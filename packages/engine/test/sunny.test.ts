@@ -145,6 +145,27 @@ describe("a wrong call", () => {
     expect(state.phase.kind).toBe("action");
   });
 
+  it("passes the turn on when it eliminates the player whose turn it now is", () => {
+    // a draws itself out of a turn honestly. b, now on the clock, accuses them
+    // anyway and pays with its last card — so the turn it was holding has to
+    // move along rather than sit with someone who is out.
+    let state = table({
+      hands: { a: ["2C"], b: ["9S"], c: ["4S"] },
+      top: "5S",
+      drawPile: ["6C", "2H", "3D", "4H"],
+    });
+    state = draw(state, "a");
+    state = draw(state, "a");
+    state = draw(state, "a");
+    expect(currentPlayer(state).id).toBe("b");
+
+    state = call(state, "b");
+    state = dispose(state, "b", "9S");
+    expect(state.players.find((p) => p.id === "b")?.eliminated).toBe(true);
+    expect(currentPlayer(state).id).toBe("c");
+    expect(state.phase.kind).toBe("action");
+  });
+
   it("can eliminate the caller who had nothing to spare", () => {
     let state = draw(
       table({ hands: { a: ["2C", "4H"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),

@@ -17,4 +17,5 @@ export * from "./cards.ts";
 export * from "./rules.ts";
 export * from "./redact.ts";
 export * from "./bot.ts";
+export * from "./protocol.ts";
 export { nextSeed, randomInt, shuffle } from "./rng.ts";

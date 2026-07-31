@@ -43,7 +43,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `join` | anyone | By room code. Refused once a game is under way — watch instead. |
 | `rejoin` | seat owner | `playerId` + `token`. |
 | `watch` | anyone | No seat, no cards, no actions. |
-| `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `disposeCard`. |
+| `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
 | `start` | host | Needs at least 3 seats; bots count. |
 | `setHandsVisible` | host | Puts hands up or down, at any time. |
 | `setStartingHandSize` | host | 3 to 10, between games. |

@@ -1,4 +1,4 @@
-import type { DisposalReason, EventView, RoomView } from "@goleta/engine";
+import type { EventView, RoomView, SurrenderReason } from "@goleta/engine";
 
 import { SUIT_LABEL } from "../components/Card.tsx";
 
@@ -9,10 +9,9 @@ export const namerFor = (room: RoomView | null): NameOf => {
   return (playerId) => names.get(playerId) ?? "Someone";
 };
 
-const disposalPhrase: Record<DisposalReason, string> = {
-  sunnyDrawn: "loses the card they drew",
-  sunnyPunishment: "pays the punishment card",
-  sunnyBadCall: "pays for a bad call",
+const surrenderPhrase: Record<SurrenderReason, string> = {
+  sunnyPunishment: "played the punishment card",
+  sunnyBadCall: "buried a card for a bad call",
 };
 
 /** One event, as a sentence for the table log. */
@@ -29,15 +28,19 @@ export const describeEvent = (event: EventView, nameOf: NameOf): string => {
         ? `${nameOf(event.playerId)} drew ${event.card.rank}${event.card.suit}.`
         : `${nameOf(event.playerId)} drew a card.`;
     case "reshuffled":
-      return `Piles recycled — ${event.drawPileSize} cards back in the draw pile.`;
+      return `Deck ran out — the pile is shuffled back in, ${event.drawPileSize} to draw.`;
+    case "turnedUp": {
+      const cards = event.cards.map((card) => `${card.rank}${card.suit}`).join(", ");
+      return event.reason === "recycle"
+        ? `${cards} turned up. That's the card to match now.`
+        : `${cards} turned up off the deck — the card they reached for. That's the card to match now.`;
+    }
     case "sunnyCalled":
       return event.correct
         ? `${nameOf(event.callerId)} called the Sunny Rule on ${nameOf(event.targetId)} — and was right.`
         : `${nameOf(event.callerId)} called the Sunny Rule on ${nameOf(event.targetId)} — and was wrong.`;
-    case "disposed": {
-      const cards = event.cards.map((card) => `${card.rank}${card.suit}`).join(", ");
-      return `${nameOf(event.playerId)} ${disposalPhrase[event.reason]}: ${cards}.`;
-    }
+    case "surrendered":
+      return `${nameOf(event.playerId)} ${surrenderPhrase[event.reason]}: ${event.card.rank}${event.card.suit}.`;
     case "eliminated":
       return `${nameOf(event.playerId)} is out of cards, and out of the game.`;
     case "turnChanged":

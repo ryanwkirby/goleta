@@ -4,7 +4,7 @@ import type { Card } from "@goleta/engine";
 
 import { PlayingCard } from "./Card.tsx";
 
-export type HandMode = "play" | "dispose" | "idle";
+export type HandMode = "play" | "surrender" | "idle";
 
 export function Hand({
   cards,
@@ -31,7 +31,7 @@ export function Hand({
   const choose = (card: Card): void => {
     if (mode === "idle") return;
     // Giving up a card is the one move you can't take back, so it asks twice.
-    if (mode === "dispose" && selected !== card.id) {
+    if (mode === "surrender" && selected !== card.id) {
       setSelected(card.id);
       return;
     }
@@ -48,13 +48,13 @@ export function Hand({
             key={card.id}
             card={card}
             size="md"
-            // In play mode the unplayable cards are dimmed. In disposal mode
-            // every card is fair game, so nothing is dimmed.
+            // In play mode the unplayable cards are dimmed. When giving a card
+            // up, legality is irrelevant, so nothing is dimmed.
             dimmed={mode === "play" && !playable}
             selected={selected === card.id}
             onClick={mode === "idle" ? undefined : () => choose(card)}
             title={
-              mode === "dispose"
+              mode === "surrender"
                 ? selected === card.id
                   ? "Tap again to give it up"
                   : "Give up this card"

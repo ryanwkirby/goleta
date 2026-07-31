@@ -30,9 +30,15 @@ export function Rules({ onDone, ctaLabel = "Got it" }: { onDone: () => void; cta
           draw a card, which is exactly what you want. Still stuck? Draw again, up to three.
         </li>
         <li>
-          <strong className="text-white">Eights are wild</strong> and let you name the next suit.
-          They're also a liability: an 8 plays on anything, so while you hold one you can always
-          play, which means you can never draw.
+          <strong className="text-white">Eights in your hand are wild</strong> and let you name the
+          next suit. They're also a liability: an 8 plays on anything, so while you hold one you can
+          always play, which means you can never draw. An 8 turned up off the deck is just an
+          ordinary 8 — its own suit, nobody names anything.
+        </li>
+        <li>
+          <strong className="text-white">When the deck runs out</strong> the whole played pile gets
+          shuffled back into it, and a fresh card is turned up. The card everyone was matching
+          changes — that's normal, not a glitch.
         </li>
       </ol>
 

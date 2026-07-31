@@ -20,21 +20,23 @@ const prompt = (game: GameView, nameOf: (id: string) => string): string => {
       return game.winnerId
         ? `${nameOf(game.winnerId)} wins, still holding cards.`
         : "Deadlock — nobody could move.";
-    case "disposal": {
-      const who = game.phase.playerId === game.you ? "You" : nameOf(game.phase.playerId);
-      const why =
-        game.phase.reason === "sunnyBadCall"
-          ? "for a call that missed"
-          : game.phase.reason === "sunnyPunishment"
-            ? "as the punishment"
-            : "";
-      return `${who} ${who === "You" ? "owe" : "owes"} a card ${why}`.trim();
+    case "surrender": {
+      const yours = game.phase.playerId === game.you;
+      const who = yours ? "You" : nameOf(game.phase.playerId);
+      if (game.phase.reason === "sunnyBadCall") {
+        return yours
+          ? "That call missed. Give up a card — it goes to the bottom of the pile."
+          : `${who} owes a card for a call that missed.`;
+      }
+      return yours
+        ? "Now the punishment card. Any card in your hand — it doesn't have to match."
+        : `${who} owes a punishment card.`;
     }
     case "suit":
       return mine ? "Name a suit." : `${nameOf(game.turnPlayerId)} is naming a suit.`;
     case "sunnyPlay":
       return mine
-        ? "Caught. Now make the play you skipped."
+        ? "Caught. Make the play you skipped."
         : `${nameOf(game.turnPlayerId)} has to make the play they skipped.`;
     case "action":
       if (!mine) return `${nameOf(game.turnPlayerId)} to play.`;
@@ -74,8 +76,8 @@ export function Table({
   }, [lastSunny]);
 
   const mode: HandMode =
-    game.phase.kind === "disposal" && game.phase.playerId === game.you
-      ? "dispose"
+    game.phase.kind === "surrender" && game.phase.playerId === game.you
+      ? "surrender"
       : mine && (game.phase.kind === "action" || game.phase.kind === "sunnyPlay")
         ? "play"
         : "idle";
@@ -87,8 +89,8 @@ export function Table({
     send({
       t: "intent",
       intent:
-        mode === "dispose"
-          ? { type: "disposeCard", playerId: me, cardId }
+        mode === "surrender"
+          ? { type: "surrenderCard", playerId: me, cardId }
           : { type: "playCard", playerId: me, cardId },
     });
   };
@@ -162,9 +164,9 @@ export function Table({
         </Panel>
       ) : null}
 
-      {mode === "dispose" ? (
+      {mode === "surrender" ? (
         <p className="rounded-xl bg-rose-500/15 px-3 py-2 text-center text-sm text-rose-200 ring-1 ring-rose-400/30">
-          Choose a card to give up. Tap it twice.
+          Choose any card to give up — it doesn't have to match. Tap it twice.
         </p>
       ) : null}
 

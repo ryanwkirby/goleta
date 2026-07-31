@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "ignorePatterns": ["dist", "node_modules"],
+  "rules": {
+    "eqeqeq": "error",
+    "no-console": "off"
+  },
+  "overrides": [
+    {
+      "files": ["packages/engine/**/*.ts"],
+      "rules": {
+        "no-restricted-globals": ["error", "Math", "Date", "crypto"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-felt-950: oklch(0.19 0.03 160);
+  --color-felt-900: oklch(0.25 0.04 160);
+  --color-felt-800: oklch(0.32 0.05 160);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* The table is a fixed surface: the page itself should never scroll or
+     rubber-band on a phone, only the panels that opt into it. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}

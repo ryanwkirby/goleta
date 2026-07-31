@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    /* The engine and server are run directly by Node, which strips types
+       rather than compiling. That means relative imports must carry their
+       `.ts` extension and the source must contain no syntax that needs
+       emitting — no enums, no parameter properties, no namespaces. Both
+       constraints are enforced by the compiler here rather than by review. */
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "goleta",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @goleta/server\" \"npm run dev -w @goleta/web\"",
+    "build": "npm run build -w @goleta/web",
+    "start": "node packages/server/src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint",
+    "typecheck": "tsc -p tsconfig.json && tsc -p packages/web/tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "concurrently": "^9.2.1",
+    "oxlint": "^1.71.0",
+    "typescript": "~6.0.2",
+    "vitest": "^3.2.7"
+  }
+}

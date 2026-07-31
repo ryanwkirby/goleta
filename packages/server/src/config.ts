@@ -20,4 +20,8 @@ export const config = {
 
   /** In dev the Vite server owns the page and proxies here, so skip static. */
   serveStatic: process.env.SERVE_STATIC !== "false",
+
+  /** A room nobody has touched for this long is forgotten. */
+  roomIdleMs: num(process.env.ROOM_IDLE_MS, 6 * 60 * 60 * 1000),
+  sweepIntervalMs: num(process.env.SWEEP_INTERVAL_MS, 15 * 60 * 1000),
 } as const;

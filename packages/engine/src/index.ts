@@ -15,4 +15,6 @@ export const ENGINE_VERSION = 1;
 export * from "./types.ts";
 export * from "./cards.ts";
 export * from "./rules.ts";
+export * from "./redact.ts";
+export * from "./bot.ts";
 export { nextSeed, randomInt, shuffle } from "./rng.ts";

@@ -328,6 +328,10 @@ const handleDispose = (
     // card they could have played, leaves nothing to make good on.
     const offender = currentPlayer(s);
     if (offender.eliminated || !mustPlay(s, offender)) advanceTurn(s, events);
+  } else if (resume.kind === "action" && currentPlayer(s).eliminated) {
+    // A wrong call made by the player whose turn it now is, paid for with
+    // their last card: there is nobody left to take the turn we resumed into.
+    advanceTurn(s, events);
   }
   return null;
 };

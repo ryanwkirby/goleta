@@ -21,6 +21,7 @@ import {
   type Intent,
   type PlayerId,
   type PlayerState,
+  type TurnUpReason,
 } from "./types.ts";
 
 /** A real table is 3 to 6. The engine allows 2 so tests can stay small. */
@@ -91,14 +92,10 @@ export const startGame = (
     eliminated: false,
   }));
 
-  // An 8 can't start the game — it would be a wild with nobody to name a suit.
-  // Bury it at the bottom of the pile and turn the next one up.
-  let upcard = drawPile.pop();
-  while (upcard && isWild(upcard)) {
-    drawPile.unshift(upcard);
-    upcard = drawPile.pop();
-  }
-  if (!upcard) throw new Error("no non-wild card to start the discard pile");
+  // An 8 turned up here is natural — its own suit is the suit in play, and
+  // nobody names anything. Nothing gets buried or redealt.
+  const upcard = drawPile.pop();
+  if (!upcard) throw new Error("no card to start the face-up pile");
 
   return {
     options,
@@ -106,10 +103,10 @@ export const startGame = (
     turnIndex: 0,
     drawPile,
     discardPile: [upcard],
-    disposalPile: [],
     activeSuit: upcard.suit,
     phase: { kind: "action" },
     challenge: null,
+    sunny: null,
     drawsThisTurn: 0,
     rngSeed: seedAfterShuffle,
     status: "playing",
@@ -141,8 +138,8 @@ const route = (s: GameState, intent: Intent, events: GameEvent[]): string | null
       return handleChooseSuit(s, intent.playerId, intent.suit, events);
     case "callSunny":
       return handleCallSunny(s, intent.playerId, events);
-    case "disposeCard":
-      return handleDispose(s, intent.playerId, intent.cardId, events);
+    case "surrenderCard":
+      return handleSurrender(s, intent.playerId, intent.cardId, events);
   }
 };
 
@@ -173,16 +170,23 @@ const handlePlay = (
   if (index === -1) return "that card isn't in your hand";
   const card = player.hand[index] as Card;
   if (!isPlayable(card, s.activeSuit, topCard(s).rank)) {
-    return "that card doesn't match the discard";
+    return "that card doesn't match the card in play";
   }
+
+  // A play made to settle a Sunny call is followed straight away by the
+  // punishment card and then the touched card, so an 8 here names nothing —
+  // whatever it chose would be buried before the next player ever saw it.
+  const settlingSunny = s.sunny !== null;
 
   player.hand.splice(index, 1);
   s.discardPile.push(card);
-  if (!isWild(card)) s.activeSuit = card.suit;
+  if (settlingSunny || !isWild(card)) s.activeSuit = card.suit;
   events.push({ type: "played", playerId: player.id, card });
 
   eliminateIfEmpty(s, player, events);
   if (finishIfOver(s, events)) return null;
+
+  if (settlingSunny) return demandPunishment(s, player, events);
 
   // Playing your last card as an 8 still gets you the suit call on the way out.
   if (isWild(card)) {
@@ -208,10 +212,19 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   const alreadyCaught = s.challenge?.drawerId === player.id && s.challenge.violation !== null;
   const snapshot = inViolation && !alreadyCaught ? structuredClone(s) : null;
 
-  if (!refillDrawPile(s, events)) {
-    // Every card is in somebody's hand. There is nothing to draw, so the turn
-    // simply ends.
-    advanceTurn(s, events);
+  // An empty deck is recycled first, and that recycle is the whole of this
+  // action — no card reaches a hand. The card turned up is a new card in play,
+  // so the player decides again against it: draw once more if still stuck, or
+  // play if it has just handed them a play.
+  //
+  // Reaching for the deck is the offence either way, so the window opens even
+  // though nothing was drawn. Otherwise an empty deck would be a silent, free
+  // way to touch it while holding a play, and re-roll the card in play with it.
+  // A resolution from here simply has nothing to turn up at the end.
+  if (s.drawPile.length === 0) {
+    // Every card is in somebody's hand. Nothing to draw, so the turn ends.
+    if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
+    else recordDraw(s, player.id, null, inViolation, snapshot);
     return null;
   }
 
@@ -268,45 +281,68 @@ const handleCallSunny = (
   if (!violation) {
     // Accusations aren't free.
     challenge.resolved = true;
-    s.phase = { kind: "disposal", playerId: callerId, reason: "sunnyBadCall", resume: s.phase };
+    s.phase = { kind: "surrender", playerId: callerId, reason: "sunnyBadCall", resume: s.phase };
     return null;
   }
 
   // Rewind to the instant before the illegal draw. Restoring wholesale is what
   // lets the punishment undo whatever the drawer did afterwards — including a
   // card they've already played and the suit an 8 named.
-  const disposedIds = [...violation.cardIds];
+  const touchedIds = [...violation.touchedIds];
   Object.assign(s, structuredClone(violation.snapshot));
   s.challenge = null;
 
   const target = playerById(s, targetId);
   if (!target) throw new Error(`the drawer ${targetId} vanished from the rewound game`);
 
-  // The cards they drew are disposed of, not put back. In the rewound state
-  // they're wherever they were before being drawn — usually the draw pile, but
-  // a reshuffle in between can leave one buried in the discard or disposal.
-  const disposed = takeCardsFromPiles(s, disposedIds);
-  s.disposalPile.push(...disposed);
-  if (disposed.length > 0) {
-    events.push({ type: "disposed", playerId: targetId, cards: disposed, reason: "sunnyDrawn" });
-  }
+  // Their hand is untouched by the rewind, so the play they were dodging is
+  // still there to make. It comes first; the punishment card and the cards they
+  // touched follow once it's made.
+  s.sunny = { offenderId: targetId, touchedIds };
+  s.phase = { kind: "sunnyPlay" };
+  return null;
+};
 
+/**
+ * Step two of a landed Sunny call: any one card from what's left of the hand.
+ * A player emptied by the skipped play has nothing to give and skips straight
+ * to having their touched cards turned up.
+ */
+const demandPunishment = (
+  s: GameState,
+  offender: PlayerState,
+  events: GameEvent[],
+): string | null => {
+  if (offender.eliminated || offender.hand.length === 0) return finishSunny(s, events);
   s.phase = {
-    kind: "disposal",
-    playerId: targetId,
+    kind: "surrender",
+    playerId: offender.id,
     reason: "sunnyPunishment",
-    resume: { kind: "sunnyPlay" },
+    resume: { kind: "action" },
   };
   return null;
 };
 
-const handleDispose = (
+/**
+ * Step three, and the end of the offender's turn: every card they drew
+ * illegally goes face up, and the last of them becomes the card in play.
+ */
+const finishSunny = (s: GameState, events: GameEvent[]): string | null => {
+  const sunny = s.sunny;
+  if (!sunny) return null;
+  s.sunny = null;
+  turnUp(s, takeCardsFromPiles(s, sunny.touchedIds), "sunnyTouched", events);
+  advanceTurn(s, events);
+  return null;
+};
+
+const handleSurrender = (
   s: GameState,
   playerId: PlayerId,
   cardId: string,
   events: GameEvent[],
 ): string | null => {
-  if (s.phase.kind !== "disposal") return "there's no card to give up";
+  if (s.phase.kind !== "surrender") return "there's no card to give up";
   if (s.phase.playerId !== playerId) return "it isn't your card to give up";
 
   const player = playerById(s, playerId);
@@ -314,25 +350,29 @@ const handleDispose = (
   const index = player.hand.findIndex((c) => c.id === cardId);
   if (index === -1) return "that card isn't in your hand";
 
+  const { reason, resume } = s.phase;
   const [card] = player.hand.splice(index, 1) as [Card];
-  s.disposalPile.push(card);
-  events.push({ type: "disposed", playerId, cards: [card], reason: s.phase.reason });
 
-  const resume = s.phase.resume;
+  if (reason === "sunnyPunishment") {
+    // Played face up like any other card. It needn't be legal, and it sets no
+    // suit: the touched card lands on top of it a moment later.
+    s.discardPile.push(card);
+  } else {
+    // Buried under everything already played, where it can never become the
+    // card in play. A bad call costs a card and changes nothing else.
+    s.discardPile.unshift(card);
+  }
+  events.push({ type: "surrendered", playerId, card, reason });
+
   eliminateIfEmpty(s, player, events);
   if (finishIfOver(s, events)) return null;
-  s.phase = resume;
 
-  if (resume.kind === "sunnyPlay") {
-    // A punishment card that empties the hand, or that happens to be the only
-    // card they could have played, leaves nothing to make good on.
-    const offender = currentPlayer(s);
-    if (offender.eliminated || !mustPlay(s, offender)) advanceTurn(s, events);
-  } else if (resume.kind === "action" && currentPlayer(s).eliminated) {
-    // A wrong call made by the player whose turn it now is, paid for with
-    // their last card: there is nobody left to take the turn we resumed into.
-    advanceTurn(s, events);
-  }
+  if (reason === "sunnyPunishment") return finishSunny(s, events);
+
+  s.phase = resume;
+  // A wrong call made by the player whose turn it now is, paid for with their
+  // last card: there is nobody left to take the turn we resumed into.
+  if (resume.kind === "action" && currentPlayer(s).eliminated) advanceTurn(s, events);
   return null;
 };
 
@@ -340,10 +380,15 @@ const handleDispose = (
 // Internals
 // ---------------------------------------------------------------------------
 
+/**
+ * Opens or extends the challenge window. `card` is null when the deck had to be
+ * recycled and nothing was drawn — the reach still counts, so the window opens
+ * with no card attached to it.
+ */
 const recordDraw = (
   s: GameState,
   playerId: PlayerId,
-  card: Card,
+  card: Card | null,
   inViolation: boolean,
   snapshot: GameState | null,
 ): void => {
@@ -351,56 +396,86 @@ const recordDraw = (
     s.challenge = { drawerId: playerId, drawnIds: [], violation: null, resolved: false };
   }
   const challenge = s.challenge;
-  challenge.drawnIds.push(card.id);
+  if (card) challenge.drawnIds.push(card.id);
   // A fresh draw is a fresh chance to be caught, even if an earlier call in
   // this turn has already been settled.
   challenge.resolved = false;
 
-  if (challenge.violation) challenge.violation.cardIds.push(card.id);
-  else if (inViolation && snapshot) challenge.violation = { snapshot, cardIds: [card.id] };
+  if (challenge.violation) {
+    if (card) challenge.violation.touchedIds.push(card.id);
+  } else if (inViolation && snapshot) {
+    challenge.violation = { snapshot, touchedIds: card ? [card.id] : [] };
+  }
 };
 
-/** Removes the named cards from wherever they're sitting in the piles. */
+/**
+ * Removes the named cards from wherever they're sitting.
+ *
+ * Only used on the cards a caught player touched, immediately before they go
+ * face up. In the rewound state they're normally still in the deck, but a
+ * recycle between the first and last illegal draw can leave one in the face-up
+ * pile — including on top of it, which is why this puts nothing back itself.
+ */
 const takeCardsFromPiles = (s: GameState, ids: readonly string[]): Card[] => {
   const wanted = new Set(ids);
-  const taken: Card[] = [];
+  const found = new Map<string, Card>();
   const sift = (pile: Card[]): Card[] =>
     pile.filter((card) => {
       if (!wanted.has(card.id)) return true;
-      taken.push(card);
+      found.set(card.id, card);
       return false;
     });
 
   s.drawPile = sift(s.drawPile);
-  // The discard pile's order below the top card is irrelevant, and the top card
-  // itself can never be one of these — a reshuffle always leaves it in place.
-  s.disposalPile = sift(s.disposalPile);
-  const top = s.discardPile[s.discardPile.length - 1];
-  s.discardPile = [...sift(s.discardPile.slice(0, -1)), ...(top ? [top] : [])];
-  return taken;
+  s.discardPile = sift(s.discardPile);
+  // Back into the order they were drawn in, so the last one drawn ends up on
+  // top of the pile and becomes the card in play.
+  return ids.flatMap((id) => {
+    const card = found.get(id);
+    return card ? [card] : [];
+  });
 };
 
-const recyclablePile = (s: GameState): Card[] => [
-  ...s.discardPile.slice(0, -1),
-  ...s.disposalPile,
-];
-
+/** Whether a card can be drawn, now or after a recycle. */
 const canRefill = (s: GameState): boolean =>
-  s.drawPile.length > 0 || recyclablePile(s).length > 0;
+  // Recycling n face-up cards turns one straight back up, leaving n-1 to draw.
+  s.drawPile.length > 0 || s.discardPile.length >= 2;
 
-/** True if a card can be drawn, reshuffling the dead piles back in if needed. */
-const refillDrawPile = (s: GameState, events: GameEvent[]): boolean => {
-  if (s.drawPile.length > 0) return true;
-  const pool = recyclablePile(s);
-  if (pool.length === 0) return false;
+/**
+ * Turns cards face up onto the pile. They came off the deck rather than out of
+ * a hand, so even an 8 is natural here: the last card's own suit is the suit in
+ * play, and nobody names anything.
+ */
+const turnUp = (
+  s: GameState,
+  cards: readonly Card[],
+  reason: TurnUpReason,
+  events: GameEvent[],
+): void => {
+  const last = cards[cards.length - 1];
+  if (!last) return;
+  s.discardPile.push(...cards);
+  s.activeSuit = last.suit;
+  events.push({ type: "turnedUp", cards: [...cards], reason });
+};
 
-  const [shuffled, seed] = shuffle(pool, s.rngSeed);
-  const top = topCard(s);
+/**
+ * The deck has run out: the whole face-up pile, current card in play included,
+ * is shuffled and turned back over, and its top card is turned up to restart
+ * the pile. Nothing is held back — the card in play changes here.
+ *
+ * False when there's nothing to recycle, which means every card is in a hand.
+ */
+const recycleFaceUpPile = (s: GameState, events: GameEvent[]): boolean => {
+  if (s.discardPile.length < 2) return false;
+
+  const [shuffled, seed] = shuffle(s.discardPile, s.rngSeed);
+  const turned = shuffled.pop() as Card;
   s.rngSeed = seed;
   s.drawPile = shuffled;
-  s.discardPile = [top];
-  s.disposalPile = [];
-  events.push({ type: "reshuffled", drawPileSize: shuffled.length });
+  s.discardPile = [];
+  events.push({ type: "reshuffled", drawPileSize: s.drawPile.length });
+  turnUp(s, [turned], "recycle", events);
   return true;
 };
 

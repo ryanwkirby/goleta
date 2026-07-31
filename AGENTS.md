@@ -101,8 +101,8 @@ game state has to be considered there, and it defaults to *not* being sent.
 - Engine tests are the safety net for the rules; every rule in `docs/RULES.md`
   and every Sunny branch gets one.
 - Full games are simulated with seeded RNG and bots. Three invariants hold after
-  **every** event: **card conservation** (hands + draw + discard + disposal ==
-  104), forced play is never skipped, and every game terminates with exactly one
+  **every** event: **card conservation** (hands + deck + face-up pile == 104),
+  forced play is never skipped, and every game terminates with exactly one
   winner.
 - No login exists anywhere in this app. Don't add one — not for hosts, not for
   persistence, not for convenience. Identity is a `playerId` plus a secret

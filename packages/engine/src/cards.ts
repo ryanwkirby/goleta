@@ -21,10 +21,15 @@ export const buildDeck = (deckCount: number): Card[] => {
 export const shuffleDeck = (cards: readonly Card[], seed: number): [Card[], number] =>
   shuffle(cards, seed);
 
+/**
+ * Whether an 8 played *from a hand* is wild. An 8 turned up off the deck is
+ * natural — it plays as its own suit and names nothing — so callers turning a
+ * card up must not consult this. See `docs/RULES.md`, "Natural eights".
+ */
 export const isWild = (card: Card): boolean => card.rank === WILD_RANK;
 
 /**
- * Whether a card can be played on the current discard.
+ * Whether a card can be played on the card in play.
  *
  * `activeSuit` rather than the top card's own suit: after a wild 8 the named
  * suit is what counts, and the 8's printed suit stops mattering.

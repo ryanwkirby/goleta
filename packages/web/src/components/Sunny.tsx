@@ -48,12 +48,16 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
         </p>
         <p className="mt-3 text-sm leading-relaxed text-white/80">
           If you take a card from the deck when you had a card you could have played, anyone else
-          can call <strong className="text-white">Sunny Rule</strong> on you. Get caught and you
-          lose the card you drew, give up another card of your choosing, and{" "}
-          <em>still</em> have to make the play you were dodging.
+          can call <strong className="text-white">Sunny Rule</strong> on you.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-white/80">
-          Calling it when they were innocent costs you a card instead. Accusations aren't free.
+          Get caught and you make the play you were dodging after all, then play a second card
+          from your hand as a punishment — any card, it doesn't have to match. The card you
+          reached for gets turned face up on top, and that's the card everyone has to match next.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-white/80">
+          Calling it when they were innocent costs you a card instead, buried at the bottom of the
+          pile. Accusations aren't free.
         </p>
         <Button variant="primary" full className="mt-5" onClick={onDone}>
           Understood

@@ -9,15 +9,19 @@ installs. Make a room, share the code.
 
 The full rules are in [`docs/RULES.md`](docs/RULES.md). The short version:
 
-- Two decks. Match the top card by rank or suit.
+- Two decks. Match the card in play by rank or suit.
 - **If you can play, you must** — so a hand full of playable cards is a hand
   that's draining.
 - Stuck? Draw, up to three cards. That's a good turn.
-- Eights are wild and name the next suit, which means you can never legally draw
-  while holding one.
+- Eights in your hand are wild and name the next suit, which means you can never
+  legally draw while holding one. An 8 turned up off the deck is just an
+  ordinary 8.
+- When the deck runs out the whole played pile is shuffled back in and a fresh
+  card is turned up — the card everyone was matching changes.
 - Draw a card when you could have played, and anyone can call the **Sunny
-  Rule** on you. Get it right and they lose the drawn card, a punishment card,
-  and still have to make the play. Get it wrong and *you* lose a card.
+  Rule** on you. Get it right and they make the play anyway, pay a punishment
+  card on top, and the card they reached for gets turned up as the new card in
+  play. Get it wrong and *you* bury a card.
 
 Tables start with every hand face up while people learn, and the host flips them
 down when the table's ready.

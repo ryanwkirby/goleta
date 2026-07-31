@@ -6,7 +6,10 @@
  *
  *   - other players' hands, when the table is playing with hands down;
  *   - anything at all about `state.challenge`, which holds both the "was that
- *     draw legal?" answer and a full snapshot of the game — every hand included.
+ *     draw legal?" answer and a full snapshot of the game — every hand included;
+ *   - `state.sunny`, which names the cards a caught player is about to have
+ *     turned up. Those are still in the deck, and which cards are coming off
+ *     the deck is not something the table gets told in advance.
  *
  * A new field on `GameState` is invisible to clients until someone adds it
  * here, which is the intended default.
@@ -16,10 +19,10 @@ import { legalCards, mustPlay, playerById, topCard } from "./rules.ts";
 import type {
   Card,
   CardId,
-  DisposalReason,
   GameEvent,
   GameState,
   PlayerId,
+  SurrenderReason,
   Suit,
 } from "./types.ts";
 
@@ -35,7 +38,7 @@ export type PhaseView =
   | { kind: "action" }
   | { kind: "suit" }
   | { kind: "sunnyPlay" }
-  | { kind: "disposal"; playerId: PlayerId; reason: DisposalReason }
+  | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason }
   | { kind: "over" };
 
 export interface GameView {
@@ -51,8 +54,6 @@ export interface GameView {
   activeSuit: Suit;
   drawPileSize: number;
   discardPileSize: number;
-  /** Face up by the rules, so its contents are public in either mode. */
-  disposalPile: Card[];
   drawsThisTurn: number;
   /**
    * Whether *you* could call the Sunny Rule this instant. True after any draw
@@ -77,15 +78,15 @@ export interface RedactOptions {
 const phaseView = (state: GameState): PhaseView => {
   const phase = state.phase;
   // `resume` is bookkeeping for the engine and means nothing at the table.
-  if (phase.kind === "disposal") {
-    return { kind: "disposal", playerId: phase.playerId, reason: phase.reason };
+  if (phase.kind === "surrender") {
+    return { kind: "surrender", playerId: phase.playerId, reason: phase.reason };
   }
   return { kind: phase.kind };
 };
 
 const waitingOn = (state: GameState): PlayerId | null => {
   if (state.phase.kind === "over") return null;
-  if (state.phase.kind === "disposal") return state.phase.playerId;
+  if (state.phase.kind === "surrender") return state.phase.playerId;
   return state.players[state.turnIndex]?.id ?? null;
 };
 
@@ -120,7 +121,6 @@ export const redact = (
     activeSuit: state.activeSuit,
     drawPileSize: state.drawPile.length,
     discardPileSize: state.discardPile.length,
-    disposalPile: state.disposalPile,
     drawsThisTurn: state.drawsThisTurn,
     sunnyCallable: canCall,
     sunnyTargetId: canCall ? challenge.drawerId : null,

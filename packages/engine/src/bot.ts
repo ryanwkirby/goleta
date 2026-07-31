@@ -46,22 +46,20 @@ const pickSuit = (view: GameView): Suit => {
 };
 
 /**
- * Which card to give up.
+ * Which card to give up, whether as a punishment or for a bad call.
  *
- * When exactly one card is playable, that's the one — a punishment disposal is
- * followed by a forced play, and giving up the only legal card cancels it. Two
- * cards leave the hand instead of three.
+ * Legality doesn't come into it — a surrendered card needn't match anything,
+ * and by the time a punishment is owed the skipped play has already been made,
+ * so there is nothing left to dodge. That leaves the plain question of which
+ * card you least want: the 8, which is what stops you being stuck at all, and
+ * otherwise one from the suit you hold most of.
  */
-const pickDisposal = (view: GameView): Card | undefined => {
+const pickSurrender = (view: GameView): Card | undefined => {
   const hand = ownHand(view);
   if (hand.length === 0) return undefined;
 
-  const legal = hand.filter((card) => view.legalCardIds.includes(card.id));
-  if (legal.length === 1) return legal[0];
-
   const wild = hand.find(isWild);
   if (wild) return wild;
-  if (legal.length > 0) return legal[0];
 
   const counts = countBySuit(hand);
   return hand.toSorted((a, b) => (counts[b.suit] ?? 0) - (counts[a.suit] ?? 0))[0];
@@ -85,10 +83,10 @@ export const decideBotIntent = (
     if (roll < SUNNY_CALL_CHANCE) return [{ type: "callSunny", playerId: me }, rng];
   }
 
-  if (view.phase.kind === "disposal") {
+  if (view.phase.kind === "surrender") {
     if (view.phase.playerId !== me) return [null, rng];
-    const card = pickDisposal(view);
-    return [card ? { type: "disposeCard", playerId: me, cardId: card.id } : null, rng];
+    const card = pickSurrender(view);
+    return [card ? { type: "surrenderCard", playerId: me, cardId: card.id } : null, rng];
   }
 
   if (view.waitingOn !== me) return [null, rng];

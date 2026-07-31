@@ -7,14 +7,18 @@
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
 }
 
+#root {
+  /* Fills the screen, but grows past it when a panel is taller than the phone
+     — a fixed height here silently clips the bottom off long content. */
+  min-height: 100%;
+}
+
 body {
-  /* The table is a fixed surface: the page itself should never scroll or
-     rubber-band on a phone, only the panels that opt into it. */
-  overscroll-behavior: none;
+  /* No rubber-banding at the edges; the table should feel like a surface. */
+  overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }

@@ -18,7 +18,10 @@ export const RANKS = [
 ] as const;
 export type Rank = (typeof RANKS)[number];
 
-/** The wild rank. Playable on anything, and its holder can never legally draw. */
+/**
+ * The wild rank — but only when played from a hand. An 8 turned up off the deck
+ * is *natural*: it plays as an ordinary card of its own suit. See `isWild`.
+ */
 export const WILD_RANK: Rank = "8";
 
 /** Most cards a player may draw in one turn. */
@@ -51,12 +54,10 @@ export interface PlayerState {
   eliminated: boolean;
 }
 
-export type DisposalReason =
-  /** Cards drawn illegally, returned to the disposal pile by a Sunny call. */
-  | "sunnyDrawn"
-  /** The extra card a caught player gives up. */
+export type SurrenderReason =
+  /** The extra card a caught player gives up. Played on top of the pile. */
   | "sunnyPunishment"
-  /** The card a wrong accusation costs its caller. */
+  /** The card a wrong accusation costs its caller. Buried at the bottom. */
   | "sunnyBadCall";
 
 /**
@@ -66,12 +67,16 @@ export type DisposalReason =
 export type Phase =
   /** The player to move must play a card or draw one. */
   | { kind: "action" }
-  /** They played an 8 and must name the suit. */
+  /** They played an 8 from hand and must name the suit. */
   | { kind: "suit" }
   /** A Sunny call landed: they must now make the play they skipped. */
   | { kind: "sunnyPlay" }
-  /** Someone owes a card. `resume` is where play picks back up. */
-  | { kind: "disposal"; playerId: PlayerId; reason: DisposalReason; resume: Phase }
+  /**
+   * Someone owes a card of their choosing, legality irrelevant. `resume` is
+   * where play picks back up, and is only meaningful for a bad call — a
+   * punishment is always followed by the rest of the Sunny resolution.
+   */
+  | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason; resume: Phase }
   | { kind: "over" };
 
 /**
@@ -94,11 +99,29 @@ export interface Challenge {
      * has already played on — including a wild 8 and the suit it named.
      */
     snapshot: GameState;
-    /** Cards drawn from the illegal draw onward. All of them are disposed. */
-    cardIds: CardId[];
+    /**
+     * Cards drawn from the illegal draw onward — the ones they "touched". All
+     * of them are turned face up at the end of the resolution.
+     */
+    touchedIds: CardId[];
   } | null;
   /** Only the first call is judged; the rest are too late. */
   resolved: boolean;
+}
+
+/**
+ * A Sunny call that landed and is still being paid off. Set the moment a
+ * correct call rewinds the game, cleared when the touched cards are turned up.
+ *
+ * It exists because the resolution spans several intents — the skipped play,
+ * then the punishment card — and the cards to turn up at the end have to
+ * survive both. `redact.ts` drops it: which cards are about to come off the
+ * deck is not something the table gets told early.
+ */
+export interface SunnyResolution {
+  offenderId: PlayerId;
+  /** Turned face up once the punishment is paid; the last lands on top. */
+  touchedIds: CardId[];
 }
 
 export interface GameState {
@@ -107,17 +130,21 @@ export interface GameState {
   /** Index into `players` of whoever is to move. */
   turnIndex: number;
   drawPile: Card[];
-  /** Top of the pile is the last element. */
+  /**
+   * The one face-up pile. Top of the pile is the last element, and the whole
+   * thing — top card included — is recycled when the deck runs out.
+   */
   discardPile: Card[];
-  /** Out of play until the draw pile runs dry and everything is recycled. */
-  disposalPile: Card[];
   /**
    * The suit that must be matched. Usually the top card's suit, but after a
-   * wild 8 it is whatever the player named, and it overrides the 8's own suit.
+   * wild 8 played from a hand it is whatever the player named, and it overrides
+   * the 8's own suit.
    */
   activeSuit: Suit;
   phase: Phase;
   challenge: Challenge | null;
+  /** Non-null only while a landed Sunny call is being paid off. */
+  sunny: SunnyResolution | null;
   drawsThisTurn: number;
   rngSeed: number;
   status: "playing" | "over";
@@ -131,7 +158,10 @@ export type Intent =
   | { type: "drawCard"; playerId: PlayerId }
   | { type: "chooseSuit"; playerId: PlayerId; suit: Suit }
   | { type: "callSunny"; playerId: PlayerId }
-  | { type: "disposeCard"; playerId: PlayerId; cardId: CardId };
+  | { type: "surrenderCard"; playerId: PlayerId; cardId: CardId };
+
+/** Why a card came off the deck rather than out of a hand. */
+export type TurnUpReason = "recycle" | "sunnyTouched";
 
 export type GameEvent =
   | { type: "gameStarted"; upcard: Card }
@@ -139,8 +169,10 @@ export type GameEvent =
   | { type: "suitChosen"; playerId: PlayerId; suit: Suit }
   | { type: "drew"; playerId: PlayerId; card: Card }
   | { type: "reshuffled"; drawPileSize: number }
+  /** A card turned face up off the deck. Always natural, never wild. */
+  | { type: "turnedUp"; cards: Card[]; reason: TurnUpReason }
   | { type: "sunnyCalled"; callerId: PlayerId; targetId: PlayerId; correct: boolean }
-  | { type: "disposed"; playerId: PlayerId; cards: Card[]; reason: DisposalReason }
+  | { type: "surrendered"; playerId: PlayerId; card: Card; reason: SurrenderReason }
   | { type: "eliminated"; playerId: PlayerId }
   | { type: "turnChanged"; playerId: PlayerId }
   | { type: "gameOver"; winnerId: PlayerId | null; reason: "lastStanding" | "stalemate" };

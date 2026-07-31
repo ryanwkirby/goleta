@@ -24,9 +24,12 @@ down when the table's ready.
 
 ## Status
 
-**Milestone 1 — online multiplayer** (desktop and phone) is in progress.
-**Milestone 2** adds IRL mode for a table of people in the same room, with an
-optional shared screen showing the board.
+**Milestone 1 — online multiplayer is done and live.** Rooms, no-login seats
+that survive a reload or a redeploy, face-up and hidden hands, bots to fill a
+table, and the Sunny Rule, on desktop and phone.
+
+**Milestone 2** is next: IRL mode for a table of people in the same room, with
+an optional shared screen showing the board.
 
 ## Development
 

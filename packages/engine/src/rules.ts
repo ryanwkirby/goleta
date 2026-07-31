@@ -205,23 +205,28 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   if (player.id !== playerId) return "it isn't your turn";
   if (s.drawsThisTurn >= MAX_DRAWS_PER_TURN) return "you've already drawn three cards";
 
-  // An empty deck is recycled first, and that recycle is the whole of this
-  // action — no card reaches a hand. The card turned up is a new card in play,
-  // so the player decides again against it: draw once more if still stuck, or
-  // play if it has just handed them a play. Nothing was drawn, so there is
-  // nothing for anyone to call the Sunny Rule on yet.
-  if (s.drawPile.length === 0) {
-    // Every card is in somebody's hand. Nothing to draw, so the turn ends.
-    if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
-    return null;
-  }
-
   // Drawing while holding a playable card breaks the rules, and the engine
   // deliberately allows it: that violation is the Sunny Rule's entire subject.
   // What it does instead is remember, so a call can be judged.
   const inViolation = mustPlay(s, player);
   const alreadyCaught = s.challenge?.drawerId === player.id && s.challenge.violation !== null;
   const snapshot = inViolation && !alreadyCaught ? structuredClone(s) : null;
+
+  // An empty deck is recycled first, and that recycle is the whole of this
+  // action — no card reaches a hand. The card turned up is a new card in play,
+  // so the player decides again against it: draw once more if still stuck, or
+  // play if it has just handed them a play.
+  //
+  // Reaching for the deck is the offence either way, so the window opens even
+  // though nothing was drawn. Otherwise an empty deck would be a silent, free
+  // way to touch it while holding a play, and re-roll the card in play with it.
+  // A resolution from here simply has nothing to turn up at the end.
+  if (s.drawPile.length === 0) {
+    // Every card is in somebody's hand. Nothing to draw, so the turn ends.
+    if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
+    else recordDraw(s, player.id, null, inViolation, snapshot);
+    return null;
+  }
 
   const card = s.drawPile.pop() as Card;
   player.hand.push(card);
@@ -375,10 +380,15 @@ const handleSurrender = (
 // Internals
 // ---------------------------------------------------------------------------
 
+/**
+ * Opens or extends the challenge window. `card` is null when the deck had to be
+ * recycled and nothing was drawn — the reach still counts, so the window opens
+ * with no card attached to it.
+ */
 const recordDraw = (
   s: GameState,
   playerId: PlayerId,
-  card: Card,
+  card: Card | null,
   inViolation: boolean,
   snapshot: GameState | null,
 ): void => {
@@ -386,13 +396,16 @@ const recordDraw = (
     s.challenge = { drawerId: playerId, drawnIds: [], violation: null, resolved: false };
   }
   const challenge = s.challenge;
-  challenge.drawnIds.push(card.id);
+  if (card) challenge.drawnIds.push(card.id);
   // A fresh draw is a fresh chance to be caught, even if an earlier call in
   // this turn has already been settled.
   challenge.resolved = false;
 
-  if (challenge.violation) challenge.violation.touchedIds.push(card.id);
-  else if (inViolation && snapshot) challenge.violation = { snapshot, touchedIds: [card.id] };
+  if (challenge.violation) {
+    if (card) challenge.violation.touchedIds.push(card.id);
+  } else if (inViolation && snapshot) {
+    challenge.violation = { snapshot, touchedIds: card ? [card.id] : [] };
+  }
 };
 
 /**

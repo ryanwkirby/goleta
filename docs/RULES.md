@@ -125,6 +125,11 @@ It applies to any illegal draw in the turn, not just the first one. Drawing a
 second card when the first card you drew gave you a play is exactly the same
 offence.
 
+**Reaching for the deck is the offence, not what comes back with it.** If the
+deck was empty and your reach only triggered a recycle, you still reached, and
+it is still callable. Otherwise an empty deck would be a free way to touch it
+while holding a play — and to re-roll the card in play while you were at it.
+
 If nobody calls it, nothing happens. The turn stands as played.
 
 ### If the call is right
@@ -138,7 +143,9 @@ The offender, in this order:
    other play.
 3. **Turns up the card they touched.** Every card they drew illegally goes face
    up on the pile, and the last of them becomes the new card in play. It is
-   turned up off the deck, so [natural eights](#natural-eights) applies.
+   turned up off the deck, so [natural eights](#natural-eights) applies. If they
+   were caught reaching for an empty deck there is nothing to turn up, and the
+   punishment card is left in play instead.
 
 Then their turn is over.
 

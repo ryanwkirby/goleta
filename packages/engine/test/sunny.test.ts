@@ -408,3 +408,55 @@ describe("the challenge window", () => {
     }
   });
 });
+
+describe("reaching for an empty deck", () => {
+  it("is callable even though nothing was drawn", () => {
+    // 5H plays on the 5S, so a is not allowed to touch the deck — and the deck
+    // being empty is no excuse. The recycle happens; so does the offence.
+    let state = table({
+      hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["KH", "QH", "JH"],
+    });
+    const total = allCardIds(state).length;
+
+    state = draw(state, "a");
+    expect(state.drawsThisTurn).toBe(0);
+    expect(state.challenge?.violation).not.toBeNull();
+    expect(state.challenge?.violation?.touchedIds).toEqual([]);
+
+    state = call(state, "b");
+    // The rewind undoes the recycle too, so the 5S is showing again and the
+    // play they were dodging is the one they now owe.
+    expect(topCard(state).id).toBe("5S#1");
+    expect(state.phase.kind).toBe("sunnyPlay");
+
+    state = play(state, "a", "5H");
+    state = surrender(state, "a", "2C");
+    // Nothing to turn up, so the punishment card is left in play.
+    expect(topCard(state).id).toBe("2C#1");
+    expect(currentPlayer(state).id).toBe("b");
+    expect(allCardIds(state)).toHaveLength(total);
+    expect(new Set(allCardIds(state)).size).toBe(total);
+  });
+
+  it("looks the same when the reach was honest, and costs a bad caller a card", () => {
+    let state = table({
+      hands: { a: ["2C"], b: ["9C", "10C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["KH", "QH"],
+    });
+    state = draw(state, "a");
+    // Same shape of window as the guilty case above: someone reached, and a
+    // call is available. Only the verdict differs.
+    expect(state.challenge?.drawerId).toBe("a");
+    expect(state.challenge?.violation).toBeNull();
+
+    state = call(state, "b");
+    state = surrender(state, "b", "10C");
+    expect(handOf(state, "b")).toEqual(["9C#1"]);
+    expect(currentPlayer(state).id).toBe("a");
+  });
+});

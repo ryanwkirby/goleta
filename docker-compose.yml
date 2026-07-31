@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    image: goleta:latest
+    container_name: goleta
+    ports:
+      - "8063:8063"
+    volumes:
+      # Live rooms are snapshotted here so `up -d --build` doesn't end a game.
+      - goleta-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  goleta-data:

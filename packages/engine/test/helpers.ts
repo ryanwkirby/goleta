@@ -31,8 +31,7 @@ export interface TableSpec {
   /** Defaults to the top card's suit, as it would be outside a wild. */
   activeSuit?: Suit;
   drawPile?: string[];
-  disposalPile?: string[];
-  /** Buried discards under the top card, for reshuffle tests. */
+  /** Cards under the top of the face-up pile, for recycle tests. */
   buriedDiscards?: string[];
   turn?: PlayerId;
   /** Players already out of the game. */
@@ -59,10 +58,10 @@ export const table = (spec: TableSpec): GameState => {
     turnIndex,
     drawPile: cards(...(spec.drawPile ?? [])),
     discardPile: [...cards(...(spec.buriedDiscards ?? [])), top],
-    disposalPile: cards(...(spec.disposalPile ?? [])),
     activeSuit: spec.activeSuit ?? top.suit,
     phase: { kind: "action" },
     challenge: null,
+    sunny: null,
     drawsThisTurn: 0,
     rngSeed: 12345,
     status: "playing",
@@ -90,6 +89,9 @@ export const play = (state: GameState, playerId: PlayerId, spec: string): GameSt
 export const draw = (state: GameState, playerId: PlayerId): GameState =>
   must(state, { type: "drawCard", playerId });
 
+export const surrender = (state: GameState, playerId: PlayerId, spec: string): GameState =>
+  must(state, { type: "surrenderCard", playerId, cardId: card(spec).id });
+
 export const handOf = (state: GameState, id: PlayerId): string[] =>
   (state.players.find((p) => p.id === id)?.hand ?? []).map((c) => c.id);
 
@@ -98,5 +100,8 @@ export const allCardIds = (state: GameState): string[] => [
   ...state.players.flatMap((p) => p.hand.map((c) => c.id)),
   ...state.drawPile.map((c) => c.id),
   ...state.discardPile.map((c) => c.id),
-  ...state.disposalPile.map((c) => c.id),
 ];
+
+/** The face-up pile from the top down, which is how the tests talk about it. */
+export const pileFromTop = (state: GameState): string[] =>
+  state.discardPile.map((c) => c.id).toReversed();

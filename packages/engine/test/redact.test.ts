@@ -125,25 +125,49 @@ describe("the Sunny button", () => {
 });
 
 describe("what the table can always see", () => {
-  it("includes the disposal pile, which is face up by the rules", () => {
+  it("includes the size of the one face-up pile, but not what is under the top", () => {
     const state = table({
       hands: { a: ["5H"], b: ["9H"], c: ["4D"] },
       top: "5S",
-      disposalPile: ["KC", "QC"],
+      buriedDiscards: ["KC", "QC"],
     });
-    expect(hiddenView(state, "a").disposalPile.map((c) => c.id)).toEqual(["KC#1", "QC#1"]);
+    const view = hiddenView(state, "a");
+    expect(view.discardPileSize).toBe(3);
+    expect(view.topCard.id).toBe("5S#1");
+    // Only the top card is named. What is buried under it stays buried.
+    expect(JSON.stringify(view)).not.toMatch(/KC#1|QC#1/);
   });
 
   it("names who the game is waiting on, even mid-punishment", () => {
     const state = table({ hands: { a: ["5H"], b: ["9H"], c: ["4D"] }, top: "5S" });
     expect(hiddenView(state, "c").waitingOn).toBe("a");
 
-    const disposing: GameState = {
+    const surrendering: GameState = {
       ...state,
-      phase: { kind: "disposal", playerId: "b", reason: "sunnyBadCall", resume: { kind: "action" } },
+      phase: {
+        kind: "surrender",
+        playerId: "b",
+        reason: "sunnyBadCall",
+        resume: { kind: "action" },
+      },
     };
-    const view = hiddenView(disposing, "c");
+    const view = hiddenView(surrendering, "c");
     expect(view.waitingOn).toBe("b");
-    expect(view.phase).toEqual({ kind: "disposal", playerId: "b", reason: "sunnyBadCall" });
+    // `resume` is engine bookkeeping and never reaches the table.
+    expect(view.phase).toEqual({ kind: "surrender", playerId: "b", reason: "sunnyBadCall" });
+  });
+
+  it("never names the cards a caught player is about to have turned up", () => {
+    // They are still in the deck. Which cards are coming off it is not
+    // something the table gets told in advance.
+    const state: GameState = {
+      ...table({ hands: { a: ["5H"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD", "QD"] }),
+      sunny: { offenderId: "a", touchedIds: ["KD#1", "QD#1"] },
+      phase: { kind: "sunnyPlay" },
+    };
+    for (const viewer of ["a", "b", "c", null]) {
+      const payload = JSON.stringify(redact(state, viewer, { handsVisible: true }));
+      expect(payload).not.toMatch(/KD#1|QD#1/);
+    }
   });
 });

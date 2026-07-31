@@ -33,10 +33,17 @@ describe("dealing", () => {
     expect(new Set(allCardIds(state)).size).toBe(104);
   });
 
-  it("never starts on a wild, whatever the seed", () => {
+  it("keeps an 8 turned up as the seed card, as a natural 8", () => {
+    // Nothing is buried or redealt: whatever comes up is the card in play, and
+    // its own suit is the suit to match.
     for (let seed = 1; seed <= 200; seed++) {
-      expect(topCard(startGame(["a", "b", "c"], seed)).rank).not.toBe("8");
+      const state = startGame(["a", "b", "c"], seed);
+      expect(state.activeSuit).toBe(topCard(state).suit);
+      expect(state.phase.kind).toBe("action");
     }
+    // And at least one of those seeds really did turn up an 8.
+    const seeds = Array.from({ length: 200 }, (_, i) => i + 1);
+    expect(seeds.some((seed) => topCard(startGame(["a", "b", "c"], seed)).rank === "8")).toBe(true);
   });
 
   it("deals the same game from the same seed", () => {
@@ -186,24 +193,67 @@ describe("running out of cards", () => {
   });
 });
 
-describe("when the draw pile runs out", () => {
-  it("recycles everything but the card on top", () => {
+describe("when the deck runs out", () => {
+  it("recycles the whole face-up pile and turns a fresh card up", () => {
     const state = draw(
       table({
         hands: { a: ["2C"], b: ["9D"] },
         top: "5S",
         drawPile: [],
-        buriedDiscards: ["KH", "QH"],
-        disposalPile: ["3C", "4C"],
+        buriedDiscards: ["KH", "QH", "3C", "4C"],
       }),
       "a",
     );
-    expect(topCard(state).id).toBe("5S#1");
-    expect(state.disposalPile).toHaveLength(0);
-    // Four cards were recycled and one of them was immediately drawn.
-    expect(state.drawPile).toHaveLength(3);
-    expect(handOf(state, "a")).toHaveLength(2);
+    // Nothing is held back, so the card that was in play is in the deck now
+    // and the pile is one freshly turned card.
+    expect(state.discardPile).toHaveLength(1);
+    expect(state.drawPile).toHaveLength(4);
+    expect(state.activeSuit).toBe(topCard(state).suit);
+    // The recycle is the whole action — no card reached a hand.
+    expect(handOf(state, "a")).toEqual(["2C#1"]);
+    expect(state.drawsThisTurn).toBe(0);
+    expect(currentPlayer(state).id).toBe("a");
     expect(allCardIds(state)).toHaveLength(7);
+  });
+
+  it("lets a player carry on drawing afterwards, up to their three", () => {
+    let state = table({
+      hands: { a: ["2C"], b: ["9D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["KH", "QH", "JH", "10H"],
+    });
+    state = draw(state, "a");
+    expect(state.drawsThisTurn).toBe(0);
+    state = draw(state, "a");
+    expect(state.drawsThisTurn).toBe(1);
+    expect(handOf(state, "a")).toHaveLength(2);
+  });
+
+  it("hands the must-play rule back the moment the new card gives them a play", () => {
+    // Nothing in a's hand touches the 5S, and the deck is empty. The recycle
+    // turns up a card that 2C does match, so drawing again is now an offence
+    // and playing is compulsory.
+    let state = table({
+      hands: { a: ["2C"], b: ["9D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["2H"],
+    });
+    state = draw(state, "a");
+    expect(topCard(state).id).toBe("2H#1");
+    expect(legalCards(state, currentPlayer(state)).map((c) => c.id)).toEqual(["2C#1"]);
+    expect(draw(state, "a").challenge?.violation).not.toBeNull();
+  });
+
+  it("turns up a natural 8 without stopping to name a suit", () => {
+    const state = draw(
+      table({ hands: { a: ["2C"], b: ["9D"] }, top: "5S", drawPile: [], buriedDiscards: ["8H"] }),
+      "a",
+    );
+    expect(topCard(state).id).toBe("8H#1");
+    expect(state.activeSuit).toBe("H");
+    expect(state.phase.kind).toBe("action");
   });
 
   it("ends the turn when there is genuinely nothing left to draw", () => {

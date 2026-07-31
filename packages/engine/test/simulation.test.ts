@@ -36,7 +36,7 @@ interface RunResult {
 
 const waitingOn = (state: GameState): PlayerId | null => {
   if (state.phase.kind === "over") return null;
-  if (state.phase.kind === "disposal") return state.phase.playerId;
+  if (state.phase.kind === "surrender") return state.phase.playerId;
   return state.players[state.turnIndex]?.id ?? null;
 };
 
@@ -117,6 +117,17 @@ const runGame = ({
       );
     }
 
+    // A card turned up off the deck is natural, 8 or not: the suit to match is
+    // always the one printed on it, and nobody is ever asked to name another.
+    for (const event of result.events) {
+      if (event.type !== "turnedUp") continue;
+      const last = event.cards[event.cards.length - 1];
+      expect(state.activeSuit, "a turned-up card didn't set the suit").toBe(last?.suit);
+    }
+    if (result.events.some((event) => event.type === "turnedUp")) {
+      expect(state.phase.kind, "turning a card up asked for a suit").not.toBe("suit");
+    }
+
     if (state.status === "playing" && state.phase.kind === "action") {
       expect(
         state.players[state.turnIndex]?.eliminated,
@@ -148,16 +159,23 @@ describe("full games", () => {
   it("finish with the Sunny Rule in play, right calls and wrong ones", () => {
     let calls = 0;
     let correct = 0;
+    const turnUps = { recycle: 0, sunnyTouched: 0 };
     for (let seed = 1; seed <= 25; seed++) {
       const run = runGame({ players: 4, seed: seed * 104729, mischief: 25 });
       expect(run.state.status).toBe("over");
       calls += run.sunnyCalls;
       correct += run.correctCalls;
+      for (const event of run.events) {
+        if (event.type === "turnedUp") turnUps[event.reason] += 1;
+      }
     }
     // Both outcomes have to actually occur, or the run proved nothing.
     expect(calls).toBeGreaterThan(0);
     expect(correct).toBeGreaterThan(0);
     expect(calls - correct).toBeGreaterThan(0);
+    // As do both ways a card comes off the deck.
+    expect(turnUps.sunnyTouched).toBeGreaterThan(0);
+    expect(turnUps.recycle).toBeGreaterThan(0);
   });
 
   it("play out identically from the same seed", () => {

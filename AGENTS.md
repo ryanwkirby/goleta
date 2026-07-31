@@ -45,8 +45,8 @@ Public at **https://goleta.ryankirby.net**, port 8063 on the Mac mini, through
 the shared `cloudflared-tunnel` container. See `docs/DEPLOYMENT.md`.
 
 **A redeploy must not kill a game in progress.** Live rooms are snapshotted to
-SQLite on a named volume and restored on boot. If you change the persisted
-shape, migrate it or version it — don't silently invalidate saved rooms.
+disk on a named volume and restored on boot. If you change the persisted shape,
+version it and handle the old one — don't silently invalidate saved rooms.
 
 ## Game rules
 

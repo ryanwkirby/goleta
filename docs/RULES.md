@@ -73,6 +73,14 @@ Take the discard pile and the disposal pile, leave the current top card where it
 is, shuffle everything else together, and that's the new draw pile. Play
 continues. Cards recycle for as long as the game lasts.
 
+### Deadlock
+
+If it ever happens that no player can play and there is nothing left to draw —
+every card sitting in a hand, nobody matching the discard — the game ends there
+and the largest hand wins. With 104 cards in circulation this is close enough to
+impossible that you will probably never see it; it exists so the game cannot
+simply stop.
+
 ## The Sunny Rule
 
 Anyone can draw a card. Not everyone is *allowed* to.

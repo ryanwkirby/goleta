@@ -3,6 +3,5 @@ dist/
 *.local
 .env
 .DS_Store
-data/*.sqlite
-data/*.sqlite-*
+data/
 coverage/

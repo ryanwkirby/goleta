@@ -23,14 +23,14 @@ The full rules are in [`docs/RULES.md`](docs/RULES.md). The short version:
   card on top, and the card they reached for gets turned up as the new card in
   play. Get it wrong and *you* bury a card.
 
-Tables start with every hand face up while people learn, and the host flips them
-down when the table's ready.
+Every hand is face up, all game — spotting the play someone skipped is the
+point, and the app won't spot it for you.
 
 ## Status
 
 **Milestone 1 — online multiplayer is done and live.** Rooms, no-login seats
-that survive a reload or a redeploy, face-up and hidden hands, bots to fill a
-table, and the Sunny Rule, on desktop and phone.
+that survive a reload or a redeploy, bots to fill a table, and the Sunny Rule,
+on desktop and phone.
 
 **Milestone 2** is next: IRL mode for a table of people in the same room, with
 an optional shared screen showing the board.

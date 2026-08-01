@@ -14,10 +14,8 @@ import {
   decideBotIntent,
   nextSeed,
   redact,
-  redactEvents,
   startGame,
   topCard,
-  type EventView,
   type GameEvent,
   type GameState,
   type GameView,
@@ -42,7 +40,6 @@ export interface Room {
   code: string;
   hostId: PlayerId;
   seats: Seat[];
-  handsVisible: boolean;
   startingHandSize: number;
   game: GameState | null;
   gamesPlayed: number;
@@ -103,7 +100,6 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     code: newRoomCode((code) => store.has(code)),
     hostId: seat.id,
     seats: [seat],
-    handsVisible: true,
     startingHandSize: DEFAULT_OPTIONS.startingHandSize,
     game: null,
     gamesPlayed: 0,
@@ -195,12 +191,6 @@ export const removeSeat = (room: Room, byPlayerId: PlayerId, target: PlayerId): 
   touch(room);
 };
 
-export const setHandsVisible = (room: Room, byPlayerId: PlayerId, value: boolean): void => {
-  requireHost(room, byPlayerId);
-  room.handsVisible = value;
-  touch(room);
-};
-
 export const setStartingHandSize = (room: Room, byPlayerId: PlayerId, value: number): void => {
   requireHost(room, byPlayerId);
   if (roomStatus(room) === "playing") fail("wait for this game to finish");
@@ -272,7 +262,7 @@ export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null =
 
   for (const seat of room.seats) {
     if (!seat.bot) continue;
-    const view = redact(game, seat.id, { handsVisible: room.handsVisible });
+    const view = redact(game, seat.id);
     const [intent, seed] = decideBotIntent(view, seat.botSeed);
     seat.botSeed = nextSeed(seed);
     if (intent) return { seat, intent };
@@ -295,7 +285,6 @@ export const wouldCloseSunnyWindow = (room: Room, playerId: PlayerId, intent: In
 export const roomView = (room: Room): RoomView => ({
   code: room.code,
   hostId: room.hostId,
-  handsVisible: room.handsVisible,
   startingHandSize: room.startingHandSize,
   seats: room.seats.map((seat) => ({
     id: seat.id,
@@ -312,13 +301,7 @@ export const roomView = (room: Room): RoomView => ({
 });
 
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>
-  room.game ? redact(room.game, viewerId, { handsVisible: room.handsVisible }) : null;
-
-export const eventsFor = (
-  room: Room,
-  viewerId: PlayerId | null,
-  events: readonly GameEvent[],
-): EventView[] => redactEvents(events, viewerId, { handsVisible: room.handsVisible });
+  room.game ? redact(room.game, viewerId) : null;
 
 // ---------------------------------------------------------------------------
 // Housekeeping

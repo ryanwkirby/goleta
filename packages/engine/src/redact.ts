@@ -1,37 +1,33 @@
 /**
  * The one place that decides what a client is allowed to see.
  *
- * Nothing else in the codebase may send game state to a browser. Two things in
- * particular must never leave this file:
+ * Nothing else in the codebase may send game state to a browser. Hands are not
+ * secret — every hand is face up, always — but two things must never leave this
+ * file:
  *
- *   - other players' hands, when the table is playing with hands down;
  *   - anything at all about `state.challenge`, which holds both the "was that
- *     draw legal?" answer and a full snapshot of the game — every hand included;
+ *     draw legal?" answer and a full snapshot of the game;
  *   - `state.sunny`, which names the cards a caught player is about to have
  *     turned up. Those are still in the deck, and which cards are coming off
  *     the deck is not something the table gets told in advance.
  *
  * A new field on `GameState` is invisible to clients until someone adds it
  * here, which is the intended default.
+ *
+ * `GameEvent`s need no redaction and are broadcast whole: every one of them
+ * describes something that has already happened in the open. A new event that
+ * would not be is a bug in the event, not something to filter on the way out.
  */
 
 import { legalCards, mustPlay, playerById, topCard } from "./rules.ts";
-import type {
-  Card,
-  CardId,
-  GameEvent,
-  GameState,
-  PlayerId,
-  SurrenderReason,
-  Suit,
-} from "./types.ts";
+import type { Card, CardId, GameState, PlayerId, SurrenderReason, Suit } from "./types.ts";
 
 export interface PlayerView {
   id: PlayerId;
   cardCount: number;
   eliminated: boolean;
-  /** Your own hand always; everyone else's only when hands are up. */
-  hand: Card[] | null;
+  /** Face up: everyone's hand, all the time. */
+  hand: Card[];
 }
 
 export type PhaseView =
@@ -44,7 +40,6 @@ export type PhaseView =
 export interface GameView {
   /** Null for a table screen or a spectator, which hold no cards. */
   you: PlayerId | null;
-  handsVisible: boolean;
   players: PlayerView[];
   turnPlayerId: PlayerId;
   /** Whoever the game is waiting on — usually, but not always, the turn. */
@@ -71,10 +66,6 @@ export interface GameView {
   turnNumber: number;
 }
 
-export interface RedactOptions {
-  handsVisible: boolean;
-}
-
 const phaseView = (state: GameState): PhaseView => {
   const phase = state.phase;
   // `resume` is bookkeeping for the engine and means nothing at the table.
@@ -90,11 +81,7 @@ const waitingOn = (state: GameState): PlayerId | null => {
   return state.players[state.turnIndex]?.id ?? null;
 };
 
-export const redact = (
-  state: GameState,
-  viewerId: PlayerId | null,
-  { handsVisible }: RedactOptions,
-): GameView => {
+export const redact = (state: GameState, viewerId: PlayerId | null): GameView => {
   const viewer = viewerId === null ? undefined : playerById(state, viewerId);
   const challenge = state.challenge;
   const canCall =
@@ -107,12 +94,11 @@ export const redact = (
 
   return {
     you: viewer?.id ?? null,
-    handsVisible,
     players: state.players.map((player) => ({
       id: player.id,
       cardCount: player.hand.length,
       eliminated: player.eliminated,
-      hand: handsVisible || player.id === viewer?.id ? player.hand : null,
+      hand: player.hand,
     })),
     turnPlayerId: state.players[state.turnIndex]?.id ?? "",
     waitingOn: waitingOn(state),
@@ -131,24 +117,3 @@ export const redact = (
     turnNumber: state.turnNumber,
   };
 };
-
-/** A `drew` event with the card withheld from everyone but its owner. */
-export type EventView =
-  | Exclude<GameEvent, { type: "drew" }>
-  | { type: "drew"; playerId: PlayerId; card: Card | null };
-
-export const redactEvent = (
-  event: GameEvent,
-  viewerId: PlayerId | null,
-  { handsVisible }: RedactOptions,
-): EventView => {
-  if (event.type !== "drew") return event;
-  const visible = handsVisible || event.playerId === viewerId;
-  return { type: "drew", playerId: event.playerId, card: visible ? event.card : null };
-};
-
-export const redactEvents = (
-  events: readonly GameEvent[],
-  viewerId: PlayerId | null,
-  options: RedactOptions,
-): EventView[] => events.map((event) => redactEvent(event, viewerId, options));

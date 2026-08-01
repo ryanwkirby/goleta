@@ -2,7 +2,7 @@ import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
-import { CardBack, PlayingCard } from "./Card.tsx";
+import { PlayingCard } from "./Card.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>
   room.seats.find((seat) => seat.id === id)?.name ?? "Player";
@@ -35,30 +35,19 @@ function Seat({ player, room, game }: { player: PlayerView; room: RoomView; game
         </span>
       </div>
 
-      {player.hand ? (
-        // Face up. Deliberately no highlight on what they could play — working
-        // that out is the other half of the Sunny Rule.
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {player.hand.map((card) => (
-            <PlayingCard
-              key={card.id}
-              card={card}
-              size="sm"
-              anchor={anchor(cardAnchor(card.id))}
-              arriving={isArriving(card.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="mt-1.5 flex gap-0.5">
-          {Array.from({ length: Math.min(player.cardCount, 8) }, (_, index) => (
-            <CardBack key={index} size="sm" className="h-8 w-6 rounded-sm" />
-          ))}
-          {player.cardCount > 8 ? (
-            <span className="self-end text-xs text-white/40">+{player.cardCount - 8}</span>
-          ) : null}
-        </div>
-      )}
+      {/* Deliberately no highlight on what they could play — working that out
+          is the other half of the Sunny Rule. */}
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        {player.hand.map((card) => (
+          <PlayingCard
+            key={card.id}
+            card={card}
+            size="sm"
+            anchor={anchor(cardAnchor(card.id))}
+            arriving={isArriving(card.id)}
+          />
+        ))}
+      </div>
     </li>
   );
 }

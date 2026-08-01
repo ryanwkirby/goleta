@@ -167,14 +167,12 @@ free.
 
 ---
 
-## Face-up and hidden hands
+## Hands are face up
 
-New tables play **face up**: every hand is visible to everyone, all the time.
-It's how you learn what the game rewards, and it makes the Sunny Rule
-self-evident — you can see exactly who could have played.
+**Every hand is visible to everyone, all the time.** Around a real table the
+cards are held up, not fanned in secret, and the app plays it the same way.
 
-When the host decides the table is ready, they flip hands down. From then on you
-can see **how many** cards each player holds, but not which ones. Sunny calls
-become reads rather than observations, and a wrong one costs you a card.
-
-The Sunny Rule is live in both modes, from the very first game.
+That is what makes the Sunny Rule a rule and not a guess: whether someone had a
+play they skipped is there on the table to be seen. Nobody is deducing it, and
+nobody is being told it either — the app never marks up another player's cards
+for you. Spotting the play, and calling it in time, is the game.

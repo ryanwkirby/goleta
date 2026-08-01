@@ -8,8 +8,8 @@
  * See `docs/PROTOCOL.md` for the conversation these messages make up.
  */
 
-import type { EventView, GameView } from "./redact.ts";
-import type { Intent, PlayerId, Suit } from "./types.ts";
+import type { GameView } from "./redact.ts";
+import type { GameEvent, Intent, PlayerId, Suit } from "./types.ts";
 
 export interface SeatView {
   id: PlayerId;
@@ -22,8 +22,6 @@ export interface SeatView {
 export interface RoomView {
   code: string;
   hostId: PlayerId;
-  /** Hands up while people learn; the host puts them down. */
-  handsVisible: boolean;
   startingHandSize: number;
   seats: SeatView[];
   status: "lobby" | "playing" | "finished";
@@ -42,7 +40,6 @@ export type ClientMessage =
   | { t: "watch"; code: string }
   | { t: "intent"; intent: Intent }
   | { t: "start" }
-  | { t: "setHandsVisible"; value: boolean }
   | { t: "setStartingHandSize"; value: number }
   | { t: "addBot" }
   | { t: "removeSeat"; playerId: PlayerId }
@@ -51,7 +48,7 @@ export type ClientMessage =
 export type ServerMessage =
   /** Identity for this browser. The token is stored and never broadcast. */
   | { t: "welcome"; code: string; playerId: PlayerId | null; token: string | null }
-  | { t: "state"; room: RoomView; game: GameView | null; events: EventView[] }
+  | { t: "state"; room: RoomView; game: GameView | null; events: GameEvent[] }
   | { t: "error"; message: string }
   | { t: "pong" };
 

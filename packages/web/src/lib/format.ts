@@ -1,4 +1,4 @@
-import type { EventView, RoomView, SurrenderReason } from "@goleta/engine";
+import type { GameEvent, RoomView, SurrenderReason } from "@goleta/engine";
 
 import { SUIT_LABEL } from "../components/Card.tsx";
 
@@ -15,7 +15,7 @@ const surrenderPhrase: Record<SurrenderReason, string> = {
 };
 
 /** One event, as a sentence for the table log. */
-export const describeEvent = (event: EventView, nameOf: NameOf): string => {
+export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
   switch (event.type) {
     case "gameStarted":
       return `New game. ${event.upcard.rank}${event.upcard.suit} turned up.`;
@@ -24,9 +24,7 @@ export const describeEvent = (event: EventView, nameOf: NameOf): string => {
     case "suitChosen":
       return `${nameOf(event.playerId)} called ${SUIT_LABEL[event.suit]}.`;
     case "drew":
-      return event.card
-        ? `${nameOf(event.playerId)} drew ${event.card.rank}${event.card.suit}.`
-        : `${nameOf(event.playerId)} drew a card.`;
+      return `${nameOf(event.playerId)} drew ${event.card.rank}${event.card.suit}.`;
     case "reshuffled":
       return `Deck ran out — the pile is shuffled back in, ${event.drawPileSize} to draw.`;
     case "turnedUp": {
@@ -54,5 +52,5 @@ export const describeEvent = (event: EventView, nameOf: NameOf): string => {
 };
 
 /** Events worth interrupting someone for, rather than just logging. */
-export const isNoteworthy = (event: EventView): boolean =>
+export const isNoteworthy = (event: GameEvent): boolean =>
   event.type === "sunnyCalled" || event.type === "eliminated" || event.type === "gameOver";

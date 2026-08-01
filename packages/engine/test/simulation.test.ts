@@ -22,7 +22,6 @@ interface RunOptions {
   seed: number;
   /** Chance in a hundred that a bot draws on purpose while holding a play. */
   mischief?: number;
-  handsVisible?: boolean;
   stepCap?: number;
 }
 
@@ -49,7 +48,6 @@ const runGame = ({
   players,
   seed,
   mischief = 0,
-  handsVisible = false,
   stepCap = 5000,
 }: RunOptions): RunResult => {
   const ids: PlayerId[] = Array.from({ length: players }, (_, i) => `p${i + 1}`);
@@ -75,7 +73,7 @@ const runGame = ({
     }
     // Everyone gets a look in, so Sunny calls come from wherever they come.
     for (const player of state.players) {
-      const view = redact(state, player.id, { handsVisible });
+      const view = redact(state, player.id);
       const [intent, next] = decideBotIntent(view, rng);
       rng = next;
       if (intent) return { intent, deliberateFoul: false };
@@ -185,12 +183,10 @@ describe("full games", () => {
     expect(second.events).toEqual(first.events);
   });
 
-  it("are playable from the redacted view alone, hands up or down", () => {
+  it("are playable from the redacted view alone", () => {
     // The bots see only what a browser sees. A game that plays out this way is
     // a game whose view carries everything the client needs.
-    for (const handsVisible of [true, false]) {
-      const { state } = runGame({ players: 5, seed: 8675309, handsVisible, mischief: 15 });
-      expect(state.status).toBe("over");
-    }
+    const { state } = runGame({ players: 5, seed: 8675309, mischief: 15 });
+    expect(state.status).toBe("over");
   });
 });

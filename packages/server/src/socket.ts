@@ -16,7 +16,6 @@ import {
   addBot,
   applySeatIntent,
   beginGame,
-  eventsFor,
   findRoom,
   gameViewFor,
   joinRoom,
@@ -26,7 +25,6 @@ import {
   rejoinRoom,
   removeSeat,
   roomView,
-  setHandsVisible,
   setStartingHandSize,
   wouldCloseSunnyWindow,
   type Room,
@@ -87,7 +85,7 @@ export const attachSockets = (
         t: "state",
         room: roomView(room),
         game: gameViewFor(room, client.playerId),
-        events: eventsFor(room, client.playerId, events),
+        events: [...events],
       });
     }
     onChange();
@@ -164,9 +162,6 @@ export const attachSockets = (
         broadcast(room, events);
         return scheduleBots(room);
       }
-      case "setHandsVisible":
-        setHandsVisible(room, playerId, message.value);
-        return broadcast(room);
       case "setStartingHandSize":
         setStartingHandSize(room, playerId, message.value);
         return broadcast(room);

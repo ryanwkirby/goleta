@@ -24,9 +24,12 @@ import {
   type TurnUpReason,
 } from "./types.ts";
 
-/** A real table is 3 to 6. The engine allows 2 so tests can stay small. */
-export const MIN_TABLE_PLAYERS = 3;
-export const MAX_TABLE_PLAYERS = 6;
+/**
+ * A real table is 4 to 8, and the lobby is what enforces the floor. The engine
+ * allows 2 so tests can stay small.
+ */
+export const MIN_TABLE_PLAYERS = 4;
+export const MAX_TABLE_PLAYERS = 8;
 
 export const currentPlayer = (state: GameState): PlayerState => {
   const player = state.players[state.turnIndex];
@@ -67,10 +70,17 @@ export const activePlayers = (state: GameState): PlayerState[] =>
 // Setting up
 // ---------------------------------------------------------------------------
 
+/**
+ * `dealerIndex` seats the dealer; play opens on the seat to their left. The
+ * dealer has no other power in this game, so it is not carried on the state —
+ * it exists to settle who leads, and rotating it between rounds is the room's
+ * job, not the engine's.
+ */
 export const startGame = (
   playerIds: readonly PlayerId[],
   seed: number,
   options: GameOptions = DEFAULT_OPTIONS,
+  dealerIndex = 0,
 ): GameState => {
   if (playerIds.length < 2) throw new Error("a game needs at least two players");
   if (playerIds.length > MAX_TABLE_PLAYERS) {
@@ -78,6 +88,9 @@ export const startGame = (
   }
   if (new Set(playerIds).size !== playerIds.length) {
     throw new Error("player ids must be unique");
+  }
+  if (!Number.isInteger(dealerIndex) || dealerIndex < 0 || dealerIndex >= playerIds.length) {
+    throw new Error(`no seat ${dealerIndex} to deal from`);
   }
 
   const [drawPile, seedAfterShuffle] = shuffleDeck(buildDeck(options.deckCount), seed);
@@ -100,7 +113,8 @@ export const startGame = (
   return {
     options,
     players,
-    turnIndex: 0,
+    // The player immediately to the dealer's left opens.
+    turnIndex: (dealerIndex + 1) % players.length,
     drawPile,
     discardPile: [upcard],
     activeSuit: upcard.suit,
@@ -525,8 +539,8 @@ const advanceTurn = (s: GameState, events: GameEvent[]): void => {
 
 /**
  * Nobody can play and there is nothing left to draw — every card is in a hand.
- * Vanishingly unlikely with 104 cards, and a hang if left unhandled, so the
- * game ends here and the biggest hand wins. See `docs/RULES.md`.
+ * Unlikely even with a single 52-card deck, and a hang if left unhandled, so
+ * the game ends here and the biggest hand wins. See `docs/RULES.md`.
  */
 const finishAsStalemate = (s: GameState, events: GameEvent[]): void => {
   const alive = activePlayers(s);

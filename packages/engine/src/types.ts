@@ -31,7 +31,7 @@ export type CardId = string;
 export type PlayerId = string;
 
 export interface Card {
-  /** Unique per physical card — there are two of every rank/suit in play. */
+  /** Unique per physical card, so a specific one can be moved. */
   readonly id: CardId;
   readonly rank: Rank;
   readonly suit: Suit;
@@ -43,8 +43,8 @@ export interface GameOptions {
 }
 
 export const DEFAULT_OPTIONS: GameOptions = {
-  deckCount: 2,
-  startingHandSize: 5,
+  deckCount: 1,
+  startingHandSize: 3,
 };
 
 export interface PlayerState {

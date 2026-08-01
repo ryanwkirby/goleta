@@ -101,22 +101,7 @@ export function Table({
       <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <header className="flex items-center gap-2 text-xs text-white/50">
           <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
-          <span>·</span>
-          {room.hostId === game.you ? (
-            // The host puts hands down whenever the table looks ready for it,
-            // mid-game included — no vote, no waiting for the next deal.
-            <Button
-              variant="ghost"
-              className="min-h-0 px-2 py-1 text-xs"
-              onClick={() => send({ t: "setHandsVisible", value: !room.handsVisible })}
-              title={room.handsVisible ? "Put hands down" : "Put hands up"}
-            >
-              {room.handsVisible ? "hands up" : "hands down"}
-            </Button>
-          ) : (
-            <span>{room.handsVisible ? "hands up" : "hands down"}</span>
-          )}
-          {offline ? <span className="text-amber-300">reconnecting…</span> : null}
+          {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
           <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
             rules
           </Button>

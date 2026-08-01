@@ -9,7 +9,7 @@
  * `gameStarted` is expanded here, from the hands the state already carries.
  */
 
-import type { Card, EventView, GameView, PlayerId } from "@goleta/engine";
+import type { Card, GameEvent, GameView, PlayerId } from "@goleta/engine";
 
 import type { CardSize } from "../components/Card.tsx";
 import { cardAnchor, DECK, HAND, PILE, seatAnchor, type AnchorKey } from "./anchors.ts";
@@ -31,7 +31,7 @@ const RESHUFFLE_CARDS = 3;
 
 export interface FlightPlan {
   id: string;
-  /** Null flies face down: a deal, or someone else's draw with hands down. */
+  /** Null flies face down — a deal, which nobody watches card by card. */
   card: Card | null;
   /** Candidate origins, most specific first. */
   from: AnchorKey[];
@@ -70,7 +70,7 @@ const sizeOfHand = (game: GameView, playerId: PlayerId): CardSize =>
   isYou(game, playerId) ? "md" : "sm";
 
 export const planFlights = (
-  events: readonly EventView[],
+  events: readonly GameEvent[],
   game: GameView,
   nextId: () => string,
 ): Planned => {
@@ -111,17 +111,14 @@ export const planFlights = (
       }
 
       case "drew": {
-        // `card` is null when the table can't see it. That is the redaction
-        // boundary doing its job, and the animation simply flies a card back —
-        // it must never ask for more than the wire gave it.
         add({
           card: event.card,
           from: [DECK],
-          to: cardOrHand(game, event.playerId, event.card?.id ?? null),
+          to: cardOrHand(game, event.playerId, event.card.id),
           size: sizeOfHand(game, event.playerId),
           fromSize: "lg",
           duration: FLIGHT_MS,
-          hides: event.card?.id ?? null,
+          hides: event.card.id,
           toPile: false,
           under: false,
         });
@@ -222,9 +219,7 @@ const dealFlights = (
   for (let round = 0; round < rounds; round += 1) {
     for (const player of game.players) {
       if (player.cardCount <= round) continue;
-      // The id is only known for a hand you can see; without one the card still
-      // flies, it just has nothing to uncover on arrival.
-      const card = player.hand?.[round] ?? null;
+      const card = player.hand[round] ?? null;
       out.push({
         id: nextId(),
         card: null,

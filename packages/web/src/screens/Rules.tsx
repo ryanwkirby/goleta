@@ -43,8 +43,8 @@ export function Rules({ onDone, ctaLabel = "Got it" }: { onDone: () => void; cta
       </ol>
 
       <p className="mt-5 rounded-xl bg-white/5 p-3 text-sm text-white/70">
-        Everyone's cards are face up to begin with, so you can see how the game moves. The host
-        turns them face down when the table is ready.
+        Every hand is face up, all game. Whether someone had a play they skipped is there to be
+        seen — spotting it is on you.
       </p>
 
       <Button variant="primary" full className="mt-5" onClick={onDone}>

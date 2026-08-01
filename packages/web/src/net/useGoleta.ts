@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { ClientMessage, EventView, GameView, RoomView, ServerMessage } from "@goleta/engine";
+import type { ClientMessage, GameEvent, GameView, RoomView, ServerMessage } from "@goleta/engine";
 
 import { forgetIdentity, loadIdentity, saveIdentity } from "./identity.ts";
 
@@ -8,7 +8,7 @@ export type ConnectionStatus = "connecting" | "open" | "closed";
 
 export interface LoggedEvent {
   id: number;
-  event: EventView;
+  event: GameEvent;
   /** When this reached the browser. The table won't act out old news. */
   at: number;
 }

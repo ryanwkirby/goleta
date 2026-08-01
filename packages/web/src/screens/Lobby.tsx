@@ -133,21 +133,6 @@ export function Lobby({
             />
           </div>
 
-          <label className="flex items-center justify-between gap-3">
-            <span className="text-sm text-white">
-              Hands face up
-              <span className="mt-0.5 block text-xs text-white/50">
-                Everyone sees every hand while people learn.
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={room.handsVisible}
-              onChange={(event) => send({ t: "setHandsVisible", value: event.target.checked })}
-              className="size-6 shrink-0 accent-amber-400"
-            />
-          </label>
-
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => send({ t: "addBot" })} disabled={full}>
               Add a bot

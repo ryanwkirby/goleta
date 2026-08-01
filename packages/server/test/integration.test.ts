@@ -24,9 +24,6 @@ interface Harness {
 
 const started: Harness[] = [];
 
-/** `5H#1` as the card objects a v1 snapshot on disk would hold. */
-const legacyCard = (id: string) => ({ id, rank: id.slice(0, -3), suit: id.slice(-3, -2) });
-
 const startServer = async (dataDir: string): Promise<Harness> => {
   const store = loadRooms(dataDir, 60_000);
   const persistence = startPersistence(store, dataDir, 5);
@@ -327,74 +324,6 @@ describe("coming back", () => {
     expect(returning.room?.status).toBe("playing");
     expect(returning.game?.players.find((p) => p.id === playerId)?.cardCount).toBe(cardsBefore);
   }, 30_000);
-
-  it("migrates a game saved before the ruleset update rather than dropping it", async () => {
-    // A v1 room, as the deployed build would have left on disk: a disposal
-    // pile, and a game stopped part-way through the old Sunny resolution.
-    const dataDir = tempDir();
-    const v1 = {
-      version: 1,
-      savedAt: Date.now(),
-      rooms: [
-        {
-          code: "ABCD",
-          hostId: "p1",
-          seats: [
-            { id: "p1", name: "Ryan", token: "t1", connected: true, bot: false },
-            { id: "p2", name: "Sam", token: "t2", connected: true, bot: false },
-          ],
-          handsVisible: true,
-          startingHandSize: 5,
-          gamesPlayed: 0,
-          lastWinnerId: null,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          game: {
-            options: { deckCount: 2, startingHandSize: 5 },
-            players: [
-              { id: "p1", hand: [legacyCard("5H#1"), legacyCard("2C#1")], eliminated: false },
-              { id: "p2", hand: [legacyCard("9H#1")], eliminated: false },
-            ],
-            turnIndex: 0,
-            drawPile: [legacyCard("QD#1")],
-            discardPile: [legacyCard("5S#1")],
-            disposalPile: [legacyCard("KC#1"), legacyCard("QC#1")],
-            activeSuit: "S",
-            phase: {
-              kind: "disposal",
-              playerId: "p1",
-              reason: "sunnyPunishment",
-              resume: { kind: "sunnyPlay" },
-            },
-            challenge: null,
-            drawsThisTurn: 1,
-            rngSeed: 12345,
-            status: "playing",
-            winnerId: null,
-            turnNumber: 3,
-          },
-        },
-      ],
-    };
-    fs.writeFileSync(path.join(dataDir, "rooms.json"), JSON.stringify(v1), "utf8");
-
-    const server = await startServer(dataDir);
-    const returning = await openClient(server.port);
-    returning.send({ t: "rejoin", code: "ABCD", playerId: "p1", token: "t1" });
-    await returning.until((c) => c.game !== null);
-
-    const game = returning.game as GameView;
-    expect(returning.room?.status).toBe("playing");
-    // Hands are untouched, and the disposal pile has been folded into the
-    // face-up pile rather than thrown away — every card is still in the game.
-    expect(game.players.find((p) => p.id === "p1")?.cardCount).toBe(2);
-    expect(game.players.find((p) => p.id === "p2")?.cardCount).toBe(1);
-    expect(game.discardPileSize).toBe(3);
-    expect(game.topCard.id).toBe("5S#1");
-    // The stranded old-shape phase is dropped and the turn simply resumes.
-    expect(game.phase.kind).toBe("action");
-    expect(game.waitingOn).toBe("p1");
-  }, 20_000);
 });
 
 describe("what the wire carries", () => {

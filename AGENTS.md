@@ -44,9 +44,11 @@ compose up -d --build`. (Docs-only changes need no deploy.)
 Public at **https://goleta.ryankirby.net**, port 8063 on the Mac mini, through
 the shared `cloudflared-tunnel` container. See `docs/DEPLOYMENT.md`.
 
-**A redeploy must not kill a game in progress.** Live rooms are snapshotted to
-disk on a named volume and restored on boot. If you change the persisted shape,
-version it and handle the old one — don't silently invalidate saved rooms.
+**A redeploy may drop games in progress.** Live rooms are snapshotted to disk on
+a named volume and restored on boot, which makes a reload or a routine restart
+painless — but that is a convenience, not a guarantee worth building around. If
+you change the persisted shape, bump `SNAPSHOT_VERSION` and let the old
+snapshots be discarded on boot. Don't write migrations for them.
 
 ## Game rules
 

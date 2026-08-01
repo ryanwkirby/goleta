@@ -186,3 +186,14 @@ play they skipped is there on the table to be seen. The app never marks up
 another player's cards for you — and it won't mark up your own either, once
 you've played a game. Spotting the play, and calling it before the sun does the
 work for you, is the game.
+
+## Asking for a hand
+
+Your first game is played with training wheels: the cards you can't play are
+dimmed, and the app tells you whether you have a move. When that game ends, both
+go away for good.
+
+After that, sit on a turn for five seconds and a quiet offer of help appears
+next to your hand. Take it and the highlights come back — for that turn only,
+and with a **"help!"** going up over your cards on every screen at the table.
+The rule is always there when you need it. It is never there quietly.

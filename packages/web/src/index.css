@@ -13,6 +13,44 @@
      Light and colour only, no movement, so it reads the same to anyone who
      has asked their machine to stop animating things. */
   --animate-sunny-tell: sunny-tell 10s cubic-bezier(0.7, 0, 0.9, 0.4) forwards;
+  --animate-help-shout: help-shout 2.6s ease-out forwards;
+}
+
+/* "help!", rising off the hand that asked for it. */
+@keyframes help-shout {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0.5rem) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -0.5rem) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -1.4rem) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -2.2rem) scale(1);
+  }
+}
+
+/* The rise is decoration; the words are the message. Anyone who has asked for
+   less movement gets the same shout, staying put. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes help-shout {
+    0%,
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -0.5rem);
+    }
+    15%,
+    70% {
+      opacity: 1;
+      transform: translate(-50%, -0.5rem);
+    }
+  }
 }
 
 @keyframes sunny-tell {

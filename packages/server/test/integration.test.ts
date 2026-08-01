@@ -396,6 +396,37 @@ describe("what the wire carries", () => {
     }
   }, 20_000);
 
+  it("carries a shout for help to the whole table, watchers included", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+
+    const guest = await openClient(server.port);
+    guest.send({ t: "join", code: host.code as string, name: "Sam" });
+    await guest.until((c) => c.room !== null);
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code: host.code as string });
+    await screen.until((c) => c.room !== null);
+
+    // Asking is public: the point of it is that everyone hears you ask.
+    const heard = Promise.all([
+      host.next((m) => m.t === "shout"),
+      guest.next((m) => m.t === "shout"),
+      screen.next((m) => m.t === "shout"),
+    ]);
+    guest.send({ t: "help" });
+    for (const message of await heard) {
+      expect(message).toEqual({ t: "shout", playerId: guest.playerId, kind: "help" });
+    }
+
+    // A watcher has no seat, so it has no voice either.
+    screen.send({ t: "help" });
+    await screen.until((c) => c.errors.length > 0);
+    expect(screen.errors.at(-1)).toMatch(/watching this table/);
+  }, 20_000);
+
   it("lets a table screen watch without holding cards", async () => {
     const server = await startServer(tempDir());
     const host = await openClient(server.port);

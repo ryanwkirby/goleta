@@ -47,6 +47,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
+| `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
 
 **The `playerId` inside an `intent` is ignored.** The server stamps the seat the
@@ -57,6 +58,9 @@ can only ever act as itself. There's a test that tries it the other way.
 
 - `welcome` — `playerId` and `token` for this browser (both null for a watcher).
 - `state` — the room, your view of the game, and the events that just happened.
+- `shout` — somebody said something out loud. Not a game event: the position
+  doesn't change, it isn't replayed, it isn't in the log, and it goes out
+  identically to everyone. Only `help` so far.
 - `error` — a human-readable sentence. Rejected moves are ordinary; the engine's
   refusals are written to be shown to a player as-is.
 - `pong`.

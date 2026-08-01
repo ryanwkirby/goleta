@@ -2,7 +2,9 @@ import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
+import type { Shout } from "../net/useGoleta.ts";
 import { PlayingCard } from "./Card.tsx";
+import { HelpShout } from "./Help.tsx";
 import { SunnySign } from "./Sunny.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>
@@ -24,11 +26,13 @@ function Seat({
   player,
   room,
   game,
+  shouting,
   onCallSunny,
 }: {
   player: PlayerView;
   room: RoomView;
   game: GameView;
+  shouting: boolean;
   onCallSunny: () => void;
 }) {
   const { anchor, isArriving } = useMotion();
@@ -40,11 +44,14 @@ function Seat({
     <li
       ref={anchor(seatAnchor(player.id))}
       className={[
-        "min-w-32 shrink-0 rounded-xl px-3 py-2 ring-1 transition-colors",
+        "relative min-w-32 shrink-0 rounded-xl px-3 py-2 ring-1 transition-colors",
         onClock ? "bg-amber-400/15 ring-amber-300/60" : "bg-black/20 ring-white/10",
         out ? "opacity-45" : "",
       ].join(" ")}
     >
+      {/* Somebody asking for a hand, said out loud over their own cards. */}
+      {shouting ? <HelpShout name={nameFor(room, player.id)} /> : null}
+
       <div className="flex items-baseline gap-2">
         <span className="truncate text-sm font-semibold text-white">
           {nameFor(room, player.id)}
@@ -87,13 +94,16 @@ function Seat({
 export function Seats({
   room,
   game,
+  shouts,
   onCallSunny,
 }: {
   room: RoomView;
   game: GameView;
+  shouts: Shout[];
   onCallSunny: () => void;
 }) {
   const others = game.players.filter((player) => player.id !== game.you);
+  const shouting = new Set(shouts.map((shout) => shout.playerId));
   return (
     <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Other players">
       {others.map((player) => (
@@ -102,6 +112,7 @@ export function Seats({
           player={player}
           room={room}
           game={game}
+          shouting={shouting.has(player.id)}
           onCallSunny={onCallSunny}
         />
       ))}

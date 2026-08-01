@@ -83,7 +83,7 @@ export function Join({
       </Panel>
 
       <p className="text-center text-xs text-white/40">
-        No account, no install. 3 to 6 players — share the room code and go.
+        No account, no install. 4 to 8 players — share the room code and go.
       </p>
     </div>
   );

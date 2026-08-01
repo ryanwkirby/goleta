@@ -9,6 +9,7 @@ import { Seats } from "../components/Seats.tsx";
 import { SunnyCall, SunnyExplainer, SuitPicker } from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { namerFor } from "../lib/format.ts";
+import { TableMotion } from "../motion/TableMotion.tsx";
 import { hasSeenSunny, markSunnySeen } from "../net/identity.ts";
 import type { LoggedEvent } from "../net/useGoleta.ts";
 
@@ -96,111 +97,113 @@ export function Table({
   };
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <header className="flex items-center gap-2 text-xs text-white/50">
-        <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
-        <span>·</span>
-        {room.hostId === game.you ? (
-          // The host puts hands down whenever the table looks ready for it,
-          // mid-game included — no vote, no waiting for the next deal.
-          <Button
-            variant="ghost"
-            className="min-h-0 px-2 py-1 text-xs"
-            onClick={() => send({ t: "setHandsVisible", value: !room.handsVisible })}
-            title={room.handsVisible ? "Put hands down" : "Put hands up"}
-          >
-            {room.handsVisible ? "hands up" : "hands down"}
-          </Button>
-        ) : (
-          <span>{room.handsVisible ? "hands up" : "hands down"}</span>
-        )}
-        {offline ? <span className="text-amber-300">reconnecting…</span> : null}
-        <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
-          rules
-        </Button>
-        <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onLeave}>
-          leave
-        </Button>
-      </header>
-
-      <Seats room={room} game={game} />
-
-      <div className="flex flex-1 flex-col justify-center gap-4 py-2">
-        <Piles
-          game={game}
-          canDraw={mine && game.phase.kind === "action" && !finished}
-          onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
-        />
-
-        <p
-          className={[
-            "text-center text-sm",
-            mine && !finished ? "font-semibold text-amber-300" : "text-white/60",
-          ].join(" ")}
-          aria-live="polite"
-        >
-          {prompt(game, nameOf)}
-        </p>
-      </div>
-
-      {finished ? (
-        <Panel className="text-center">
-          <p className="text-lg font-semibold text-amber-300">
-            {game.winnerId === game.you
-              ? "You win — you kept your cards."
-              : game.winnerId
-                ? `${nameOf(game.winnerId)} wins.`
-                : "A dead end. Nobody could move."}
-          </p>
+    <TableMotion game={game} log={log}>
+      <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <header className="flex items-center gap-2 text-xs text-white/50">
+          <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
+          <span>·</span>
           {room.hostId === game.you ? (
-            <Button variant="primary" className="mt-3" onClick={() => send({ t: "start" })}>
-              Deal again
+            // The host puts hands down whenever the table looks ready for it,
+            // mid-game included — no vote, no waiting for the next deal.
+            <Button
+              variant="ghost"
+              className="min-h-0 px-2 py-1 text-xs"
+              onClick={() => send({ t: "setHandsVisible", value: !room.handsVisible })}
+              title={room.handsVisible ? "Put hands down" : "Put hands up"}
+            >
+              {room.handsVisible ? "hands up" : "hands down"}
             </Button>
           ) : (
-            <p className="mt-2 text-sm text-white/50">
-              Waiting for {nameOf(room.hostId)} to deal again.
-            </p>
+            <span>{room.handsVisible ? "hands up" : "hands down"}</span>
           )}
-        </Panel>
-      ) : null}
+          {offline ? <span className="text-amber-300">reconnecting…</span> : null}
+          <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
+            rules
+          </Button>
+          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onLeave}>
+            leave
+          </Button>
+        </header>
 
-      {mode === "surrender" ? (
-        <p className="rounded-xl bg-rose-500/15 px-3 py-2 text-center text-sm text-rose-200 ring-1 ring-rose-400/30">
-          Choose any card to give up — it doesn't have to match. Tap it twice.
-        </p>
-      ) : null}
+        <Seats room={room} game={game} />
 
-      <Hand
-        cards={you?.hand ?? []}
-        legalCardIds={game.legalCardIds}
-        mode={mode}
-        onChoose={onChooseCard}
-      />
+        <div className="flex flex-1 flex-col justify-center gap-4 py-2">
+          <Piles
+            game={game}
+            canDraw={mine && game.phase.kind === "action" && !finished}
+            onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
+          />
 
-      <EventLog log={log} nameOf={nameOf} />
+          <p
+            className={[
+              "text-center text-sm",
+              mine && !finished ? "font-semibold text-amber-300" : "text-white/60",
+            ].join(" ")}
+            aria-live="polite"
+          >
+            {prompt(game, nameOf)}
+          </p>
+        </div>
 
-      {game.phase.kind === "suit" && mine ? (
-        <SuitPicker
-          onPick={(suit: Suit) =>
-            send({ t: "intent", intent: { type: "chooseSuit", playerId: me, suit } })
-          }
+        {finished ? (
+          <Panel className="text-center">
+            <p className="text-lg font-semibold text-amber-300">
+              {game.winnerId === game.you
+                ? "You win — you kept your cards."
+                : game.winnerId
+                  ? `${nameOf(game.winnerId)} wins.`
+                  : "A dead end. Nobody could move."}
+            </p>
+            {room.hostId === game.you ? (
+              <Button variant="primary" className="mt-3" onClick={() => send({ t: "start" })}>
+                Deal again
+              </Button>
+            ) : (
+              <p className="mt-2 text-sm text-white/50">
+                Waiting for {nameOf(room.hostId)} to deal again.
+              </p>
+            )}
+          </Panel>
+        ) : null}
+
+        {mode === "surrender" ? (
+          <p className="rounded-xl bg-rose-500/15 px-3 py-2 text-center text-sm text-rose-200 ring-1 ring-rose-400/30">
+            Choose any card to give up — it doesn't have to match. Tap it twice.
+          </p>
+        ) : null}
+
+        <Hand
+          cards={you?.hand ?? []}
+          legalCardIds={game.legalCardIds}
+          mode={mode}
+          onChoose={onChooseCard}
         />
-      ) : null}
 
-      <SunnyCall
-        game={game}
-        room={room}
-        onCall={() => send({ t: "intent", intent: { type: "callSunny", playerId: me } })}
-      />
+        <EventLog log={log} nameOf={nameOf} />
 
-      {explainSunny ? (
-        <SunnyExplainer
-          onDone={() => {
-            markSunnySeen();
-            setExplainSunny(false);
-          }}
+        {game.phase.kind === "suit" && mine ? (
+          <SuitPicker
+            onPick={(suit: Suit) =>
+              send({ t: "intent", intent: { type: "chooseSuit", playerId: me, suit } })
+            }
+          />
+        ) : null}
+
+        <SunnyCall
+          game={game}
+          room={room}
+          onCall={() => send({ t: "intent", intent: { type: "callSunny", playerId: me } })}
         />
-      ) : null}
-    </div>
+
+        {explainSunny ? (
+          <SunnyExplainer
+            onDone={() => {
+              markSunnySeen();
+              setExplainSunny(false);
+            }}
+          />
+        ) : null}
+      </div>
+    </TableMotion>
   );
 }

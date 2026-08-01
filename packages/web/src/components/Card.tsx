@@ -1,3 +1,5 @@
+import type { RefCallback } from "react";
+
 import type { Card as CardModel, Suit } from "@goleta/engine";
 
 export const SUIT_GLYPH: Record<Suit, string> = { C: "♣", D: "♦", H: "♥", S: "♠" };
@@ -18,6 +20,14 @@ const SIZES: Record<CardSize, string> = {
   lg: "h-32 w-24 text-2xl rounded-xl p-2",
 };
 
+/**
+ * The widths above, in pixels at the default root font size. Only the *ratio*
+ * between two of these is ever used — to size a card in flight against the one
+ * it is flying towards — so a browser zoom or a bigger root font doesn't skew
+ * it. Keep them in step with `SIZES` anyway.
+ */
+export const CARD_WIDTH_PX: Record<CardSize, number> = { sm: 40, md: 68, lg: 96 };
+
 interface CardProps {
   card: CardModel;
   size?: CardSize;
@@ -26,6 +36,13 @@ interface CardProps {
   selected?: boolean;
   onClick?: () => void;
   title?: string;
+  /**
+   * The card is still flying to this spot. It keeps its place in the layout and
+   * gives up only its ink, so nothing shifts when it lands.
+   */
+  arriving?: boolean;
+  /** Registers this card as a place a flight can start from or land on. */
+  anchor?: RefCallback<HTMLElement>;
 }
 
 export function PlayingCard({
@@ -35,6 +52,8 @@ export function PlayingCard({
   selected = false,
   onClick,
   title,
+  arriving = false,
+  anchor,
 }: CardProps) {
   const glyph = SUIT_GLYPH[card.suit];
   const colour = isRed(card.suit) ? "text-rose-600" : "text-slate-900";
@@ -42,12 +61,14 @@ export function PlayingCard({
 
   return (
     <Tag
+      ref={anchor}
       type={onClick ? "button" : undefined}
       onClick={onClick}
       title={title}
       aria-label={`${card.rank} of ${SUIT_LABEL[card.suit]}`}
       className={[
         SIZES[size],
+        arriving ? "invisible" : "",
         // `overflow-hidden` is the belt to the layout's braces: a rank like 10
         // at a large text size must never spill past the card's edge.
         "relative flex shrink-0 flex-col items-start overflow-hidden bg-white font-semibold leading-none shadow-lg",
@@ -76,9 +97,18 @@ export function PlayingCard({
 }
 
 /** The back of a card: someone else's hand, or the draw pile. */
-export function CardBack({ size = "md", className = "" }: { size?: CardSize; className?: string }) {
+export function CardBack({
+  size = "md",
+  className = "",
+  anchor,
+}: {
+  size?: CardSize;
+  className?: string;
+  anchor?: RefCallback<HTMLElement>;
+}) {
   return (
     <div
+      ref={anchor}
       aria-hidden
       className={[
         SIZES[size],

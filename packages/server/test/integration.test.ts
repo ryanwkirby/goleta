@@ -327,7 +327,7 @@ describe("coming back", () => {
 });
 
 describe("what the wire carries", () => {
-  it("never sends another player's hand once the host puts hands down", async () => {
+  it("sends every hand to every client, and never the challenge behind them", async () => {
     const server = await startServer(tempDir());
     const host = await openClient(server.port);
     host.send({ t: "create", name: "Ryan" });
@@ -339,24 +339,23 @@ describe("what the wire carries", () => {
     host.send({ t: "addBot" });
     await host.until((c) => (c.room?.seats.length ?? 0) === 3);
 
-    host.send({ t: "setHandsVisible", value: false });
-    await host.until((c) => c.room?.handsVisible === false);
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
     await guest.until((c) => c.game !== null);
 
+    // Each client is sent the other seats' cards, not a count of them.
+    const hostSeenByGuest = guest.game?.players.find((p) => p.id === host.playerId);
+    expect(hostSeenByGuest?.hand).toHaveLength(hostSeenByGuest?.cardCount ?? -1);
+    const guestSeenByHost = host.game?.players.find((p) => p.id === guest.playerId);
+    expect(guestSeenByHost?.hand).toHaveLength(guestSeenByHost?.cardCount ?? -1);
+
+    // Visible hands are not an excuse to relax the rest of the boundary.
     for (const client of [host, guest]) {
-      const own = client.game?.players.find((p) => p.id === client.playerId);
-      expect(own?.hand).toHaveLength(5);
-      for (const other of client.game?.players.filter((p) => p.id !== client.playerId) ?? []) {
-        expect(other.hand).toBeNull();
-        expect(other.cardCount).toBe(5);
-      }
+      const wire = JSON.stringify(client.game);
+      expect(wire).not.toContain("challenge");
+      expect(wire).not.toContain("violation");
+      expect(wire).not.toContain("snapshot");
     }
-    // And the two clients really did receive different cards.
-    const hostCards = host.game?.players.find((p) => p.id === host.playerId)?.hand ?? [];
-    const guestWire = JSON.stringify(guest.game);
-    for (const card of hostCards) expect(guestWire).not.toContain(card.id);
   }, 20_000);
 
   it("lets a table screen watch without holding cards", async () => {

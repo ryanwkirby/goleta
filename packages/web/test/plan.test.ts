@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Card, EventView, GameView } from "@goleta/engine";
+import type { Card, GameEvent, GameView } from "@goleta/engine";
 
 import { planFlights, settlesAt } from "../src/motion/plan.ts";
 
@@ -10,13 +10,12 @@ const card = (id: string, rank: Card["rank"] = "7", suit: Card["suit"] = "H"): C
   suit,
 });
 
-/** A table where you are `me` and everyone else's hands are down. */
+/** A table where you are `me`, facing one other player. */
 const view = (overrides: Partial<GameView> = {}): GameView => ({
   you: "me",
-  handsVisible: false,
   players: [
     { id: "me", cardCount: 3, eliminated: false, hand: [card("m1"), card("m2"), card("m3")] },
-    { id: "them", cardCount: 3, eliminated: false, hand: null },
+    { id: "them", cardCount: 3, eliminated: false, hand: [card("t1"), card("t2"), card("t3")] },
   ],
   turnPlayerId: "me",
   waitingOn: "me",
@@ -41,7 +40,7 @@ const ids = () => {
   return () => `f${(next += 1)}`;
 };
 
-const plan = (events: EventView[], game: GameView = view()) => planFlights(events, game, ids());
+const plan = (events: GameEvent[], game: GameView = view()) => planFlights(events, game, ids());
 
 describe("what moves", () => {
   it("flies your play from the card itself, falling back to the hand", () => {
@@ -87,18 +86,8 @@ describe("what moves", () => {
   });
 });
 
-describe("what a draw is allowed to show", () => {
-  it("flies a card back when the wire withheld the card", () => {
-    const { flights } = plan([{ type: "drew", playerId: "them", card: null }]);
-
-    expect(flights[0]?.card).toBeNull();
-    expect(flights[0]?.from).toEqual(["deck"]);
-    expect(flights[0]?.to).toEqual(["seat:them"]);
-    // Nothing to uncover on arrival: the seat only ever showed a count.
-    expect(flights[0]?.hides).toBeNull();
-  });
-
-  it("shows your own draw, and holds it back until it lands", () => {
+describe("a draw", () => {
+  it("shows your own, and holds it back until it lands", () => {
     const { flights } = plan([{ type: "drew", playerId: "me", card: card("m4") }]);
 
     expect(flights[0]?.card?.id).toBe("m4");
@@ -106,14 +95,13 @@ describe("what a draw is allowed to show", () => {
     expect(flights[0]?.hides).toBe("m4");
   });
 
-  it("never invents a card for a draw it wasn't told about", () => {
-    const { flights } = plan([
-      { type: "drew", playerId: "them", card: null },
-      { type: "drew", playerId: "them", card: null },
-    ]);
+  it("shows someone else's the same way, flying it to their seat", () => {
+    const { flights } = plan([{ type: "drew", playerId: "them", card: card("t4") }]);
 
-    for (const flight of flights) expect(flight.card).toBeNull();
-    expect(JSON.stringify(flights)).not.toContain("m1");
+    expect(flights[0]?.card?.id).toBe("t4");
+    expect(flights[0]?.from).toEqual(["deck"]);
+    expect(flights[0]?.to).toEqual(["card:t4", "seat:them"]);
+    expect(flights[0]?.hides).toBe("t4");
   });
 });
 
@@ -137,15 +125,15 @@ describe("a deal", () => {
 
     expect(dealt.map((flight) => flight.to[0])).toEqual([
       "card:m1",
-      "seat:them",
+      "card:t1",
       "card:m2",
-      "seat:them",
+      "card:t2",
       "card:m3",
-      "seat:them",
+      "card:t3",
     ]);
     // Every card arrives face down and turns over as it lands.
     expect(dealt.every((flight) => flight.card === null)).toBe(true);
-    expect(dealt.filter((flight) => flight.hides !== null)).toHaveLength(3);
+    expect(dealt.filter((flight) => flight.hides !== null)).toHaveLength(6);
   });
 
   it("keeps a full table's deal inside a second", () => {
@@ -153,7 +141,7 @@ describe("a deal", () => {
       id: `p${index}`,
       cardCount: 5,
       eliminated: false,
-      hand: null,
+      hand: Array.from({ length: 5 }, (_, n) => card(`p${index}c${n}`)),
     }));
     const { flights } = plan([{ type: "gameStarted", upcard: card("up") }], view({ players }));
 
@@ -178,7 +166,7 @@ describe("a batch", () => {
   });
 
   it("compresses a burst rather than falling behind the table", () => {
-    const events: EventView[] = Array.from({ length: 20 }, (_, index) => ({
+    const events: GameEvent[] = Array.from({ length: 20 }, (_, index) => ({
       type: "played",
       playerId: "them",
       card: card(`t${index}`),

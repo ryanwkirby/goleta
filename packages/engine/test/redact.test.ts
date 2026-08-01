@@ -1,42 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { redact, redactEvent, startGame, type GameState } from "../src/index.ts";
+import { redact, startGame, type GameState } from "../src/index.ts";
 import { draw, table } from "./helpers.ts";
 
-const hiddenView = (state: GameState, viewer: string) =>
-  redact(state, viewer, { handsVisible: false });
-
-describe("with hands down", () => {
-  it("sends counts and never a card", () => {
-    const state = startGame(["a", "b", "c"], 31337);
-    const view = hiddenView(state, "a");
-
-    const others = view.players.filter((p) => p.id !== "a");
-    expect(others).toHaveLength(2);
-    for (const player of others) {
-      expect(player.hand).toBeNull();
-      expect(player.cardCount).toBe(5);
-    }
-    expect(view.players.find((p) => p.id === "a")?.hand).toHaveLength(5);
-  });
-
-  it("leaks no other hand into the serialised payload", () => {
-    // The real test: not what the shape looks like, but whether any card id
-    // belonging to someone else survives anywhere in the bytes on the wire.
-    let state = startGame(["a", "b", "c", "d"], 555);
-    state = draw(state, state.players[0]?.id ?? "a");
-
-    for (const viewer of state.players) {
-      const wire = JSON.stringify(hiddenView(state, viewer.id));
-      const foreign = state.players
-        .filter((p) => p.id !== viewer.id)
-        .flatMap((p) => p.hand.map((c) => c.id));
-      for (const cardId of foreign) {
-        expect(wire, `${cardId} leaked into ${viewer.id}'s view`).not.toContain(cardId);
-      }
+describe("hands", () => {
+  it("are face up: every seat, every viewer, including a spectator", () => {
+    const state = startGame(["a", "b", "c"], 42);
+    for (const viewer of ["a", "b", "c", null]) {
+      const view = redact(state, viewer);
+      for (const player of view.players) expect(player.hand).toHaveLength(5);
     }
   });
+});
 
+describe("what never leaves the server", () => {
   it("never ships the challenge, which carries every hand in a snapshot", () => {
     const state = draw(
       table({ hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD"] }),
@@ -44,42 +21,10 @@ describe("with hands down", () => {
     );
     expect(state.challenge?.violation?.snapshot).toBeDefined();
 
-    const wire = JSON.stringify(hiddenView(state, "b"));
+    const wire = JSON.stringify(redact(state, "b"));
     expect(wire).not.toContain("snapshot");
     expect(wire).not.toContain("violation");
     expect(wire).not.toContain("challenge");
-    // b's own hand is fine; a's must not be there.
-    expect(wire).toContain("9H#1");
-    expect(wire).not.toContain("5H#1");
-  });
-
-  it("hides which card someone drew, but not that they drew", () => {
-    const event = { type: "drew", playerId: "a", card: { id: "KD#1", rank: "K", suit: "D" } } as const;
-    expect(redactEvent(event, "b", { handsVisible: false })).toEqual({
-      type: "drew",
-      playerId: "a",
-      card: null,
-    });
-    expect(redactEvent(event, "a", { handsVisible: false })).toEqual(event);
-    expect(redactEvent(event, "b", { handsVisible: true })).toEqual(event);
-  });
-});
-
-describe("with hands up", () => {
-  it("shows everything, because that is the point of the mode", () => {
-    const state = startGame(["a", "b", "c"], 42);
-    const view = redact(state, "a", { handsVisible: true });
-    for (const player of view.players) expect(player.hand).toHaveLength(5);
-  });
-
-  it("still keeps the challenge to itself", () => {
-    const state = draw(
-      table({ hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD"] }),
-      "a",
-    );
-    const wire = JSON.stringify(redact(state, "b", { handsVisible: true }));
-    expect(wire).not.toContain("violation");
-    expect(wire).not.toContain("snapshot");
   });
 });
 
@@ -94,7 +39,7 @@ describe("the Sunny button", () => {
       "a",
     );
     for (const state of [guilty, innocent]) {
-      const view = hiddenView(state, "b");
+      const view = redact(state, "b");
       expect(view.sunnyCallable).toBe(true);
       expect(view.sunnyTargetId).toBe("a");
     }
@@ -106,10 +51,10 @@ describe("the Sunny button", () => {
       "a",
     );
     expect(state.status).toBe("playing");
-    expect(hiddenView(state, "a").sunnyCallable).toBe(false);
+    expect(redact(state, "a").sunnyCallable).toBe(false);
 
     const fresh = table({ hands: { a: ["5H"], b: ["9H"], c: ["4D"] }, top: "5S" });
-    expect(hiddenView(fresh, "b").sunnyCallable).toBe(false);
+    expect(redact(fresh, "b").sunnyCallable).toBe(false);
   });
 
   it("isn't offered to a spectator, who holds no cards to lose", () => {
@@ -117,7 +62,7 @@ describe("the Sunny button", () => {
       table({ hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD"] }),
       "a",
     );
-    const view = redact(state, null, { handsVisible: false });
+    const view = redact(state, null);
     expect(view.you).toBeNull();
     expect(view.sunnyCallable).toBe(false);
     expect(view.legalCardIds).toEqual([]);
@@ -131,7 +76,7 @@ describe("what the table can always see", () => {
       top: "5S",
       buriedDiscards: ["KC", "QC"],
     });
-    const view = hiddenView(state, "a");
+    const view = redact(state, "a");
     expect(view.discardPileSize).toBe(3);
     expect(view.topCard.id).toBe("5S#1");
     // Only the top card is named. What is buried under it stays buried.
@@ -140,7 +85,7 @@ describe("what the table can always see", () => {
 
   it("names who the game is waiting on, even mid-punishment", () => {
     const state = table({ hands: { a: ["5H"], b: ["9H"], c: ["4D"] }, top: "5S" });
-    expect(hiddenView(state, "c").waitingOn).toBe("a");
+    expect(redact(state, "c").waitingOn).toBe("a");
 
     const surrendering: GameState = {
       ...state,
@@ -151,7 +96,7 @@ describe("what the table can always see", () => {
         resume: { kind: "action" },
       },
     };
-    const view = hiddenView(surrendering, "c");
+    const view = redact(surrendering, "c");
     expect(view.waitingOn).toBe("b");
     // `resume` is engine bookkeeping and never reaches the table.
     expect(view.phase).toEqual({ kind: "surrender", playerId: "b", reason: "sunnyBadCall" });
@@ -166,7 +111,7 @@ describe("what the table can always see", () => {
       phase: { kind: "sunnyPlay" },
     };
     for (const viewer of ["a", "b", "c", null]) {
-      const payload = JSON.stringify(redact(state, viewer, { handsVisible: true }));
+      const payload = JSON.stringify(redact(state, viewer));
       expect(payload).not.toMatch(/KD#1|QD#1/);
     }
   });

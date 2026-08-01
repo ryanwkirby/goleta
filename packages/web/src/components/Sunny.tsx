@@ -21,11 +21,12 @@ function SunGlyph() {
 }
 
 /**
- * The sun that sits beside whoever is on the clock.
+ * The sun that sits beside the player a call would land on.
  *
- * Three states, and the difference between the last two is the whole feature:
+ * It exists only while there is somebody to accuse, so seeing one always means
+ * the same thing. Two states, and the difference between them is the whole
+ * feature:
  *
- *   - `idle` — nobody has drawn. Furniture, and not even focusable.
  *   - `callable` — a draw is standing and you may accuse. Says nothing about
  *     whether you'd be right.
  *   - `telling` — the draw *was* illegal. The glow ramps from barely-there to
@@ -33,9 +34,6 @@ function SunGlyph() {
  *     one who isn't; they just no longer have to be right to be quick. This is
  *     a deliberate departure from the old "the server never says" rule, and it
  *     is written down in `AGENTS.md`.
- *
- * The glyph tracks the seat it sits in; the label names whoever the call would
- * actually land on, which after a played card is not always the same person.
  */
 export function SunnySign({
   state,
@@ -43,19 +41,11 @@ export function SunnySign({
   onCall,
   className = "",
 }: {
-  state: "idle" | "callable" | "telling";
+  state: "callable" | "telling";
   targetName?: string;
   onCall?: () => void;
   className?: string;
 }) {
-  if (state === "idle") {
-    return (
-      <span aria-hidden className={["block h-5 w-5 text-white/25", className].join(" ")}>
-        <SunGlyph />
-      </span>
-    );
-  }
-
   return (
     <button
       type="button"

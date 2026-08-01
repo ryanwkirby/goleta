@@ -9,7 +9,7 @@
 import type { Server } from "node:http";
 import { WebSocket, WebSocketServer } from "ws";
 
-import type { ClientMessage, GameEvent, PlayerId, ServerMessage } from "@goleta/engine";
+import type { BotSpeed, ClientMessage, GameEvent, PlayerId, ServerMessage } from "@goleta/engine";
 
 import {
   RoomError,
@@ -25,6 +25,7 @@ import {
   rejoinRoom,
   removeSeat,
   roomView,
+  setBotSpeed,
   wouldCloseSunnyWindow,
   type Room,
   type RoomStore,
@@ -45,7 +46,21 @@ export interface BotTiming {
   sunnyGrace: number;
 }
 
-export const DEFAULT_BOT_TIMING: BotTiming = { move: 800, call: 1200, sunnyGrace: 3500 };
+/**
+ * Two paces, chosen by the host in the lobby.
+ *
+ * `human` is the default and the one a table actually wants: five seconds is
+ * about how long a person takes to look at their hand and decide. Its grace is
+ * longer than the ten seconds the sun icon takes to reach full glow, so the
+ * tell has time to finish arriving before a bot can shut the window on it.
+ *
+ * `lightning` is the old pace, for anyone who finds the wait tedious. It closes
+ * a challenge window well before that glow tops out, which is the trade.
+ */
+export const DEFAULT_BOT_TIMING: Record<BotSpeed, BotTiming> = {
+  human: { move: 5000, call: 5000, sunnyGrace: 12_000 },
+  lightning: { move: 800, call: 1200, sunnyGrace: 3500 },
+};
 
 interface Client {
   socket: WebSocket;
@@ -59,7 +74,7 @@ export interface SocketDeps {
   store: RoomStore;
   onChange: () => void;
   /** Tests run the bots flat out; people need them slower than that. */
-  botTiming?: BotTiming;
+  botTiming?: Record<BotSpeed, BotTiming>;
 }
 
 const send = (client: Client, message: ServerMessage): void => {
@@ -95,12 +110,13 @@ export const attachSockets = (
     const move = nextBotMove(room);
     if (!move) return;
 
+    const timing = botTiming[room.botSpeed];
     const delay =
       move.intent.type === "callSunny"
-        ? botTiming.call
+        ? timing.call
         : wouldCloseSunnyWindow(room, move.seat.id, move.intent)
-          ? botTiming.sunnyGrace
-          : botTiming.move;
+          ? timing.sunnyGrace
+          : timing.move;
 
     const timer = setTimeout(() => {
       botTimers.delete(room.code);
@@ -163,6 +179,9 @@ export const attachSockets = (
       }
       case "addBot":
         addBot(room, playerId);
+        return broadcast(room);
+      case "setBotSpeed":
+        setBotSpeed(room, playerId, message.speed);
         return broadcast(room);
       case "removeSeat":
         removeSeat(room, playerId, message.playerId);

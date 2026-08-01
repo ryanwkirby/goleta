@@ -16,6 +16,7 @@ import {
   redact,
   startGame,
   topCard,
+  type BotSpeed,
   type GameEvent,
   type GameState,
   type GameView,
@@ -45,6 +46,12 @@ export interface Room {
    * doesn't lead every game; null until the room has dealt at all.
    */
   dealerId: PlayerId | null;
+  /**
+   * How fast this table's bots play. Human by default: a bot that answers
+   * instantly is unpleasant to sit next to, and it leaves no room to notice a
+   * Sunny call, let alone make one.
+   */
+  botSpeed: BotSpeed;
   game: GameState | null;
   gamesPlayed: number;
   lastWinnerId: PlayerId | null;
@@ -115,6 +122,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     hostId: seat.id,
     seats: [seat],
     dealerId: null,
+    botSpeed: "human",
     game: null,
     gamesPlayed: 0,
     lastWinnerId: null,
@@ -193,6 +201,19 @@ export const addBot = (room: Room, byPlayerId: PlayerId): void => {
   const taken = new Set(room.seats.map((s) => s.name));
   const name = BOT_NAMES.find((candidate) => !taken.has(candidate)) ?? "Bot";
   room.seats.push(newSeatFor(name, true));
+  touch(room);
+};
+
+/**
+ * Between games only. Changing the pace mid-hand would move a challenge window
+ * that somebody is already watching, and there is nothing here worth that.
+ */
+export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): void => {
+  requireHost(room, byPlayerId);
+  if (roomStatus(room) === "playing") fail("wait for this game to finish");
+  if (speed !== "human" && speed !== "lightning") fail("no such speed");
+
+  room.botSpeed = speed;
   touch(room);
 };
 
@@ -320,6 +341,7 @@ export const roomView = (room: Room): RoomView => ({
   minPlayers: MIN_TABLE_PLAYERS,
   maxPlayers: MAX_TABLE_PLAYERS,
   lastWinnerId: room.lastWinnerId,
+  botSpeed: room.botSpeed,
 });
 
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>

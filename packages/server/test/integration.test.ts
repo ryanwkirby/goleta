@@ -31,6 +31,12 @@ interface Harness {
 
 const started: Harness[] = [];
 
+/** Both speeds run flat out here; the pacing itself is the room store's job. */
+const FLAT_OUT = {
+  human: { move: 2, call: 2, sunnyGrace: 5 },
+  lightning: { move: 2, call: 2, sunnyGrace: 5 },
+};
+
 const startServer = async (dataDir: string): Promise<Harness> => {
   const store = loadRooms(dataDir, 60_000);
   const persistence = startPersistence(store, dataDir, 5);
@@ -38,7 +44,7 @@ const startServer = async (dataDir: string): Promise<Harness> => {
   const detach = attachSockets(server, {
     store,
     onChange: () => persistence.save(),
-    botTiming: { move: 2, call: 2, sunnyGrace: 5 },
+    botTiming: FLAT_OUT,
   });
 
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -263,6 +269,25 @@ describe("a room over the wire", () => {
     await guest.until((c) => c.errors.length > 0);
     expect(guest.errors.at(-1)).toMatch(/only the host/);
     expect(guest.room?.seats).toHaveLength(2);
+  }, 20_000);
+
+  it("lets the host set the bot speed, and tells the whole table about it", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+
+    const guest = await openClient(server.port);
+    guest.send({ t: "join", code: host.code as string, name: "Sam" });
+    await guest.until((c) => c.room !== null);
+    expect(guest.room?.botSpeed).toBe("human");
+
+    guest.send({ t: "setBotSpeed", speed: "lightning" });
+    await guest.until((c) => c.errors.length > 0);
+    expect(guest.errors.at(-1)).toMatch(/only the host/);
+
+    host.send({ t: "setBotSpeed", speed: "lightning" });
+    await guest.until((c) => c.room?.botSpeed === "lightning");
   }, 20_000);
 });
 

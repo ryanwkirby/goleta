@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { ClientMessage, RoomView } from "@goleta/engine";
+import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
 import { Button, Panel } from "../components/ui.tsx";
 
@@ -32,6 +32,46 @@ function RoomCode({ code }: { code: string }) {
   );
 }
 
+const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
+  { key: "human", label: "Human", blurb: "A few seconds a turn, like people play." },
+  { key: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
+];
+
+/**
+ * Only worth showing once there's a bot to pace. It's a table setting rather
+ * than a personal one — the bots are timed on the server, so everyone watches
+ * the same game.
+ */
+function BotSpeedPicker({
+  speed,
+  onPick,
+}: {
+  speed: BotSpeed;
+  onPick: (speed: BotSpeed) => void;
+}) {
+  const chosen = SPEEDS.find((option) => option.key === speed);
+
+  return (
+    <div className="mt-3 border-t border-white/10 pt-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Bot speed</p>
+      <div className="mt-2 flex gap-2">
+        {SPEEDS.map((option) => (
+          <Button
+            key={option.key}
+            variant={option.key === speed ? "primary" : "secondary"}
+            className="flex-1"
+            aria-pressed={option.key === speed}
+            onClick={() => onPick(option.key)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-white/40">{chosen?.blurb}</p>
+    </div>
+  );
+}
+
 export function Lobby({
   room,
   playerId,
@@ -48,6 +88,7 @@ export function Lobby({
   const isHost = room.hostId === playerId;
   const enough = room.seats.length >= room.minPlayers;
   const full = room.seats.length >= room.maxPlayers;
+  const anyBots = room.seats.some((seat) => seat.bot);
   const winner = room.lastWinnerId
     ? room.seats.find((seat) => seat.id === room.lastWinnerId)
     : undefined;
@@ -128,10 +169,21 @@ export function Lobby({
               {room.gamesPlayed > 0 ? "Next game" : "Deal"}
             </Button>
           </div>
+          {anyBots ? (
+            <BotSpeedPicker
+              speed={room.botSpeed}
+              onPick={(speed) => send({ t: "setBotSpeed", speed })}
+            />
+          ) : null}
         </Panel>
       ) : (
         <Panel className="text-center text-sm text-white/60">
           Waiting for {room.seats.find((seat) => seat.isHost)?.name ?? "the host"} to deal.
+          {anyBots ? (
+            <span className="mt-1 block text-xs text-white/40">
+              Bots play at {room.botSpeed === "human" ? "a human" : "lightning"} speed.
+            </span>
+          ) : null}
         </Panel>
       )}
 

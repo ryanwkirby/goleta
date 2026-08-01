@@ -19,6 +19,12 @@ export interface SeatView {
   isHost: boolean;
 }
 
+/**
+ * How fast the bots play. A table setting rather than a personal one: bots are
+ * timed on the server, so everyone watches the same pace.
+ */
+export type BotSpeed = "human" | "lightning";
+
 export interface RoomView {
   code: string;
   hostId: PlayerId;
@@ -28,6 +34,7 @@ export interface RoomView {
   minPlayers: number;
   maxPlayers: number;
   lastWinnerId: PlayerId | null;
+  botSpeed: BotSpeed;
 }
 
 export type ClientMessage =
@@ -41,6 +48,8 @@ export type ClientMessage =
   | { t: "start" }
   | { t: "addBot" }
   | { t: "removeSeat"; playerId: PlayerId }
+  /** Host only, between games: how fast the bots at this table play. */
+  | { t: "setBotSpeed"; speed: BotSpeed }
   | { t: "ping" };
 
 export type ServerMessage =

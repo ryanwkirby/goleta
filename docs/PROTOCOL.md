@@ -46,6 +46,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
+| `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `ping` | anyone | Answered with `pong`. |
 
 **The `playerId` inside an `intent` is ignored.** The server stamps the seat the
@@ -77,13 +78,22 @@ succeed would leak the answer just as surely as sending a flag called
 
 ## Bots
 
-Bots live on the server and act on a timer. Ordinary moves are paced at around
-800ms so the table can follow what happened.
+Bots live on the server and act on a timer, at one of two paces the host picks
+in the lobby. The setting belongs to the room, not to a viewer — one timer feeds
+every screen at the table.
 
-The exception matters: when a challenge window is open, a bot that would close
-it by acting waits considerably longer (3.5s). Without that, a bot sitting in
-the next seat would shut the window before any human could reach the button, and
-the Sunny Rule would only ever work between people.
+| | ordinary move | calling Sunny | grace before closing a challenge window |
+| --- | --- | --- | --- |
+| `human` (default) | 5s | 5s | 12s |
+| `lightning` | 800ms | 1.2s | 3.5s |
+
+The grace column is the one that matters: when a challenge window is open, a bot
+whose move would close it waits instead. Without that, a bot in the next seat
+would shut the window before any human could reach for it and the Sunny Rule
+would only ever work between people. On `human` it also outlasts the ten seconds
+the sun icon takes to reach full glow, so the tell finishes arriving before the
+window can close on it — on `lightning` it doesn't, which is the trade you make
+for the pace.
 
 ## Connection care
 

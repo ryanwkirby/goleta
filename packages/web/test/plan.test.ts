@@ -141,7 +141,7 @@ describe("a deal", () => {
       id: `p${index}`,
       cardCount: 5,
       eliminated: false,
-      hand: Array.from({ length: 5 }, (_, n) => card(`p${index}c${n}`)),
+      hand: [0, 1, 2, 3, 4].map((n) => card(`p${index}c${n}`)),
     }));
     const { flights } = plan([{ type: "gameStarted", upcard: card("up") }], view({ players }));
 

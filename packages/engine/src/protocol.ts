@@ -19,6 +19,12 @@ export interface SeatView {
   isHost: boolean;
 }
 
+/**
+ * How fast the bots play. A table setting rather than a personal one: bots are
+ * timed on the server, so everyone watches the same pace.
+ */
+export type BotSpeed = "human" | "lightning";
+
 export interface RoomView {
   code: string;
   hostId: PlayerId;
@@ -28,6 +34,7 @@ export interface RoomView {
   minPlayers: number;
   maxPlayers: number;
   lastWinnerId: PlayerId | null;
+  botSpeed: BotSpeed;
 }
 
 export type ClientMessage =
@@ -41,12 +48,22 @@ export type ClientMessage =
   | { t: "start" }
   | { t: "addBot" }
   | { t: "removeSeat"; playerId: PlayerId }
+  /** Host only, between games: how fast the bots at this table play. */
+  | { t: "setBotSpeed"; speed: BotSpeed }
+  /** "I'm stuck." Turns your own highlights back on, and tells the table. */
+  | { t: "help" }
   | { t: "ping" };
 
 export type ServerMessage =
   /** Identity for this browser. The token is stored and never broadcast. */
   | { t: "welcome"; code: string; playerId: PlayerId | null; token: string | null }
   | { t: "state"; room: RoomView; game: GameView | null; events: GameEvent[] }
+  /**
+   * Somebody said something out loud. Not a game event: nothing about the
+   * position changes, it isn't replayed, and it isn't in the log — it happens
+   * and it's gone, like speaking.
+   */
+  | { t: "shout"; playerId: PlayerId; kind: "help" }
   | { t: "error"; message: string }
   | { t: "pong" };
 

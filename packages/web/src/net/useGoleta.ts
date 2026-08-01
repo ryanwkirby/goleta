@@ -13,6 +13,13 @@ export interface LoggedEvent {
   at: number;
 }
 
+/** Somebody asking for help, out loud. Lives for a couple of seconds. */
+export interface Shout {
+  id: number;
+  playerId: string;
+  kind: "help";
+}
+
 export interface Goleta {
   status: ConnectionStatus;
   room: RoomView | null;
@@ -20,6 +27,8 @@ export interface Goleta {
   playerId: string | null;
   /** Most recent first. */
   log: LoggedEvent[];
+  /** Whoever is currently asking for help. Empties itself. */
+  shouts: Shout[];
   error: string | null;
   clearError: () => void;
   send: (message: ClientMessage) => void;
@@ -28,6 +37,8 @@ export interface Goleta {
 
 const MAX_LOG = 60;
 const RETRY_MS = [500, 1000, 2000, 4000, 8000];
+/** Long enough to read across the table, short enough to be embarrassing. */
+const SHOUT_MS = 2600;
 
 const socketUrl = (): string => {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -51,6 +62,7 @@ export const useGoleta = (): Goleta => {
   const [game, setGame] = useState<GameView | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [log, setLog] = useState<LoggedEvent[]>([]);
+  const [shouts, setShouts] = useState<Shout[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -58,6 +70,7 @@ export const useGoleta = (): Goleta => {
   const attemptRef = useRef(0);
   const closedRef = useRef(false);
   const logIdRef = useRef(0);
+  const shoutIdRef = useRef(0);
   /** The room we're in, so a reconnect knows what to reclaim. */
   const codeRef = useRef<string | null>(null);
 
@@ -125,6 +138,20 @@ export const useGoleta = (): Goleta => {
             }
             break;
           }
+          case "shout": {
+            // It clears itself: nothing downstream has to remember to forget.
+            const shout: Shout = {
+              id: ++shoutIdRef.current,
+              playerId: message.playerId,
+              kind: message.kind,
+            };
+            setShouts((previous) => [...previous, shout]);
+            window.setTimeout(
+              () => setShouts((previous) => previous.filter((s) => s.id !== shout.id)),
+              SHOUT_MS,
+            );
+            break;
+          }
           case "error":
             setError(message.message);
             break;
@@ -163,5 +190,5 @@ export const useGoleta = (): Goleta => {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { status, room, game, playerId, log, error, clearError, send, leave };
+  return { status, room, game, playerId, log, shouts, error, clearError, send, leave };
 };

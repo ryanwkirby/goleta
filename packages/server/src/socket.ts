@@ -9,7 +9,7 @@
 import type { Server } from "node:http";
 import { WebSocket, WebSocketServer } from "ws";
 
-import type { ClientMessage, GameEvent, PlayerId, ServerMessage } from "@goleta/engine";
+import type { BotSpeed, ClientMessage, GameEvent, PlayerId, ServerMessage } from "@goleta/engine";
 
 import {
   RoomError,
@@ -25,6 +25,7 @@ import {
   rejoinRoom,
   removeSeat,
   roomView,
+  setBotSpeed,
   wouldCloseSunnyWindow,
   type Room,
   type RoomStore,
@@ -45,7 +46,24 @@ export interface BotTiming {
   sunnyGrace: number;
 }
 
-export const DEFAULT_BOT_TIMING: BotTiming = { move: 800, call: 1200, sunnyGrace: 3500 };
+/**
+ * Two paces, chosen by the host in the lobby.
+ *
+ * `human` is the default and the one a table actually wants: five seconds is
+ * about how long a person takes to look at their hand and decide. Its grace is
+ * longer than the ten seconds the sun icon takes to reach full glow, so the
+ * tell has time to finish arriving before a bot can shut the window on it.
+ *
+ * `lightning` is the old pace, for anyone who finds the wait tedious. It closes
+ * a challenge window well before that glow tops out, which is the trade.
+ */
+export const DEFAULT_BOT_TIMING: Record<BotSpeed, BotTiming> = {
+  human: { move: 5000, call: 5000, sunnyGrace: 12_000 },
+  lightning: { move: 800, call: 1200, sunnyGrace: 3500 },
+};
+
+/** Asking for help is free, but not unlimited: it reaches every screen. */
+const SHOUT_COOLDOWN_MS = 2000;
 
 interface Client {
   socket: WebSocket;
@@ -53,13 +71,14 @@ interface Client {
   /** Null for a table screen or spectator: they see the board and hold no cards. */
   playerId: PlayerId | null;
   alive: boolean;
+  lastShoutAt: number;
 }
 
 export interface SocketDeps {
   store: RoomStore;
   onChange: () => void;
   /** Tests run the bots flat out; people need them slower than that. */
-  botTiming?: BotTiming;
+  botTiming?: Record<BotSpeed, BotTiming>;
 }
 
 const send = (client: Client, message: ServerMessage): void => {
@@ -75,6 +94,13 @@ export const attachSockets = (
   const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 16 * 1024 });
   const clients = new Set<Client>();
   const botTimers = new Map<string, NodeJS.Timeout>();
+
+  /** The same message to every screen at one table, redaction not involved. */
+  const announce = (room: Room, message: ServerMessage): void => {
+    for (const client of clients) {
+      if (client.code === room.code) send(client, message);
+    }
+  };
 
   /** Everyone in the room gets their own view of the same moment. */
   const broadcast = (room: Room, events: readonly GameEvent[] = []): void => {
@@ -95,12 +121,13 @@ export const attachSockets = (
     const move = nextBotMove(room);
     if (!move) return;
 
+    const timing = botTiming[room.botSpeed];
     const delay =
       move.intent.type === "callSunny"
-        ? botTiming.call
+        ? timing.call
         : wouldCloseSunnyWindow(room, move.seat.id, move.intent)
-          ? botTiming.sunnyGrace
-          : botTiming.move;
+          ? timing.sunnyGrace
+          : timing.move;
 
     const timer = setTimeout(() => {
       botTimers.delete(room.code);
@@ -164,6 +191,17 @@ export const attachSockets = (
       case "addBot":
         addBot(room, playerId);
         return broadcast(room);
+      case "setBotSpeed":
+        setBotSpeed(room, playerId, message.speed);
+        return broadcast(room);
+      case "help": {
+        // Silently dropped rather than refused: a rejected "help" would put an
+        // error banner in front of the one player already asking for a hand.
+        const now = Date.now();
+        if (now - client.lastShoutAt < SHOUT_COOLDOWN_MS) return;
+        client.lastShoutAt = now;
+        return announce(room, { t: "shout", playerId, kind: "help" });
+      }
       case "removeSeat":
         removeSeat(room, playerId, message.playerId);
         return broadcast(room);
@@ -171,7 +209,7 @@ export const attachSockets = (
   };
 
   wss.on("connection", (socket: WebSocket) => {
-    const client: Client = { socket, code: null, playerId: null, alive: true };
+    const client: Client = { socket, code: null, playerId: null, alive: true, lastShoutAt: 0 };
     clients.add(client);
 
     socket.on("pong", () => {

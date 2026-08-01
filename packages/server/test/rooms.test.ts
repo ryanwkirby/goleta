@@ -8,7 +8,15 @@ import { describe, expect, it } from "vitest";
 
 import { MAX_TABLE_PLAYERS, MIN_TABLE_PLAYERS } from "@goleta/engine";
 
-import { addBot, beginGame, createRoom, createStore, type Room } from "../src/rooms.ts";
+import {
+  addBot,
+  beginGame,
+  createRoom,
+  createStore,
+  roomView,
+  setBotSpeed,
+  type Room,
+} from "../src/rooms.ts";
 
 /** A room with the host in seat one and bots filling it out to `size`. */
 const seatedRoom = (size = MIN_TABLE_PLAYERS): Room => {
@@ -76,5 +84,25 @@ describe("seating", () => {
 
     expect(names).toHaveLength(MAX_TABLE_PLAYERS);
     expect(new Set(names).size).toBe(MAX_TABLE_PLAYERS);
+  });
+});
+
+describe("bot speed", () => {
+  it("starts human, and the host can change it between games", () => {
+    const room = seatedRoom();
+    expect(roomView(room).botSpeed).toBe("human");
+
+    setBotSpeed(room, room.hostId, "lightning");
+    expect(roomView(room).botSpeed).toBe("lightning");
+  });
+
+  it("is the host's to set, and only between games", () => {
+    const room = seatedRoom();
+    const guest = room.seats[1]?.id ?? "";
+    expect(() => setBotSpeed(room, guest, "lightning")).toThrow(/only the host/);
+
+    beginGame(room, room.hostId);
+    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/wait for this game/);
+    expect(room.botSpeed).toBe("human");
   });
 });

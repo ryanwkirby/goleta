@@ -9,7 +9,8 @@ import { Rules } from "./screens/Rules.tsx";
 import { Table } from "./screens/Table.tsx";
 
 export function App() {
-  const { status, room, game, playerId, log, error, clearError, send, leave } = useGoleta();
+  const { status, room, game, playerId, log, shouts, error, clearError, send, leave } =
+    useGoleta();
   const [showRules, setShowRules] = useState(false);
   const [seatedOnce, setSeatedOnce] = useState(false);
 
@@ -58,6 +59,7 @@ export function App() {
         room={room}
         game={game}
         log={log}
+        shouts={shouts}
         send={send}
         onLeave={leave}
         onShowRules={() => setShowRules(true)}

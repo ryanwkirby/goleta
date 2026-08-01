@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
@@ -6,15 +6,32 @@ import { EventLog } from "../components/EventLog.tsx";
 import { Hand, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { Seats } from "../components/Seats.tsx";
-import { SunnyCall, SunnyExplainer, SuitPicker } from "../components/Sunny.tsx";
+import {
+  SunnyAnnounce,
+  SunnyExplainer,
+  SunnySign,
+  SuitPicker,
+} from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
+import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
-import { hasSeenSunny, markSunnySeen } from "../net/identity.ts";
-import type { LoggedEvent } from "../net/useGoleta.ts";
+import {
+  gamesFinished,
+  hasSeenSunny,
+  markSunnySeen,
+  recordGameFinished,
+} from "../net/identity.ts";
+import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
+
+/** How long the table looks at "X called it on Y" before anything else. */
+const ANNOUNCE_MS = 3200;
+
+/** How long you can sit on a turn before the app offers you a hand. */
+const STALL_MS = 5000;
 
 /** What the table is waiting for, said plainly. */
-const prompt = (game: GameView, nameOf: (id: string) => string): string => {
+const prompt = (game: GameView, nameOf: (id: string) => string, assist: boolean): string => {
   const mine = game.waitingOn === game.you;
   switch (game.phase.kind) {
     case "over":
@@ -41,6 +58,9 @@ const prompt = (game: GameView, nameOf: (id: string) => string): string => {
         : `${nameOf(game.turnPlayerId)} has to make the play they skipped.`;
     case "action":
       if (!mine) return `${nameOf(game.turnPlayerId)} to play.`;
+      // Both of these give the answer away — being told you *must* play is
+      // being told a card matches — so neither is said unless help is on.
+      if (!assist) return "Your turn.";
       return game.youMustPlay
         ? "Your turn — you have a card that matches, so you have to play it."
         : "Nothing matches. Draw a card.";
@@ -51,6 +71,7 @@ export function Table({
   room,
   game,
   log,
+  shouts,
   send,
   onLeave,
   onShowRules,
@@ -59,22 +80,82 @@ export function Table({
   room: RoomView;
   game: GameView;
   log: LoggedEvent[];
+  shouts: Shout[];
   send: (message: ClientMessage) => void;
   onLeave: () => void;
   onShowRules: () => void;
   offline: boolean;
 }) {
   const [explainSunny, setExplainSunny] = useState(false);
+  const [announcing, setAnnouncing] = useState(false);
+  const [finishedGames, setFinishedGames] = useState(gamesFinished);
+  const [graduating, setGraduating] = useState(false);
+  const [helpedTurn, setHelpedTurn] = useState<number | null>(null);
+  const [stalled, setStalled] = useState(false);
   const nameOf = namerFor(room);
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
   const finished = game.status === "over";
 
-  // The rule is taught by being used: the first time one lands, explain it.
-  const lastSunny = log.find((entry) => entry.event.type === "sunnyCalled")?.id;
+  // A call is news before it's a lesson: everyone gets told who called it on
+  // whom, and the explanation waits until that banner has been and gone. It is
+  // taught by being used, so only first-timers ever see the second part.
+  const lastCall = log.find((entry) => entry.event.type === "sunnyCalled");
+  const lastCallId = lastCall?.id;
+  const call = lastCall?.event.type === "sunnyCalled" ? lastCall.event : null;
   useEffect(() => {
-    if (lastSunny !== undefined && !hasSeenSunny()) setExplainSunny(true);
-  }, [lastSunny]);
+    if (lastCallId !== undefined) setAnnouncing(true);
+  }, [lastCallId]);
+
+  const announcementOver = useCallback(() => {
+    setAnnouncing(false);
+    if (!hasSeenSunny()) setExplainSunny(true);
+  }, []);
+
+  const callSunny = (): void =>
+    send({ t: "intent", intent: { type: "callSunny", playerId: game.you ?? "" } });
+
+  /**
+   * Whether the table is marking up your playable cards. Your first game comes
+   * with the guardrails on; after that they're something you ask for, one turn
+   * at a time. Being caught out having a play you didn't make is the whole
+   * subject of the Sunny Rule, and an app that points at the answer never lets
+   * anyone be caught.
+   *
+   * Making the play you skipped is the exception: you've already been caught,
+   * the move is forced, and there is nothing left to fumble.
+   */
+  const learning = finishedGames === 0;
+  const assist =
+    game.phase.kind === "sunnyPlay" || learning || helpedTurn === game.turnNumber;
+
+  // One count per game actually watched to the end. Keyed off the event rather
+  // than the status so that coming back to a finished room doesn't count again.
+  const lastGameOverId = log.find((entry) => entry.event.type === "gameOver")?.id;
+  useEffect(() => {
+    if (lastGameOverId === undefined || game.you === null) return;
+    const played = recordGameFinished();
+    setFinishedGames(played);
+    if (played === 1) setGraduating(true);
+  }, [lastGameOverId, game.you]);
+
+  // Five seconds on a turn you haven't moved on, and the app offers a hand.
+  // Every fresh draw restarts the clock: you're deciding again.
+  const couldUseHelp = mine && game.phase.kind === "action" && !finished && !assist;
+  useEffect(() => {
+    setStalled(false);
+    if (!couldUseHelp) return;
+    const timer = setTimeout(() => setStalled(true), STALL_MS);
+    return () => clearTimeout(timer);
+  }, [couldUseHelp, game.turnNumber, game.drawsThisTurn]);
+
+  const askForHelp = (): void => {
+    setHelpedTurn(game.turnNumber);
+    setStalled(false);
+    send({ t: "help" });
+  };
+
+  const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
 
   const mode: HandMode =
     game.phase.kind === "surrender" && game.phase.playerId === game.you
@@ -110,7 +191,12 @@ export function Table({
           </Button>
         </header>
 
-        <Seats room={room} game={game} />
+        <Seats
+          room={room}
+          game={game}
+          shouts={shouts}
+          onCallSunny={callSunny}
+        />
 
         <div className="flex flex-1 flex-col justify-center gap-4 py-2">
           <Piles
@@ -126,7 +212,7 @@ export function Table({
             ].join(" ")}
             aria-live="polite"
           >
-            {prompt(game, nameOf)}
+            {prompt(game, nameOf, assist)}
           </p>
         </div>
 
@@ -157,12 +243,41 @@ export function Table({
           </p>
         ) : null}
 
-        <Hand
-          cards={you?.hand ?? []}
-          legalCardIds={game.legalCardIds}
-          mode={mode}
-          onChoose={onChooseCard}
-        />
+        {/*
+          The sun normally lives in the seat of whoever is on the clock, which
+          leaves nowhere for it on your own turn. That case is real and still
+          callable: someone draws illegally, plays, and the turn lands on you
+          with the window still open. Without this the call would be
+          unreachable, so it comes to sit by your hand instead.
+        */}
+        <div className="relative flex flex-col">
+          <div className="flex min-h-7 items-center gap-2 px-1">
+            {game.sunnyCallable && game.turnPlayerId === game.you ? (
+              <>
+                <SunnySign
+                  state="callable"
+                  targetName={game.sunnyTargetId ? nameOf(game.sunnyTargetId) : undefined}
+                  onCall={callSunny}
+                />
+                <span className="text-xs text-white/40">
+                  {game.sunnyTargetId ? `${nameOf(game.sunnyTargetId)}?` : null}
+                </span>
+              </>
+            ) : null}
+            {stalled ? <HelpLink onAsk={askForHelp} /> : null}
+          </div>
+
+          {/* Your own shout, over your own cards, same as everyone else sees. */}
+          {shoutingHere ? <HelpShout /> : null}
+
+          <Hand
+            cards={you?.hand ?? []}
+            legalCardIds={game.legalCardIds}
+            mode={mode}
+            assist={assist}
+            onChoose={onChooseCard}
+          />
+        </div>
 
         <EventLog log={log} nameOf={nameOf} />
 
@@ -174,11 +289,15 @@ export function Table({
           />
         ) : null}
 
-        <SunnyCall
-          game={game}
-          room={room}
-          onCall={() => send({ t: "intent", intent: { type: "callSunny", playerId: me } })}
-        />
+        {announcing && call ? (
+          <SunnyAnnounce
+            callerName={nameOf(call.callerId)}
+            targetName={nameOf(call.targetId)}
+            correct={call.correct}
+            onDone={announcementOver}
+            ms={ANNOUNCE_MS}
+          />
+        ) : null}
 
         {explainSunny ? (
           <SunnyExplainer
@@ -188,6 +307,8 @@ export function Table({
             }}
           />
         ) : null}
+
+        {graduating ? <Graduation onDone={() => setGraduating(false)} /> : null}
       </div>
     </TableMotion>
   );

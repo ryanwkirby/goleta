@@ -123,6 +123,13 @@ committed, the moment has passed.
 If several people call at once, only the **first call to arrive** is judged. The
 rest are too late, and cost them nothing.
 
+A small sun sits beside whoever is on the clock. Any time somebody has drawn,
+it can be tapped to call — that much says nothing about whether you'd be right.
+But if the draw really was illegal, and it is still that player's turn, the sun
+begins to glow, faintly at first and unmistakably by about ten seconds in. Call
+it early and you are backing your own eyes. Wait for the sun to make up your
+mind and everyone watched you wait.
+
 It applies to any illegal draw in the turn, not just the first one. Drawing a
 second card when the first card you drew gave you a play is exactly the same
 offence.
@@ -175,6 +182,18 @@ free.
 cards are held up, not fanned in secret, and the app plays it the same way.
 
 That is what makes the Sunny Rule a rule and not a guess: whether someone had a
-play they skipped is there on the table to be seen. Nobody is deducing it, and
-nobody is being told it either — the app never marks up another player's cards
-for you. Spotting the play, and calling it in time, is the game.
+play they skipped is there on the table to be seen. The app never marks up
+another player's cards for you — and it won't mark up your own either, once
+you've played a game. Spotting the play, and calling it before the sun does the
+work for you, is the game.
+
+## Asking for a hand
+
+Your first game is played with training wheels: the cards you can't play are
+dimmed, and the app tells you whether you have a move. When that game ends, both
+go away for good.
+
+After that, sit on a turn for five seconds and a quiet offer of help appears
+next to your hand. Take it and the highlights come back — for that turn only,
+and with a **"help!"** going up over your cards on every screen at the table.
+The rule is always there when you need it. It is never there quietly.

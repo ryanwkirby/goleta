@@ -73,6 +73,36 @@ export const markRulesSeen = (): void => {
   }
 };
 
+const GAMES_KEY = "goleta:games-finished";
+
+/**
+ * How many games this browser has seen through to the end.
+ *
+ * It decides one thing: whether the table still marks up your playable cards
+ * for you. It does that until your first game is over, and then stops — see
+ * `AGENTS.md`. Still no accounts; this is a number in `localStorage` next to
+ * the seat tokens, and clearing it just means you get the guardrails again.
+ */
+export const gamesFinished = (): number => {
+  try {
+    const raw = Number(localStorage.getItem(GAMES_KEY));
+    return Number.isFinite(raw) && raw > 0 ? raw : 0;
+  } catch {
+    return 0;
+  }
+};
+
+/** Returns the new count, so a caller can notice the first one going by. */
+export const recordGameFinished = (): number => {
+  const next = gamesFinished() + 1;
+  try {
+    localStorage.setItem(GAMES_KEY, String(next));
+  } catch {
+    // Private browsing. The guardrails just never come off.
+  }
+  return next;
+};
+
 const SUNNY_KEY = "goleta:sunny-seen";
 
 /** The Sunny Rule is taught by being used, so we only explain it once. */

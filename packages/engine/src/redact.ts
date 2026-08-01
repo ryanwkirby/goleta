@@ -5,8 +5,11 @@
  * secret — every hand is face up, always — but two things must never leave this
  * file:
  *
- *   - anything at all about `state.challenge`, which holds both the "was that
- *     draw legal?" answer and a full snapshot of the game;
+ *   - `state.challenge` itself, which carries a full snapshot of the game and
+ *     therefore of every hand as it stood a moment ago. One *derived* bit of it
+ *     does go out — `sunnyWouldLand`, whether a call would land — and that is a
+ *     deliberate decision recorded in `AGENTS.md`, not a hole. The object stays
+ *     here regardless.
  *   - `state.sunny`, which names the cards a caught player is about to have
  *     turned up. Those are still in the deck, and which cards are coming off
  *     the deck is not something the table gets told in advance.
@@ -57,6 +60,20 @@ export interface GameView {
    */
   sunnyCallable: boolean;
   sunnyTargetId: PlayerId | null;
+  /**
+   * Whether a call would actually land — the tell behind the sun icon's glow.
+   *
+   * This is the one thing about the challenge window that used to be kept back
+   * on purpose, and shipping it was a deliberate design decision, not an
+   * oversight: see the Sunny Rule section of `AGENTS.md`. The balance is in the
+   * UI, where the glow takes ten seconds to become obvious, so a player who is
+   * watching still beats one who isn't.
+   *
+   * Sent only to viewers who could call this instant. The drawer never learns
+   * they've been caught, and a spectator — who can't call at all — is told
+   * nothing either.
+   */
+  sunnyWouldLand: boolean;
   /** Your own playable cards. Never computed for anyone else's hand. */
   legalCardIds: CardId[];
   /** Whether you are currently forbidden from drawing. */
@@ -110,6 +127,7 @@ export const redact = (state: GameState, viewerId: PlayerId | null): GameView =>
     drawsThisTurn: state.drawsThisTurn,
     sunnyCallable: canCall,
     sunnyTargetId: canCall ? challenge.drawerId : null,
+    sunnyWouldLand: canCall && challenge.violation !== null,
     legalCardIds: viewer ? legalCards(state, viewer).map((c) => c.id) : [],
     youMustPlay: viewer ? mustPlay(state, viewer) : false,
     status: state.status,

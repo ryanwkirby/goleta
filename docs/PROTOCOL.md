@@ -46,6 +46,8 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
+| `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
+| `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
 
 **The `playerId` inside an `intent` is ignored.** The server stamps the seat the
@@ -56,34 +58,58 @@ can only ever act as itself. There's a test that tries it the other way.
 
 - `welcome` — `playerId` and `token` for this browser (both null for a watcher).
 - `state` — the room, your view of the game, and the events that just happened.
+- `shout` — somebody said something out loud. Not a game event: the position
+  doesn't change, it isn't replayed, it isn't in the log, and it goes out
+  identically to everyone. Only `help` so far.
 - `error` — a human-readable sentence. Rejected moves are ordinary; the engine's
   refusals are written to be shown to a player as-is.
 - `pong`.
 
 ## What the server never sends
 
-- Anything about the challenge window beyond `sunnyCallable` and
-  `sunnyTargetId`. In particular, never whether a draw was legal.
+- The `challenge` object itself, which carries a full snapshot of the game and
+  therefore of every hand as it stood a moment ago.
 - The contents of the deck, including the cards a Sunny call is about to turn
   up off it.
 
 Hands are not on that list: every hand is face up, so `state` carries all of
 them and `events` go out whole, the same bytes to everybody seated.
 
-The first one shapes the protocol more than it looks. `sunnyCallable` is true
-after **any** draw by somebody else — offering the call only when it would
-succeed would leak the answer just as surely as sending a flag called
-`wasIllegal`. Two draws, one honest and one not, produce byte-identical views.
+### What it does send, and used not to
+
+Three fields describe the challenge window: `sunnyCallable`, `sunnyTargetId`,
+and `sunnyWouldLand`.
+
+The first two are old. `sunnyCallable` is true after **any** draw by somebody
+else, honest or not — the call is always available, so its presence tells you
+nothing.
+
+`sunnyWouldLand` is the answer, and sending it at all reverses a decision this
+document used to state the other way round. It is the tell behind the sun
+icon's glow, and the balance is in how the UI spends it: the glow takes ten
+seconds to go from barely perceptible to unmissable, so a player watching the
+table still gets there before one who isn't. It goes only to viewers who could
+call this instant — never to the drawer, who is not told they've been caught,
+and never to a spectator, who has no call to make.
 
 ## Bots
 
-Bots live on the server and act on a timer. Ordinary moves are paced at around
-800ms so the table can follow what happened.
+Bots live on the server and act on a timer, at one of two paces the host picks
+in the lobby. The setting belongs to the room, not to a viewer — one timer feeds
+every screen at the table.
 
-The exception matters: when a challenge window is open, a bot that would close
-it by acting waits considerably longer (3.5s). Without that, a bot sitting in
-the next seat would shut the window before any human could reach the button, and
-the Sunny Rule would only ever work between people.
+| | ordinary move | calling Sunny | grace before closing a challenge window |
+| --- | --- | --- | --- |
+| `human` (default) | 5s | 5s | 12s |
+| `lightning` | 800ms | 1.2s | 3.5s |
+
+The grace column is the one that matters: when a challenge window is open, a bot
+whose move would close it waits instead. Without that, a bot in the next seat
+would shut the window before any human could reach for it and the Sunny Rule
+would only ever work between people. On `human` it also outlasts the ten seconds
+the sun icon takes to reach full glow, so the tell finishes arriving before the
+window can close on it — on `lightning` it doesn't, which is the trade you make
+for the pace.
 
 ## Connection care
 

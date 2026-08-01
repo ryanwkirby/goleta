@@ -15,11 +15,19 @@ export function Hand({
   cards,
   legalCardIds,
   mode,
+  assist,
   onChoose,
 }: {
   cards: Card[];
   legalCardIds: string[];
   mode: HandMode;
+  /**
+   * Whether to mark up the cards you can play. Off by default once you've
+   * finished a game — see `AGENTS.md`. Being able to see your own legal move
+   * at a glance is exactly what stops you making the mistake the Sunny Rule
+   * exists to punish, and the mistake is the game.
+   */
+  assist: boolean;
   onChoose: (cardId: string) => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -115,19 +123,21 @@ export function Hand({
             size="md"
             anchor={refFor(card.id)}
             arriving={isArriving(card.id)}
-            // In play mode the unplayable cards are dimmed. When giving a card
-            // up, legality is irrelevant, so nothing is dimmed.
-            dimmed={mode === "play" && !playable}
+            // With help on, the unplayable cards are dimmed. Without it they
+            // all look alike. When giving a card up, legality is irrelevant,
+            // so nothing is dimmed either way.
+            dimmed={mode === "play" && assist && !playable}
             selected={selected === card.id}
             onClick={mode === "idle" ? undefined : () => choose(card)}
+            // The tooltip is a highlight in slow motion, so it stays quiet too.
             title={
               mode === "surrender"
                 ? selected === card.id
                   ? "Tap again to give it up"
                   : "Give up this card"
-                : playable
-                  ? "Play this card"
-                  : "Doesn't match"
+                : assist && !playable
+                  ? "Doesn't match"
+                  : "Play this card"
             }
           />
         );

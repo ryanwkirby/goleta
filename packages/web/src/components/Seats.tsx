@@ -1,16 +1,20 @@
 import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
+import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
+import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard } from "./Card.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>
   room.seats.find((seat) => seat.id === id)?.name ?? "Player";
 
 function Seat({ player, room, game }: { player: PlayerView; room: RoomView; game: GameView }) {
+  const { anchor, isArriving } = useMotion();
   const onClock = game.waitingOn === player.id;
   const out = player.eliminated;
 
   return (
     <li
+      ref={anchor(seatAnchor(player.id))}
       className={[
         "min-w-32 shrink-0 rounded-xl px-3 py-2 ring-1 transition-colors",
         onClock ? "bg-amber-400/15 ring-amber-300/60" : "bg-black/20 ring-white/10",
@@ -36,7 +40,13 @@ function Seat({ player, room, game }: { player: PlayerView; room: RoomView; game
         // that out is the other half of the Sunny Rule.
         <div className="mt-1.5 flex flex-wrap gap-1">
           {player.hand.map((card) => (
-            <PlayingCard key={card.id} card={card} size="sm" />
+            <PlayingCard
+              key={card.id}
+              card={card}
+              size="sm"
+              anchor={anchor(cardAnchor(card.id))}
+              arriving={isArriving(card.id)}
+            />
           ))}
         </div>
       ) : (

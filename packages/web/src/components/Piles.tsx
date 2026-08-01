@@ -1,5 +1,7 @@
 import type { GameView } from "@goleta/engine";
 
+import { DECK, PILE } from "../motion/anchors.ts";
+import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitBadge } from "./Card.tsx";
 
 export function Piles({
@@ -11,8 +13,14 @@ export function Piles({
   canDraw: boolean;
   onDraw: () => void;
 }) {
+  const { anchor, pileFace } = useMotion();
+  // The state's top card is the one that has *finished* arriving. While a card
+  // is still on its way here the pile keeps showing the card it is landing on,
+  // and shows nothing at all through a deal, until the upcard drops.
+  const face = pileFace(game.topCard);
+  const shown = face ?? game.topCard;
   // The named suit only needs saying when it isn't the one you can see.
-  const suitOverridden = game.activeSuit !== game.topCard.suit;
+  const suitOverridden = game.activeSuit !== shown.suit;
 
   return (
     <div className="flex items-center justify-center gap-6">
@@ -36,7 +44,7 @@ export function Piles({
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
           ].join(" ")}
         >
-          <CardBack size="lg" />
+          <CardBack size="lg" anchor={anchor(DECK)} />
           <span className="absolute inset-x-0 bottom-2 text-center font-mono text-sm text-white/70">
             {game.drawPileSize}
           </span>
@@ -45,7 +53,15 @@ export function Piles({
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
-        <PlayingCard card={game.topCard} size="lg" />
+        {face ? (
+          <PlayingCard card={face} size="lg" anchor={anchor(PILE)} />
+        ) : (
+          <div
+            ref={anchor(PILE)}
+            aria-hidden
+            className="h-32 w-24 rounded-xl border border-dashed border-white/15"
+          />
+        )}
         <span className="text-xs text-white/40">
           {suitOverridden ? "showing" : `${game.discardPileSize} played`}
         </span>

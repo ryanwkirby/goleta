@@ -30,8 +30,8 @@ describe("what never leaves the server", () => {
   });
 });
 
-describe("the Sunny button", () => {
-  it("looks exactly the same whether or not the draw was legal", () => {
+describe("the Sunny tell", () => {
+  it("is offered on any draw, and says which of them was actually illegal", () => {
     const guilty = draw(
       table({ hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD"] }),
       "a",
@@ -40,11 +40,26 @@ describe("the Sunny button", () => {
       table({ hands: { a: ["2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
       "a",
     );
+    // The call is available either way — you may always accuse.
     for (const state of [guilty, innocent]) {
       const view = redact(state, "b");
       expect(view.sunnyCallable).toBe(true);
       expect(view.sunnyTargetId).toBe("a");
     }
+    // Whether it would land is what the sun icon spends ten seconds admitting.
+    expect(redact(guilty, "b").sunnyWouldLand).toBe(true);
+    expect(redact(innocent, "b").sunnyWouldLand).toBe(false);
+  });
+
+  it("never tells the drawer they've been caught", () => {
+    const guilty = draw(
+      table({ hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD"] }),
+      "a",
+    );
+    // A caught player watching their own screen learns nothing, and neither
+    // does a spectator, who has no call to make.
+    expect(redact(guilty, "a").sunnyWouldLand).toBe(false);
+    expect(redact(guilty, null).sunnyWouldLand).toBe(false);
   });
 
   it("isn't offered to the drawer, or to anyone once the window shuts", () => {

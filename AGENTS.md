@@ -65,7 +65,7 @@ normal card games is inverted, so read `docs/RULES.md` before touching
 ## Rules that look like bugs and are not
 
 These are load-bearing. Each one will read as an oversight to a fresh pair of
-eyes; all three have already been decided deliberately. Do not "fix" them.
+eyes; all of them have already been decided deliberately. Do not "fix" them.
 
 - **The draw pile stays tappable when you have a legal play, with no warning.**
   Drawing when you could have played is the violation the entire Sunny Rule
@@ -73,11 +73,24 @@ eyes; all three have already been decided deliberately. Do not "fix" them.
   confirmation dialog, no "are you sure?", no hint.
 - **The app never highlights other players' legal cards.** Every hand is face
   up, so you can see them; working out whether they had a play is your job.
-  Adding that highlight makes Sunny calls automatic and deletes the mechanic.
-- **Every draw looks identical on the wire and offers the Sunny button.** The
-  server knows whether a draw was a violation; that flag must never leave the
-  server, not even implicitly by only showing the call button when a call would
-  succeed.
+  Adding that highlight would make Sunny calls trivially automatic.
+- **The app does not tell you which of your own cards are playable either**, and
+  the turn prompt won't say whether you have a play. That guardrail is on until
+  you finish your first game and then comes off for good — after which you can
+  ask for it back, one turn at a time, and everyone at the table hears you ask
+  (#33). Restoring the highlights unconditionally removes the chance to make the
+  mistake the Sunny Rule feeds on.
+- **The server does say whether a draw was illegal — slowly.** This one reversed
+  in #31, and the old rule ("that flag must never leave the server") is gone.
+  `GameView.sunnyWouldLand` carries it to anyone who could call, and the sun
+  icon spends ten seconds ramping from barely visible to unmissable. The trade
+  was made with eyes open: a player watching the table still calls it sooner
+  than one who isn't, and a call is available on any draw regardless, so the
+  button's mere presence still reveals nothing. Do not "restore" the old
+  behaviour, and do not shorten the ramp — the ramp *is* the balance.
+- **The drawer is never told they've been caught**, and neither is a spectator.
+  `sunnyWouldLand` is gated on being able to call. The whole `state.challenge`
+  object, snapshot and all, still never leaves the server.
 
 ## Architecture
 

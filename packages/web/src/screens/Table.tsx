@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
@@ -6,12 +6,20 @@ import { EventLog } from "../components/EventLog.tsx";
 import { Hand, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { Seats } from "../components/Seats.tsx";
-import { SunnyCall, SunnyExplainer, SuitPicker } from "../components/Sunny.tsx";
+import {
+  SunnyAnnounce,
+  SunnyExplainer,
+  SunnySign,
+  SuitPicker,
+} from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { namerFor } from "../lib/format.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
 import { hasSeenSunny, markSunnySeen } from "../net/identity.ts";
 import type { LoggedEvent } from "../net/useGoleta.ts";
+
+/** How long the table looks at "X called it on Y" before anything else. */
+const ANNOUNCE_MS = 3200;
 
 /** What the table is waiting for, said plainly. */
 const prompt = (game: GameView, nameOf: (id: string) => string): string => {
@@ -65,16 +73,29 @@ export function Table({
   offline: boolean;
 }) {
   const [explainSunny, setExplainSunny] = useState(false);
+  const [announcing, setAnnouncing] = useState(false);
   const nameOf = namerFor(room);
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
   const finished = game.status === "over";
 
-  // The rule is taught by being used: the first time one lands, explain it.
-  const lastSunny = log.find((entry) => entry.event.type === "sunnyCalled")?.id;
+  // A call is news before it's a lesson: everyone gets told who called it on
+  // whom, and the explanation waits until that banner has been and gone. It is
+  // taught by being used, so only first-timers ever see the second part.
+  const lastCall = log.find((entry) => entry.event.type === "sunnyCalled");
+  const lastCallId = lastCall?.id;
+  const call = lastCall?.event.type === "sunnyCalled" ? lastCall.event : null;
   useEffect(() => {
-    if (lastSunny !== undefined && !hasSeenSunny()) setExplainSunny(true);
-  }, [lastSunny]);
+    if (lastCallId !== undefined) setAnnouncing(true);
+  }, [lastCallId]);
+
+  const announcementOver = useCallback(() => {
+    setAnnouncing(false);
+    if (!hasSeenSunny()) setExplainSunny(true);
+  }, []);
+
+  const callSunny = (): void =>
+    send({ t: "intent", intent: { type: "callSunny", playerId: game.you ?? "" } });
 
   const mode: HandMode =
     game.phase.kind === "surrender" && game.phase.playerId === game.you
@@ -110,7 +131,7 @@ export function Table({
           </Button>
         </header>
 
-        <Seats room={room} game={game} />
+        <Seats room={room} game={game} onCallSunny={callSunny} />
 
         <div className="flex flex-1 flex-col justify-center gap-4 py-2">
           <Piles
@@ -157,6 +178,26 @@ export function Table({
           </p>
         ) : null}
 
+        {/*
+          The sun normally lives in the seat of whoever is on the clock, which
+          leaves nowhere for it on your own turn. That case is real and still
+          callable: someone draws illegally, plays, and the turn lands on you
+          with the window still open. Without this the call would be
+          unreachable, so it comes to sit by your hand instead.
+        */}
+        {game.sunnyCallable && game.turnPlayerId === game.you ? (
+          <div className="flex items-center gap-2 px-1">
+            <SunnySign
+              state="callable"
+              targetName={game.sunnyTargetId ? nameOf(game.sunnyTargetId) : undefined}
+              onCall={callSunny}
+            />
+            <span className="text-xs text-white/40">
+              {game.sunnyTargetId ? `${nameOf(game.sunnyTargetId)}?` : null}
+            </span>
+          </div>
+        ) : null}
+
         <Hand
           cards={you?.hand ?? []}
           legalCardIds={game.legalCardIds}
@@ -174,11 +215,15 @@ export function Table({
           />
         ) : null}
 
-        <SunnyCall
-          game={game}
-          room={room}
-          onCall={() => send({ t: "intent", intent: { type: "callSunny", playerId: me } })}
-        />
+        {announcing && call ? (
+          <SunnyAnnounce
+            callerName={nameOf(call.callerId)}
+            targetName={nameOf(call.targetId)}
+            correct={call.correct}
+            onDone={announcementOver}
+            ms={ANNOUNCE_MS}
+          />
+        ) : null}
 
         {explainSunny ? (
           <SunnyExplainer

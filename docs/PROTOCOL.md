@@ -63,18 +63,30 @@ can only ever act as itself. There's a test that tries it the other way.
 
 ## What the server never sends
 
-- Anything about the challenge window beyond `sunnyCallable` and
-  `sunnyTargetId`. In particular, never whether a draw was legal.
+- The `challenge` object itself, which carries a full snapshot of the game and
+  therefore of every hand as it stood a moment ago.
 - The contents of the deck, including the cards a Sunny call is about to turn
   up off it.
 
 Hands are not on that list: every hand is face up, so `state` carries all of
 them and `events` go out whole, the same bytes to everybody seated.
 
-The first one shapes the protocol more than it looks. `sunnyCallable` is true
-after **any** draw by somebody else — offering the call only when it would
-succeed would leak the answer just as surely as sending a flag called
-`wasIllegal`. Two draws, one honest and one not, produce byte-identical views.
+### What it does send, and used not to
+
+Three fields describe the challenge window: `sunnyCallable`, `sunnyTargetId`,
+and `sunnyWouldLand`.
+
+The first two are old. `sunnyCallable` is true after **any** draw by somebody
+else, honest or not — the call is always available, so its presence tells you
+nothing.
+
+`sunnyWouldLand` is the answer, and sending it at all reverses a decision this
+document used to state the other way round. It is the tell behind the sun
+icon's glow, and the balance is in how the UI spends it: the glow takes ten
+seconds to go from barely perceptible to unmissable, so a player watching the
+table still gets there before one who isn't. It goes only to viewers who could
+call this instant — never to the drawer, who is not told they've been caught,
+and never to a spectator, who has no call to make.
 
 ## Bots
 

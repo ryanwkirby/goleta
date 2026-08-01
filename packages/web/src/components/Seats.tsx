@@ -3,14 +3,38 @@ import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { PlayingCard } from "./Card.tsx";
+import { SunnySign } from "./Sunny.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>
   room.seats.find((seat) => seat.id === id)?.name ?? "Player";
 
-function Seat({ player, room, game }: { player: PlayerView; room: RoomView; game: GameView }) {
+/**
+ * The sun belongs to whoever is on the clock, and it only tells while the
+ * player who drew is still that person — after they play and the turn moves
+ * on, the window can still be open, but pointing a glow at the next seat would
+ * be accusing the wrong head.
+ */
+const sunFor = (game: GameView, playerId: string): "idle" | "callable" | "telling" | null => {
+  if (game.turnPlayerId !== playerId) return null;
+  if (!game.sunnyCallable) return "idle";
+  return game.sunnyWouldLand && game.sunnyTargetId === playerId ? "telling" : "callable";
+};
+
+function Seat({
+  player,
+  room,
+  game,
+  onCallSunny,
+}: {
+  player: PlayerView;
+  room: RoomView;
+  game: GameView;
+  onCallSunny: () => void;
+}) {
   const { anchor, isArriving } = useMotion();
   const onClock = game.waitingOn === player.id;
   const out = player.eliminated;
+  const sun = sunFor(game, player.id);
 
   return (
     <li
@@ -25,6 +49,14 @@ function Seat({ player, room, game }: { player: PlayerView; room: RoomView; game
         <span className="truncate text-sm font-semibold text-white">
           {nameFor(room, player.id)}
         </span>
+        {sun ? (
+          <SunnySign
+            state={sun}
+            targetName={game.sunnyTargetId ? nameFor(room, game.sunnyTargetId) : undefined}
+            onCall={onCallSunny}
+            className="self-center"
+          />
+        ) : null}
         <span
           className={[
             "ml-auto font-mono text-sm tabular-nums",
@@ -52,12 +84,26 @@ function Seat({ player, room, game }: { player: PlayerView; room: RoomView; game
   );
 }
 
-export function Seats({ room, game }: { room: RoomView; game: GameView }) {
+export function Seats({
+  room,
+  game,
+  onCallSunny,
+}: {
+  room: RoomView;
+  game: GameView;
+  onCallSunny: () => void;
+}) {
   const others = game.players.filter((player) => player.id !== game.you);
   return (
     <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Other players">
       {others.map((player) => (
-        <Seat key={player.id} player={player} room={room} game={game} />
+        <Seat
+          key={player.id}
+          player={player}
+          room={room}
+          game={game}
+          onCallSunny={onCallSunny}
+        />
       ))}
     </ul>
   );

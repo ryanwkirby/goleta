@@ -27,6 +27,7 @@ const view = (overrides: Partial<GameView> = {}): GameView => ({
   drawsThisTurn: 0,
   sunnyCallable: false,
   sunnyTargetId: null,
+  sunnyWouldLand: false,
   legalCardIds: [],
   youMustPlay: false,
   status: "playing",

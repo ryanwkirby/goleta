@@ -44,8 +44,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `rejoin` | seat owner | `playerId` + `token`. |
 | `watch` | anyone | No seat, no cards, no actions. |
 | `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
-| `start` | host | Needs at least 3 seats; bots count. |
-| `setStartingHandSize` | host | 3 to 10, between games. |
+| `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `ping` | anyone | Answered with `pong`. |
 

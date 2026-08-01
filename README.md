@@ -4,12 +4,12 @@ An in-browser card game: **Crazy Eights, reversed.** You want to *keep* cards.
 Running out eliminates you, playing is compulsory, and drawing is the reward.
 The last player still holding cards wins.
 
-Play at **https://goleta.ryankirby.net** — 3 to 6 players, no accounts, no
+Play at **https://goleta.ryankirby.net** — 4 to 8 players, no accounts, no
 installs. Make a room, share the code.
 
 The full rules are in [`docs/RULES.md`](docs/RULES.md). The short version:
 
-- Two decks. Match the card in play by rank or suit.
+- One deck, three cards each. Match the card in play by rank or suit.
 - **If you can play, you must** — so a hand full of playable cards is a hand
   that's draining.
 - Stuck? Draw, up to three cards. That's a good turn.

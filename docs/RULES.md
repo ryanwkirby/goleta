@@ -10,15 +10,17 @@ This document is canonical. The engine implements it; the UI explains it.
 
 ## Setup
 
-- **Two standard 52-card decks**, shuffled together. 104 cards, no jokers.
-  Duplicate cards are distinct — there are two of every card, and the engine
-  tracks each one separately.
-- **3 to 6 players.**
-- Each player is dealt a starting hand — **5 cards by default**, adjustable by
-  the host in the lobby.
+- **One standard 52-card deck**, shuffled. No jokers.
+- **4 to 8 players.**
+- Someone deals. The deal **passes one seat around the table** between rounds,
+  so the same player doesn't open every game.
+- Each player is dealt **3 cards**, face up.
 - One card is turned face up to start the **face-up pile**. If it's an 8 it
   stays — see [natural eights](#natural-eights).
 - The rest becomes the **deck**, face down.
+- **The player to the dealer's left goes first**, and play moves round the
+  table in that direction. Dealing is all the dealer does: there is no other
+  advantage or penalty to it.
 
 There are only ever these two piles. Cards leave a hand for the face-up pile and
 come back to the deck when the face-up pile is recycled. Nothing is ever set
@@ -100,8 +102,8 @@ you play instead of drawing again.
 
 If it ever happens that no player can play and there is nothing left to draw —
 every card sitting in a hand, nobody matching the card in play — the game ends
-there and the largest hand wins. With 104 cards in circulation this is close
-enough to impossible that you will probably never see it; it exists so the game
+there and the largest hand wins. It has never come up across thousands of
+simulated games and you are unlikely to ever see it; it exists so the game
 cannot simply stop.
 
 ## The Sunny Rule

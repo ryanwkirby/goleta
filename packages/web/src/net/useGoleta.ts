@@ -9,6 +9,8 @@ export type ConnectionStatus = "connecting" | "open" | "closed";
 export interface LoggedEvent {
   id: number;
   event: EventView;
+  /** When this reached the browser. The table won't act out old news. */
+  at: number;
 }
 
 export interface Goleta {
@@ -111,10 +113,11 @@ export const useGoleta = (): Goleta => {
             setRoom(message.room);
             setGame(message.game);
             if (message.events.length > 0) {
+              const at = Date.now();
               setLog((previous) =>
                 [
                   ...message.events
-                    .map((event) => ({ id: ++logIdRef.current, event }))
+                    .map((event) => ({ id: ++logIdRef.current, event, at }))
                     .toReversed(),
                   ...previous,
                 ].slice(0, MAX_LOG),

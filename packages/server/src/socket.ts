@@ -25,7 +25,6 @@ import {
   rejoinRoom,
   removeSeat,
   roomView,
-  setStartingHandSize,
   wouldCloseSunnyWindow,
   type Room,
   type RoomStore,
@@ -162,9 +161,6 @@ export const attachSockets = (
         broadcast(room, events);
         return scheduleBots(room);
       }
-      case "setStartingHandSize":
-        setStartingHandSize(room, playerId, message.value);
-        return broadcast(room);
       case "addBot":
         addBot(room, playerId);
         return broadcast(room);

@@ -10,7 +10,14 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 
-import type { ClientMessage, GameView, RoomView, ServerMessage } from "@goleta/engine";
+import {
+  DEFAULT_OPTIONS,
+  MIN_TABLE_PLAYERS,
+  type ClientMessage,
+  type GameView,
+  type RoomView,
+  type ServerMessage,
+} from "@goleta/engine";
 
 import { loadRooms, startPersistence } from "../src/persist.ts";
 import { attachSockets } from "../src/socket.ts";
@@ -127,6 +134,16 @@ afterEach(async () => {
 
 const openClient = async (port: number): Promise<TestClient> => new TestClient(port).open();
 
+/** Bots up to a full table, so a test doesn't have to know the minimum. */
+const fillTable = async (host: TestClient, size = MIN_TABLE_PLAYERS): Promise<void> => {
+  // oxlint-disable no-await-in-loop -- one bot at a time, same as a host clicking.
+  while ((host.room?.seats.length ?? 0) < size) {
+    const seated = host.room?.seats.length ?? 0;
+    host.send({ t: "addBot" });
+    await host.until((c) => (c.room?.seats.length ?? 0) > seated);
+  }
+};
+
 /**
  * Plays a seat the way a person would: look at the view, make the only move
  * the rules leave you, then wait for the table to come back round.
@@ -177,18 +194,19 @@ describe("a room over the wire", () => {
     guest.send({ t: "join", code, name: "Sam" });
     await guest.until((c) => c.room !== null);
 
-    // Three to a table, so a bot makes up the numbers.
+    // Four to a table, so bots make up the numbers.
     host.send({ t: "start" });
     await host.until((c) => c.errors.length > 0);
-    expect(host.errors.at(-1)).toMatch(/needs 3 players/);
+    expect(host.errors.at(-1)).toMatch(new RegExp(`needs ${MIN_TABLE_PLAYERS} players`));
 
-    host.send({ t: "addBot" });
-    await host.until((c) => (c.room?.seats.length ?? 0) === 3);
+    await fillTable(host);
 
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
-    expect(host.game?.players).toHaveLength(3);
-    expect(host.game?.players.every((p) => p.cardCount === 5)).toBe(true);
+    expect(host.game?.players).toHaveLength(MIN_TABLE_PLAYERS);
+    expect(
+      host.game?.players.every((p) => p.cardCount === DEFAULT_OPTIONS.startingHandSize),
+    ).toBe(true);
 
     // Hands are up by default, so everyone can see everything.
     await guest.until((c) => c.game !== null);
@@ -211,8 +229,7 @@ describe("a room over the wire", () => {
     const guest = await openClient(server.port);
     guest.send({ t: "join", code, name: "Sam" });
     await guest.until((c) => c.room !== null);
-    host.send({ t: "addBot" });
-    await host.until((c) => (c.room?.seats.length ?? 0) === 3);
+    await fillTable(host);
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
     await guest.until((c) => c.game !== null);
@@ -298,10 +315,7 @@ describe("coming back", () => {
     await host.until((c) => c.room !== null);
     const { code, playerId, token } = host;
 
-    host.send({ t: "addBot" });
-    await host.until((c) => (c.room?.seats.length ?? 0) === 2);
-    host.send({ t: "addBot" });
-    await host.until((c) => (c.room?.seats.length ?? 0) === 3);
+    await fillTable(host);
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
     const cardsBefore = host.game?.players.find((p) => p.id === playerId)?.cardCount;
@@ -336,8 +350,7 @@ describe("what the wire carries", () => {
     const guest = await openClient(server.port);
     guest.send({ t: "join", code: host.code as string, name: "Sam" });
     await guest.until((c) => c.room !== null);
-    host.send({ t: "addBot" });
-    await host.until((c) => (c.room?.seats.length ?? 0) === 3);
+    await fillTable(host);
 
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
@@ -363,10 +376,7 @@ describe("what the wire carries", () => {
     const host = await openClient(server.port);
     host.send({ t: "create", name: "Ryan" });
     await host.until((c) => c.room !== null);
-    host.send({ t: "addBot" });
-    await host.until((c) => (c.room?.seats.length ?? 0) === 2);
-    host.send({ t: "addBot" });
-    await host.until((c) => (c.room?.seats.length ?? 0) === 3);
+    await fillTable(host);
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
 

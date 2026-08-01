@@ -27,7 +27,7 @@ export const randomInt = (seed: number, bound: number): [value: number, seed: nu
   if (bound <= 1) return [0, nextSeed(seed)];
   const next = nextSeed(seed);
   // Rejection-free and biased by at most 2^-32 per draw, which is far below
-  // anything that matters for shuffling 104 cards.
+  // anything that matters for shuffling a deck of cards.
   return [(next >>> 0) % bound, next];
 };
 

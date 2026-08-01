@@ -22,7 +22,6 @@ export interface SeatView {
 export interface RoomView {
   code: string;
   hostId: PlayerId;
-  startingHandSize: number;
   seats: SeatView[];
   status: "lobby" | "playing" | "finished";
   gamesPlayed: number;
@@ -40,7 +39,6 @@ export type ClientMessage =
   | { t: "watch"; code: string }
   | { t: "intent"; intent: Intent }
   | { t: "start" }
-  | { t: "setStartingHandSize"; value: number }
   | { t: "addBot" }
   | { t: "removeSeat"; playerId: PlayerId }
   | { t: "ping" };

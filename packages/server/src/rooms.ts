@@ -40,7 +40,11 @@ export interface Room {
   code: string;
   hostId: PlayerId;
   seats: Seat[];
-  startingHandSize: number;
+  /**
+   * Who dealt the last round. Advances one seat per deal so the same player
+   * doesn't lead every game; null until the room has dealt at all.
+   */
+  dealerId: PlayerId | null;
   game: GameState | null;
   gamesPlayed: number;
   lastWinnerId: PlayerId | null;
@@ -53,7 +57,17 @@ export type RoomStore = Map<string, Room>;
 export const createStore = (): RoomStore => new Map();
 
 const MAX_NAME_LENGTH = 16;
-const BOT_NAMES = ["Robot", "Automaton", "Clockwork", "Tinny", "Gizmo", "Widget"];
+/** One per seat, so a table of eight bots has eight distinct names. */
+const BOT_NAMES = [
+  "Robot",
+  "Automaton",
+  "Clockwork",
+  "Tinny",
+  "Gizmo",
+  "Widget",
+  "Sprocket",
+  "Cogs",
+];
 
 export class RoomError extends Error {}
 
@@ -100,7 +114,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     code: newRoomCode((code) => store.has(code)),
     hostId: seat.id,
     seats: [seat],
-    startingHandSize: DEFAULT_OPTIONS.startingHandSize,
+    dealerId: null,
     game: null,
     gamesPlayed: 0,
     lastWinnerId: null,
@@ -191,12 +205,18 @@ export const removeSeat = (room: Room, byPlayerId: PlayerId, target: PlayerId): 
   touch(room);
 };
 
-export const setStartingHandSize = (room: Room, byPlayerId: PlayerId, value: number): void => {
-  requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("wait for this game to finish");
-  if (!Number.isInteger(value) || value < 3 || value > 10) fail("hands run from 3 to 10 cards");
-  room.startingHandSize = value;
-  touch(room);
+/**
+ * The seat that deals this round: one along from whoever dealt last, so the
+ * lead moves around the table. The host deals the opening round.
+ *
+ * If the last dealer has since left, `indexOf` gives -1 and the rotation starts
+ * over at the top of the table. That's a small unfairness in exchange for not
+ * tracking a seat that no longer exists.
+ */
+const nextDealerIndex = (room: Room): number => {
+  const seatIds = room.seats.map((seat) => seat.id);
+  const previous = room.dealerId === null ? -1 : seatIds.indexOf(room.dealerId);
+  return (previous + 1) % seatIds.length;
 };
 
 export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
@@ -206,10 +226,13 @@ export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
     fail(`goleta needs ${MIN_TABLE_PLAYERS} players — add a bot to make up the numbers`);
   }
 
+  const dealerIndex = nextDealerIndex(room);
+  room.dealerId = room.seats[dealerIndex]?.id ?? null;
   room.game = startGame(
     room.seats.map((seat) => seat.id),
     newSeed(),
-    { deckCount: DEFAULT_OPTIONS.deckCount, startingHandSize: room.startingHandSize },
+    DEFAULT_OPTIONS,
+    dealerIndex,
   );
   touch(room);
   return [{ type: "gameStarted", upcard: topCard(room.game) }];
@@ -285,7 +308,6 @@ export const wouldCloseSunnyWindow = (room: Room, playerId: PlayerId, intent: In
 export const roomView = (room: Room): RoomView => ({
   code: room.code,
   hostId: room.hostId,
-  startingHandSize: room.startingHandSize,
   seats: room.seats.map((seat) => ({
     id: seat.id,
     name: seat.name,

@@ -114,25 +114,7 @@ export function Lobby({
       </Panel>
 
       {isHost ? (
-        <Panel className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white">Starting hand</span>
-              <span className="font-mono text-sm text-amber-300">{room.startingHandSize} cards</span>
-            </div>
-            <input
-              type="range"
-              min={3}
-              max={10}
-              value={room.startingHandSize}
-              onChange={(event) =>
-                send({ t: "setStartingHandSize", value: Number(event.target.value) })
-              }
-              className="mt-2 w-full accent-amber-400"
-              aria-label="Starting hand size"
-            />
-          </div>
-
+        <Panel>
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => send({ t: "addBot" })} disabled={full}>
               Add a bot

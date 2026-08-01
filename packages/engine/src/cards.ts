@@ -2,9 +2,10 @@ import { RANKS, SUITS, WILD_RANK, type Card, type Rank, type Suit } from "./type
 import { shuffle } from "./rng.ts";
 
 /**
- * Two decks means two of every card. Each physical card gets its own id so the
- * engine can move a specific one — `8H#1` and `8H#2` are interchangeable to a
- * player and never to the code.
+ * One deck by default. `deckCount` is still a parameter because every physical
+ * card gets its own id — `8H#1` and `8H#2` would be interchangeable to a player
+ * and never to the code — so dealing from more than one deck stays possible
+ * without anything downstream having to care.
  */
 export const buildDeck = (deckCount: number): Card[] => {
   const cards: Card[] = [];

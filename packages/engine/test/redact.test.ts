@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { redact, startGame, type GameState } from "../src/index.ts";
+import { DEFAULT_OPTIONS, redact, startGame, type GameState } from "../src/index.ts";
 import { draw, table } from "./helpers.ts";
 
 describe("hands", () => {
@@ -8,7 +8,9 @@ describe("hands", () => {
     const state = startGame(["a", "b", "c"], 42);
     for (const viewer of ["a", "b", "c", null]) {
       const view = redact(state, viewer);
-      for (const player of view.players) expect(player.hand).toHaveLength(5);
+      for (const player of view.players) {
+        expect(player.hand).toHaveLength(DEFAULT_OPTIONS.startingHandSize);
+      }
     }
   });
 });

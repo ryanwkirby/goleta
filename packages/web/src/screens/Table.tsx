@@ -6,12 +6,7 @@ import { EventLog } from "../components/EventLog.tsx";
 import { Hand, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { Seats } from "../components/Seats.tsx";
-import {
-  SunnyAnnounce,
-  SunnyExplainer,
-  SunnySign,
-  SuitPicker,
-} from "../components/Sunny.tsx";
+import { SunnyAnnounce, SunnyExplainer, SuitPicker } from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
@@ -243,27 +238,10 @@ export function Table({
           </p>
         ) : null}
 
-        {/*
-          The sun normally lives in the seat of whoever is on the clock, which
-          leaves nowhere for it on your own turn. That case is real and still
-          callable: someone draws illegally, plays, and the turn lands on you
-          with the window still open. Without this the call would be
-          unreachable, so it comes to sit by your hand instead.
-        */}
         <div className="relative flex flex-col">
+          {/* Kept clear whether or not the offer is showing, so the hand
+              doesn't move under your fingers when it appears. */}
           <div className="flex min-h-7 items-center gap-2 px-1">
-            {game.sunnyCallable && game.turnPlayerId === game.you ? (
-              <>
-                <SunnySign
-                  state="callable"
-                  targetName={game.sunnyTargetId ? nameOf(game.sunnyTargetId) : undefined}
-                  onCall={callSunny}
-                />
-                <span className="text-xs text-white/40">
-                  {game.sunnyTargetId ? `${nameOf(game.sunnyTargetId)}?` : null}
-                </span>
-              </>
-            ) : null}
             {stalled ? <HelpLink onAsk={askForHelp} /> : null}
           </div>
 

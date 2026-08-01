@@ -123,12 +123,14 @@ committed, the moment has passed.
 If several people call at once, only the **first call to arrive** is judged. The
 rest are too late, and cost them nothing.
 
-A small sun sits beside whoever is on the clock. Any time somebody has drawn,
-it can be tapped to call — that much says nothing about whether you'd be right.
-But if the draw really was illegal, and it is still that player's turn, the sun
-begins to glow, faintly at first and unmistakably by about ten seconds in. Call
-it early and you are backing your own eyes. Wait for the sun to make up your
-mind and everyone watched you wait.
+When somebody draws, a small sun appears beside them — and stays beside them
+until the window shuts, even once play has moved on. Tap it to call. That it is
+there at all says nothing about whether you'd be right; it means only that they
+drew.
+
+But if the draw really was illegal, the sun begins to glow: faintly at first,
+unmistakably by about ten seconds in. Call it early and you are backing your own
+eyes. Wait for the sun to make up your mind, and everyone watched you wait.
 
 It applies to any illegal draw in the turn, not just the first one. Drawing a
 second card when the first card you drew gave you a play is exactly the same

@@ -11,15 +11,16 @@ const nameFor = (room: RoomView, id: string): string =>
   room.seats.find((seat) => seat.id === id)?.name ?? "Player";
 
 /**
- * The sun belongs to whoever is on the clock, and it only tells while the
- * player who drew is still that person — after they play and the turn moves
- * on, the window can still be open, but pointing a glow at the next seat would
- * be accusing the wrong head.
+ * The sun belongs to whoever a call would land on, wherever the turn has got
+ * to — not to whoever is playing. Those are the same seat right up until the
+ * drawer plays and the turn moves on with the window still open, and following
+ * the target through that is what keeps the icon pointing at the right head.
+ *
+ * No target, no sun. On screen it means one thing: you could accuse them.
  */
-const sunFor = (game: GameView, playerId: string): "idle" | "callable" | "telling" | null => {
-  if (game.turnPlayerId !== playerId) return null;
-  if (!game.sunnyCallable) return "idle";
-  return game.sunnyWouldLand && game.sunnyTargetId === playerId ? "telling" : "callable";
+const sunFor = (game: GameView, playerId: string): "callable" | "telling" | null => {
+  if (!game.sunnyCallable || game.sunnyTargetId !== playerId) return null;
+  return game.sunnyWouldLand ? "telling" : "callable";
 };
 
 function Seat({
@@ -59,7 +60,7 @@ function Seat({
         {sun ? (
           <SunnySign
             state={sun}
-            targetName={game.sunnyTargetId ? nameFor(room, game.sunnyTargetId) : undefined}
+            targetName={nameFor(room, player.id)}
             onCall={onCallSunny}
             className="self-center"
           />

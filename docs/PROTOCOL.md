@@ -45,7 +45,6 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `watch` | anyone | No seat, no cards, no actions. |
 | `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
 | `start` | host | Needs at least 3 seats; bots count. |
-| `setHandsVisible` | host | Puts hands up or down, at any time. |
 | `setStartingHandSize` | host | 3 to 10, between games. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `ping` | anyone | Answered with `pong`. |
@@ -64,11 +63,15 @@ can only ever act as itself. There's a test that tries it the other way.
 
 ## What the server never sends
 
-- Another player's hand, when the table is playing with hands down.
 - Anything about the challenge window beyond `sunnyCallable` and
   `sunnyTargetId`. In particular, never whether a draw was legal.
+- The contents of the deck, including the cards a Sunny call is about to turn
+  up off it.
 
-That second one shapes the protocol more than it looks. `sunnyCallable` is true
+Hands are not on that list: every hand is face up, so `state` carries all of
+them and `events` go out whole, the same bytes to everybody seated.
+
+The first one shapes the protocol more than it looks. `sunnyCallable` is true
 after **any** draw by somebody else — offering the call only when it would
 succeed would leak the answer just as surely as sending a flag called
 `wasIllegal`. Two draws, one honest and one not, produce byte-identical views.

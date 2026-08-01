@@ -71,9 +71,9 @@ eyes; all three have already been decided deliberately. Do not "fix" them.
   Drawing when you could have played is the violation the entire Sunny Rule
   exists to punish. The UI must permit it silently. No disabled state, no
   confirmation dialog, no "are you sure?", no hint.
-- **In face-up mode the app never highlights other players' legal cards.** You
-  can see their hands; working out whether they had a play is your job. Adding
-  that highlight makes Sunny calls automatic and deletes the mechanic.
+- **The app never highlights other players' legal cards.** Every hand is face
+  up, so you can see them; working out whether they had a play is your job.
+  Adding that highlight makes Sunny calls automatic and deletes the mechanic.
 - **Every draw looks identical on the wire and offers the Sunny button.** The
   server knows whether a draw was a violation; that flag must never leave the
   server, not even implicitly by only showing the call button when a call would
@@ -93,10 +93,11 @@ npm workspaces monorepo, one Docker image, one process.
 - `packages/web` — React + Vite + TypeScript + Tailwind, `oxlint`.
 
 **`packages/engine/src/redact.ts` is the security boundary.** Nothing outside it
-decides what a client may see. In hidden-hands mode it emits card *counts* only —
-never identities — and there is a test that serialises a redacted payload and
-asserts no other player's card ids appear anywhere in it. Any new field on the
-game state has to be considered there, and it defaults to *not* being sent.
+decides what a client may see. Hands are not what it guards — every hand is face
+up — but `state.challenge`, `state.sunny` and the deck are, and there is a test
+that serialises a redacted payload and asserts none of them appear anywhere in
+it. Any new field on the game state has to be considered there, and it defaults
+to *not* being sent.
 
 ## Testing
 

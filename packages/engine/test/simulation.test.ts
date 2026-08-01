@@ -140,12 +140,16 @@ const runGame = ({
 
 describe("full games", () => {
   it("finish, with one winner still holding cards", () => {
-    for (const players of [3, 4, 5, 6]) {
+    for (const players of [4, 5, 6, 7, 8]) {
       for (let seed = 1; seed <= 12; seed++) {
-        const { state, steps } = runGame({ players, seed: seed * 7919 });
+        const { state, steps, events } = runGame({ players, seed: seed * 7919 });
         expect(state.status, `${players} players, seed ${seed}: unfinished after ${steps}`).toBe(
           "over",
         );
+        // One 52-card deck puts fewer cards in circulation than two used to, so
+        // the deadlock safeguard is closer to reach. It should still never fire.
+        const over = events.findLast((event) => event.type === "gameOver");
+        expect(over, `${players} players, seed ${seed}`).toMatchObject({ reason: "lastStanding" });
         const survivors = state.players.filter((p) => !p.eliminated);
         expect(survivors).toHaveLength(1);
         expect(state.winnerId).toBe(survivors[0]?.id);

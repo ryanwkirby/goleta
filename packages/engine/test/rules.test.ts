@@ -14,11 +14,16 @@ import {
 import { allCardIds, card, draw, handOf, must, play, reject, table } from "./helpers.ts";
 
 describe("the deck", () => {
-  it("is two of every card", () => {
+  it("is one of every card", () => {
+    const deck = buildDeck(DEFAULT_OPTIONS.deckCount);
+    expect(deck).toHaveLength(52);
+    expect(new Set(deck.map((c) => c.id)).size).toBe(52);
+    expect(deck.filter((c) => c.rank === "8")).toHaveLength(4);
+  });
+
+  it("gives every card of a second deck its own id", () => {
     const deck = buildDeck(2);
-    expect(deck).toHaveLength(104);
     expect(new Set(deck.map((c) => c.id)).size).toBe(104);
-    expect(deck.filter((c) => c.rank === "8")).toHaveLength(8);
   });
 });
 
@@ -29,8 +34,28 @@ describe("dealing", () => {
       expect(player.hand).toHaveLength(DEFAULT_OPTIONS.startingHandSize);
     }
     expect(state.discardPile).toHaveLength(1);
-    expect(allCardIds(state)).toHaveLength(104);
-    expect(new Set(allCardIds(state)).size).toBe(104);
+    expect(allCardIds(state)).toHaveLength(52);
+    expect(new Set(allCardIds(state)).size).toBe(52);
+  });
+
+  it("seats a full table of eight from one deck", () => {
+    const ids = ["a", "b", "c", "d", "e", "f", "g", "h"];
+    const state = startGame(ids, 11);
+    expect(state.players).toHaveLength(8);
+    expect(allCardIds(state)).toHaveLength(52);
+    // 24 dealt and one turned up still leaves a deck worth drawing from.
+    expect(state.drawPile).toHaveLength(27);
+  });
+
+  it("opens on the player to the dealer's left", () => {
+    const ids = ["a", "b", "c", "d"];
+    expect(currentPlayer(startGame(ids, 3, DEFAULT_OPTIONS, 0)).id).toBe("b");
+    expect(currentPlayer(startGame(ids, 3, DEFAULT_OPTIONS, 2)).id).toBe("d");
+  });
+
+  it("wraps the lead round when the last seat deals", () => {
+    const ids = ["a", "b", "c", "d"];
+    expect(currentPlayer(startGame(ids, 3, DEFAULT_OPTIONS, 3)).id).toBe("a");
   });
 
   it("keeps an 8 turned up as the seed card, as a natural 8", () => {
@@ -57,6 +82,7 @@ describe("dealing", () => {
     expect(() => startGame(["a", "b", "c"], 1, { deckCount: 1, startingHandSize: 30 })).toThrow(
       /won't fit/,
     );
+    expect(() => startGame(["a", "b", "c"], 1, DEFAULT_OPTIONS, 3)).toThrow(/no seat 3/);
   });
 });
 

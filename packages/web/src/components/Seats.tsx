@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
+import { inTurnOrder } from "../lib/seating.ts";
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import type { Shout } from "../net/useGoleta.ts";
@@ -106,7 +107,7 @@ export function Seats({
   shouts: Shout[];
   onCallSunny: () => void;
 }) {
-  const others = game.players.filter((player) => player.id !== game.you);
+  const others = inTurnOrder(game);
   const shouting = new Set(shouts.map((shout) => shout.playerId));
   const strip = useRef<HTMLUListElement>(null);
   const { reduced } = useMotion();

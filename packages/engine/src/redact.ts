@@ -6,10 +6,13 @@
  * file:
  *
  *   - `state.challenge` itself, which carries a full snapshot of the game and
- *     therefore of every hand as it stood a moment ago. One *derived* bit of it
- *     does go out — `sunnyWouldLand`, whether a call would land — and that is a
- *     deliberate decision recorded in `AGENTS.md`, not a hole. The object stays
- *     here regardless.
+ *     therefore of every hand as it stood a moment ago. One thing derived from
+ *     it does go out, to whoever is eligible to call: `sunnyReach`, the
+ *     offender's pre-draw hand and the board they faced at that moment. It
+ *     doesn't say which of those cards was legal — that is for the viewer to
+ *     work out, same as it always was. The object itself, and in particular
+ *     `violation`, stays here regardless: nothing ever says whether a call
+ *     *would* land.
  *   - `state.sunny`, which names the cards a caught player is about to have
  *     turned up. Those are still in the deck, and which cards are coming off
  *     the deck is not something the table gets told in advance.
@@ -23,7 +26,7 @@
  */
 
 import { legalCards, mustPlay, playerById, topCard } from "./rules.ts";
-import type { Card, CardId, GameState, PlayerId, SurrenderReason, Suit } from "./types.ts";
+import type { Card, CardId, GameState, PlayerId, Rank, SurrenderReason, Suit } from "./types.ts";
 
 export interface PlayerView {
   id: PlayerId;
@@ -61,19 +64,24 @@ export interface GameView {
   sunnyCallable: boolean;
   sunnyTargetId: PlayerId | null;
   /**
-   * Whether a call would actually land — the tell behind the sun icon's glow.
-   *
-   * This is the one thing about the challenge window that used to be kept back
-   * on purpose, and shipping it was a deliberate design decision, not an
-   * oversight: see the Sunny Rule section of `AGENTS.md`. The balance is in the
-   * UI, where the glow takes ten seconds to become obvious, so a player who is
-   * watching still beats one who isn't.
+   * The offender's hand and the board they faced, exactly as they stood before
+   * the draw a call would be judged against. This is what a call must name a
+   * card from — nothing they drew afterwards is ever offered — and it is the
+   * only material a viewer gets to work out whether a card was actually legal.
+   * The server never says that part; it only ever hands over what was already
+   * public a moment ago.
    *
    * Sent only to viewers who could call this instant. The drawer never learns
    * they've been caught, and a spectator — who can't call at all — is told
    * nothing either.
    */
-  sunnyWouldLand: boolean;
+  sunnyReach: { hand: Card[]; activeSuit: Suit; topRank: Rank } | null;
+  /**
+   * Draws left before *you* may call again, after a wrong accusation. Zero
+   * means free to call. Visible only to the locked-out player themselves —
+   * nobody else at the table is told.
+   */
+  sunnyLockedDraws: number;
   /** Your own playable cards. Never computed for anyone else's hand. */
   legalCardIds: CardId[];
   /** Whether you are currently forbidden from drawing. */
@@ -85,7 +93,6 @@ export interface GameView {
 
 const phaseView = (state: GameState): PhaseView => {
   const phase = state.phase;
-  // `resume` is bookkeeping for the engine and means nothing at the table.
   if (phase.kind === "surrender") {
     return { kind: "surrender", playerId: phase.playerId, reason: phase.reason };
   }
@@ -127,7 +134,10 @@ export const redact = (state: GameState, viewerId: PlayerId | null): GameView =>
     drawsThisTurn: state.drawsThisTurn,
     sunnyCallable: canCall,
     sunnyTargetId: canCall ? challenge.drawerId : null,
-    sunnyWouldLand: canCall && challenge.violation !== null,
+    sunnyReach: canCall ? challenge.reach : null,
+    sunnyLockedDraws: viewer
+      ? Math.max(0, (state.sunnyLockouts[viewer.id] ?? 0) - state.totalDraws)
+      : 0,
     legalCardIds: viewer ? legalCards(state, viewer).map((c) => c.id) : [],
     youMustPlay: viewer ? mustPlay(state, viewer) : false,
     status: state.status,

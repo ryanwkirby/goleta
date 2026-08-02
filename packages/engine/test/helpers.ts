@@ -63,6 +63,8 @@ export const table = (spec: TableSpec): GameState => {
     challenge: null,
     sunny: null,
     drawsThisTurn: 0,
+    totalDraws: 0,
+    sunnyLockouts: {},
     rngSeed: 12345,
     status: "playing",
     winnerId: null,

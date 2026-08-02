@@ -7,7 +7,7 @@
  */
 
 import { randomInt } from "./rng.ts";
-import { isWild } from "./cards.ts";
+import { isPlayable, isWild } from "./cards.ts";
 import type { GameView } from "./redact.ts";
 import { SUITS, type Card, type Intent, type PlayerId, type Suit } from "./types.ts";
 
@@ -72,13 +72,13 @@ const pickSuit = (view: GameView): Suit => {
 };
 
 /**
- * Which card to give up, whether as a punishment or for a bad call.
+ * Which card to give up as the punishment for a landed call.
  *
  * Legality doesn't come into it — a surrendered card needn't match anything,
- * and by the time a punishment is owed the skipped play has already been made,
- * so there is nothing left to dodge. That leaves the plain question of which
- * card you least want: the 8, which is what stops you being stuck at all, and
- * otherwise one from the suit you hold most of.
+ * and by the time it's owed the skipped play has already been made, so there
+ * is nothing left to dodge. That leaves the plain question of which card you
+ * least want: the 8, which is what stops you being stuck at all, and otherwise
+ * one from the suit you hold most of.
  */
 const pickSurrender = (view: GameView): Card | undefined => {
   const hand = ownHand(view);
@@ -89,6 +89,21 @@ const pickSurrender = (view: GameView): Card | undefined => {
 
   const counts = countBySuit(hand);
   return hand.toSorted((a, b) => (counts[b.suit] ?? 0) - (counts[a.suit] ?? 0))[0];
+};
+
+/**
+ * Which card to name, if the offender's pre-draw hand actually holds one that
+ * was legal against the board they faced. A bot reads this the same way a
+ * human has to: nothing says which card was legal, so it has to work that out
+ * from `reach` itself rather than being handed the answer.
+ */
+const pickAccusation = (reach: NonNullable<GameView["sunnyReach"]>): Card | undefined => {
+  const legal = reach.hand.filter((card) => isPlayable(card, reach.activeSuit, reach.topRank));
+  const wild = legal.find(isWild);
+  if (wild) return wild;
+
+  const counts = countBySuit(reach.hand);
+  return legal.toSorted((a, b) => (counts[a.suit] ?? 0) - (counts[b.suit] ?? 0))[0];
 };
 
 /**
@@ -103,12 +118,13 @@ export const decideBotIntent = (view: GameView, { callSunny = false }: BotOption
   const me: PlayerId | null = view.you;
   if (me === null || view.status === "over") return null;
 
-  // A bot accuses only somebody it has actually caught. `sunnyWouldLand` is the
-  // same tell a human reads off the sun's glow, so this gates behaviour on
-  // information the bot already holds rather than handing it any more — and a
-  // call that misses costs a card, which is not a price to pay on a guess.
-  if (callSunny && view.sunnyCallable && view.sunnyWouldLand) {
-    return { type: "callSunny", playerId: me };
+  // A bot accuses only somebody it has actually caught, and only when it isn't
+  // locked out from an earlier miss. `sunnyReach` is the same hand and board a
+  // human sees; a bot works out legality from it rather than being told, and a
+  // call it can't back with a legal card is one it never makes.
+  if (callSunny && view.sunnyCallable && view.sunnyLockedDraws === 0 && view.sunnyReach) {
+    const card = pickAccusation(view.sunnyReach);
+    if (card) return { type: "callSunny", playerId: me, cardId: card.id };
   }
 
   if (view.phase.kind === "surrender") {

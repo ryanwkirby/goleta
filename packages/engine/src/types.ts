@@ -27,6 +27,9 @@ export const WILD_RANK: Rank = "8";
 /** Most cards a player may draw in one turn. */
 export const MAX_DRAWS_PER_TURN = 3;
 
+/** Draws a wrong caller must sit out before they may call again. */
+export const SUNNY_LOCKOUT_DRAWS = 3;
+
 export type CardId = string;
 export type PlayerId = string;
 
@@ -56,9 +59,7 @@ export interface PlayerState {
 
 export type SurrenderReason =
   /** The extra card a caught player gives up. Played on top of the pile. */
-  | "sunnyPunishment"
-  /** The card a wrong accusation costs its caller. Buried at the bottom. */
-  | "sunnyBadCall";
+  "sunnyPunishment";
 
 /**
  * What the game is waiting for. Anything other than `action` means one specific
@@ -71,12 +72,8 @@ export type Phase =
   | { kind: "suit" }
   /** A Sunny call landed: they must now make the play they skipped. */
   | { kind: "sunnyPlay" }
-  /**
-   * Someone owes a card of their choosing, legality irrelevant. `resume` is
-   * where play picks back up, and is only meaningful for a bad call — a
-   * punishment is always followed by the rest of the Sunny resolution.
-   */
-  | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason; resume: Phase }
+  /** They were caught and owe the punishment card: any one, legality irrelevant. */
+  | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason }
   | { kind: "over" };
 
 /**
@@ -85,13 +82,26 @@ export type Phase =
  * Opens on any draw and closes when the *next* player takes their first action,
  * so it can outlive the turn it belongs to — a call arriving after the turn
  * ended rewinds it. `violation` is populated only when the draw was actually
- * illegal, and it never leaves the server: `redact.ts` drops this whole object
- * and sends only whether a call is currently possible.
+ * illegal, and it never leaves the server: `redact.ts` drops this whole object,
+ * sending only whether a call is currently possible and — to whoever could make
+ * one — `reach.hand` to accuse from. Nothing about `violation` itself, or which
+ * of those cards was actually legal, ever goes out.
  */
 export interface Challenge {
   drawerId: PlayerId;
   /** Every card drawn this turn, in order. */
   drawnIds: CardId[];
+  /**
+   * The offender's hand, and the board they faced, exactly as they stood
+   * immediately before their most recent draw. This is what an accusation is
+   * judged against: a card they only came to hold afterwards must never be
+   * offered, or count, as an accusation.
+   */
+  reach: {
+    hand: Card[];
+    activeSuit: Suit;
+    topRank: Rank;
+  };
   violation: {
     /**
      * The game exactly as it stood *before* the illegal draw. A successful call
@@ -146,6 +156,17 @@ export interface GameState {
   /** Non-null only while a landed Sunny call is being paid off. */
   sunny: SunnyResolution | null;
   drawsThisTurn: number;
+  /**
+   * Draws taken at the table across the whole game, never reset. A wrong
+   * caller's lockout is measured against this rather than against turns, so it
+   * counts down at the same rate regardless of how draws land within a turn.
+   */
+  totalDraws: number;
+  /**
+   * Per caller, the `totalDraws` value at which their lockout from a wrong
+   * accusation lifts. Absent or at-or-below `totalDraws` means free to call.
+   */
+  sunnyLockouts: Record<PlayerId, number>;
   rngSeed: number;
   status: "playing" | "over";
   winnerId: PlayerId | null;
@@ -157,7 +178,8 @@ export type Intent =
   | { type: "playCard"; playerId: PlayerId; cardId: CardId }
   | { type: "drawCard"; playerId: PlayerId }
   | { type: "chooseSuit"; playerId: PlayerId; suit: Suit }
-  | { type: "callSunny"; playerId: PlayerId }
+  /** `cardId` is the accused card from the offender's pre-draw hand. */
+  | { type: "callSunny"; playerId: PlayerId; cardId: CardId }
   | { type: "surrenderCard"; playerId: PlayerId; cardId: CardId };
 
 /** Why a card came off the deck rather than out of a hand. */
@@ -171,7 +193,7 @@ export type GameEvent =
   | { type: "reshuffled"; drawPileSize: number }
   /** A card turned face up off the deck. Always natural, never wild. */
   | { type: "turnedUp"; cards: Card[]; reason: TurnUpReason }
-  | { type: "sunnyCalled"; callerId: PlayerId; targetId: PlayerId; correct: boolean }
+  | { type: "sunnyCalled"; callerId: PlayerId; targetId: PlayerId; card: Card; correct: boolean }
   | { type: "surrendered"; playerId: PlayerId; card: Card; reason: SurrenderReason }
   | { type: "eliminated"; playerId: PlayerId }
   | { type: "turnChanged"; playerId: PlayerId }

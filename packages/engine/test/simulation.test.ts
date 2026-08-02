@@ -112,15 +112,22 @@ const runGame = ({
     }
 
     // An accusation thrown without looking, which is the only way a wrong one
-    // ever gets made now.
+    // ever gets made now. It names whatever card comes to hand rather than a
+    // legal one — that's what makes it slander rather than a real catch.
     const challenge = state.challenge;
     if (slander > 0 && challenge && !challenge.resolved) {
       const [roll, next] = randomInt(rng, 100);
       rng = next;
-      const accuser = state.players.find((p) => !p.eliminated && p.id !== challenge.drawerId);
-      if (roll < slander && accuser) {
+      const accuser = state.players.find(
+        (p) =>
+          !p.eliminated &&
+          p.id !== challenge.drawerId &&
+          (state.sunnyLockouts[p.id] ?? 0) <= state.totalDraws,
+      );
+      const accused = challenge.reach.hand[0];
+      if (roll < slander && accuser && accused) {
         return {
-          intent: { type: "callSunny", playerId: accuser.id },
+          intent: { type: "callSunny", playerId: accuser.id, cardId: accused.id },
           deliberateFoul: false,
           fromBot: false,
         };

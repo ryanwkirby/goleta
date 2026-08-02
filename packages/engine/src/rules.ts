@@ -13,8 +13,10 @@ import {
   DEFAULT_OPTIONS,
   MAX_DRAWS_PER_TURN,
   SUITS,
+  SUNNY_LOCKOUT_DRAWS,
   type ApplyResult,
   type Card,
+  type Challenge,
   type GameEvent,
   type GameOptions,
   type GameState,
@@ -122,6 +124,8 @@ export const startGame = (
     challenge: null,
     sunny: null,
     drawsThisTurn: 0,
+    totalDraws: 0,
+    sunnyLockouts: {},
     rngSeed: seedAfterShuffle,
     status: "playing",
     winnerId: null,
@@ -151,7 +155,7 @@ const route = (s: GameState, intent: Intent, events: GameEvent[]): string | null
     case "chooseSuit":
       return handleChooseSuit(s, intent.playerId, intent.suit, events);
     case "callSunny":
-      return handleCallSunny(s, intent.playerId, events);
+      return handleCallSunny(s, intent.playerId, intent.cardId, events);
     case "surrenderCard":
       return handleSurrender(s, intent.playerId, intent.cardId, events);
   }
@@ -226,6 +230,12 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   const alreadyCaught = s.challenge?.drawerId === player.id && s.challenge.violation !== null;
   const snapshot = inViolation && !alreadyCaught ? structuredClone(s) : null;
 
+  // The hand and the board exactly as they stand right now, before anything
+  // about this reach is resolved — what an accusation of this draw is judged
+  // against, and all a caller is ever shown to accuse from.
+  const reach = { hand: [...player.hand], activeSuit: s.activeSuit, topRank: topCard(s).rank };
+  s.totalDraws += 1;
+
   // An empty deck is recycled first, and that recycle is the whole of this
   // action — no card reaches a hand. The card turned up is a new card in play,
   // so the player decides again against it: draw once more if still stuck, or
@@ -238,7 +248,7 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   if (s.drawPile.length === 0) {
     // Every card is in somebody's hand. Nothing to draw, so the turn ends.
     if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
-    else recordDraw(s, player.id, null, inViolation, snapshot);
+    else recordDraw(s, player.id, null, inViolation, snapshot, reach);
     return null;
   }
 
@@ -246,7 +256,7 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   player.hand.push(card);
   s.drawsThisTurn += 1;
   events.push({ type: "drew", playerId: player.id, card });
-  recordDraw(s, player.id, card, inViolation, snapshot);
+  recordDraw(s, player.id, card, inViolation, snapshot, reach);
 
   const stillStuck = !mustPlay(s, player);
   if (stillStuck && (s.drawsThisTurn >= MAX_DRAWS_PER_TURN || !canRefill(s))) {
@@ -276,6 +286,7 @@ const handleChooseSuit = (
 const handleCallSunny = (
   s: GameState,
   callerId: PlayerId,
+  cardId: string,
   events: GameEvent[],
 ): string | null => {
   // A settled call leaves either `resolved` set or the whole window gone with
@@ -288,22 +299,46 @@ const handleCallSunny = (
   if (!caller) return "unknown player";
   if (caller.eliminated) return "you're out of the game";
 
-  const violation = challenge.violation;
-  const targetId = challenge.drawerId;
-  events.push({ type: "sunnyCalled", callerId, targetId, correct: violation !== null });
+  const lockedUntil = s.sunnyLockouts[callerId] ?? 0;
+  if (lockedUntil > s.totalDraws) {
+    return `you can't call again for ${lockedUntil - s.totalDraws} more draw(s)`;
+  }
 
-  if (!violation) {
-    // Accusations aren't free.
+  // The only cards an accusation may ever name: the offender's hand as it
+  // stood before the draw being challenged. Anything they drew since is not an
+  // option, on the server any more than in the UI.
+  const accused = challenge.reach.hand.find((c) => c.id === cardId);
+  if (!accused) return "that wasn't in their hand when they drew";
+
+  const correct = isPlayable(accused, challenge.reach.activeSuit, challenge.reach.topRank);
+  const targetId = challenge.drawerId;
+  events.push({ type: "sunnyCalled", callerId, targetId, card: accused, correct });
+
+  if (!correct) {
+    // Nothing happens to either hand — but the caller can't try again until
+    // three further draws have happened at the table.
     challenge.resolved = true;
-    s.phase = { kind: "surrender", playerId: callerId, reason: "sunnyBadCall", resume: s.phase };
+    s.sunnyLockouts[callerId] = s.totalDraws + SUNNY_LOCKOUT_DRAWS;
     return null;
   }
 
+  // A named card is only ever legal here if the reach it was judged against
+  // really was a violation, which is exactly when `violation` gets set.
+  const violation = challenge.violation;
+  if (!violation) throw new Error("a correct accusation found no violation to rewind to");
+
   // Rewind to the instant before the illegal draw. Restoring wholesale is what
   // lets the punishment undo whatever the drawer did afterwards — including a
-  // card they've already played and the suit an 8 named.
+  // card they've already played and the suit an 8 named. `totalDraws` and
+  // `sunnyLockouts` are carried forward rather than restored: draws taken and
+  // lockouts earned since then are real and happened at the table regardless
+  // of how this call landed, and the rewind must not hand anyone their call
+  // back.
   const touchedIds = [...violation.touchedIds];
+  const { totalDraws, sunnyLockouts } = s;
   Object.assign(s, structuredClone(violation.snapshot));
+  s.totalDraws = totalDraws;
+  s.sunnyLockouts = sunnyLockouts;
   s.challenge = null;
 
   const target = playerById(s, targetId);
@@ -328,12 +363,7 @@ const demandPunishment = (
   events: GameEvent[],
 ): string | null => {
   if (offender.eliminated || offender.hand.length === 0) return finishSunny(s, events);
-  s.phase = {
-    kind: "surrender",
-    playerId: offender.id,
-    reason: "sunnyPunishment",
-    resume: { kind: "action" },
-  };
+  s.phase = { kind: "surrender", playerId: offender.id, reason: "sunnyPunishment" };
   return null;
 };
 
@@ -364,30 +394,18 @@ const handleSurrender = (
   const index = player.hand.findIndex((c) => c.id === cardId);
   if (index === -1) return "that card isn't in your hand";
 
-  const { reason, resume } = s.phase;
+  const { reason } = s.phase;
   const [card] = player.hand.splice(index, 1) as [Card];
 
-  if (reason === "sunnyPunishment") {
-    // Played face up like any other card. It needn't be legal, and it sets no
-    // suit: the touched card lands on top of it a moment later.
-    s.discardPile.push(card);
-  } else {
-    // Buried under everything already played, where it can never become the
-    // card in play. A bad call costs a card and changes nothing else.
-    s.discardPile.unshift(card);
-  }
+  // Played face up like any other card. It needn't be legal, and it sets no
+  // suit: the touched card lands on top of it a moment later.
+  s.discardPile.push(card);
   events.push({ type: "surrendered", playerId, card, reason });
 
   eliminateIfEmpty(s, player, events);
   if (finishIfOver(s, events)) return null;
 
-  if (reason === "sunnyPunishment") return finishSunny(s, events);
-
-  s.phase = resume;
-  // A wrong call made by the player whose turn it now is, paid for with their
-  // last card: there is nobody left to take the turn we resumed into.
-  if (resume.kind === "action" && currentPlayer(s).eliminated) advanceTurn(s, events);
-  return null;
+  return finishSunny(s, events);
 };
 
 // ---------------------------------------------------------------------------
@@ -398,6 +416,12 @@ const handleSurrender = (
  * Opens or extends the challenge window. `card` is null when the deck had to be
  * recycled and nothing was drawn — the reach still counts, so the window opens
  * with no card attached to it.
+ *
+ * `reach` is overwritten on every draw, whether or not it was a violation:
+ * it's what an accusation is judged against, and it always means "the hand and
+ * board as of the most recent reach." Whichever reach was the actual violation,
+ * the card that made it one is still unplayed and still in hand, so it stays
+ * accusable through every later reach in the same window too.
  */
 const recordDraw = (
   s: GameState,
@@ -405,11 +429,13 @@ const recordDraw = (
   card: Card | null,
   inViolation: boolean,
   snapshot: GameState | null,
+  reach: Challenge["reach"],
 ): void => {
   if (!s.challenge || s.challenge.drawerId !== playerId) {
-    s.challenge = { drawerId: playerId, drawnIds: [], violation: null, resolved: false };
+    s.challenge = { drawerId: playerId, drawnIds: [], reach, violation: null, resolved: false };
   }
   const challenge = s.challenge;
+  challenge.reach = reach;
   if (card) challenge.drawnIds.push(card.id);
   // A fresh draw is a fresh chance to be caught, even if an earlier call in
   // this turn has already been settled.

@@ -49,7 +49,10 @@ const prompt = (game: GameView, nameOf: (id: string) => string, assist: boolean)
         : `${nameOf(game.phase.playerId)} owes a punishment card.`;
     }
     case "suit":
-      return mine ? "Name a suit." : `${nameOf(game.turnPlayerId)} is naming a suit.`;
+      // The namer, not the player to move — under Power of Eights the suit is
+      // owed by the next seat, and under Dealer's Choice by the dealer before
+      // anyone has played at all.
+      return mine ? "Name a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
     case "sunnyPlay":
       return mine
         ? "Caught. Make the play you skipped."

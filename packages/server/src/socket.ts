@@ -33,6 +33,7 @@ import {
   removeSeat,
   roomView,
   setBotSpeed,
+  setHouseRules,
   wouldCloseSunnyWindow,
   type Room,
   type RoomStore,
@@ -256,6 +257,9 @@ export const attachSockets = (
         return broadcast(room);
       case "setBotSpeed":
         setBotSpeed(room, playerId, message.speed);
+        return broadcast(room);
+      case "setHouseRules":
+        setHouseRules(room, playerId, message.rules);
         return broadcast(room);
       case "help": {
         // Silently dropped rather than refused: a rejected "help" would put an

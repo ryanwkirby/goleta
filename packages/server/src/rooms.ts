@@ -10,6 +10,7 @@ import {
   DEFAULT_OPTIONS,
   MAX_TABLE_PLAYERS,
   MIN_TABLE_PLAYERS,
+  SUNNY_LOCKOUT_DRAWS,
   applyIntent,
   decideBotIntent,
   redact,
@@ -19,8 +20,10 @@ import {
   type BotSpeed,
   type CardId,
   type GameEvent,
+  type GameOptions,
   type GameState,
   type GameView,
+  type HouseRules,
   type Intent,
   type PlayerId,
   type RoomView,
@@ -68,6 +71,12 @@ export interface Room {
    * Sunny call, let alone make one.
    */
   botSpeed: BotSpeed;
+  /**
+   * This table's house rules, chosen in the lobby and applied at the next deal.
+   * Held on the room rather than read off the game so a table keeps its rules
+   * between games — and so they can be changed while no game is running.
+   */
+  options: GameOptions;
   /** Seeds the table-wide rolls its bots make. One table, one thread of luck. */
   botSeed: number;
   sunnyVerdict: SunnyVerdict | null;
@@ -141,6 +150,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     seats: [seat],
     dealerId: null,
     botSpeed: "human",
+    options: DEFAULT_OPTIONS,
     botSeed: newSeed(),
     sunnyVerdict: null,
     game: null,
@@ -237,6 +247,41 @@ export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): 
   touch(room);
 };
 
+/**
+ * The table's house rules, chosen by the host between games.
+ *
+ * Every field is checked against its permitted values rather than trusted:
+ * this arrives from a browser, and the engine's `GameOptions` also carries a
+ * deck count and a hand size that a client has no business setting. Those are
+ * taken from `DEFAULT_OPTIONS` here and can never be moved from outside.
+ */
+export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRules): void => {
+  requireHost(room, byPlayerId);
+  if (roomStatus(room) === "playing") fail("wait for this game to finish");
+  if (rules.eights !== "playerNames" && rules.eights !== "nextPlayerNames") {
+    fail("no such rule for eights");
+  }
+  if (rules.seedEight !== "natural" && rules.seedEight !== "dealerNames") {
+    fail("no such rule for the seed card");
+  }
+  if (typeof rules.sunny !== "boolean") fail("the Sunny Rule is on or off");
+
+  room.options = {
+    ...DEFAULT_OPTIONS,
+    eights: rules.eights,
+    seedEight: rules.seedEight,
+    sunny: rules.sunny ? { lockoutDraws: SUNNY_LOCKOUT_DRAWS } : null,
+  };
+  touch(room);
+};
+
+/** The room's options as the lobby talks about them. */
+export const houseRulesOf = (room: Room): HouseRules => ({
+  eights: room.options.eights,
+  seedEight: room.options.seedEight,
+  sunny: room.options.sunny !== null,
+});
+
 export const removeSeat = (room: Room, byPlayerId: PlayerId, target: PlayerId): void => {
   requireHost(room, byPlayerId);
   if (roomStatus(room) === "playing") fail("wait for this game to finish");
@@ -272,7 +317,7 @@ export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
   room.game = startGame(
     room.seats.map((seat) => seat.id),
     newSeed(),
-    DEFAULT_OPTIONS,
+    room.options,
     dealerIndex,
   );
   touch(room);
@@ -400,6 +445,7 @@ export const roomView = (room: Room): RoomView => ({
   maxPlayers: MAX_TABLE_PLAYERS,
   lastWinnerId: room.lastWinnerId,
   botSpeed: room.botSpeed,
+  houseRules: houseRulesOf(room),
 });
 
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>

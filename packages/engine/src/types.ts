@@ -77,6 +77,21 @@ export type Phase =
   | { kind: "over" };
 
 /**
+ * The position a challenged reach was made from: the hand the drawer held and
+ * the board they faced, both frozen at the instant *before* they touched the
+ * deck.
+ *
+ * Named because it is the shape of the accusation on both sides of the wire —
+ * `Challenge.reach` on the server, `GameView.sunnyReach` at the table — and the
+ * two must not be allowed to drift apart.
+ */
+export interface SunnyReach {
+  hand: Card[];
+  activeSuit: Suit;
+  topRank: Rank;
+}
+
+/**
  * The Sunny Rule challenge window.
  *
  * Opens on any draw and closes when the *next* player takes their first action,
@@ -97,11 +112,7 @@ export interface Challenge {
    * judged against: a card they only came to hold afterwards must never be
    * offered, or count, as an accusation.
    */
-  reach: {
-    hand: Card[];
-    activeSuit: Suit;
-    topRank: Rank;
-  };
+  reach: SunnyReach;
   violation: {
     /**
      * The game exactly as it stood *before* the illegal draw. A successful call

@@ -278,7 +278,7 @@ describe("a wrong call", () => {
     // lockout counts draws at the table, not whether the window is open.
     state = draw(state, "a");
     expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
-      /can't call again/,
+      /before you can call again/,
     );
     // Someone else at the table is untouched by b's lockout.
     const result = applyIntent(state, { type: "callSunny", playerId: "c", cardId: card("2C").id });
@@ -301,12 +301,12 @@ describe("a wrong call", () => {
     };
 
     expect(reject(locked, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
-      /can't call again/,
+      /before you can call again/,
     );
     const stillLocked = { ...locked, totalDraws: 12 };
     expect(
       reject(stillLocked, { type: "callSunny", playerId: "b", cardId: card("2C").id }),
-    ).toMatch(/can't call again/);
+    ).toMatch(/before you can call again/);
     const free = { ...locked, totalDraws: 13 };
     expect(applyIntent(free, { type: "callSunny", playerId: "b", cardId: card("2C").id }).ok).toBe(
       true,

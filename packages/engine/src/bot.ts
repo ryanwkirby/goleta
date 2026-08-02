@@ -9,7 +9,14 @@
 import { randomInt } from "./rng.ts";
 import { isPlayable, isWild } from "./cards.ts";
 import type { GameView } from "./redact.ts";
-import { SUITS, type Card, type Intent, type PlayerId, type Suit } from "./types.ts";
+import {
+  SUITS,
+  type Card,
+  type Intent,
+  type PlayerId,
+  type SunnyReach,
+  type Suit,
+} from "./types.ts";
 
 /**
  * How often a table of bots calls a violation it has caught.
@@ -97,7 +104,7 @@ const pickSurrender = (view: GameView): Card | undefined => {
  * human has to: nothing says which card was legal, so it has to work that out
  * from `reach` itself rather than being handed the answer.
  */
-const pickAccusation = (reach: NonNullable<GameView["sunnyReach"]>): Card | undefined => {
+const pickAccusation = (reach: SunnyReach): Card | undefined => {
   const legal = reach.hand.filter((card) => isPlayable(card, reach.activeSuit, reach.topRank));
   const wild = legal.find(isWild);
   if (wild) return wild;

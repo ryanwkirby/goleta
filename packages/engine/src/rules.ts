@@ -16,13 +16,13 @@ import {
   SUNNY_LOCKOUT_DRAWS,
   type ApplyResult,
   type Card,
-  type Challenge,
   type GameEvent,
   type GameOptions,
   type GameState,
   type Intent,
   type PlayerId,
   type PlayerState,
+  type SunnyReach,
   type TurnUpReason,
 } from "./types.ts";
 
@@ -283,6 +283,19 @@ const handleChooseSuit = (
   return null;
 };
 
+/**
+ * How many more reaches this player must sit out before they may accuse again.
+ * Zero for anyone free to call, which is almost everyone almost always.
+ *
+ * Written without `Math.max` on purpose: the engine bans the `Math` global
+ * outright, which is how `Math.random` is kept out of a package that has to
+ * replay exactly from a seed.
+ */
+export const sunnyLockedDraws = (s: GameState, playerId: PlayerId): number => {
+  const until = s.sunnyLockouts[playerId] ?? 0;
+  return until > s.totalDraws ? until - s.totalDraws : 0;
+};
+
 const handleCallSunny = (
   s: GameState,
   callerId: PlayerId,
@@ -299,9 +312,9 @@ const handleCallSunny = (
   if (!caller) return "unknown player";
   if (caller.eliminated) return "you're out of the game";
 
-  const lockedUntil = s.sunnyLockouts[callerId] ?? 0;
-  if (lockedUntil > s.totalDraws) {
-    return `you can't call again for ${lockedUntil - s.totalDraws} more draw(s)`;
+  const locked = sunnyLockedDraws(s, callerId);
+  if (locked > 0) {
+    return `your last call missed — ${locked} more ${locked === 1 ? "draw" : "draws"} before you can call again`;
   }
 
   // The only cards an accusation may ever name: the offender's hand as it
@@ -429,7 +442,7 @@ const recordDraw = (
   card: Card | null,
   inViolation: boolean,
   snapshot: GameState | null,
-  reach: Challenge["reach"],
+  reach: SunnyReach,
 ): void => {
   if (!s.challenge || s.challenge.drawerId !== playerId) {
     s.challenge = { drawerId: playerId, drawnIds: [], reach, violation: null, resolved: false };

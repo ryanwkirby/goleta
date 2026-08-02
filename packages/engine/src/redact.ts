@@ -25,8 +25,16 @@
  * would not be is a bug in the event, not something to filter on the way out.
  */
 
-import { legalCards, mustPlay, playerById, topCard } from "./rules.ts";
-import type { Card, CardId, GameState, PlayerId, Rank, SurrenderReason, Suit } from "./types.ts";
+import { legalCards, mustPlay, playerById, sunnyLockedDraws, topCard } from "./rules.ts";
+import type {
+  Card,
+  CardId,
+  GameState,
+  PlayerId,
+  SunnyReach,
+  SurrenderReason,
+  Suit,
+} from "./types.ts";
 
 export interface PlayerView {
   id: PlayerId;
@@ -75,7 +83,7 @@ export interface GameView {
    * they've been caught, and a spectator — who can't call at all — is told
    * nothing either.
    */
-  sunnyReach: { hand: Card[]; activeSuit: Suit; topRank: Rank } | null;
+  sunnyReach: SunnyReach | null;
   /**
    * Draws left before *you* may call again, after a wrong accusation. Zero
    * means free to call. Visible only to the locked-out player themselves —
@@ -135,9 +143,7 @@ export const redact = (state: GameState, viewerId: PlayerId | null): GameView =>
     sunnyCallable: canCall,
     sunnyTargetId: canCall ? challenge.drawerId : null,
     sunnyReach: canCall ? challenge.reach : null,
-    sunnyLockedDraws: viewer
-      ? Math.max(0, (state.sunnyLockouts[viewer.id] ?? 0) - state.totalDraws)
-      : 0,
+    sunnyLockedDraws: viewer ? sunnyLockedDraws(state, viewer.id) : 0,
     legalCardIds: viewer ? legalCards(state, viewer).map((c) => c.id) : [],
     youMustPlay: viewer ? mustPlay(state, viewer) : false,
     status: state.status,

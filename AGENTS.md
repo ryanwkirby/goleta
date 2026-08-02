@@ -81,17 +81,32 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   back, one turn at a time, and everyone at the table hears you ask (#33).
   Restoring the highlights unconditionally removes the chance to make the
   mistake the Sunny Rule feeds on.
-- **The server does say whether a draw was illegal — slowly.** This one reversed
-  in #31, and the old rule ("that flag must never leave the server") is gone.
-  `GameView.sunnyWouldLand` carries it to anyone who could call, and the sun
-  icon spends ten seconds ramping from barely visible to unmissable. The trade
-  was made with eyes open: a player watching the table still calls it sooner
-  than one who isn't, and a call is available on any draw regardless, so the
-  button's mere presence still reveals nothing. Do not "restore" the old
-  behaviour, and do not shorten the ramp — the ramp *is* the balance.
+- **Whether a draw was illegal never leaves the server.** No field carries it,
+  and nothing on screen — no glow, no ramp, no ordering, no wording — separates
+  a legal draw from an illegal one. The sun has exactly one appearance and it
+  means "somebody reached, and you may accuse them."
+
+  This bullet has been round the houses, so the history is worth keeping. #31
+  reversed the rule and shipped the answer as `GameView.sunnyWouldLand`, behind
+  a ten-second glow ramp, on the reasoning that a wrong call cost the caller a
+  card and free guessing needed a brake somewhere. #50 reversed it back, because
+  requiring the caller to **name the card** is a far better brake: a guess now
+  has to be a specific claim, made out loud, that can be specifically wrong. The
+  tell had nothing left to buy. Both the flag and the ramp are gone; do not
+  reintroduce either, under any name.
+- **What does go out is `sunnyReach` — evidence, not a verdict.** A viewer who
+  could call is sent the offender's hand and the board as they stood before the
+  reach, because an accusation has to name one of those cards. Nothing says
+  which of them was legal. Do not add a `legalCardIds` equivalent for it, do not
+  sort it helpfully, and do not dim the cards that wouldn't have played.
 - **The drawer is never told they've been caught**, and neither is a spectator.
-  `sunnyWouldLand` is gated on being able to call. The whole `state.challenge`
-  object, snapshot and all, still never leaves the server.
+  `sunnyReach` is gated on being able to call. The whole `state.challenge`
+  object, snapshot and `violation` and all, never leaves the server.
+- **A wrong call costs no cards.** It locks the caller out for three draws
+  (`SUNNY_LOCKOUT_DRAWS`) and that is all. The old card forfeit was a
+  digital-era invention to stop free guessing; the game's original written rules
+  never had any wrong-call penalty, and naming the card does that job now. The
+  lockout is visible only to the player serving it.
 
 ## Architecture
 

@@ -313,6 +313,35 @@ describe("a wrong call", () => {
     );
   });
 
+  it("survives the rewind a later correct call performs", () => {
+    // The rewind restores a whole cloned `GameState`, and lockouts live on it.
+    // Restoring them wholesale would refund a wrong call made *before* the
+    // snapshot was taken — b would walk away from a miss because somebody else
+    // later got it right. `handleCallSunny` carries the two counters across the
+    // `Object.assign` by hand; this is what would break if that were dropped.
+    let state = draw(
+      table({
+        hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
+        top: "5S",
+        drawPile: ["QD", "KD"],
+      }),
+      "a",
+    );
+    // b names the 2C, which was dead against the 5S. A miss.
+    state = call(state, "b", "2C");
+    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_DRAWS + 1);
+
+    // a reaches again, reopening the window, and c names the 5H — which really
+    // was playable. That call lands and rewinds the game past b's miss.
+    state = draw(state, "a");
+    state = call(state, "c", "5H");
+    expect(state.phase.kind).toBe("sunnyPlay");
+
+    // b's miss stands, and the draws served against it weren't handed back.
+    expect(state.totalDraws).toBe(2);
+    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_DRAWS + 1);
+  });
+
   it("is per caller: someone else's lockout doesn't apply to you", () => {
     let state = draw(
       table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD", "3D"] }),

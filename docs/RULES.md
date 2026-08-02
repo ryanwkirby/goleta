@@ -126,11 +126,21 @@ rest are too late, and cost them nothing.
 When somebody draws, a small sun appears beside them — and stays beside them
 until the window shuts, even once play has moved on. Tap it to call. That it is
 there at all says nothing about whether you'd be right; it means only that they
-drew.
+drew, and it looks exactly the same whether they were allowed to or not.
 
-But if the draw really was illegal, the sun begins to glow: faintly at first,
-unmistakably by about ten seconds in. Call it early and you are backing your own
-eyes. Wait for the sun to make up your mind, and everyone watched you wait.
+### Naming the card
+
+**A call has to name a card.** Tapping the sun doesn't accuse anyone by itself:
+it shows you the offender's hand *as it stood immediately before they reached*,
+and you tap the card you say they should have played.
+
+It is that hand and no other. Anything they drew after the reach you are
+challenging was never theirs to play, so it is not on the list and cannot be
+named.
+
+Nothing in the app marks up which of those cards was legal. It is the same
+judgement you would make leaning over a real table — their cards are face up,
+the card in play is face up, and the two are all you need.
 
 It applies to any illegal draw in the turn, not just the first one. Drawing a
 second card when the first card you drew gave you a play is exactly the same
@@ -145,10 +155,12 @@ If nobody calls it, nothing happens. The turn stands as played.
 
 ### If the call is right
 
-The offender, in this order:
+Right means the card you named really was legal against the card in play at the
+moment they reached. The offender, in this order:
 
 1. **Makes the play they skipped**, choosing among the cards that were legal
-   before they reached for the deck.
+   before they reached for the deck. They are not held to the card you named —
+   naming one only had to prove they had one.
 2. **Plays a punishment card** — any one card from the rest of their hand, their
    choice. It does not have to be legal. It goes face up on the pile like any
    other play.
@@ -171,10 +183,18 @@ anything named would be erased before it could matter.
 
 ### If the call is wrong
 
-The caller **gives up one card** of their choosing. It goes to the **bottom of
-the face-up pile**, underneath everything already played, so it never becomes
-the card in play and changes nothing about the position. Accusations aren't
-free.
+**Nothing happens to anybody's hand.** No card is lost, by the caller or by the
+accused, and the position is exactly as it was.
+
+What a miss costs is your voice: **you cannot call the Sunny Rule again until
+three more cards have been drawn** at the table. Everyone else can still call in
+the meantime, including on the very draw you just got wrong.
+
+That is the whole penalty, and it is deliberately not a card. Having to name a
+specific card is what stops a call being a free guess — you have to be able to
+point at the play they skipped — so a wrong call is already a wrong claim made
+out loud in front of everyone. The lockout just stops you making another one
+immediately.
 
 ---
 
@@ -186,8 +206,8 @@ cards are held up, not fanned in secret, and the app plays it the same way.
 That is what makes the Sunny Rule a rule and not a guess: whether someone had a
 play they skipped is there on the table to be seen. The app never marks up
 another player's cards for you — and it won't mark up your own either, once
-you've played a game. Spotting the play, and calling it before the sun does the
-work for you, is the game.
+you've played a game. Spotting the play, and being able to point at it, is the
+game.
 
 ## Asking for a hand
 

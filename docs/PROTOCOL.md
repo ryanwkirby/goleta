@@ -75,22 +75,34 @@ can only ever act as itself. There's a test that tries it the other way.
 Hands are not on that list: every hand is face up, so `state` carries all of
 them and `events` go out whole, the same bytes to everybody seated.
 
-### What it does send, and used not to
+Whether a draw was actually illegal is not on that list because it is not on any
+list: no field carries it. `challenge.violation` stays on the server, and
+nothing is derived from it on the way out.
 
-Three fields describe the challenge window: `sunnyCallable`, `sunnyTargetId`,
-and `sunnyWouldLand`.
+### What it does send about the challenge window
 
-The first two are old. `sunnyCallable` is true after **any** draw by somebody
-else, honest or not — the call is always available, so its presence tells you
-nothing.
+Four fields, none of which is the answer.
 
-`sunnyWouldLand` is the answer, and sending it at all reverses a decision this
-document used to state the other way round. It is the tell behind the sun
-icon's glow, and the balance is in how the UI spends it: the glow takes ten
-seconds to go from barely perceptible to unmissable, so a player watching the
-table still gets there before one who isn't. It goes only to viewers who could
-call this instant — never to the drawer, who is not told they've been caught,
-and never to a spectator, who has no call to make.
+`sunnyCallable` is true after **any** draw by somebody else, honest or not — the
+call is always available, so its presence tells you nothing. `sunnyTargetId`
+names who it would land on.
+
+`sunnyReach` is the material for an accusation: the offender's hand and the
+board they faced, frozen at the instant before the draw being challenged. A call
+has to name one of those cards, so a caller has to be able to see them. Nothing
+in it says which was legal — that is the judgement being asked for, and it is
+made from cards that were face up on the table anyway. It goes only to viewers
+who could call this instant: never to the drawer, who is not told they've been
+caught, and never to a spectator, who has no call to make.
+
+`sunnyLockedDraws` is how many draws you personally have left to serve after a
+call that missed. It is about you and nobody else, so it goes to you and nobody
+else.
+
+An earlier revision (#31) did send the answer, as `sunnyWouldLand`, behind a
+ten-second glow. #50 removed it: requiring the caller to name a card makes a
+wrong call specific enough to stand on its own, so the tell was no longer
+buying anything.
 
 ## Bots
 
@@ -98,18 +110,22 @@ Bots live on the server and act on a timer, at one of two paces the host picks
 in the lobby. The setting belongs to the room, not to a viewer — one timer feeds
 every screen at the table.
 
-| | ordinary move | calling Sunny | grace before closing a challenge window |
-| --- | --- | --- | --- |
-| `human` (default) | 5s | 5s | 12s |
-| `lightning` | 800ms | 1.2s | 3.5s |
+| | first move of a turn | later in the same turn | calling Sunny | grace before closing a challenge window |
+| --- | --- | --- | --- | --- |
+| `human` (default) | 3s | 1s | 5s | 12s |
+| `lightning` | 700ms | 700ms | 700ms | 2s |
 
 The grace column is the one that matters: when a challenge window is open, a bot
 whose move would close it waits instead. Without that, a bot in the next seat
 would shut the window before any human could reach for it and the Sunny Rule
-would only ever work between people. On `human` it also outlasts the ten seconds
-the sun icon takes to reach full glow, so the tell finishes arriving before the
-window can close on it — on `lightning` it doesn't, which is the trade you make
+would only ever work between people. `human` leaves twelve seconds because a
+call is three decisions from a standing start — notice the reach, read the hand
+they reached from, pick the card they should have played — and nothing on screen
+helps with any of them. `lightning` cuts it to two, which is the trade you make
 for the pace.
+
+A bot picks its accusation the same way, from `sunnyReach` alone: it is never
+told which card was legal, so a bot that can't find one says nothing.
 
 ## Connection care
 

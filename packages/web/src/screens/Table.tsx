@@ -3,19 +3,22 @@ import { useCallback, useEffect, useState } from "react";
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
 import { EventLog } from "../components/EventLog.tsx";
-import { Hand, type HandMode } from "../components/Hand.tsx";
+import { Hand, HandSortButton, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { Seats } from "../components/Seats.tsx";
 import { SunnyAnnounce, SunnyExplainer, SuitPicker } from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
+import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
   hasSeenSunny,
+  loadHandSort,
   markSunnySeen,
   recordGameFinished,
+  saveHandSort,
 } from "../net/identity.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
 
@@ -87,6 +90,7 @@ export function Table({
   const [graduating, setGraduating] = useState(false);
   const [helpedTurn, setHelpedTurn] = useState<number | null>(null);
   const [stalled, setStalled] = useState(false);
+  const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
   const nameOf = namerFor(room);
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
@@ -148,6 +152,12 @@ export function Table({
     setHelpedTurn(game.turnNumber);
     setStalled(false);
     send({ t: "help" });
+  };
+
+  const cycleSort = (): void => {
+    const next = NEXT_SORT[handSort];
+    setHandSort(next);
+    saveHandSort(next);
   };
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
@@ -253,13 +263,16 @@ export function Table({
               doesn't move under your fingers when it appears. */}
           <div className="flex min-h-7 items-center gap-2 px-1">
             {stalled ? <HelpLink onAsk={askForHelp} /> : null}
+            {(you?.hand.length ?? 0) > 1 ? (
+              <HandSortButton sort={handSort} onCycle={cycleSort} className="ml-auto" />
+            ) : null}
           </div>
 
           {/* Your own shout, over your own cards, same as everyone else sees. */}
           {shoutingHere ? <HelpShout /> : null}
 
           <Hand
-            cards={you?.hand ?? []}
+            cards={sortHand(you?.hand ?? [], handSort)}
             legalCardIds={game.legalCardIds}
             mode={mode}
             assist={assist}

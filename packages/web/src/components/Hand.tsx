@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type RefCallback } from "react";
 
 import type { Card } from "@goleta/engine";
 
+import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
 import { cardAnchor, HAND } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { PlayingCard } from "./Card.tsx";
@@ -10,6 +11,39 @@ export type HandMode = "play" | "surrender" | "idle";
 
 /** How long the hand takes to close a gap, or open one. */
 const REFLOW_MS = 190;
+
+/**
+ * The one control over your own cards: tap to cycle how they're arranged.
+ *
+ * Quiet, and next to the offer of help rather than anywhere near the table —
+ * it changes nothing about the game, only about your eyes. The cards slide to
+ * their new places on the reflow below, so where a card went is watchable.
+ */
+export function HandSortButton({
+  sort,
+  onCycle,
+  className = "",
+}: {
+  sort: HandSort;
+  onCycle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onCycle}
+      title={`Your hand is ${SORT_LABELS[sort]}. Tap to sort it ${SORT_LABELS[NEXT_SORT[sort]]}.`}
+      className={[
+        "rounded-lg px-2 py-1 text-xs text-white/35",
+        "transition-colors hover:bg-white/5 hover:text-white/70",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+        className,
+      ].join(" ")}
+    >
+      sort: {SORT_LABELS[sort]}
+    </button>
+  );
+}
 
 export function Hand({
   cards,

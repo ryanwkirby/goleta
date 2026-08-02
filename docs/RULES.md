@@ -63,7 +63,9 @@ Draw one card from the deck, into your hand.
   third, your turn ends and you keep all three.
 
 So three draws only happen when you're genuinely, thoroughly stuck — and that's
-the best turn you can have.
+the best turn you can have. The card most likely to spoil one is an
+[8](#eights-are-wild), which is playable on anything and so always cuts a draw
+short.
 
 ### Eights are wild
 
@@ -72,9 +74,18 @@ An 8 **played from your hand** can be played on any card. After playing one, you
 
 Note what this costs you: because an 8 is always playable, and because playing
 is compulsory, **you can never legally draw while you hold an 8.** An 8 in your
-hand is a countdown, not a weapon. Naming the suit on the way out is the
-consolation prize — and [the Power of Eights](#the-power-of-eights) takes even
-that away.
+hand is a countdown, not a weapon.
+
+**An 8 is a turn stopper.** That is the thing to understand about it, and it
+bites hardest mid-draw. Being stuck is the best turn you can have — up to three
+cards into your hand — but the moment a drawn card can be played, you have to
+play it and your turn is over. An 8 can always be played. So drawing one ends
+your turn on the spot: the card goes straight back out, and it takes whatever
+draws you had left with it. Drawn on the first of three, an 8 costs you the two
+you never got to take.
+
+Naming the suit on the way out is the one scrap of compensation for that — and
+[the Power of Eights](#the-power-of-eights) takes even that away.
 
 ### Natural eights
 
@@ -231,10 +242,12 @@ there is simply nobody empowered to do anything about it if you don't.
 Instead of the player who plays an 8 naming the suit, **the next player names
 it** — and then plays against the suit they just named.
 
-This makes an 8 worse than useless. Under the standard rule, being forced to
-play your 8 at least buys you the suit call. Here it buys you nothing and hands
-your neighbour a gift: they will name a suit they cannot follow, fail to play,
-and draw a card off the back of it.
+An 8 is [already a turn stopper](#eights-are-wild): it ends your turn the moment
+it reaches your hand and gives you nothing back. Under the standard rule the
+suit call is the one thing you get for that. This rule takes it away, so the 8
+stops your turn *and* hands the say over what happens next to the player it
+stopped in favour of. They will name a suit they can't follow, fail to play, and
+draw off the back of your dead turn.
 
 ### Dealer's Choice
 

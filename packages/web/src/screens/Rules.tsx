@@ -44,9 +44,10 @@ export function Rules({
         </li>
         <li>
           <strong className="text-white">Eights in your hand are wild</strong> and let you name the
-          next suit. They're also a liability: an 8 plays on anything, so while you hold one you can
-          always play, which means you can never draw. An 8 turned up off the deck is just an
-          ordinary 8 — its own suit, nobody names anything.
+          next suit. They're also a turn stopper: an 8 plays on anything, so holding one means you
+          can never draw — and drawing one ends your turn on the spot, straight back out, taking
+          the draws you had left with it. An 8 turned up off the deck is just an ordinary 8 — its
+          own suit, nobody names anything.
         </li>
         <li>
           <strong className="text-white">When the deck runs out</strong> the whole played pile gets

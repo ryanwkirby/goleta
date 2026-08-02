@@ -33,8 +33,8 @@ const started: Harness[] = [];
 
 /** Both speeds run flat out here; the pacing itself is the room store's job. */
 const FLAT_OUT = {
-  human: { firstMove: 2, nextMove: 2, call: 2, sunnyGrace: 5 },
-  lightning: { firstMove: 2, nextMove: 2, call: 2, sunnyGrace: 5 },
+  human: { firstMove: 2, nextMove: 2, call: 2 },
+  lightning: { firstMove: 2, nextMove: 2, call: 2 },
 };
 
 const startServer = async (dataDir: string): Promise<Harness> => {

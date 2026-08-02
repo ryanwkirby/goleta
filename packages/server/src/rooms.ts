@@ -391,8 +391,8 @@ const tableCallsSunny = (room: Room): boolean => {
 
 /**
  * The next move a bot wants to make, if any. Returns one at a time so the
- * caller can space them out — bots that answered instantly would slam the
- * Sunny window shut before a human could reach for it.
+ * caller can space them out, and so each move is decided against the table as
+ * it stands rather than against a plan made several moves ago.
  */
 export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null => {
   const game = room.game;
@@ -415,14 +415,6 @@ export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null =
     if (intent) return { seat, intent };
   }
   return null;
-};
-
-/** Whether a move by this player would close an open challenge window. */
-export const wouldCloseSunnyWindow = (room: Room, playerId: PlayerId, intent: Intent): boolean => {
-  const challenge = room.game?.challenge;
-  if (!challenge || challenge.resolved) return false;
-  if (intent.type !== "playCard" && intent.type !== "drawCard") return false;
-  return challenge.drawerId !== playerId;
 };
 
 // ---------------------------------------------------------------------------

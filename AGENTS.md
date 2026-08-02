@@ -99,6 +99,13 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   reach, because an accusation has to name one of those cards. Nothing says
   which of them was legal. Do not add a `legalCardIds` equivalent for it, do not
   sort it helpfully, and do not dim the cards that wouldn't have played.
+- **Bots never wait for a Sunny window.** Their pacing is turn rhythm and
+  nothing else, and `botPace` has no input that could tell it a call is on
+  offer. A window opens on every draw, so a bot that held off would be stalling
+  the table almost continuously — and a bot pausing after its own draw so the
+  seat next to it might accuse it is the worst of it. A human therefore has only
+  as long as the next bot's ordinary move to get a call in; that is the accepted
+  cost, not a regression. Don't reintroduce a grace period. (#56)
 - **The drawer is never told they've been caught**, and neither is a spectator.
   `sunnyReach` is gated on being able to call. The whole `state.challenge`
   object, snapshot and `violation` and all, never leaves the server.

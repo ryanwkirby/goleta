@@ -128,19 +128,32 @@ Bots live on the server and act on a timer, at one of two paces the host picks
 in the lobby. The setting belongs to the room, not to a viewer — one timer feeds
 every screen at the table.
 
-| | first move of a turn | later in the same turn | calling Sunny | grace before closing a challenge window |
-| --- | --- | --- | --- | --- |
-| `human` (default) | 3s | 1s | 5s | 12s |
-| `lightning` | 700ms | 700ms | 700ms | 2s |
+| | first action of a turn | the rest of that turn | calling Sunny |
+| --- | --- | --- | --- |
+| `human` (default) | 3s | 1s | 5s |
+| `lightning` | 700ms | 700ms | 700ms |
 
-The grace column is the one that matters: when a challenge window is open, a bot
-whose move would close it waits instead. Without that, a bot in the next seat
-would shut the window before any human could reach for it and the Sunny Rule
-would only ever work between people. `human` leaves twelve seconds because a
-call is three decisions from a standing start — notice the reach, read the hand
-they reached from, pick the card they should have played — and nothing on screen
-helps with any of them. `lightning` cuts it to two, which is the trade you make
-for the pace.
+The first two columns are the whole of a bot's turn pacing. It pauses once, to
+read as thinking, and then gets on with the rest — the second and third draws of
+a stuck turn, and the suit named after playing an 8, are decisions it has
+effectively already made, and sitting on those reads as lag.
+
+**An open challenge window changes none of these figures.** A window opens on
+every draw, so a bot that waited on one would spend most of the game waiting;
+the bot that just drew would be holding the table still on the chance that
+somebody accuses it. Bots move at their own pace and windows close when they
+close. Whether a call is available is not an input to the pacing at all.
+
+`calling Sunny` is the one Sunny figure left, and it is not a wait on the
+possibility of a call — it paces a call a bot is making. It is left long on
+`human` because bots that call correctly would otherwise take every call at the
+table, and a person watching should be able to beat them to one.
+
+One consequence, taken deliberately: against a bot's illegal draw, a person has
+only the next bot's beat to get a call in. Nothing on screen flags the draw, and
+an accusation has to name a card, so catching one means reading the table
+yourself and reading it fast. A window waiting on a person stays open as long as
+that person takes.
 
 A bot picks its accusation the same way, from `sunnyReach` alone: it is never
 told which card was legal, so a bot that can't find one says nothing.

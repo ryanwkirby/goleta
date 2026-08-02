@@ -34,7 +34,6 @@ import {
   roomView,
   setBotSpeed,
   setHouseRules,
-  wouldCloseSunnyWindow,
   type Room,
   type RoomStore,
   type Seat,
@@ -53,12 +52,6 @@ export interface BotTiming {
   nextMove: number;
   /** A bot calling the Sunny Rule. */
   call: number;
-  /**
-   * How long a bot waits before taking an action that would shut an open
-   * challenge window. Without this, a bot on the next seat would close the
-   * window instantly and no human could ever get a call in.
-   */
-  sunnyGrace: number;
 }
 
 /**
@@ -66,16 +59,11 @@ export interface BotTiming {
  *
  * `human` is the default and the one a table actually wants: three seconds is
  * about how long a person takes to look at a fresh hand, and a second is about
- * how long the rest of the turn deserves. Its grace is the long one because a
- * Sunny call is not one decision but three — spot the reach, read the hand they
- * reached from, and pick the card you say they should have played. Twelve
- * seconds is enough to do that from a standing start; anything less and the
- * bots take every call at the table.
+ * how long the rest of the turn deserves.
  *
  * `lightning` is for anyone who finds the wait tedious: everything at 700ms,
  * which still clears a card's flight across the table (`FLIGHT_MS`, 220ms) with
- * room to spare. Its grace is cut to two seconds — a real window, and a tight
- * one. That trade is the whole of what lightning costs you.
+ * room to spare.
  *
  * Neither `call` figure is turn pacing. It is the window in which a person can
  * beat the bots to a call they can all see, which is why the human one is left
@@ -83,16 +71,14 @@ export interface BotTiming {
  * every call at the table.
  */
 export const DEFAULT_BOT_TIMING: Record<BotSpeed, BotTiming> = {
-  human: { firstMove: 3000, nextMove: 1000, call: 5000, sunnyGrace: 12_000 },
-  lightning: { firstMove: 700, nextMove: 700, call: 700, sunnyGrace: 2000 },
+  human: { firstMove: 3000, nextMove: 1000, call: 5000 },
+  lightning: { firstMove: 700, nextMove: 700, call: 700 },
 };
 
 /** What a bot is about to do, as far as pacing is concerned. */
 export interface BotMoveShape {
   /** It is calling the Sunny Rule. */
   call: boolean;
-  /** It would shut a challenge window somebody else could still use. */
-  closesWindow: boolean;
   /** It has already acted this turn, so it isn't deciding from scratch. */
   midTurn: boolean;
 }
@@ -100,13 +86,16 @@ export interface BotMoveShape {
 /**
  * How long that move waits.
  *
- * Order matters: the two Sunny figures aren't turn pacing at all — they're the
- * room a person needs to get a call in — so they win over the ordinary rhythm
- * of a turn.
+ * Turn rhythm, and nothing else. Whether a challenge window happens to be open
+ * — which, since a window opens on every draw, is most of the time — does not
+ * enter into it. A bot that has decided what to do and then sits on it to leave
+ * room for a call against itself just reads as lag.
+ *
+ * `call` is the one Sunny figure left, and it paces an action a bot is actually
+ * taking rather than a wait on the possibility of one.
  */
 export const botPace = (timing: BotTiming, move: BotMoveShape): number => {
   if (move.call) return timing.call;
-  if (move.closesWindow) return timing.sunnyGrace;
   return move.midTurn ? timing.nextMove : timing.firstMove;
 };
 
@@ -174,7 +163,6 @@ export const attachSockets = (
     const last = botTurns.get(room.code);
     return botPace(botTiming[room.botSpeed], {
       call: move.intent.type === "callSunny",
-      closesWindow: wouldCloseSunnyWindow(room, move.seat.id, move.intent),
       midTurn: last?.playerId === move.seat.id && last.turnNumber === room.game?.turnNumber,
     });
   };

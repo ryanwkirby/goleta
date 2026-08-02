@@ -89,6 +89,14 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   than one who isn't, and a call is available on any draw regardless, so the
   button's mere presence still reveals nothing. Do not "restore" the old
   behaviour, and do not shorten the ramp — the ramp *is* the balance.
+- **Bots never wait for a Sunny window.** Their pacing is turn rhythm and
+  nothing else, and `botPace` has no input that could tell it a call is on
+  offer. A window opens on every draw, so a bot that held off would be stalling
+  the table almost continuously — and a bot pausing after its own draw so the
+  seat next to it might accuse it is the worst of it. This means the sun's
+  ten-second ramp usually won't finish before an ordinary bot move shuts the
+  window; that is the accepted cost, not a regression. Don't reintroduce a
+  grace period. (#56)
 - **The drawer is never told they've been caught**, and neither is a spectator.
   `sunnyWouldLand` is gated on being able to call. The whole `state.challenge`
   object, snapshot and all, still never leaves the server.

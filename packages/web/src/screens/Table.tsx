@@ -187,7 +187,7 @@ export function Table({
 
   return (
     <TableMotion game={game} log={log}>
-      <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <header className="flex items-center gap-2 text-xs text-white/50">
           <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}

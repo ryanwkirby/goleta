@@ -72,30 +72,36 @@ short.
 An 8 **played from your hand** can be played on any card. After playing one, you
 **name the suit** the next player has to match.
 
-Note what this costs you: because an 8 is always playable, and because playing
-is compulsory, **you can never legally draw while you hold an 8.** An 8 in your
-hand is a countdown, and you don't get to choose when it goes off.
+There are two ways an 8 reaches you and both of them are bad.
 
-**An 8 is a turn stopper.** That is the thing to understand about it, and it
-bites hardest mid-draw. Being stuck is the best turn you can have — up to three
-cards into your hand — but the moment a drawn card can be played, you have to
-play it and your turn is over. An 8 can always be played. So drawing one ends
-your turn on the spot: the card goes straight back out, and it takes whatever
-draws you had left with it. Drawn on the first of three, an 8 costs you the two
-you never got to take.
+**Dealt one, you are on a countdown.** Because an 8 is always playable, and
+because playing is compulsory, **you can never legally draw while you hold an
+8.** The best turn in the game is shut to you until it is gone, and you do not
+get to choose when that is.
 
-But what you get back for it is the suit, and that is worth more than a
-consolation. **Every hand is face up, so naming a suit is not a guess.** You can
-read what the players between you and your next turn are holding and pick
-something that does a specific thing to them. With the cards lying right, you
-can name a suit nobody can answer and arrange to come back round to a hand you
-can't play either — which is to say, arrange your own draw. Hold more than one 8
-and you can do it again each time the turn returns, steering the game for as
-many loops as you're willing to pay eights for.
+**Draw one, and your turn stops dead.** Being stuck is the best turn you can
+have — up to three cards into your hand — but the moment a drawn card can be
+played, you have to play it and your turn is over. An 8 can always be played. So
+drawing one ends the turn on the spot: the card goes straight back out, and it
+takes whatever draws you had left with it. Drawn on the first of three, an 8
+costs you the two you never got to take.
 
-That costs you cards, which is the only real currency here. Control usually
-does. [The Power of Eights](#the-power-of-eights) is the rule that takes it
-away.
+Either way it finishes the same, and the finish is the point: **the 8 leaves
+your hand.** That is a card gone, and cards are the only thing keeping you in
+this game.
+
+What softens it is the suit, and that is worth more than a consolation, because
+**every hand is face up, so naming a suit is not a guess.** You can read what
+the players between you and your next turn are holding and pick something that
+does a specific thing to them. With the cards lying right you can name a suit
+nobody can answer and arrange to come back round to a hand you can't play
+either — which is to say, arrange your own draw. Hold more than one 8 and you
+can do it again each time the turn comes back to you.
+
+None of which makes an 8 a card you *want*. You are still a card down, and down
+is the wrong direction. It makes it a card you hope to spend well.
+[The Power of Eights](#the-power-of-eights) is the rule that takes even that
+hope away.
 
 ### Natural eights
 
@@ -252,15 +258,16 @@ there is simply nobody empowered to do anything about it if you don't.
 Instead of the player who plays an 8 naming the suit, **the next player names
 it** — and then plays against the suit they just named.
 
-An 8 is [already a turn stopper](#eights-are-wild). Under the standard rule what
-you get for that is the suit — real control, worth reading the table for, and
-worth spending cards on. This rule takes it away and hands it to the player your
-dead turn just passed to, who will name something they can't follow and draw off
-the back of it.
+An 8 is [bad news either way](#eights-are-wild): a countdown while you hold it, a
+stopped turn if you draw it, and a card gone when it goes. Under the standard
+rule the suit is the one thing you get back for that — the reason an 8 is a card
+you hope to place well rather than simply a card you lost. This rule takes it
+away and hands it to the player your dead turn just passed to, who will name
+something they can't follow and draw off the back of it.
 
 That is the whole of the change, and it is bigger than it looks. Under the
-standard rules an 8 is a card you can *do* something with. Here, drawing one is
-purely an unlucky draw.
+standard rules an 8 is a bad card you can still do something with. Here it is
+just a bad card.
 
 ### Dealer's Choice
 

@@ -11,8 +11,34 @@ import { isWild } from "./cards.ts";
 import type { GameView } from "./redact.ts";
 import { SUITS, type Card, type Intent, type PlayerId, type Suit } from "./types.ts";
 
-/** How often a bot speaks up when a call is available. It is often wrong. */
-export const SUNNY_CALL_CHANCE = 15;
+/**
+ * How often a table of bots calls a violation it has caught.
+ *
+ * One roll per violation, taken by the table as a whole rather than by each bot
+ * in turn — see `rollSunnyCall`. Seven bots are therefore exactly as watchful as
+ * one, and you get away with roughly three illegal draws in ten either way,
+ * which is about what a room of people manages.
+ */
+export const SUNNY_CALL_CHANCE = 70;
+
+/**
+ * The table's single decision about the violation standing right now: call it,
+ * or let it go.
+ *
+ * The caller rolls once, when the violation first exists, and hands every bot
+ * the same answer. Rolling per bot would make a full table nearly impossible to
+ * slip anything past; re-rolling as the window ticks along would walk the odds
+ * up to certainty on its own.
+ */
+export const rollSunnyCall = (seed: number): [call: boolean, seed: number] => {
+  const [roll, next] = randomInt(seed, 100);
+  return [roll < SUNNY_CALL_CHANCE, next];
+};
+
+export interface BotOptions {
+  /** The table's verdict from `rollSunnyCall`, the same for every bot. */
+  callSunny?: boolean;
+}
 
 const ownHand = (view: GameView): Card[] =>
   view.players.find((p) => p.id === view.you)?.hand ?? [];
@@ -66,41 +92,43 @@ const pickSurrender = (view: GameView): Card | undefined => {
 };
 
 /**
- * The bot's move, if it has one. Returns the seed to carry forward so a run of
- * bot games replays exactly.
+ * The bot's move, if it has one.
+ *
+ * Nothing here is random. Every choice falls out of the view it was handed, and
+ * the one coin-flip a bot ever needed — whether to speak up about a violation —
+ * belongs to the table rather than to any one seat, so it is rolled outside and
+ * passed in.
  */
-export const decideBotIntent = (
-  view: GameView,
-  seed: number,
-): [intent: Intent | null, seed: number] => {
+export const decideBotIntent = (view: GameView, { callSunny = false }: BotOptions = {}): Intent | null => {
   const me: PlayerId | null = view.you;
-  if (me === null || view.status === "over") return [null, seed];
+  if (me === null || view.status === "over") return null;
 
-  let rng = seed;
-  if (view.sunnyCallable) {
-    const [roll, next] = randomInt(rng, 100);
-    rng = next;
-    if (roll < SUNNY_CALL_CHANCE) return [{ type: "callSunny", playerId: me }, rng];
+  // A bot accuses only somebody it has actually caught. `sunnyWouldLand` is the
+  // same tell a human reads off the sun's glow, so this gates behaviour on
+  // information the bot already holds rather than handing it any more — and a
+  // call that misses costs a card, which is not a price to pay on a guess.
+  if (callSunny && view.sunnyCallable && view.sunnyWouldLand) {
+    return { type: "callSunny", playerId: me };
   }
 
   if (view.phase.kind === "surrender") {
-    if (view.phase.playerId !== me) return [null, rng];
+    if (view.phase.playerId !== me) return null;
     const card = pickSurrender(view);
-    return [card ? { type: "surrenderCard", playerId: me, cardId: card.id } : null, rng];
+    return card ? { type: "surrenderCard", playerId: me, cardId: card.id } : null;
   }
 
-  if (view.waitingOn !== me) return [null, rng];
+  if (view.waitingOn !== me) return null;
 
   if (view.phase.kind === "suit") {
-    return [{ type: "chooseSuit", playerId: me, suit: pickSuit(view) }, rng];
+    return { type: "chooseSuit", playerId: me, suit: pickSuit(view) };
   }
 
   if (view.phase.kind === "action" || view.phase.kind === "sunnyPlay") {
     const card = pickPlay(view);
-    if (card) return [{ type: "playCard", playerId: me, cardId: card.id }, rng];
+    if (card) return { type: "playCard", playerId: me, cardId: card.id };
     // No legal card, so drawing is both allowed and required.
-    if (view.phase.kind === "action") return [{ type: "drawCard", playerId: me }, rng];
+    if (view.phase.kind === "action") return { type: "drawCard", playerId: me };
   }
 
-  return [null, rng];
+  return null;
 };

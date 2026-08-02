@@ -187,7 +187,7 @@ export function Table({
 
   return (
     <TableMotion game={game} log={log}>
-      <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <header className="flex items-center gap-2 text-xs text-white/50">
           <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
@@ -274,13 +274,27 @@ export function Table({
           {/* Your own shout, over your own cards, same as everyone else sees. */}
           {shoutingHere ? <HelpShout /> : null}
 
-          <Hand
-            cards={sortHand(you?.hand ?? [], handSort)}
-            legalCardIds={game.legalCardIds}
-            mode={mode}
-            assist={assist}
-            onChoose={onChooseCard}
-          />
+          {/* The same frame every other seat gets when the table is waiting on
+              it. Your own cards aren't in the strip, so the one seat that most
+              wants the highlight was the only one without it.
+
+              On a wrapper rather than on `Hand` itself: that element scrolls
+              its own overflow, and a box that clips one axis clips both, so it
+              would trim its own ring. */}
+          <div
+            className={[
+              "rounded-2xl transition-colors",
+              mine ? "ring-1 ring-amber-300/60" : "",
+            ].join(" ")}
+          >
+            <Hand
+              cards={sortHand(you?.hand ?? [], handSort)}
+              legalCardIds={game.legalCardIds}
+              mode={mode}
+              assist={assist}
+              onChoose={onChooseCard}
+            />
+          </div>
         </div>
 
         <EventLog log={log} nameOf={nameOf} />

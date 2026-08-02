@@ -5,6 +5,11 @@
   --color-felt-900: oklch(0.25 0.04 160);
   --color-felt-800: oklch(0.32 0.05 160);
 
+  /* The backs of the cards: a Bee deck's blue, and the lighter blue its
+     lattice is woven in. */
+  --color-bee-700: oklch(0.42 0.12 258);
+  --color-bee-500: oklch(0.62 0.13 258);
+
   /* The Sunny tell: ten seconds from "did I imagine that?" to unmissable.
      The ramp is the whole point — it hands the answer to a player who was
      watching sooner than to one who wasn't. See the Sunny Rule section of
@@ -14,6 +19,20 @@
      has asked their machine to stop animating things. */
   --animate-sunny-tell: sunny-tell 10s cubic-bezier(0.7, 0, 0.9, 0.4) forwards;
   --animate-help-shout: help-shout 2.6s ease-out forwards;
+}
+
+/* A Bee deck's woven diamond lattice, near enough: two repeating gradients
+   crossing at right angles, with the diamonds falling out of where they meet.
+   Not a reproduction and not trying to be.
+
+   The 6px period is chosen for the small end of the range. `CardBack` is drawn
+   at 96px on the draw pile and at 40px for every card flying face-down into a
+   seat, and a lattice tuned to the big one turns to mush at the small one. */
+@utility bee-back {
+  background-color: var(--color-bee-700);
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 5px, var(--color-bee-500) 5px 6px),
+    repeating-linear-gradient(-45deg, transparent 0 5px, var(--color-bee-500) 5px 6px);
 }
 
 /* "help!", rising off the hand that asked for it. */
@@ -76,11 +95,22 @@ body {
 
 #root {
   /* Fills the screen, but grows past it when a panel is taller than the phone
-     — a fixed height here silently clips the bottom off long content. */
+     — a fixed height here silently clips the bottom off long content.
+     `min-height` alone left the screens measuring themselves against an auto
+     height, which no percentage can resolve against, so they wrapped their
+     content and left the rest of the viewport bare. A flex column hands each
+     screen the leftover height without anyone having to ask for a percentage
+     of anything. */
   min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 body {
+  /* Nothing white underneath the app to be uncovered — not by a safe-area
+     inset, not by the address bar sliding away mid-scroll. The screens paint
+     their own gradient on top; this is only what's behind them. */
+  background-color: var(--color-felt-950);
   /* No rubber-banding at the edges; the table should feel like a surface. */
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;

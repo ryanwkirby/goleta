@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
+import { inTurnOrder } from "../lib/seating.ts";
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import type { Shout } from "../net/useGoleta.ts";
@@ -106,19 +107,32 @@ export function Seats({
   shouts: Shout[];
   onCallSunny: () => void;
 }) {
-  const others = game.players.filter((player) => player.id !== game.you);
+  const others = inTurnOrder(game);
   const shouting = new Set(shouts.map((shout) => shout.playerId));
   const strip = useRef<HTMLUListElement>(null);
   const { reduced } = useMotion();
 
   /**
-   * The strip brings whoever the table is waiting on into the middle of itself.
+   * One rule for where the strip sits: show whoever the table is waiting on,
+   * whole.
    *
    * Eight seats don't fit on a phone, and having to go looking for the person
    * playing — every turn, all game — was the single most tiring thing about
    * watching a full table. `waitingOn` rather than the turn, so it also follows
    * somebody who owes a card for a call that missed: that is exactly the moment
    * you want to be looking at them.
+   *
+   * On your own turn there is nobody in the strip to follow, so it goes hard
+   * left — which, rotated, is the player about to follow you, and exactly who
+   * you're weighing up while you decide.
+   *
+   * Otherwise the seat is centred, but never at the price of hanging one of its
+   * ends off an edge: the first seat settles at `0` and the last at the end of
+   * the scroll. Centring alone got that wrong for any seat wider than the strip
+   * — `clientWidth - offsetWidth` goes negative and the "centre" lands *inside*
+   * the seat, showing its middle with both ends cut off, and low enough that
+   * the clamp to the far end never fired. A seat too wide to show whole gets
+   * its start instead of its middle.
    *
    * Scrolls by arithmetic on the strip rather than `scrollIntoView`, which is
    * free to scroll every ancestor it can find and would yank the page about
@@ -128,26 +142,41 @@ export function Seats({
    * strip rather than its place on the page.
    */
   const waitingOn = game.waitingOn;
+  const you = game.you;
   useEffect(() => {
     const list = strip.current;
     if (!list || waitingOn === null) return;
-    const seat = list.querySelector<HTMLElement>(`[data-seat="${waitingOn}"]`);
-    if (!seat) return;
 
-    const centred = seat.offsetLeft - (list.clientWidth - seat.offsetWidth) / 2;
-    const left = Math.max(0, Math.min(centred, list.scrollWidth - list.clientWidth));
+    const end = Math.max(0, list.scrollWidth - list.clientWidth);
+    let left = 0;
+
+    if (waitingOn !== you) {
+      const seat = list.querySelector<HTMLElement>(`[data-seat="${waitingOn}"]`);
+      if (!seat) return;
+      const centred = seat.offsetLeft - (list.clientWidth - seat.offsetWidth) / 2;
+      const showingItsStart = seat.offsetLeft;
+      const showingItsEnd = seat.offsetLeft + seat.offsetWidth - list.clientWidth;
+      const wanted = Math.min(Math.max(centred, showingItsEnd), showingItsStart);
+      left = Math.min(Math.max(wanted, 0), end);
+    }
+
     if (Math.abs(left - list.scrollLeft) < 1) return;
     // A hidden tab runs no animation frames, and a smooth scroll asked for
     // there is dropped rather than deferred — you'd come back to a table still
     // showing the wrong seat. Nobody is watching it glide, so don't ask it to.
     const gliding = !reduced && document.visibilityState === "visible";
     list.scrollTo({ left, behavior: gliding ? "smooth" : "auto" });
-  }, [waitingOn, reduced]);
+  }, [waitingOn, you, reduced]);
 
   return (
     <ul
       ref={strip}
-      className="relative flex gap-2 overflow-x-auto pb-1"
+      // The padding is for the turn ring. A ring is drawn outside the border
+      // box, and a box that clips one axis clips both, so without room to draw
+      // in the ring was trimmed off the top of every seat and off the side of
+      // the first and last ones at the scroll extremes. Same fix as `Hand.tsx`
+      // uses to keep a lifted card from being cut off.
+      className="relative flex gap-2 overflow-x-auto p-1"
       aria-label="Other players"
     >
       {others.map((player) => (

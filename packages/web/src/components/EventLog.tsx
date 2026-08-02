@@ -1,7 +1,20 @@
 import { useState } from "react";
 
-import { describeEvent, type NameOf } from "../lib/format.ts";
+import { describeEvent, spellSuits, type NameOf } from "../lib/format.ts";
 import type { LoggedEvent } from "../net/useGoleta.ts";
+
+/**
+ * One line of the log, shown with its pips and read out with its words. Same
+ * sentence either way — see `spellSuits`.
+ */
+function Line({ children }: { children: string }) {
+  return (
+    <>
+      <span aria-hidden>{children}</span>
+      <span className="sr-only">{spellSuits(children)}</span>
+    </>
+  );
+}
 
 export function EventLog({ log, nameOf }: { log: LoggedEvent[]; nameOf: NameOf }) {
   const [open, setOpen] = useState(false);
@@ -16,7 +29,7 @@ export function EventLog({ log, nameOf }: { log: LoggedEvent[]; nameOf: NameOf }
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
       >
         <span className="truncate">
-          {latest ? describeEvent(latest.event, nameOf) : "Nothing has happened yet."}
+          <Line>{latest ? describeEvent(latest.event, nameOf) : "Nothing has happened yet."}</Line>
         </span>
         <span aria-hidden className="ml-auto shrink-0 text-white/40">
           {open ? "▾" : "▴"}
@@ -26,7 +39,9 @@ export function EventLog({ log, nameOf }: { log: LoggedEvent[]; nameOf: NameOf }
       {open ? (
         <ol className="max-h-44 space-y-1 overflow-y-auto border-t border-white/10 px-3 py-2 text-xs text-white/60">
           {log.map((entry) => (
-            <li key={entry.id}>{describeEvent(entry.event, nameOf)}</li>
+            <li key={entry.id}>
+              <Line>{describeEvent(entry.event, nameOf)}</Line>
+            </li>
           ))}
         </ol>
       ) : null}

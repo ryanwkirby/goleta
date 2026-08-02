@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "./components/ui.tsx";
-import { hasSeenRules, markRulesSeen } from "./net/identity.ts";
+import { hasSeenRules, markRulesSeen, setFirstGameHints } from "./net/identity.ts";
 import { useGoleta } from "./net/useGoleta.ts";
 import { Join } from "./screens/Join.tsx";
 import { Lobby } from "./screens/Lobby.tsx";
@@ -13,13 +13,18 @@ export function App() {
     useGoleta();
   const [showRules, setShowRules] = useState(false);
   const [seatedOnce, setSeatedOnce] = useState(false);
+  /** True only for the read on the way in, where the hints are also offered. */
+  const [firstRead, setFirstRead] = useState(false);
 
   // First time in, explain the game before the lobby. Everything except the
   // Sunny Rule, which people meet by having it called on them.
   useEffect(() => {
     if (room && !seatedOnce) {
       setSeatedOnce(true);
-      if (!hasSeenRules()) setShowRules(true);
+      if (!hasSeenRules()) {
+        setFirstRead(true);
+        setShowRules(true);
+      }
     }
   }, [room, seatedOnce]);
 
@@ -31,7 +36,13 @@ export function App() {
 
   const dismissRules = (): void => {
     markRulesSeen();
+    setFirstRead(false);
     setShowRules(false);
+  };
+
+  const chooseHints = (wanted: boolean): void => {
+    setFirstGameHints(wanted);
+    dismissRules();
   };
 
   const body = (() => {
@@ -39,7 +50,11 @@ export function App() {
     if (showRules) {
       return (
         <div className="flex min-h-full items-start justify-center p-5 sm:items-center">
-          <Rules onDone={dismissRules} ctaLabel={room.status === "lobby" ? "To the table" : "Play"} />
+          <Rules
+            onDone={dismissRules}
+            ctaLabel={room.status === "lobby" ? "To the table" : "Play"}
+            onChooseHints={firstRead ? chooseHints : undefined}
+          />
         </div>
       );
     }

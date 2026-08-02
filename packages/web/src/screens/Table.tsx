@@ -19,6 +19,7 @@ import {
   markSunnySeen,
   recordGameFinished,
   saveHandSort,
+  wantsFirstGameHints,
 } from "../net/identity.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
 
@@ -91,6 +92,7 @@ export function Table({
   const [helpedTurn, setHelpedTurn] = useState<number | null>(null);
   const [stalled, setStalled] = useState(false);
   const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
+  const [wantedHints] = useState(wantsFirstGameHints);
   const nameOf = namerFor(room);
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
@@ -115,16 +117,16 @@ export function Table({
     send({ t: "intent", intent: { type: "callSunny", playerId: game.you ?? "" } });
 
   /**
-   * Whether the table is marking up your playable cards. Your first game comes
-   * with the guardrails on; after that they're something you ask for, one turn
-   * at a time. Being caught out having a play you didn't make is the whole
-   * subject of the Sunny Rule, and an app that points at the answer never lets
-   * anyone be caught.
+   * Whether the table is marking up your playable cards. Your first game can
+   * come with the guardrails on if you asked for them on the way in; after that
+   * they're something you ask for, one turn at a time. Being caught out having
+   * a play you didn't make is the whole subject of the Sunny Rule, and an app
+   * that points at the answer never lets anyone be caught.
    *
    * Making the play you skipped is the exception: you've already been caught,
    * the move is forced, and there is nothing left to fumble.
    */
-  const learning = finishedGames === 0;
+  const learning = finishedGames === 0 && wantedHints;
   const assist =
     game.phase.kind === "sunnyPlay" || learning || helpedTurn === game.turnNumber;
 
@@ -135,8 +137,9 @@ export function Table({
     if (lastGameOverId === undefined || game.you === null) return;
     const played = recordGameFinished();
     setFinishedGames(played);
-    if (played === 1) setGraduating(true);
-  }, [lastGameOverId, game.you]);
+    // Only worth announcing to somebody who had the highlights to lose.
+    if (played === 1 && wantedHints) setGraduating(true);
+  }, [lastGameOverId, game.you, wantedHints]);
 
   // Five seconds on a turn you haven't moved on, and the app offers a hand.
   // Every fresh draw restarts the clock: you're deciding again.

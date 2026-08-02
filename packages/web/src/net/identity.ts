@@ -105,6 +105,30 @@ export const recordGameFinished = (): number => {
   return next;
 };
 
+const HINTS_KEY = "goleta:first-game-hints";
+
+/**
+ * Whether you asked for the training wheels on the way in.
+ *
+ * Offered once, on the rules screen, before your first game. Anyone who saw the
+ * rules before that choice existed gets them, which is what they'd have had.
+ */
+export const wantsFirstGameHints = (): boolean => {
+  try {
+    return localStorage.getItem(HINTS_KEY) !== "0";
+  } catch {
+    return true;
+  }
+};
+
+export const setFirstGameHints = (wanted: boolean): void => {
+  try {
+    localStorage.setItem(HINTS_KEY, wanted ? "1" : "0");
+  } catch {
+    // Private browsing. You get the hints, which is the kinder default.
+  }
+};
+
 const SORT_KEY = "goleta:hand-sort";
 
 /**

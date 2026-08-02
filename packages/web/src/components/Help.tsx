@@ -46,26 +46,21 @@ export function HelpShout({ name }: { name?: string }) {
 }
 
 /**
- * The one time the app makes a fuss of you: your first finished game, and the
- * moment the highlights go away. Says what it's taking and what it's leaving.
+ * Your first finished game, and the moment the highlights go away.
+ *
+ * Two sentences. It used to be four paragraphs explaining a change you were
+ * about to notice on your very next turn anyway — and it only appears at all if
+ * you took the training wheels in the first place. Nothing is being taken from
+ * somebody who never had them.
  */
 export function Graduation({ onDone }: { onDone: () => void }) {
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/60 p-4 sm:items-center">
       <Panel className="w-full max-w-md bg-felt-900 ring-amber-300/30">
-        <h2 className="text-xl font-semibold text-amber-300">That's one game down</h2>
+        <h2 className="text-xl font-semibold text-amber-300">Nice one</h2>
         <p className="mt-3 text-sm leading-relaxed text-white/80">
-          Nicely done. Up to now the table has been dimming the cards you can't play, so your
-          move was always the obvious one.
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-white/80">
-          That stops here. From your next turn the cards all look alike and it's on you to spot
-          the match — which also means it's on you to notice when somebody else misses theirs.
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-white/80">
-          If you get stuck, wait a moment and{" "}
-          <strong className="text-white">ask for a hand</strong> — the highlights come back for
-          that turn. Everyone at the table will hear you ask.
+          Now you've got the hang of the basics, we'll stop showing you which of your cards are
+          playable. Help's still there whenever you want it — just ask.
         </p>
         <Button variant="primary" full className="mt-5" onClick={onDone}>
           Deal me in

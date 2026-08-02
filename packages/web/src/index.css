@@ -5,14 +5,6 @@
   --color-felt-900: oklch(0.25 0.04 160);
   --color-felt-800: oklch(0.32 0.05 160);
 
-  /* The Sunny tell: ten seconds from "did I imagine that?" to unmissable.
-     The ramp is the whole point — it hands the answer to a player who was
-     watching sooner than to one who wasn't. See the Sunny Rule section of
-     AGENTS.md for why the app says this at all.
-
-     Light and colour only, no movement, so it reads the same to anyone who
-     has asked their machine to stop animating things. */
-  --animate-sunny-tell: sunny-tell 10s cubic-bezier(0.7, 0, 0.9, 0.4) forwards;
   --animate-help-shout: help-shout 2.6s ease-out forwards;
 }
 
@@ -50,22 +42,6 @@
       opacity: 1;
       transform: translate(-50%, -0.5rem);
     }
-  }
-}
-
-@keyframes sunny-tell {
-  0% {
-    opacity: 0.3;
-    filter: none;
-  }
-  60% {
-    opacity: 0.75;
-    filter: drop-shadow(0 0 4px oklch(0.83 0.19 84 / 0.5));
-  }
-  100% {
-    opacity: 1;
-    filter: drop-shadow(0 0 7px oklch(0.88 0.17 92 / 0.95))
-      drop-shadow(0 0 16px oklch(0.83 0.19 84 / 0.75));
   }
 }
 

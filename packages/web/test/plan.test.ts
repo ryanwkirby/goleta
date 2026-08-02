@@ -27,7 +27,8 @@ const view = (overrides: Partial<GameView> = {}): GameView => ({
   drawsThisTurn: 0,
   sunnyCallable: false,
   sunnyTargetId: null,
-  sunnyWouldLand: false,
+  sunnyReach: null,
+  sunnyLockedDraws: 0,
   legalCardIds: [],
   youMustPlay: false,
   status: "playing",
@@ -62,23 +63,15 @@ describe("what moves", () => {
     expect(flights[0]?.size).toBe("lg");
   });
 
-  it("buries a bad call's card instead of landing it on the pile", () => {
-    const { flights } = plan([
-      { type: "surrendered", playerId: "me", card: card("m1"), reason: "sunnyBadCall" },
-    ]);
-
-    expect(flights[0]?.under).toBe(true);
-    // Nothing lands, so the pile keeps showing the card it already had.
-    expect(flights[0]?.toPile).toBe(false);
-  });
-
   it("lands a punishment card face up on the pile", () => {
+    // The only way a card leaves a hand without being played. A wrong call
+    // costs no card at all now, so nothing is ever buried under the pile.
     const { flights } = plan([
       { type: "surrendered", playerId: "me", card: card("m1"), reason: "sunnyPunishment" },
     ]);
 
-    expect(flights[0]?.under).toBe(false);
     expect(flights[0]?.toPile).toBe(true);
+    expect(flights[0]?.to).toEqual(["pile"]);
   });
 
   it("says nothing at all about a suit being called", () => {
@@ -154,7 +147,7 @@ describe("a deal", () => {
 describe("a batch", () => {
   it("plays a resolved Sunny call in the order it happened", () => {
     const { flights } = plan([
-      { type: "sunnyCalled", callerId: "me", targetId: "them", correct: true },
+      { type: "sunnyCalled", callerId: "me", targetId: "them", card: card("t1"), correct: true },
       { type: "surrendered", playerId: "them", card: card("t1"), reason: "sunnyPunishment" },
       { type: "turnedUp", cards: [card("u1"), card("u2")], reason: "sunnyTouched" },
       { type: "turnChanged", playerId: "me" },

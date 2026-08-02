@@ -6,7 +6,12 @@ import { EventLog } from "../components/EventLog.tsx";
 import { Hand, HandSortButton, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { Seats } from "../components/Seats.tsx";
-import { SunnyAnnounce, SunnyExplainer, SuitPicker } from "../components/Sunny.tsx";
+import {
+  SunnyAccusePicker,
+  SunnyAnnounce,
+  SunnyExplainer,
+  SuitPicker,
+} from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
@@ -39,15 +44,9 @@ const prompt = (game: GameView, nameOf: (id: string) => string, assist: boolean)
         : "Deadlock — nobody could move.";
     case "surrender": {
       const yours = game.phase.playerId === game.you;
-      const who = yours ? "You" : nameOf(game.phase.playerId);
-      if (game.phase.reason === "sunnyBadCall") {
-        return yours
-          ? "That call missed. Give up a card — it goes to the bottom of the pile."
-          : `${who} owes a card for a call that missed.`;
-      }
       return yours
         ? "Now the punishment card. Any card in your hand — it doesn't have to match."
-        : `${who} owes a punishment card.`;
+        : `${nameOf(game.phase.playerId)} owes a punishment card.`;
     }
     case "suit":
       return mine ? "Name a suit." : `${nameOf(game.turnPlayerId)} is naming a suit.`;
@@ -87,6 +86,8 @@ export function Table({
 }) {
   const [explainSunny, setExplainSunny] = useState(false);
   const [announcing, setAnnouncing] = useState(false);
+  /** Whose reach you are part-way through accusing, if any. */
+  const [accusing, setAccusing] = useState<string | null>(null);
   const [finishedGames, setFinishedGames] = useState(gamesFinished);
   const [graduating, setGraduating] = useState(false);
   const [helpedTurn, setHelpedTurn] = useState<number | null>(null);
@@ -113,8 +114,25 @@ export function Table({
     if (!hasSeenSunny()) setExplainSunny(true);
   }, []);
 
-  const callSunny = (): void =>
-    send({ t: "intent", intent: { type: "callSunny", playerId: game.you ?? "" } });
+  /**
+   * Tapping the sun no longer calls anything — it opens the picker. An
+   * accusation has to name a card, so the tap that starts one can't be the tap
+   * that commits it.
+   */
+  const startAccusing = (playerId: string): void => setAccusing(playerId);
+
+  const accuse = (cardId: string): void => {
+    setAccusing(null);
+    send({ t: "intent", intent: { type: "callSunny", playerId: game.you ?? "", cardId } });
+  };
+
+  // Somebody else may act — or call it first — while you're still choosing. The
+  // picker goes with the window rather than sitting there offering a card you
+  // can no longer name.
+  const stillAccusable = game.sunnyCallable && game.sunnyTargetId === accusing;
+  useEffect(() => {
+    if (accusing !== null && !stillAccusable) setAccusing(null);
+  }, [accusing, stillAccusable]);
 
   /**
    * Whether the table is marking up your playable cards. Your first game can
@@ -203,7 +221,7 @@ export function Table({
           room={room}
           game={game}
           shouts={shouts}
-          onCallSunny={callSunny}
+          onCallSunny={startAccusing}
         />
 
         <div className="flex flex-1 flex-col justify-center gap-4 py-2">
@@ -251,8 +269,18 @@ export function Table({
           </p>
         ) : null}
 
-        {/* Docked above your hand rather than thrown over the table: naming a
-            suit well means reading what everyone else is holding. */}
+        {/* Both pickers dock above your hand rather than being thrown over the
+            table: each is a decision you make by reading what everyone else is
+            holding, and a scrim would take the evidence away. */}
+        {accusing !== null && stillAccusable && game.sunnyReach ? (
+          <SunnyAccusePicker
+            targetName={nameOf(accusing)}
+            reach={game.sunnyReach}
+            onPick={accuse}
+            onCancel={() => setAccusing(null)}
+          />
+        ) : null}
+
         {game.phase.kind === "suit" && mine ? (
           <SuitPicker
             onPick={(suit: Suit) =>
@@ -266,6 +294,14 @@ export function Table({
               doesn't move under your fingers when it appears. */}
           <div className="flex min-h-7 items-center gap-2 px-1">
             {stalled ? <HelpLink onAsk={askForHelp} /> : null}
+            {/* Yours alone: the server sends this to nobody else, and a missed
+                call is not something the table needs announcing. */}
+            {game.sunnyLockedDraws > 0 ? (
+              <span className="text-xs text-white/35" aria-live="polite">
+                <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
+                {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
+              </span>
+            ) : null}
             {(you?.hand.length ?? 0) > 1 ? (
               <HandSortButton sort={handSort} onCycle={cycleSort} className="ml-auto" />
             ) : null}
@@ -289,6 +325,7 @@ export function Table({
           <SunnyAnnounce
             callerName={nameOf(call.callerId)}
             targetName={nameOf(call.targetId)}
+            card={call.card}
             correct={call.correct}
             onDone={announcementOver}
             ms={ANNOUNCE_MS}

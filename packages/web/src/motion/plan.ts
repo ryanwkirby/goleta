@@ -46,8 +46,6 @@ export interface FlightPlan {
   hides: string | null;
   /** Landing here hands the pile a new face to show. */
   toPile: boolean;
-  /** Buried instead of played: it fades out under the pile. */
-  under: boolean;
 }
 
 export interface Planned {
@@ -104,7 +102,6 @@ export const planFlights = (
           duration: FLIGHT_MS,
           hides: null,
           toPile: true,
-          under: false,
         });
         cursor += BEAT_MS;
         break;
@@ -120,7 +117,6 @@ export const planFlights = (
           duration: FLIGHT_MS,
           hides: event.card.id,
           toPile: false,
-          under: false,
         });
         cursor += BEAT_MS;
         break;
@@ -137,7 +133,6 @@ export const planFlights = (
             duration: FLIGHT_MS,
             hides: null,
             toPile: true,
-            under: false,
           });
           cursor += TURN_UP_BEAT_MS;
         }
@@ -145,10 +140,9 @@ export const planFlights = (
       }
 
       case "surrendered": {
-        // A punishment card is played face up; a card given up for a bad call
-        // goes to the bottom, where it can never come back into play. The
-        // second one has to look like it went under, not onto, the pile.
-        const buried = event.reason === "sunnyBadCall";
+        // The punishment card is played face up like any other card. There is
+        // no longer any way for a card to leave a hand and *not* land on the
+        // pile — the bad-call burial went with the wrong-call forfeit.
         add({
           card: event.card,
           from: isYou(game, event.playerId)
@@ -159,8 +153,7 @@ export const planFlights = (
           fromSize: sizeOfHand(game, event.playerId),
           duration: FLIGHT_MS,
           hides: null,
-          toPile: !buried,
-          under: buried,
+          toPile: true,
         });
         cursor += BEAT_MS;
         break;
@@ -177,7 +170,6 @@ export const planFlights = (
             duration: RESHUFFLE_MS,
             hides: null,
             toPile: false,
-            under: false,
           });
           cursor += 60;
         }
@@ -231,7 +223,6 @@ const dealFlights = (
         duration: DEAL_MS,
         hides: card?.id ?? null,
         toPile: false,
-        under: false,
       });
       cursor += beat;
     }
@@ -248,7 +239,6 @@ const dealFlights = (
     duration: FLIGHT_MS,
     hides: null,
     toPile: true,
-    under: false,
   });
 
   return cursor + BEAT_MS;

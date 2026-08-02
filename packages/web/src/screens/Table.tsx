@@ -238,6 +238,16 @@ export function Table({
           </p>
         ) : null}
 
+        {/* Docked above your hand rather than thrown over the table: naming a
+            suit well means reading what everyone else is holding. */}
+        {game.phase.kind === "suit" && mine ? (
+          <SuitPicker
+            onPick={(suit: Suit) =>
+              send({ t: "intent", intent: { type: "chooseSuit", playerId: me, suit } })
+            }
+          />
+        ) : null}
+
         <div className="relative flex flex-col">
           {/* Kept clear whether or not the offer is showing, so the hand
               doesn't move under your fingers when it appears. */}
@@ -258,14 +268,6 @@ export function Table({
         </div>
 
         <EventLog log={log} nameOf={nameOf} />
-
-        {game.phase.kind === "suit" && mine ? (
-          <SuitPicker
-            onPick={(suit: Suit) =>
-              send({ t: "intent", intent: { type: "chooseSuit", playerId: me, suit } })
-            }
-          />
-        ) : null}
 
         {announcing && call ? (
           <SunnyAnnounce

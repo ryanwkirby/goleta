@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>goleta</title>
+  <!--
+    The felt, a tilted card, and an eight.
+
+    The colours below are copied out of the `@theme` block in `src/index.css`.
+    Tailwind never sees this file — it is a static asset served as-is — so it
+    cannot read the theme and will not follow a change to it. If the felt moves,
+    move it here too. (The tile runs a step brighter than the table's own
+    gradient so it still reads as green rather than black at 16px.)
+
+    The eight is a path and not a `<text>` element on purpose: a favicon is
+    rasterised by the browser against whatever font it happens to resolve, and
+    by something else again when `favicon.ico` is generated. Geometry lands the
+    same everywhere.
+  -->
+  <defs>
+    <radialGradient id="felt" cx="0.5" cy="0" r="1.1">
+      <stop offset="0" stop-color="#193b2a" />
+      <stop offset="1" stop-color="#07180f" />
+    </radialGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#felt)" />
+
+  <g transform="rotate(-10 32 32)">
+    <rect x="15" y="9" width="34" height="46" rx="5" fill="#ffffff" />
+    <!-- Two rings, wound against their holes so the overlap stays inked. -->
+    <path
+      fill="#0e271b"
+      d="M32 14A8.5 8.5 0 1 1 32 31A8.5 8.5 0 1 1 32 14Z
+         M32 27A11.5 11.5 0 1 1 32 50A11.5 11.5 0 1 1 32 27Z
+         M32 18.3A4.2 4.2 0 1 0 32 26.7A4.2 4.2 0 1 0 32 18.3Z
+         M32 32A6.5 6.5 0 1 0 32 45A6.5 6.5 0 1 0 32 32Z"
+    />
+  </g>
+</svg>

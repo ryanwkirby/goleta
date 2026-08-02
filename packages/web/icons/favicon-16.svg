@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <title>goleta</title>
+  <!--
+    The 16px layer of `favicon.ico`, drawn again rather than scaled down.
+
+    At 16px the tab strip gets about ten pixels of card to work with. The tilt
+    turns to fringe, the margins close up, and the eight fills in solid. So this
+    one sits square on the pixel grid, gives the card the whole tile, and opens
+    the eight's counters until they survive being two pixels across. Same three
+    colours, same card, same eight — see `../public/favicon.svg` for where they
+    come from. Rebuild with `scripts/build-icons.sh`.
+  -->
+  <defs>
+    <radialGradient id="felt" cx="0.5" cy="0" r="1.1">
+      <stop offset="0" stop-color="#193b2a" />
+      <stop offset="1" stop-color="#07180f" />
+    </radialGradient>
+  </defs>
+
+  <rect width="16" height="16" rx="3.5" fill="url(#felt)" />
+  <rect x="2.5" y="1.5" width="11" height="13" rx="1.5" fill="#ffffff" />
+  <path
+    fill="#0e271b"
+    d="M8 2.85A2.7 2.7 0 1 1 8 8.25A2.7 2.7 0 1 1 8 2.85Z
+       M8 6.15A3.5 3.5 0 1 1 8 13.15A3.5 3.5 0 1 1 8 6.15Z
+       M8 4.2A1.35 1.35 0 1 0 8 6.9A1.35 1.35 0 1 0 8 4.2Z
+       M8 7.75A1.9 1.9 0 1 0 8 11.55A1.9 1.9 0 1 0 8 7.75Z"
+  />
+</svg>

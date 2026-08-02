@@ -24,7 +24,7 @@ export function HelpLink({ onAsk }: { onAsk: () => void }) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
       ].join(" ")}
     >
-      stuck? ask for a hand
+      want help?
     </button>
   );
 }

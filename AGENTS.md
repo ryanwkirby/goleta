@@ -108,6 +108,37 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   never had any wrong-call penalty, and naming the card does that job now. The
   lockout is visible only to the player serving it.
 
+## House rules
+
+A table can vary three things, all of them rules the game already had written
+down: the two alternates from the original rules (**Power of Eights**,
+**Dealer's Choice**) and whether the **Sunny Rule** is played at all. They live
+on `GameOptions`, are chosen by the host in the lobby, and apply at the next
+deal.
+
+Two constraints on anything added here:
+
+- **Options are data, never behaviour.** `applyIntent` clones the state on
+  every intent, `Challenge.violation.snapshot` clones it again, and `persist.ts`
+  puts it through `JSON.stringify`. A function on `GameOptions` throws
+  `DataCloneError` on the first move. Behaviour that varies is looked up from
+  these values in module scope, which is also what keeps `applyIntent(state,
+  intent)`'s signature stable.
+- **`DEFAULT_OPTIONS` is the game as written**, and every alternate defaults
+  off. A table that never opens the lobby controls plays exactly the game it
+  played before, and the existing tests are the check on that.
+
+What a *client* may set is narrower still: `HouseRules` in the protocol carries
+the three toggles and nothing else. `deckCount` and `startingHandSize` are not
+on offer over the wire — they arrive from a browser, and a hand size of nine
+hundred is a denial of service, not a house rule.
+
+The safety net is `simulation.test.ts`, which plays every combination out in
+full. Its three invariants — card conservation, forced play never skipped,
+exactly one winner — say nothing about which rules are in play, so they hold a
+variant to the same standard as the default game. Add a rule, add it to the
+matrix.
+
 ## Architecture
 
 npm workspaces monorepo, one Docker image, one process.

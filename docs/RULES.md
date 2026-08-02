@@ -16,11 +16,13 @@ This document is canonical. The engine implements it; the UI explains it.
   so the same player doesn't open every game.
 - Each player is dealt **3 cards**, face up.
 - One card is turned face up to start the **face-up pile**. If it's an 8 it
-  stays — see [natural eights](#natural-eights).
+  stays — see [natural eights](#natural-eights), unless the table is playing
+  [Dealer's Choice](#dealers-choice).
 - The rest becomes the **deck**, face down.
 - **The player to the dealer's left goes first**, and play moves round the
   table in that direction. Dealing is all the dealer does: there is no other
-  advantage or penalty to it.
+  advantage or penalty to it, unless the table has turned
+  [Dealer's Choice](#dealers-choice) on.
 
 There are only ever these two piles. Cards leave a hand for the face-up pile and
 come back to the deck when the face-up pile is recycled. Nothing is ever set
@@ -71,7 +73,8 @@ An 8 **played from your hand** can be played on any card. After playing one, you
 Note what this costs you: because an 8 is always playable, and because playing
 is compulsory, **you can never legally draw while you hold an 8.** An 8 in your
 hand is a countdown, not a weapon. Naming the suit on the way out is the
-consolation prize.
+consolation prize — and [the Power of Eights](#the-power-of-eights) takes even
+that away.
 
 ### Natural eights
 
@@ -81,7 +84,8 @@ play, and nobody names anything. Nothing is buried and nothing is redealt.
 
 This covers all three places a card gets turned up off the deck: the card that
 starts the game, the card turned up after a recycle, and the card flipped by a
-Sunny Rule call.
+Sunny Rule call. The first of those is the one [Dealer's
+Choice](#dealers-choice) overrides.
 
 The distinction is simply whether a hand was involved. Played from a hand, an 8
 is wild. Flipped off the deck, it is an 8 of the suit printed on it.
@@ -109,6 +113,9 @@ cannot simply stop.
 ## The Sunny Rule
 
 Anyone can draw a card. Not everyone is *allowed* to.
+
+This is the one rule a table can [switch off](#playing-without-the-sunny-rule).
+It is on unless somebody says otherwise.
 
 If you take a card from the deck when you had a playable card in your hand, any
 other player still in the game can call **"Sunny Rule!"** on you.
@@ -195,6 +202,50 @@ specific card is what stops a call being a free guess — you have to be able to
 point at the play they skipped — so a wrong call is already a wrong claim made
 out loud in front of everyone. The lockout just stops you making another one
 immediately.
+
+---
+
+## House rules
+
+Everything above is the game as written, and it is what you get if nobody
+touches anything. A table can vary three things, chosen by the host in the
+lobby before a deal. They apply to the next game, never to one already running.
+
+### Playing without the Sunny Rule
+
+The Sunny Rule can be switched off entirely.
+
+With it off, reaching for the deck while holding a play is simply not an
+offence — there is no accusation to make, no sun appears beside anybody, and
+nothing anywhere in the app suggests otherwise. It is a quieter, friendlier
+game, and a considerably less interesting one. It is also the right setting for
+a table that would rather not have to watch each other.
+
+The must-play rule itself does **not** relax. If you can play, you still must;
+there is simply nobody empowered to do anything about it if you don't.
+
+### The Power of Eights
+
+*From the original written rules.*
+
+Instead of the player who plays an 8 naming the suit, **the next player names
+it** — and then plays against the suit they just named.
+
+This makes an 8 worse than useless. Under the standard rule, being forced to
+play your 8 at least buys you the suit call. Here it buys you nothing and hands
+your neighbour a gift: they will name a suit they cannot follow, fail to play,
+and draw a card off the back of it.
+
+### Dealer's Choice
+
+*From the original written rules.*
+
+If the card turned up to start the game is an 8, the **dealer names the suit**
+instead of it playing as a [natural eight](#natural-eights).
+
+This is the only advantage dealing carries. It has no effect at all unless the
+seed card happens to be an 8 — four cards in fifty-two, so roughly one game in
+thirteen.
 
 ---
 

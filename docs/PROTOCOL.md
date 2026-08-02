@@ -47,6 +47,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
+| `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
 
@@ -103,6 +104,23 @@ An earlier revision (#31) did send the answer, as `sunnyWouldLand`, behind a
 ten-second glow. #50 removed it: requiring the caller to name a card makes a
 wrong call specific enough to stand on its own, so the tell was no longer
 buying anything.
+
+## House rules
+
+`RoomView.houseRules` carries what the table is playing: `sunny` (a boolean),
+`eights` and `seedEight`. The host changes them with `{ t: "setHouseRules",
+rules }`, between games only — the server rejects it while a game is running,
+the same as bot speed.
+
+The message is deliberately not `GameOptions`. The engine's options also carry
+a deck count and a starting hand size, and those are never accepted from a
+client: the server validates the three toggles against their permitted values
+and constructs the full options itself. A rule that isn't named in `HouseRules`
+cannot be reached from a browser.
+
+With `sunny` off, the three challenge-window fields above are inert for
+everyone — `sunnyCallable` false, `sunnyReach` null, `sunnyLockedDraws` zero —
+because no challenge window is ever opened in the first place.
 
 ## Bots
 

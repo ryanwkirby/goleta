@@ -46,7 +46,8 @@ export interface PlayerView {
 
 export type PhaseView =
   | { kind: "action" }
-  | { kind: "suit" }
+  /** `playerId` is whose call the suit is, which need not be whose turn it is. */
+  | { kind: "suit"; playerId: PlayerId }
   | { kind: "sunnyPlay" }
   | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason }
   | { kind: "over" };
@@ -104,12 +105,20 @@ const phaseView = (state: GameState): PhaseView => {
   if (phase.kind === "surrender") {
     return { kind: "surrender", playerId: phase.playerId, reason: phase.reason };
   }
+  if (phase.kind === "suit") return { kind: "suit", playerId: phase.playerId };
   return { kind: phase.kind };
 };
 
+/**
+ * Whoever the game is actually waiting on. Usually the player to move, but a
+ * suit and a punishment card are both owed by a named player who may be sitting
+ * somewhere else entirely — under Power of Eights the suit is owed by the next
+ * seat, and under Dealer's Choice by the dealer before play has begun.
+ */
 const waitingOn = (state: GameState): PlayerId | null => {
   if (state.phase.kind === "over") return null;
   if (state.phase.kind === "surrender") return state.phase.playerId;
+  if (state.phase.kind === "suit") return state.phase.playerId;
   return state.players[state.turnIndex]?.id ?? null;
 };
 

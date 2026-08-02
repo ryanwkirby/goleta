@@ -13,7 +13,6 @@ import {
   DEFAULT_OPTIONS,
   MAX_DRAWS_PER_TURN,
   SUITS,
-  SUNNY_LOCKOUT_DRAWS,
   type ApplyResult,
   type Card,
   type GameEvent,
@@ -68,6 +67,22 @@ export const mustPlay = (state: GameState, player: PlayerState): boolean =>
 export const activePlayers = (state: GameState): PlayerState[] =>
   state.players.filter((p) => !p.eliminated);
 
+/**
+ * The next player still in the game, going round from whoever is to move.
+ *
+ * Only looks — it moves nothing. `advanceTurn` is what actually passes the
+ * turn; this answers "who is next" for a rule that needs to name them ahead of
+ * time, which today means Power of Eights. Undefined when nobody else is left.
+ */
+const nextActivePlayer = (state: GameState): PlayerState | undefined => {
+  const seats = state.players.length;
+  for (let step = 1; step <= seats; step++) {
+    const candidate = state.players[(state.turnIndex + step) % seats];
+    if (candidate && !candidate.eliminated) return candidate;
+  }
+  return undefined;
+};
+
 // ---------------------------------------------------------------------------
 // Setting up
 // ---------------------------------------------------------------------------
@@ -107,20 +122,31 @@ export const startGame = (
     eliminated: false,
   }));
 
-  // An 8 turned up here is natural — its own suit is the suit in play, and
-  // nobody names anything. Nothing gets buried or redealt.
+  // Normally an 8 turned up here is natural — its own suit is the suit in play,
+  // and nobody names anything. Nothing gets buried or redealt.
   const upcard = drawPile.pop();
   if (!upcard) throw new Error("no card to start the face-up pile");
+
+  // Dealer's Choice: an 8 seed is the dealer's to name instead.
+  //
+  // The turn is seated on the *dealer* rather than on the opening player, which
+  // looks wrong until you follow it through: naming a suit always advances the
+  // turn, and advancing from the dealer lands on their left — which is exactly
+  // who opens. So the ordinary rule gets us there with no special case, and
+  // `turnNumber` starts a step back so the first real turn is still turn 1.
+  const dealerNames = options.seedEight === "dealerNames" && isWild(upcard);
 
   return {
     options,
     players,
     // The player immediately to the dealer's left opens.
-    turnIndex: (dealerIndex + 1) % players.length,
+    turnIndex: dealerNames ? dealerIndex : (dealerIndex + 1) % players.length,
     drawPile,
     discardPile: [upcard],
     activeSuit: upcard.suit,
-    phase: { kind: "action" },
+    phase: dealerNames
+      ? { kind: "suit", playerId: players[dealerIndex]?.id ?? "" }
+      : { kind: "action" },
     challenge: null,
     sunny: null,
     drawsThisTurn: 0,
@@ -129,7 +155,7 @@ export const startGame = (
     rngSeed: seedAfterShuffle,
     status: "playing",
     winnerId: null,
-    turnNumber: 1,
+    turnNumber: dealerNames ? 0 : 1,
   };
 };
 
@@ -206,9 +232,15 @@ const handlePlay = (
 
   if (settlingSunny) return demandPunishment(s, player, events);
 
-  // Playing your last card as an 8 still gets you the suit call on the way out.
+  // Playing your last card as an 8 still gets you the suit call on the way out —
+  // unless the table plays Power of Eights, where the call was never yours.
   if (isWild(card)) {
-    s.phase = { kind: "suit" };
+    const namer =
+      s.options.eights === "nextPlayerNames" ? nextActivePlayer(s)?.id : player.id;
+    // Nobody left to hand it to. Can't happen in practice — a table with one
+    // player standing has already ended above — but the suit has to go
+    // somewhere, so it stays with the player who laid the 8.
+    s.phase = { kind: "suit", playerId: namer ?? player.id };
     return null;
   }
   advanceTurn(s, events);
@@ -226,15 +258,23 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   // Drawing while holding a playable card breaks the rules, and the engine
   // deliberately allows it: that violation is the Sunny Rule's entire subject.
   // What it does instead is remember, so a call can be judged.
-  const inViolation = mustPlay(s, player);
+  //
+  // At a table playing without the rule none of that bookkeeping means
+  // anything, and skipping it is not just tidiness — the snapshot below clones
+  // the entire game state, on every illegal draw, and it is the most expensive
+  // thing this engine does. With the rule off, drawing is just drawing.
+  const watching = s.options.sunny !== null;
+  const inViolation = watching && mustPlay(s, player);
   const alreadyCaught = s.challenge?.drawerId === player.id && s.challenge.violation !== null;
   const snapshot = inViolation && !alreadyCaught ? structuredClone(s) : null;
 
   // The hand and the board exactly as they stand right now, before anything
   // about this reach is resolved — what an accusation of this draw is judged
   // against, and all a caller is ever shown to accuse from.
-  const reach = { hand: [...player.hand], activeSuit: s.activeSuit, topRank: topCard(s).rank };
-  s.totalDraws += 1;
+  const reach = watching
+    ? { hand: [...player.hand], activeSuit: s.activeSuit, topRank: topCard(s).rank }
+    : null;
+  if (watching) s.totalDraws += 1;
 
   // An empty deck is recycled first, and that recycle is the whole of this
   // action — no card reaches a hand. The card turned up is a new card in play,
@@ -248,7 +288,7 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   if (s.drawPile.length === 0) {
     // Every card is in somebody's hand. Nothing to draw, so the turn ends.
     if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
-    else recordDraw(s, player.id, null, inViolation, snapshot, reach);
+    else if (reach) recordDraw(s, player.id, null, inViolation, snapshot, reach);
     return null;
   }
 
@@ -256,7 +296,7 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   player.hand.push(card);
   s.drawsThisTurn += 1;
   events.push({ type: "drew", playerId: player.id, card });
-  recordDraw(s, player.id, card, inViolation, snapshot, reach);
+  if (reach) recordDraw(s, player.id, card, inViolation, snapshot, reach);
 
   const stillStuck = !mustPlay(s, player);
   if (stillStuck && (s.drawsThisTurn >= MAX_DRAWS_PER_TURN || !canRefill(s))) {
@@ -272,13 +312,18 @@ const handleChooseSuit = (
   events: GameEvent[],
 ): string | null => {
   if (s.phase.kind !== "suit") return "there's no suit to name";
-  const player = currentPlayer(s);
-  if (player.id !== playerId) return "it isn't your call";
+  // Whose call it is, not whose turn it is. Under Power of Eights those differ
+  // by one seat, and under Dealer's Choice the game hasn't started yet.
+  if (s.phase.playerId !== playerId) return "it isn't your call";
   const chosen = SUITS.find((candidate) => candidate === suit);
   if (!chosen) return "that isn't a suit";
 
   s.activeSuit = chosen;
-  events.push({ type: "suitChosen", playerId: player.id, suit: chosen });
+  events.push({ type: "suitChosen", playerId, suit: chosen });
+  // Always advance, whoever named it. Each variant seats the turn so that this
+  // one rule lands on the right player: the 8's player under the standard rule,
+  // the 8's player again under Power of Eights (so the namer plays next), and
+  // the dealer under Dealer's Choice (so their left opens).
   advanceTurn(s, events);
   return null;
 };
@@ -302,6 +347,11 @@ const handleCallSunny = (
   cardId: string,
   events: GameEvent[],
 ): string | null => {
+  // Said plainly rather than as "there's nothing to call", which would be true
+  // but would read as "you were too slow" at a table where the rule is off.
+  const rule = s.options.sunny;
+  if (!rule) return "this table isn't playing the Sunny Rule";
+
   // A settled call leaves either `resolved` set or the whole window gone with
   // the rewind, so this one check covers "too late" in all its forms.
   const challenge = s.challenge;
@@ -331,7 +381,7 @@ const handleCallSunny = (
     // Nothing happens to either hand — but the caller can't try again until
     // three further draws have happened at the table.
     challenge.resolved = true;
-    s.sunnyLockouts[callerId] = s.totalDraws + SUNNY_LOCKOUT_DRAWS;
+    s.sunnyLockouts[callerId] = s.totalDraws + rule.lockoutDraws;
     return null;
   }
 

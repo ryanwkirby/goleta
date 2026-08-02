@@ -40,14 +40,61 @@ export interface Card {
   readonly suit: Suit;
 }
 
+/**
+ * Who names the suit after an 8 is played from a hand.
+ *
+ * `nextPlayerNames` is the **Power of Eights** alternate rule. It only swaps
+ * the chooser — the turn still passes to the next player, who then plays
+ * against the suit they just named. That makes an 8 a pure liability: the
+ * player you hand it to will name a suit they can't follow, and get a free
+ * draw out of you.
+ */
+export type EightsRule = "playerNames" | "nextPlayerNames";
+
+/**
+ * What an 8 turned up as the very first card means.
+ *
+ * `natural` plays it as an ordinary 8 of its printed suit. `dealerNames` is the
+ * **Dealer's Choice** alternate rule, where the dealer names the suit instead —
+ * the one advantage dealing carries in this game.
+ */
+export type SeedEightRule = "natural" | "dealerNames";
+
+/**
+ * The Sunny Rule's settings, or `null` at a table that plays without it.
+ *
+ * Null is the rule genuinely not existing rather than a rule that does nothing:
+ * no challenge window is opened, and the per-draw position snapshot that makes
+ * a rewind possible is never taken. See `rules.ts`.
+ */
+export interface SunnyRule {
+  /** Draws a wrong caller sits out before they may accuse again. */
+  readonly lockoutDraws: number;
+}
+
+/**
+ * The house rules for one game. Data only — never functions.
+ *
+ * `applyIntent` clones the state on every intent, `Challenge.violation.snapshot`
+ * clones it again, and `persist.ts` puts it through `JSON.stringify`. Anything
+ * here that isn't structured-cloneable and JSON-serializable breaks all three.
+ * Behaviour that varies is looked up from these values, not stored in them.
+ */
 export interface GameOptions {
   readonly deckCount: number;
   readonly startingHandSize: number;
+  readonly eights: EightsRule;
+  readonly seedEight: SeedEightRule;
+  readonly sunny: SunnyRule | null;
 }
 
+/** The game as written. Every alternate rule is off. */
 export const DEFAULT_OPTIONS: GameOptions = {
   deckCount: 1,
   startingHandSize: 3,
+  eights: "playerNames",
+  seedEight: "natural",
+  sunny: { lockoutDraws: SUNNY_LOCKOUT_DRAWS },
 };
 
 export interface PlayerState {
@@ -68,8 +115,16 @@ export type SurrenderReason =
 export type Phase =
   /** The player to move must play a card or draw one. */
   | { kind: "action" }
-  /** They played an 8 from hand and must name the suit. */
-  | { kind: "suit" }
+  /**
+   * A suit is owed. `playerId` is whose call it is, which is *not* always the
+   * player to move: under Power of Eights it is the next seat, and under
+   * Dealer's Choice it is the dealer before anyone has played at all.
+   *
+   * Naming always advances the turn afterwards. That single rule covers every
+   * variant, because each one seats the turn so that advancing lands on the
+   * right player — see `handleChooseSuit`.
+   */
+  | { kind: "suit"; playerId: PlayerId }
   /** A Sunny call landed: they must now make the play they skipped. */
   | { kind: "sunnyPlay" }
   /** They were caught and owe the punishment card: any one, legality irrelevant. */

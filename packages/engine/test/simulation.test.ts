@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_OPTIONS,
   MAX_DRAWS_PER_TURN,
   applyIntent,
   decideBotIntent,
@@ -15,6 +16,7 @@ import {
   type GameEvent,
   type GameState,
   type Intent,
+  type GameOptions,
   type PlayerId,
 } from "../src/index.ts";
 import { allCardIds } from "./helpers.ts";
@@ -31,6 +33,8 @@ interface RunOptions {
    */
   slander?: number;
   stepCap?: number;
+  /** The house rules to play under. Defaults to the game as written. */
+  options?: GameOptions;
 }
 
 interface RunResult {
@@ -47,6 +51,9 @@ interface RunResult {
 const waitingOn = (state: GameState): PlayerId | null => {
   if (state.phase.kind === "over") return null;
   if (state.phase.kind === "surrender") return state.phase.playerId;
+  // A suit is owed by a named player, who under Power of Eights is not the
+  // player to move. Kept in step with `redact.ts`'s copy of this.
+  if (state.phase.kind === "suit") return state.phase.playerId;
   return state.players[state.turnIndex]?.id ?? null;
 };
 
@@ -61,9 +68,10 @@ const runGame = ({
   mischief = 0,
   slander = 0,
   stepCap = 5000,
+  options = DEFAULT_OPTIONS,
 }: RunOptions): RunResult => {
   const ids: PlayerId[] = Array.from({ length: players }, (_, i) => `p${i + 1}`);
-  let state = startGame(ids, seed);
+  let state = startGame(ids, seed, options);
   const total = allCardIds(state).length;
   const events: GameEvent[] = [];
   let rng = nextSeed(seed);
@@ -258,6 +266,48 @@ describe("full games", () => {
     const second = runGame({ players: 4, seed: 2024, mischief: 20 });
     expect(second.state).toEqual(first.state);
     expect(second.events).toEqual(first.events);
+  });
+
+  /**
+   * Every combination of house rules, played out in full.
+   *
+   * This is the safety net the options system rests on. The three invariants
+   * checked after every event — card conservation, forced play never skipped,
+   * exactly one winner — say nothing about *which* rules are in play, so they
+   * hold a variant to the same standard as the game as written. A house rule
+   * that leaks a card, strands a turn or hangs the game fails here, seeded and
+   * reproducible, rather than at somebody's table.
+   */
+  it("finish under every combination of house rules", () => {
+    const matrix: GameOptions[] = [];
+    for (const eights of ["playerNames", "nextPlayerNames"] as const) {
+      for (const seedEight of ["natural", "dealerNames"] as const) {
+        for (const sunny of [DEFAULT_OPTIONS.sunny, null]) {
+          matrix.push({ ...DEFAULT_OPTIONS, eights, seedEight, sunny });
+        }
+      }
+    }
+    expect(matrix).toHaveLength(8);
+
+    for (const options of matrix) {
+      const label = `${options.eights}/${options.seedEight}/sunny=${options.sunny !== null}`;
+      for (let seed = 1; seed <= 6; seed++) {
+        // Mischief on throughout: with the Sunny Rule off, an illegal draw is
+        // simply a legal one nobody can say anything about, and the game still
+        // has to terminate cleanly.
+        const run = runGame({ players: 4, seed: seed * 31337, mischief: 25, slander: 4, options });
+        expect(run.state.status, `${label}, seed ${seed}: unfinished`).toBe("over");
+        const survivors = run.state.players.filter((p) => !p.eliminated);
+        expect(survivors, `${label}, seed ${seed}`).toHaveLength(1);
+
+        // With the rule off, none of its machinery may so much as stir.
+        if (options.sunny === null) {
+          expect(run.sunnyCalls, `${label}: a call landed with the rule off`).toBe(0);
+          expect(run.state.challenge, `${label}: a window opened with the rule off`).toBeNull();
+          expect(run.state.totalDraws, `${label}: draws counted with the rule off`).toBe(0);
+        }
+      }
+    }
   });
 
   it("are playable from the redacted view alone", () => {

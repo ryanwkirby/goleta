@@ -65,9 +65,11 @@ export interface BotTiming {
  *
  * `human` is the default and the one a table actually wants: three seconds is
  * about how long a person takes to look at a fresh hand, and a second is about
- * how long the rest of the turn deserves. Its grace is longer than the ten
- * seconds the sun icon takes to reach full glow, so the tell has time to finish
- * arriving before a bot can shut the window on it.
+ * how long the rest of the turn deserves. Its grace is the long one because a
+ * Sunny call is not one decision but three — spot the reach, read the hand they
+ * reached from, and pick the card you say they should have played. Twelve
+ * seconds is enough to do that from a standing start; anything less and the
+ * bots take every call at the table.
  *
  * `lightning` is for anyone who finds the wait tedious: everything at 700ms,
  * which still clears a card's flight across the table (`FLIGHT_MS`, 220ms) with

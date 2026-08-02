@@ -41,10 +41,11 @@ describe("a bot's pace", () => {
     }
   });
 
-  it("outlasts the sun's ramp at human speed, so the tell arrives first", () => {
-    // The icon spends ten seconds getting from barely-there to unmissable, and
-    // AGENTS.md says not to shorten it. A bot must not close the window inside
-    // that, or the ramp never finishes for anybody.
+  it("leaves a person long enough to read a hand and name a card", () => {
+    // Nothing on screen says whether a draw was illegal, so a call at human
+    // speed is three decisions from a standing start: notice the reach, read
+    // the hand they reached from, pick the card they should have played. A
+    // window a bot can shut inside ten seconds is not one a person can use.
     expect(DEFAULT_BOT_TIMING.human.sunnyGrace).toBeGreaterThan(10_000);
   });
 

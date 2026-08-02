@@ -200,9 +200,15 @@ moment they reached. The offender, in this order:
    other play.
 3. **Turns up the card they touched.** Every card they drew illegally goes face
    up on the pile, and the last of them becomes the new card in play. It is
-   turned up off the deck, so [natural eights](#natural-eights) applies. If they
-   were caught reaching for an empty deck there is nothing to turn up, and the
-   punishment card is left in play instead.
+   turned up off the deck, so [natural eights](#natural-eights) applies.
+
+   If they were caught reaching for an **empty** deck there is nothing they
+   touched to turn up. The deck is then answered the way an empty deck always
+   is: the whole pile — punishment card and all — is
+   [shuffled back](#when-the-deck-runs-out) and a fresh card is turned up to
+   start it again. Nobody chooses that card, which is the point. Reaching for
+   the deck costs you control of the board; it must never hand you a free
+   placement of a card you picked out of your own hand.
 
 Then their turn is over.
 

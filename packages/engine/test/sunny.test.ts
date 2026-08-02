@@ -587,11 +587,41 @@ describe("reaching for an empty deck", () => {
 
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
-    // Nothing to turn up, so the punishment card is left in play.
-    expect(topCard(state).id).toBe("2C#1");
+
+    // Nothing they touched to turn up, so the deck is answered the way an empty
+    // deck always is: the pile is shuffled back and a fresh card comes off it.
+    // Crucially the punishment card is *not* left showing — that would let the
+    // offender choose what the whole table matches next, which is the opposite
+    // of what reaching is supposed to cost them.
+    expect(topCard(state).id).not.toBe("2C#1");
+    // Whatever came up, it is genuinely the card in play: suit and card agree.
+    expect(state.activeSuit).toBe(topCard(state).suit);
+    expect(state.drawPile.length).toBeGreaterThan(0);
+
     expect(currentPlayer(state).id).toBe("b");
+    // The recycle assigns the draw pile outright, so this is the check that it
+    // never does so over cards that were still in it.
     expect(allCardIds(state)).toHaveLength(total);
     expect(new Set(allCardIds(state)).size).toBe(total);
+  });
+
+  it("turns up a card nobody chose, rather than one the offender picked", () => {
+    // The offensive shape of this: `a` is holding a card that would strand the
+    // table and would love to place it. Reaching at an empty deck and inviting
+    // the call must not be a way to do that.
+    let state = table({
+      hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["KH", "QH", "JH"],
+    });
+    state = draw(state, "a");
+    state = call(state, "b", "5H");
+    state = play(state, "a", "5H");
+    state = surrender(state, "a", "2C");
+
+    // The 2C they chose is back in the shuffle with everything else, not on top.
+    expect(state.drawPile.map((c) => c.id)).toContain("2C#1");
   });
 
   it("looks the same when the reach was honest, and just locks out a bad caller", () => {

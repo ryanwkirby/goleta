@@ -438,7 +438,28 @@ const finishSunny = (s: GameState, events: GameEvent[]): string | null => {
   const sunny = s.sunny;
   if (!sunny) return null;
   s.sunny = null;
-  turnUp(s, takeCardsFromPiles(s, sunny.touchedIds), "sunnyTouched", events);
+
+  const touched = takeCardsFromPiles(s, sunny.touchedIds);
+  if (touched.length > 0) {
+    turnUp(s, touched, "sunnyTouched", events);
+  } else if (s.drawPile.length === 0) {
+    // They were caught reaching for an empty deck, so there is nothing they
+    // touched to turn up. The reach still has to produce a new card in play,
+    // and it is drawn the same way any other empty deck is answered: the pile
+    // is shuffled back into a deck and a fresh card comes off it.
+    //
+    // Leaving the punishment card showing instead — which is what this used to
+    // do — handed the offender the choice of what the whole table matches next.
+    // That is backwards. Reaching for the deck costs you control of the board;
+    // it does not buy you a free placement of a card you picked.
+    //
+    // The guard matters: `recycleFaceUpPile` assigns the draw pile outright, so
+    // calling it with cards still in the deck would drop all of them. Nothing
+    // touched implies an empty-deck reach implies a rewind to an empty deck, so
+    // this should always hold — but card conservation is not a thing to assume.
+    recycleFaceUpPile(s, events);
+  }
+
   advanceTurn(s, events);
   return null;
 };

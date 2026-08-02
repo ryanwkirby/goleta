@@ -138,6 +138,18 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
   );
 }
 
+/**
+ * Naming the suit, without being shut in a box to do it.
+ *
+ * Deliberately not a modal. Choosing well means counting what everyone else is
+ * holding — the whole table is face up for exactly that reason — and an overlay
+ * with a scrim over it took the evidence away at the one moment you needed to
+ * read it. So it docks to the bottom of the table instead: nothing is covered,
+ * the seats still scroll, and it travels with you while you look around.
+ *
+ * Your own cards aren't tappable during this phase anyway, so there is no move
+ * to fumble while it's up.
+ */
 export function SuitPicker({ onPick }: { onPick: (suit: "C" | "D" | "H" | "S") => void }) {
   const suits = [
     { key: "H", glyph: "♥", label: "Hearts", red: true },
@@ -147,31 +159,38 @@ export function SuitPicker({ onPick }: { onPick: (suit: "C" | "D" | "H" | "S") =
   ] as const;
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/60 p-4 sm:items-center">
-      <div className="w-full max-w-sm rounded-2xl bg-felt-900 p-5 ring-1 ring-white/15">
-        <h2 className="text-center text-lg font-semibold text-white">Name a suit</h2>
-        <p className="mt-1 text-center text-sm text-white/60">
-          The next player has to match it. Pick one you don't hold.
+    <section
+      aria-label="Name a suit"
+      className={[
+        "sticky bottom-2 z-20 rounded-2xl bg-felt-900/95 p-3 shadow-xl",
+        "ring-1 ring-amber-300/40 backdrop-blur",
+      ].join(" ")}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-sm font-semibold text-amber-300">Name a suit</h2>
+        <p className="truncate text-xs text-white/50">
+          Take your time — every hand is still up there.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {suits.map((suit) => (
-            <button
-              key={suit.key}
-              type="button"
-              onClick={() => onPick(suit.key)}
-              className={[
-                "flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl bg-white",
-                "text-3xl font-semibold shadow-lg transition-transform hover:-translate-y-0.5",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-                suit.red ? "text-rose-600" : "text-slate-900",
-              ].join(" ")}
-            >
-              <span aria-hidden>{suit.glyph}</span>
-              <span className="text-xs font-medium text-slate-500">{suit.label}</span>
-            </button>
-          ))}
-        </div>
       </div>
-    </div>
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {suits.map((suit) => (
+          <button
+            key={suit.key}
+            type="button"
+            onClick={() => onPick(suit.key)}
+            aria-label={suit.label}
+            className={[
+              "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl bg-white",
+              "text-2xl font-semibold shadow-lg transition-transform hover:-translate-y-0.5",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+              suit.red ? "text-rose-600" : "text-slate-900",
+            ].join(" ")}
+          >
+            <span aria-hidden>{suit.glyph}</span>
+            <span className="text-[0.65rem] font-medium text-slate-500">{suit.label}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }

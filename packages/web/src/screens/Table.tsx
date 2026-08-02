@@ -3,19 +3,23 @@ import { useCallback, useEffect, useState } from "react";
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
 import { EventLog } from "../components/EventLog.tsx";
-import { Hand, type HandMode } from "../components/Hand.tsx";
+import { Hand, HandSortButton, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { Seats } from "../components/Seats.tsx";
 import { SunnyAnnounce, SunnyExplainer, SuitPicker } from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
+import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
   hasSeenSunny,
+  loadHandSort,
   markSunnySeen,
   recordGameFinished,
+  saveHandSort,
+  wantsFirstGameHints,
 } from "../net/identity.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
 
@@ -87,6 +91,8 @@ export function Table({
   const [graduating, setGraduating] = useState(false);
   const [helpedTurn, setHelpedTurn] = useState<number | null>(null);
   const [stalled, setStalled] = useState(false);
+  const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
+  const [wantedHints] = useState(wantsFirstGameHints);
   const nameOf = namerFor(room);
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
@@ -111,16 +117,16 @@ export function Table({
     send({ t: "intent", intent: { type: "callSunny", playerId: game.you ?? "" } });
 
   /**
-   * Whether the table is marking up your playable cards. Your first game comes
-   * with the guardrails on; after that they're something you ask for, one turn
-   * at a time. Being caught out having a play you didn't make is the whole
-   * subject of the Sunny Rule, and an app that points at the answer never lets
-   * anyone be caught.
+   * Whether the table is marking up your playable cards. Your first game can
+   * come with the guardrails on if you asked for them on the way in; after that
+   * they're something you ask for, one turn at a time. Being caught out having
+   * a play you didn't make is the whole subject of the Sunny Rule, and an app
+   * that points at the answer never lets anyone be caught.
    *
    * Making the play you skipped is the exception: you've already been caught,
    * the move is forced, and there is nothing left to fumble.
    */
-  const learning = finishedGames === 0;
+  const learning = finishedGames === 0 && wantedHints;
   const assist =
     game.phase.kind === "sunnyPlay" || learning || helpedTurn === game.turnNumber;
 
@@ -131,8 +137,9 @@ export function Table({
     if (lastGameOverId === undefined || game.you === null) return;
     const played = recordGameFinished();
     setFinishedGames(played);
-    if (played === 1) setGraduating(true);
-  }, [lastGameOverId, game.you]);
+    // Only worth announcing to somebody who had the highlights to lose.
+    if (played === 1 && wantedHints) setGraduating(true);
+  }, [lastGameOverId, game.you, wantedHints]);
 
   // Five seconds on a turn you haven't moved on, and the app offers a hand.
   // Every fresh draw restarts the clock: you're deciding again.
@@ -148,6 +155,12 @@ export function Table({
     setHelpedTurn(game.turnNumber);
     setStalled(false);
     send({ t: "help" });
+  };
+
+  const cycleSort = (): void => {
+    const next = NEXT_SORT[handSort];
+    setHandSort(next);
+    saveHandSort(next);
   };
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
@@ -238,18 +251,31 @@ export function Table({
           </p>
         ) : null}
 
+        {/* Docked above your hand rather than thrown over the table: naming a
+            suit well means reading what everyone else is holding. */}
+        {game.phase.kind === "suit" && mine ? (
+          <SuitPicker
+            onPick={(suit: Suit) =>
+              send({ t: "intent", intent: { type: "chooseSuit", playerId: me, suit } })
+            }
+          />
+        ) : null}
+
         <div className="relative flex flex-col">
           {/* Kept clear whether or not the offer is showing, so the hand
               doesn't move under your fingers when it appears. */}
           <div className="flex min-h-7 items-center gap-2 px-1">
             {stalled ? <HelpLink onAsk={askForHelp} /> : null}
+            {(you?.hand.length ?? 0) > 1 ? (
+              <HandSortButton sort={handSort} onCycle={cycleSort} className="ml-auto" />
+            ) : null}
           </div>
 
           {/* Your own shout, over your own cards, same as everyone else sees. */}
           {shoutingHere ? <HelpShout /> : null}
 
           <Hand
-            cards={you?.hand ?? []}
+            cards={sortHand(you?.hand ?? [], handSort)}
             legalCardIds={game.legalCardIds}
             mode={mode}
             assist={assist}
@@ -258,14 +284,6 @@ export function Table({
         </div>
 
         <EventLog log={log} nameOf={nameOf} />
-
-        {game.phase.kind === "suit" && mine ? (
-          <SuitPicker
-            onPick={(suit: Suit) =>
-              send({ t: "intent", intent: { type: "chooseSuit", playerId: me, suit } })
-            }
-          />
-        ) : null}
 
         {announcing && call ? (
           <SunnyAnnounce

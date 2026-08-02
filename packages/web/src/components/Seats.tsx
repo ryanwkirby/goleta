@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
@@ -44,6 +46,7 @@ function Seat({
   return (
     <li
       ref={anchor(seatAnchor(player.id))}
+      data-seat={player.id}
       className={[
         "relative min-w-32 shrink-0 rounded-xl px-3 py-2 ring-1 transition-colors",
         onClock ? "bg-amber-400/15 ring-amber-300/60" : "bg-black/20 ring-white/10",
@@ -105,8 +108,48 @@ export function Seats({
 }) {
   const others = game.players.filter((player) => player.id !== game.you);
   const shouting = new Set(shouts.map((shout) => shout.playerId));
+  const strip = useRef<HTMLUListElement>(null);
+  const { reduced } = useMotion();
+
+  /**
+   * The strip brings whoever the table is waiting on into the middle of itself.
+   *
+   * Eight seats don't fit on a phone, and having to go looking for the person
+   * playing — every turn, all game — was the single most tiring thing about
+   * watching a full table. `waitingOn` rather than the turn, so it also follows
+   * somebody who owes a card for a call that missed: that is exactly the moment
+   * you want to be looking at them.
+   *
+   * Scrolls by arithmetic on the strip rather than `scrollIntoView`, which is
+   * free to scroll every ancestor it can find and would yank the page about
+   * underneath you. Offsets, not bounding boxes, so a card mid-flight can't
+   * poison the measurement — which is why the strip is `relative`: it makes
+   * itself the offset parent, so a seat's `offsetLeft` is its place in the
+   * strip rather than its place on the page.
+   */
+  const waitingOn = game.waitingOn;
+  useEffect(() => {
+    const list = strip.current;
+    if (!list || waitingOn === null) return;
+    const seat = list.querySelector<HTMLElement>(`[data-seat="${waitingOn}"]`);
+    if (!seat) return;
+
+    const centred = seat.offsetLeft - (list.clientWidth - seat.offsetWidth) / 2;
+    const left = Math.max(0, Math.min(centred, list.scrollWidth - list.clientWidth));
+    if (Math.abs(left - list.scrollLeft) < 1) return;
+    // A hidden tab runs no animation frames, and a smooth scroll asked for
+    // there is dropped rather than deferred — you'd come back to a table still
+    // showing the wrong seat. Nobody is watching it glide, so don't ask it to.
+    const gliding = !reduced && document.visibilityState === "visible";
+    list.scrollTo({ left, behavior: gliding ? "smooth" : "auto" });
+  }, [waitingOn, reduced]);
+
   return (
-    <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Other players">
+    <ul
+      ref={strip}
+      className="relative flex gap-2 overflow-x-auto pb-1"
+      aria-label="Other players"
+    >
       {others.map((player) => (
         <Seat
           key={player.id}

@@ -75,10 +75,11 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   up, so you can see them; working out whether they had a play is your job.
   Adding that highlight would make Sunny calls trivially automatic.
 - **The app does not tell you which of your own cards are playable either**, and
-  the turn prompt won't say whether you have a play. That guardrail is on until
-  you finish your first game and then comes off for good — after which you can
-  ask for it back, one turn at a time, and everyone at the table hears you ask
-  (#33). Restoring the highlights unconditionally removes the chance to make the
+  the turn prompt won't say whether you have a play. That guardrail is offered
+  on the rules screen on the way in, lasts until you finish your first game if
+  you took it, and then comes off for good — after which you can ask for it
+  back, one turn at a time, and everyone at the table hears you ask (#33).
+  Restoring the highlights unconditionally removes the chance to make the
   mistake the Sunny Rule feeds on.
 - **The server does say whether a draw was illegal — slowly.** This one reversed
   in #31, and the old rule ("that flag must never leave the server") is gone.

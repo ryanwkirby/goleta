@@ -5,6 +5,8 @@
  * so a reload, a locked phone or a redeploy doesn't cost you your hand.
  */
 
+import type { HandSort } from "../lib/sort.ts";
+
 export interface Identity {
   playerId: string;
   token: string;
@@ -101,6 +103,53 @@ export const recordGameFinished = (): number => {
     // Private browsing. The guardrails just never come off.
   }
   return next;
+};
+
+const HINTS_KEY = "goleta:first-game-hints";
+
+/**
+ * Whether you asked for the training wheels on the way in.
+ *
+ * Offered once, on the rules screen, before your first game. Anyone who saw the
+ * rules before that choice existed gets them, which is what they'd have had.
+ */
+export const wantsFirstGameHints = (): boolean => {
+  try {
+    return localStorage.getItem(HINTS_KEY) !== "0";
+  } catch {
+    return true;
+  }
+};
+
+export const setFirstGameHints = (wanted: boolean): void => {
+  try {
+    localStorage.setItem(HINTS_KEY, wanted ? "1" : "0");
+  } catch {
+    // Private browsing. You get the hints, which is the kinder default.
+  }
+};
+
+const SORT_KEY = "goleta:hand-sort";
+
+/**
+ * How you like your hand arranged. Kept because having to set it again every
+ * time you reload is exactly the sort of small annoyance nobody reports.
+ */
+export const loadHandSort = (): HandSort => {
+  try {
+    const raw = localStorage.getItem(SORT_KEY);
+    return raw === "rank" || raw === "suit" ? raw : "dealt";
+  } catch {
+    return "dealt";
+  }
+};
+
+export const saveHandSort = (sort: HandSort): void => {
+  try {
+    localStorage.setItem(SORT_KEY, sort);
+  } catch {
+    /* nothing to be done */
+  }
 };
 
 const SUNNY_KEY = "goleta:sunny-seen";

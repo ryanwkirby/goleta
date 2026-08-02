@@ -6,8 +6,21 @@ import { Button, Panel } from "../components/ui.tsx";
  * The Sunny Rule is deliberately absent. It is live from the first game, but
  * you meet it by having it called on you — and the app explains it at that
  * moment, when it will actually stick.
+ *
+ * First time through, this is also where you say whether you want the training
+ * wheels for that game. Asking is the point: being given help you didn't ask
+ * for is how a game teaches you it thinks you need it.
  */
-export function Rules({ onDone, ctaLabel = "Got it" }: { onDone: () => void; ctaLabel?: string }) {
+export function Rules({
+  onDone,
+  ctaLabel = "Got it",
+  onChooseHints,
+}: {
+  onDone: () => void;
+  ctaLabel?: string;
+  /** Present only on the way in. Absent when the rules are simply reopened. */
+  onChooseHints?: (wanted: boolean) => void;
+}) {
   return (
     <Panel className="max-w-lg">
       <h2 className="text-xl font-semibold text-white">How goleta works</h2>
@@ -47,9 +60,26 @@ export function Rules({ onDone, ctaLabel = "Got it" }: { onDone: () => void; cta
         seen — spotting it is on you.
       </p>
 
-      <Button variant="primary" full className="mt-5" onClick={onDone}>
-        {ctaLabel}
-      </Button>
+      {onChooseHints ? (
+        <div className="mt-5 border-t border-white/10 pt-4">
+          <p className="text-sm text-white/70">
+            For your first game the table can dim the cards you can't play, so your move is
+            always the obvious one. After that it stops either way.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Button variant="primary" className="flex-1" onClick={() => onChooseHints(true)}>
+              Dim them for me
+            </Button>
+            <Button variant="secondary" className="flex-1" onClick={() => onChooseHints(false)}>
+              I'll spot them myself
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="primary" full className="mt-5" onClick={onDone}>
+          {ctaLabel}
+        </Button>
+      )}
     </Panel>
   );
 }

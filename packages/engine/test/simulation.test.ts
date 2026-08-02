@@ -9,7 +9,9 @@ import {
   playerById,
   randomInt,
   redact,
+  rollSunnyCall,
   startGame,
+  type CardId,
   type GameEvent,
   type GameState,
   type Intent,
@@ -22,6 +24,12 @@ interface RunOptions {
   seed: number;
   /** Chance in a hundred that a bot draws on purpose while holding a play. */
   mischief?: number;
+  /**
+   * Chance in a hundred that somebody accuses on spec. Bots only ever call a
+   * violation they have actually caught, so a wrong call — and the resolution
+   * that follows one — has to be made deliberately.
+   */
+  slander?: number;
   stepCap?: number;
 }
 
@@ -31,6 +39,9 @@ interface RunResult {
   events: GameEvent[];
   sunnyCalls: number;
   correctCalls: number;
+  /** Calls a bot chose to make, as against the ones the harness forced. */
+  botCalls: number;
+  wrongBotCalls: number;
 }
 
 const waitingOn = (state: GameState): PlayerId | null => {
@@ -48,6 +59,7 @@ const runGame = ({
   players,
   seed,
   mischief = 0,
+  slander = 0,
   stepCap = 5000,
 }: RunOptions): RunResult => {
   const ids: PlayerId[] = Array.from({ length: players }, (_, i) => `p${i + 1}`);
@@ -58,9 +70,32 @@ const runGame = ({
   let steps = 0;
   let sunnyCalls = 0;
   let correctCalls = 0;
+  let botCalls = 0;
+  let wrongBotCalls = 0;
+
+  /**
+   * The table's shared verdict on the violation in front of it, rolled once and
+   * remembered — the same bargain the server strikes in `rooms.ts`.
+   */
+  let verdict: { drawerId: PlayerId; firstDrawnId: CardId | null; call: boolean } | null = null;
+  const tableCallsSunny = (): boolean => {
+    const challenge = state.challenge;
+    if (!challenge || challenge.resolved || challenge.violation === null) {
+      verdict = null;
+      return false;
+    }
+    const firstDrawnId = challenge.drawnIds[0] ?? null;
+    if (verdict && verdict.drawerId === challenge.drawerId && verdict.firstDrawnId === firstDrawnId) {
+      return verdict.call;
+    }
+    const [call, next] = rollSunnyCall(rng);
+    rng = next;
+    verdict = { drawerId: challenge.drawerId, firstDrawnId, call };
+    return call;
+  };
 
   /** The bots follow the rules; only the harness breaks them on purpose. */
-  const nextMove = (): { intent: Intent; deliberateFoul: boolean } | null => {
+  const nextMove = (): { intent: Intent; deliberateFoul: boolean; fromBot: boolean } | null => {
     const waiting = waitingOn(state);
     const canStillDraw = state.drawsThisTurn < MAX_DRAWS_PER_TURN;
     if (mischief > 0 && state.phase.kind === "action" && waiting !== null && canStillDraw) {
@@ -68,15 +103,35 @@ const runGame = ({
       const [roll, next] = randomInt(rng, 100);
       rng = next;
       if (player && roll < mischief && legalCards(state, player).length > 0) {
-        return { intent: { type: "drawCard", playerId: player.id }, deliberateFoul: true };
+        return {
+          intent: { type: "drawCard", playerId: player.id },
+          deliberateFoul: true,
+          fromBot: false,
+        };
       }
     }
-    // Everyone gets a look in, so Sunny calls come from wherever they come.
-    for (const player of state.players) {
-      const view = redact(state, player.id);
-      const [intent, next] = decideBotIntent(view, rng);
+
+    // An accusation thrown without looking, which is the only way a wrong one
+    // ever gets made now.
+    const challenge = state.challenge;
+    if (slander > 0 && challenge && !challenge.resolved) {
+      const [roll, next] = randomInt(rng, 100);
       rng = next;
-      if (intent) return { intent, deliberateFoul: false };
+      const accuser = state.players.find((p) => !p.eliminated && p.id !== challenge.drawerId);
+      if (roll < slander && accuser) {
+        return {
+          intent: { type: "callSunny", playerId: accuser.id },
+          deliberateFoul: false,
+          fromBot: false,
+        };
+      }
+    }
+
+    // Everyone gets a look in, so Sunny calls come from wherever they come.
+    const callSunny = tableCallsSunny();
+    for (const player of state.players) {
+      const intent = decideBotIntent(redact(state, player.id), { callSunny });
+      if (intent) return { intent, deliberateFoul: false, fromBot: true };
     }
     return null;
   };
@@ -100,6 +155,9 @@ const runGame = ({
       if (event.type !== "sunnyCalled") continue;
       sunnyCalls += 1;
       if (event.correct) correctCalls += 1;
+      if (!move.fromBot) continue;
+      botCalls += 1;
+      if (!event.correct) wrongBotCalls += 1;
     }
 
     const present = allCardIds(state);
@@ -135,7 +193,7 @@ const runGame = ({
     if (state.status === "over") expect(state.phase.kind).toBe("over");
   }
 
-  return { state, steps, events, sunnyCalls, correctCalls };
+  return { state, steps, events, sunnyCalls, correctCalls, botCalls, wrongBotCalls };
 };
 
 describe("full games", () => {
@@ -161,12 +219,16 @@ describe("full games", () => {
   it("finish with the Sunny Rule in play, right calls and wrong ones", () => {
     let calls = 0;
     let correct = 0;
+    let botCalls = 0;
+    let wrongBotCalls = 0;
     const turnUps = { recycle: 0, sunnyTouched: 0 };
     for (let seed = 1; seed <= 25; seed++) {
-      const run = runGame({ players: 4, seed: seed * 104729, mischief: 25 });
+      const run = runGame({ players: 4, seed: seed * 104729, mischief: 25, slander: 4 });
       expect(run.state.status).toBe("over");
       calls += run.sunnyCalls;
       correct += run.correctCalls;
+      botCalls += run.botCalls;
+      wrongBotCalls += run.wrongBotCalls;
       for (const event of run.events) {
         if (event.type === "turnedUp") turnUps[event.reason] += 1;
       }
@@ -175,6 +237,10 @@ describe("full games", () => {
     expect(calls).toBeGreaterThan(0);
     expect(correct).toBeGreaterThan(0);
     expect(calls - correct).toBeGreaterThan(0);
+    // But a bot is never the one who got it wrong: it accuses only somebody it
+    // has caught, so every call of its own lands.
+    expect(botCalls).toBeGreaterThan(0);
+    expect(wrongBotCalls, "a bot accused an innocent player").toBe(0);
     // As do both ways a card comes off the deck.
     expect(turnUps.sunnyTouched).toBeGreaterThan(0);
     expect(turnUps.recycle).toBeGreaterThan(0);

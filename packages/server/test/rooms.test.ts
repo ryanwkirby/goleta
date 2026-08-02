@@ -6,13 +6,15 @@
 
 import { describe, expect, it } from "vitest";
 
-import { MAX_TABLE_PLAYERS, MIN_TABLE_PLAYERS } from "@goleta/engine";
+import { MAX_TABLE_PLAYERS, MIN_TABLE_PLAYERS, rollSunnyCall } from "@goleta/engine";
 
 import {
   addBot,
+  applySeatIntent,
   beginGame,
   createRoom,
   createStore,
+  nextBotMove,
   roomView,
   setBotSpeed,
   type Room,
@@ -36,6 +38,30 @@ const dealAgain = (room: Room): string => {
   if (room.game) room.game.status = "over";
   beginGame(room, room.hostId);
   return leaderOf(room);
+};
+
+/** The lowest seed that makes the table's roll come out this way. */
+const seedRolling = (call: boolean): number => {
+  for (let seed = 1; seed < 10_000; seed += 1) if (rollSunnyCall(seed)[0] === call) return seed;
+  throw new Error(`no seed rolls ${call}`);
+};
+
+/**
+ * Puts the human host plainly in the wrong: a card in their hand is made to
+ * match what's showing, and then they reach for the deck anyway.
+ */
+const hostDrawsWithAPlay = (room: Room): void => {
+  beginGame(room, room.hostId);
+  const game = room.game;
+  if (!game) throw new Error("no game");
+  game.turnIndex = game.players.findIndex((player) => player.id === room.hostId);
+  const held = game.players[game.turnIndex]?.hand[0];
+  if (!held) throw new Error("no cards");
+  game.activeSuit = held.suit;
+
+  const outcome = applySeatIntent(room, room.hostId, { type: "drawCard", playerId: room.hostId });
+  expect(outcome.ok).toBe(true);
+  expect(game.challenge?.violation).not.toBeNull();
 };
 
 describe("passing the deal", () => {
@@ -104,5 +130,52 @@ describe("bot speed", () => {
     beginGame(room, room.hostId);
     expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/wait for this game/);
     expect(room.botSpeed).toBe("human");
+  });
+});
+
+describe("bots and the Sunny Rule", () => {
+  it("calls a violation the table has agreed to, ahead of anyone's ordinary move", () => {
+    const room = seatedRoom();
+    room.botSeed = seedRolling(true);
+    hostDrawsWithAPlay(room);
+
+    const move = nextBotMove(room);
+    expect(move?.intent.type).toBe("callSunny");
+    expect(room.seats.find((seat) => seat.id === move?.seat.id)?.bot).toBe(true);
+  });
+
+  it("lets it go when the roll says so", () => {
+    const room = seatedRoom();
+    room.botSeed = seedRolling(false);
+    hostDrawsWithAPlay(room);
+
+    expect(nextBotMove(room)?.intent.type).not.toBe("callSunny");
+  });
+
+  it("rolls once for the whole table, however often the schedule is recomputed", () => {
+    const room = seatedRoom();
+    room.botSeed = seedRolling(false);
+    hostDrawsWithAPlay(room);
+
+    // The window lasts seconds and the bot schedule is worked out afresh on
+    // every broadcast. Re-rolling here would walk 70% up to a certainty.
+    for (let recompute = 0; recompute < 50; recompute += 1) {
+      expect(nextBotMove(room)?.intent.type).not.toBe("callSunny");
+    }
+    expect(room.sunnyVerdict).toMatchObject({ drawerId: room.hostId, call: false });
+  });
+
+  it("forgets its verdict once the window shuts", () => {
+    const room = seatedRoom();
+    room.botSeed = seedRolling(true);
+    hostDrawsWithAPlay(room);
+    nextBotMove(room);
+    expect(room.sunnyVerdict).not.toBeNull();
+
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    game.challenge = null;
+    nextBotMove(room);
+    expect(room.sunnyVerdict).toBeNull();
   });
 });

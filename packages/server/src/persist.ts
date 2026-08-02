@@ -19,7 +19,7 @@ import path from "node:path";
 import type { Room, RoomStore } from "./rooms.ts";
 import { createStore, pruneRooms } from "./rooms.ts";
 
-const SNAPSHOT_VERSION = 5;
+const SNAPSHOT_VERSION = 6;
 
 interface Snapshot {
   version: number;

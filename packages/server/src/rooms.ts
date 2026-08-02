@@ -12,11 +12,12 @@ import {
   MIN_TABLE_PLAYERS,
   applyIntent,
   decideBotIntent,
-  nextSeed,
   redact,
+  rollSunnyCall,
   startGame,
   topCard,
   type BotSpeed,
+  type CardId,
   type GameEvent,
   type GameState,
   type GameView,
@@ -34,7 +35,22 @@ export interface Seat {
   token: string;
   bot: boolean;
   connected: boolean;
-  botSeed: number;
+}
+
+/**
+ * The table's one decision about the Sunny call currently on offer, kept until
+ * that window shuts.
+ *
+ * Bots roll for a violation once between them rather than once each — see
+ * `SUNNY_CALL_CHANCE`. Remembering the answer is what makes that true: the bot
+ * schedule is recomputed several times across a window that lasts seconds, and
+ * a fresh roll each time would quietly walk the odds up to certainty.
+ */
+interface SunnyVerdict {
+  drawerId: PlayerId;
+  /** The first card of the window, which is what tells two windows apart. */
+  firstDrawnId: CardId | null;
+  call: boolean;
 }
 
 export interface Room {
@@ -52,6 +68,9 @@ export interface Room {
    * Sunny call, let alone make one.
    */
   botSpeed: BotSpeed;
+  /** Seeds the table-wide rolls its bots make. One table, one thread of luck. */
+  botSeed: number;
+  sunnyVerdict: SunnyVerdict | null;
   game: GameState | null;
   gamesPlayed: number;
   lastWinnerId: PlayerId | null;
@@ -112,7 +131,6 @@ const newSeatFor = (name: string, bot: boolean): Seat => ({
   token: newToken(),
   bot,
   connected: !bot,
-  botSeed: newSeed(),
 });
 
 export const createRoom = (store: RoomStore, name: string): { room: Room; seat: Seat } => {
@@ -123,6 +141,8 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     seats: [seat],
     dealerId: null,
     botSpeed: "human",
+    botSeed: newSeed(),
+    sunnyVerdict: null,
     game: null,
     gamesPlayed: 0,
     lastWinnerId: null,
@@ -296,6 +316,35 @@ export const applySeatIntent = (
 };
 
 /**
+ * Whether the bots at this table have agreed to call the violation standing
+ * right now. Rolled once, the first time there is something to decide, and held
+ * until that window shuts.
+ *
+ * The referee is the one looking at `challenge.violation` here, not a bot: the
+ * roll only asks whether a caught player gets away with it. What each bot may
+ * *see* is still whatever `redact` gives it, and that is where the decision to
+ * accuse is actually made.
+ */
+const tableCallsSunny = (room: Room): boolean => {
+  const challenge = room.game?.challenge ?? null;
+  if (!challenge || challenge.resolved || challenge.violation === null) {
+    room.sunnyVerdict = null;
+    return false;
+  }
+
+  const firstDrawnId = challenge.drawnIds[0] ?? null;
+  const held = room.sunnyVerdict;
+  if (held && held.drawerId === challenge.drawerId && held.firstDrawnId === firstDrawnId) {
+    return held.call;
+  }
+
+  const [call, seed] = rollSunnyCall(room.botSeed);
+  room.botSeed = seed;
+  room.sunnyVerdict = { drawerId: challenge.drawerId, firstDrawnId, call };
+  return call;
+};
+
+/**
  * The next move a bot wants to make, if any. Returns one at a time so the
  * caller can space them out — bots that answered instantly would slam the
  * Sunny window shut before a human could reach for it.
@@ -303,12 +352,21 @@ export const applySeatIntent = (
 export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null => {
   const game = room.game;
   if (!game || game.status !== "playing") return null;
+  const bots = room.seats.filter((seat) => seat.bot);
+  if (bots.length === 0) return null;
 
-  for (const seat of room.seats) {
-    if (!seat.bot) continue;
-    const view = redact(game, seat.id);
-    const [intent, seed] = decideBotIntent(view, seat.botSeed);
-    seat.botSeed = nextSeed(seed);
+  // A call the table has agreed to make comes before anything else. Otherwise a
+  // bot on the clock and earlier in seat order would take its ordinary turn and
+  // shut the window on a call that was already decided.
+  if (tableCallsSunny(room)) {
+    for (const seat of bots) {
+      const intent = decideBotIntent(redact(game, seat.id), { callSunny: true });
+      if (intent?.type === "callSunny") return { seat, intent };
+    }
+  }
+
+  for (const seat of bots) {
+    const intent = decideBotIntent(redact(game, seat.id));
     if (intent) return { seat, intent };
   }
   return null;

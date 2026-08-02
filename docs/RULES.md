@@ -191,9 +191,10 @@ work for you, is the game.
 
 ## Asking for a hand
 
-Your first game is played with training wheels: the cards you can't play are
-dimmed, and the app tells you whether you have a move. When that game ends, both
-go away for good.
+Your first game can be played with training wheels: the cards you can't play are
+dimmed, and the app tells you whether you have a move. You are asked on the way
+in whether you want them, and when that game ends they go away for good either
+way.
 
 After that, sit on a turn for five seconds and a quiet offer of help appears
 next to your hand. Take it and the highlights come back — for that turn only,

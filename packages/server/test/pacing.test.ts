@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_BOT_TIMING, botPace, type BotMoveShape } from "../src/socket.ts";
 
-const ordinary: BotMoveShape = { call: false, closesWindow: false, midTurn: false };
+const ordinary: BotMoveShape = { call: false, midTurn: false };
 
 describe("a bot's pace", () => {
   it("pauses to think once a turn, then gets on with it", () => {
@@ -31,27 +31,31 @@ describe("a bot's pace", () => {
     expect(botPace(lightning, ordinary)).toBeGreaterThan(220);
   });
 
-  it("holds off on anything that would shut a challenge window", () => {
+  it("keeps its rhythm whether or not a challenge window is open", () => {
+    // A window opens on every draw, so a bot that waited on one would spend
+    // most of the game waiting. Nothing about a Sunny call being available to
+    // somebody else — including a call against the bot that just drew — reaches
+    // this function. There is no input here that could carry it.
     for (const timing of Object.values(DEFAULT_BOT_TIMING)) {
-      const closing = botPace(timing, { ...ordinary, closesWindow: true });
-      expect(closing).toBe(timing.sunnyGrace);
-      // Whatever the pace, shutting the window is the slowest thing a bot does.
-      expect(closing).toBeGreaterThan(botPace(timing, ordinary));
-      expect(closing).toBeGreaterThan(botPace(timing, { ...ordinary, midTurn: true }));
+      expect(botPace(timing, ordinary)).toBe(timing.firstMove);
+      expect(botPace(timing, { ...ordinary, midTurn: true })).toBe(timing.nextMove);
     }
-  });
-
-  it("outlasts the sun's ramp at human speed, so the tell arrives first", () => {
-    // The icon spends ten seconds getting from barely-there to unmissable, and
-    // AGENTS.md says not to shorten it. A bot must not close the window inside
-    // that, or the ramp never finishes for anybody.
-    expect(DEFAULT_BOT_TIMING.human.sunnyGrace).toBeGreaterThan(10_000);
   });
 
   it("takes a call ahead of everything, however mid-turn it is", () => {
     for (const timing of Object.values(DEFAULT_BOT_TIMING)) {
-      const calling: BotMoveShape = { call: true, closesWindow: true, midTurn: true };
+      const calling: BotMoveShape = { call: true, midTurn: true };
       expect(botPace(timing, calling)).toBe(timing.call);
     }
+  });
+
+  it("leaves a person room to beat the bots to a call at human speed", () => {
+    // The one Sunny figure left. It paces a call a bot is making, not a wait on
+    // one it might be given — and it is long because bots that call correctly
+    // would otherwise take every call at the table.
+    const human = DEFAULT_BOT_TIMING.human;
+    expect(botPace(human, { ...ordinary, call: true })).toBeGreaterThan(
+      botPace(human, ordinary),
+    );
   });
 });

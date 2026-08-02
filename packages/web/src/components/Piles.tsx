@@ -4,6 +4,18 @@ import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitBadge } from "./Card.tsx";
 
+/**
+ * A word under a pile, or the room one would take.
+ *
+ * The captions come and go — `showing` only exists while a suit is called —
+ * and the row is `items-center`, so a caption appearing under one column would
+ * shove that column's card upwards. The space is held whether or not there's
+ * anything to say, the same way `Table.tsx` holds a row above your hand.
+ */
+function Caption({ children }: { children?: string }) {
+  return <span className="h-4 text-xs leading-4 text-white/40">{children}</span>;
+}
+
 export function Piles({
   game,
   canDraw,
@@ -21,6 +33,7 @@ export function Piles({
   const shown = face ?? game.topCard;
   // The named suit only needs saying when it isn't the one you can see.
   const suitOverridden = game.activeSuit !== shown.suit;
+  const cardsLeft = game.drawPileSize;
 
   return (
     <div className="flex items-center justify-center gap-6">
@@ -35,7 +48,9 @@ export function Piles({
           type="button"
           onClick={onDraw}
           disabled={!canDraw}
-          aria-label="Draw a card"
+          // The label overrides everything inside the button, so the count has
+          // to be part of it or it is never announced at all.
+          aria-label={`Draw a card — ${cardsLeft} left`}
           className={[
             "relative rounded-lg transition-transform",
             canDraw
@@ -45,11 +60,17 @@ export function Piles({
           ].join(" ")}
         >
           <CardBack size="lg" anchor={anchor(DECK)} />
-          <span className="absolute inset-x-0 bottom-2 text-center font-mono text-sm text-white/70">
-            {game.drawPileSize}
+          {/* Sat on the lattice rather than on a flat colour now, so it brings
+              its own dark to stand on. */}
+          <span aria-hidden className="absolute inset-x-0 bottom-2 flex justify-center">
+            <span className="rounded-full bg-black/55 px-2 py-1 font-mono text-xs leading-none text-white/85">
+              {cardsLeft} {cardsLeft === 1 ? "card" : "cards"}
+            </span>
           </span>
         </button>
-        <span className="text-xs text-white/40">draw</span>
+        {/* No `draw` caption: the button says so where it counts, and the pile
+            of face-down cards was never the ambiguous half of this row. */}
+        <Caption />
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
@@ -62,9 +83,10 @@ export function Piles({
             className="h-32 w-24 rounded-xl border border-dashed border-white/15"
           />
         )}
-        <span className="text-xs text-white/40">
-          {suitOverridden ? "showing" : `${game.discardPileSize} played`}
-        </span>
+        {/* `showing` earns its place — paired with `called` under the badge it
+            is what explains that the card you can see is not the suit in play.
+            The count of cards already played explained nothing. */}
+        <Caption>{suitOverridden ? "showing" : undefined}</Caption>
       </div>
 
       {suitOverridden ? (
@@ -72,7 +94,7 @@ export function Piles({
           <div className="flex h-32 items-center">
             <SuitBadge suit={game.activeSuit} className="text-base" />
           </div>
-          <span className="text-xs text-white/40">called</span>
+          <Caption>called</Caption>
         </div>
       ) : null}
     </div>

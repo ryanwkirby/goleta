@@ -9,7 +9,14 @@
 import type { Server } from "node:http";
 import { WebSocket, WebSocketServer } from "ws";
 
-import type { BotSpeed, ClientMessage, GameEvent, PlayerId, ServerMessage } from "@goleta/engine";
+import type {
+  BotSpeed,
+  ClientMessage,
+  GameEvent,
+  Intent,
+  PlayerId,
+  ServerMessage,
+} from "@goleta/engine";
 
 import {
   RoomError,
@@ -29,13 +36,20 @@ import {
   wouldCloseSunnyWindow,
   type Room,
   type RoomStore,
+  type Seat,
 } from "./rooms.ts";
 
 const HEARTBEAT_MS = 30_000;
 
 export interface BotTiming {
-  /** A bot's ordinary move, paced so people can follow what happened. */
-  move: number;
+  /** A bot's first action on a turn: the pause that reads as thinking. */
+  firstMove: number;
+  /**
+   * Everything it does after that in the same turn. The second and third draws
+   * of a stuck turn, and the suit named after playing an 8, are decisions it
+   * has effectively already made — sitting on them just reads as lag.
+   */
+  nextMove: number;
   /** A bot calling the Sunny Rule. */
   call: number;
   /**
@@ -49,17 +63,48 @@ export interface BotTiming {
 /**
  * Two paces, chosen by the host in the lobby.
  *
- * `human` is the default and the one a table actually wants: five seconds is
- * about how long a person takes to look at their hand and decide. Its grace is
- * longer than the ten seconds the sun icon takes to reach full glow, so the
- * tell has time to finish arriving before a bot can shut the window on it.
+ * `human` is the default and the one a table actually wants: three seconds is
+ * about how long a person takes to look at a fresh hand, and a second is about
+ * how long the rest of the turn deserves. Its grace is longer than the ten
+ * seconds the sun icon takes to reach full glow, so the tell has time to finish
+ * arriving before a bot can shut the window on it.
  *
- * `lightning` is the old pace, for anyone who finds the wait tedious. It closes
- * a challenge window well before that glow tops out, which is the trade.
+ * `lightning` is for anyone who finds the wait tedious: everything at 700ms,
+ * which still clears a card's flight across the table (`FLIGHT_MS`, 220ms) with
+ * room to spare. Its grace is cut to two seconds — a real window, and a tight
+ * one. That trade is the whole of what lightning costs you.
+ *
+ * Neither `call` figure is turn pacing. It is the window in which a person can
+ * beat the bots to a call they can all see, which is why the human one is left
+ * long: bots that call correctly (see `SUNNY_CALL_CHANCE`) would otherwise take
+ * every call at the table.
  */
 export const DEFAULT_BOT_TIMING: Record<BotSpeed, BotTiming> = {
-  human: { move: 5000, call: 5000, sunnyGrace: 12_000 },
-  lightning: { move: 800, call: 1200, sunnyGrace: 3500 },
+  human: { firstMove: 3000, nextMove: 1000, call: 5000, sunnyGrace: 12_000 },
+  lightning: { firstMove: 700, nextMove: 700, call: 700, sunnyGrace: 2000 },
+};
+
+/** What a bot is about to do, as far as pacing is concerned. */
+export interface BotMoveShape {
+  /** It is calling the Sunny Rule. */
+  call: boolean;
+  /** It would shut a challenge window somebody else could still use. */
+  closesWindow: boolean;
+  /** It has already acted this turn, so it isn't deciding from scratch. */
+  midTurn: boolean;
+}
+
+/**
+ * How long that move waits.
+ *
+ * Order matters: the two Sunny figures aren't turn pacing at all — they're the
+ * room a person needs to get a call in — so they win over the ordinary rhythm
+ * of a turn.
+ */
+export const botPace = (timing: BotTiming, move: BotMoveShape): number => {
+  if (move.call) return timing.call;
+  if (move.closesWindow) return timing.sunnyGrace;
+  return move.midTurn ? timing.nextMove : timing.firstMove;
 };
 
 /** Asking for help is free, but not unlimited: it reaches every screen. */
@@ -94,6 +139,8 @@ export const attachSockets = (
   const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 16 * 1024 });
   const clients = new Set<Client>();
   const botTimers = new Map<string, NodeJS.Timeout>();
+  /** The last thing a bot did at each table, so a turn can pick up its pace. */
+  const botTurns = new Map<string, { playerId: PlayerId; turnNumber: number }>();
 
   /** The same message to every screen at one table, redaction not involved. */
   const announce = (room: Room, message: ServerMessage): void => {
@@ -116,18 +163,26 @@ export const attachSockets = (
     onChange();
   };
 
+  /**
+   * How long this move sits before it happens. A bot thinks once a turn and
+   * then gets on with it, so only its first action pays the full pause.
+   */
+  const paceFor = (room: Room, move: { seat: Seat; intent: Intent }): number => {
+    const last = botTurns.get(room.code);
+    return botPace(botTiming[room.botSpeed], {
+      call: move.intent.type === "callSunny",
+      closesWindow: wouldCloseSunnyWindow(room, move.seat.id, move.intent),
+      midTurn: last?.playerId === move.seat.id && last.turnNumber === room.game?.turnNumber,
+    });
+  };
+
   const scheduleBots = (room: Room): void => {
     if (botTimers.has(room.code)) return;
     const move = nextBotMove(room);
-    if (!move) return;
-
-    const timing = botTiming[room.botSpeed];
-    const delay =
-      move.intent.type === "callSunny"
-        ? timing.call
-        : wouldCloseSunnyWindow(room, move.seat.id, move.intent)
-          ? timing.sunnyGrace
-          : timing.move;
+    if (!move) {
+      botTurns.delete(room.code);
+      return;
+    }
 
     const timer = setTimeout(() => {
       botTimers.delete(room.code);
@@ -135,9 +190,15 @@ export const attachSockets = (
       const now = nextBotMove(room);
       if (!now) return;
       const outcome = applySeatIntent(room, now.seat.id, now.intent);
-      if (outcome.ok) broadcast(room, outcome.events);
+      if (outcome.ok) {
+        botTurns.set(room.code, {
+          playerId: now.seat.id,
+          turnNumber: room.game?.turnNumber ?? 0,
+        });
+        broadcast(room, outcome.events);
+      }
       scheduleBots(room);
-    }, delay);
+    }, paceFor(room, move));
     timer.unref?.();
     botTimers.set(room.code, timer);
   };
@@ -258,6 +319,7 @@ export const attachSockets = (
     clearInterval(heartbeat);
     for (const timer of botTimers.values()) clearTimeout(timer);
     botTimers.clear();
+    botTurns.clear();
     // `wss.close()` stops new connections but leaves the open ones holding the
     // HTTP server up, so shutdown hangs until every browser wanders off.
     for (const client of clients) client.socket.close(1001, "server shutting down");

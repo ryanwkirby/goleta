@@ -171,7 +171,23 @@ export type GameEvent =
   | { type: "reshuffled"; drawPileSize: number }
   /** A card turned face up off the deck. Always natural, never wild. */
   | { type: "turnedUp"; cards: Card[]; reason: TurnUpReason }
-  | { type: "sunnyCalled"; callerId: PlayerId; targetId: PlayerId; correct: boolean }
+  /**
+   * `returned` are the cards the rewind takes back off the offender and puts
+   * on the deck — empty for a call that missed, and for a reach at an empty
+   * deck that brought nothing back.
+   *
+   * They are safe to broadcast even though `state.sunny` is not. Every one of
+   * them was drawn face up, in front of everybody, and announced by its own
+   * `drew` event; the rewind is the table watching that undone, not a peek at
+   * what the deck is holding.
+   */
+  | {
+      type: "sunnyCalled";
+      callerId: PlayerId;
+      targetId: PlayerId;
+      correct: boolean;
+      returned: Card[];
+    }
   | { type: "surrendered"; playerId: PlayerId; card: Card; reason: SurrenderReason }
   | { type: "eliminated"; playerId: PlayerId }
   | { type: "turnChanged"; playerId: PlayerId }

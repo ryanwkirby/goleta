@@ -58,6 +58,15 @@ describe("a correct call", () => {
     expect(allCardIds(state)).toHaveLength(7);
   });
 
+  it("names the cards the rewind takes back, so the table can watch it happen", () => {
+    const result = applyIntent(caughtInTheAct(), { type: "callSunny", playerId: "b" });
+    if (!result.ok) throw new Error(result.error);
+    const called = result.events.find((event) => event.type === "sunnyCalled");
+    expect(called).toMatchObject({ callerId: "b", targetId: "a", correct: true });
+    // Read off the hand before the rewind moved it back onto the deck.
+    expect(called?.type === "sunnyCalled" && called.returned.map((c) => c.id)).toEqual(["KD#1"]);
+  });
+
   it("costs two cards from hand — one more than an honest turn would have", () => {
     let state = caughtInTheAct();
     state = call(state, "b");
@@ -220,6 +229,12 @@ describe("a wrong call", () => {
       }),
       "a",
     );
+    const result = applyIntent(state, { type: "callSunny", playerId: "b" });
+    if (!result.ok) throw new Error(result.error);
+    const called = result.events.find((event) => event.type === "sunnyCalled");
+    // Nothing is rewound, so there is nothing to fly back to the deck.
+    expect(called?.type === "sunnyCalled" && called.returned).toEqual([]);
+
     state = call(state, "b");
     expect(state.phase).toMatchObject({ kind: "surrender", playerId: "b", reason: "sunnyBadCall" });
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Card, GameEvent, GameView } from "@goleta/engine";
 
+import { DECK, seatAnchor } from "../src/motion/anchors.ts";
 import { planFlights, settlesAt } from "../src/motion/plan.ts";
 
 const card = (id: string, rank: Card["rank"] = "7", suit: Card["suit"] = "H"): Card => ({
@@ -154,7 +155,7 @@ describe("a deal", () => {
 describe("a batch", () => {
   it("plays a resolved Sunny call in the order it happened", () => {
     const { flights } = plan([
-      { type: "sunnyCalled", callerId: "me", targetId: "them", correct: true },
+      { type: "sunnyCalled", callerId: "me", targetId: "them", correct: true, returned: [] },
       { type: "surrendered", playerId: "them", card: card("t1"), reason: "sunnyPunishment" },
       { type: "turnedUp", cards: [card("u1"), card("u2")], reason: "sunnyTouched" },
       { type: "turnChanged", playerId: "me" },
@@ -164,6 +165,40 @@ describe("a batch", () => {
     const delays = flights.map((flight) => flight.delay);
     expect(delays).toEqual(delays.toSorted((a, b) => a - b));
     expect(new Set(delays).size).toBe(3);
+  });
+
+  it("flies what a landed call rewinds back onto the deck, before anything else", () => {
+    const { flights } = plan([
+      {
+        type: "sunnyCalled",
+        callerId: "me",
+        targetId: "them",
+        correct: true,
+        returned: [card("r1")],
+      },
+      { type: "played", playerId: "them", card: card("t1") },
+    ]);
+
+    const rewind = flights[0];
+    expect(rewind?.card?.id).toBe("r1");
+    expect(rewind?.to).toEqual([DECK]);
+    expect(rewind?.toPile).toBe(false);
+    // The hand as a whole is the fallback origin: by now the card has already
+    // left it, so its own anchor is gone.
+    expect(rewind?.from).toContain(seatAnchor("them"));
+    // And the forced play that follows waits for it.
+    expect(flights[1]?.card?.id).toBe("t1");
+    expect(flights[1]?.delay).toBeGreaterThan(rewind?.delay ?? 0);
+  });
+
+  it("moves nothing when the call missed", () => {
+    const { flights } = plan([
+      { type: "sunnyCalled", callerId: "me", targetId: "them", correct: false, returned: [] },
+      { type: "surrendered", playerId: "me", card: card("c1"), reason: "sunnyBadCall" },
+    ]);
+
+    expect(flights.map((flight) => flight.card?.id)).toEqual(["c1"]);
+    expect(flights[0]?.under).toBe(true);
   });
 
   it("compresses a burst rather than falling behind the table", () => {

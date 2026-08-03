@@ -156,10 +156,8 @@ export function Seats({
     return () => watch.disconnect();
   }, []);
 
-  const fan = fanTable(
-    available,
-    others.map((player) => player.hand.length),
-  );
+  const held = others.map((player) => player.hand.length);
+  const fan = fanTable(available, held);
 
   /**
    * One rule for where the strip sits: show whoever the table is waiting on,
@@ -191,13 +189,18 @@ export function Seats({
    * strip rather than its place on the page.
    *
    * Seats change width as hands grow and as the fan tightens under them, so the
-   * layout is a dependency too: whoever the table is waiting on has to end up
+   * geometry is a dependency too: whoever the table is waiting on has to end up
    * centred against the widths as they finally settle, not the ones they had
    * before the last resize.
+   *
+   * Everything that decides a width goes in the key, not just the fan. A strip
+   * that narrows while the sliver was already at the floor changes nothing about
+   * the cards and everything about where the middle is, and watching the fan
+   * alone left that resize centred on the width before it.
    */
   const waitingOn = game.waitingOn;
   const you = game.you;
-  const settled = `${fan.sliver}:${fan.rows.join(",")}`;
+  const settled = `${available}:${fan.sliver}:${held.join(",")}`;
   useEffect(() => {
     const list = strip.current;
     if (!list || waitingOn === null) return;

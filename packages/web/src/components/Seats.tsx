@@ -1,12 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 
 import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
+import { fanTable, inRows } from "../lib/fan.ts";
 import { inTurnOrder } from "../lib/seating.ts";
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import type { Shout } from "../net/useGoleta.ts";
-import { PlayingCard } from "./Card.tsx";
+import { CARD_WIDTH_PX, PlayingCard } from "./Card.tsx";
 import { HelpShout } from "./Help.tsx";
 import { SunnySign } from "./Sunny.tsx";
 
@@ -31,12 +32,15 @@ function Seat({
   room,
   game,
   shouting,
+  rows,
   onCallSunny,
 }: {
   player: PlayerView;
   room: RoomView;
   game: GameView;
   shouting: boolean;
+  /** How many rows this hand takes at the strip's shared sliver. */
+  rows: number;
   onCallSunny: () => void;
 }) {
   const { anchor, isArriving } = useMotion();
@@ -81,15 +85,29 @@ function Seat({
 
       {/* Deliberately no highlight on what they could play — working that out
           is the other half of the Sunny Rule. */}
-      <div className="mt-1.5 flex flex-wrap gap-1">
-        {player.hand.map((card) => (
-          <PlayingCard
-            key={card.id}
-            card={card}
-            size="sm"
-            anchor={anchor(cardAnchor(card.id))}
-            arriving={isArriving(card.id)}
-          />
+      <div className="mt-1.5 flex flex-col gap-1">
+        {inRows(player.hand, rows).map((row) => (
+          // Cards slide left onto their neighbours by `--fan`, which the strip
+          // sets once for the whole table. What each one keeps is its top-left
+          // corner — rank over glyph, where the face already puts them — and the
+          // last in the row shows whole. Later cards paint over earlier ones by
+          // DOM order alone, so no `z-index` is needed or wanted.
+          //
+          // The elements keep their full `h-14 w-10` box, shifted rather than
+          // shrunk or clipped: `resolveAnchor` reads these rects to decide where
+          // a flight starts and lands, so a card that is half-covered is still a
+          // whole card as far as the motion layer is concerned.
+          <div key={row[0].id} className="flex [&>*+*]:ml-[var(--fan)]">
+            {row.map((card) => (
+              <PlayingCard
+                key={card.id}
+                card={card}
+                size="sm"
+                anchor={anchor(cardAnchor(card.id))}
+                arriving={isArriving(card.id)}
+              />
+            ))}
+          </div>
         ))}
       </div>
     </li>
@@ -111,6 +129,35 @@ export function Seats({
   const shouting = new Set(shouts.map((shout) => shout.playerId));
   const strip = useRef<HTMLUListElement>(null);
   const { reduced } = useMotion();
+
+  /**
+   * How much room the seats have between them, measured rather than assumed.
+   *
+   * The overlap is a table-wide decision — one sliver for everybody — so it
+   * needs the strip's width and every hand's size at once, which is here and
+   * nowhere else. `contentRect` is the strip's box inside its own padding,
+   * which is exactly the width the seats have to fit across.
+   *
+   * The caution about offsets rather than bounding boxes belongs to the
+   * scroll-centring below, where a card mid-flight could poison a measurement.
+   * Nothing is in flight across the strip's own border box.
+   *
+   * Rounded down, so a fractional resize that changes nothing anybody can see
+   * doesn't re-render the table.
+   */
+  const [available, setAvailable] = useState(0);
+  useLayoutEffect(() => {
+    const list = strip.current;
+    if (!list) return;
+    const watch = new ResizeObserver(([entry]) => {
+      if (entry) setAvailable(Math.floor(entry.contentRect.width));
+    });
+    watch.observe(list);
+    return () => watch.disconnect();
+  }, []);
+
+  const held = others.map((player) => player.hand.length);
+  const fan = fanTable(available, held);
 
   /**
    * One rule for where the strip sits: show whoever the table is waiting on,
@@ -140,9 +187,20 @@ export function Seats({
    * poison the measurement — which is why the strip is `relative`: it makes
    * itself the offset parent, so a seat's `offsetLeft` is its place in the
    * strip rather than its place on the page.
+   *
+   * Seats change width as hands grow and as the fan tightens under them, so the
+   * geometry is a dependency too: whoever the table is waiting on has to end up
+   * centred against the widths as they finally settle, not the ones they had
+   * before the last resize.
+   *
+   * Everything that decides a width goes in the key, not just the fan. A strip
+   * that narrows while the sliver was already at the floor changes nothing about
+   * the cards and everything about where the middle is, and watching the fan
+   * alone left that resize centred on the width before it.
    */
   const waitingOn = game.waitingOn;
   const you = game.you;
+  const settled = `${available}:${fan.sliver}:${held.join(",")}`;
   useEffect(() => {
     const list = strip.current;
     if (!list || waitingOn === null) return;
@@ -166,11 +224,17 @@ export function Seats({
     // showing the wrong seat. Nobody is watching it glide, so don't ask it to.
     const gliding = !reduced && document.visibilityState === "visible";
     list.scrollTo({ left, behavior: gliding ? "smooth" : "auto" });
-  }, [waitingOn, you, reduced]);
+  }, [waitingOn, you, reduced, settled]);
 
   return (
     <ul
       ref={strip}
+      // One overlap for the entire strip, handed down from here: cards read
+      // identically in every hand, and somebody holding three isn't squashed
+      // differently from somebody holding twenty. It's the shift from one card
+      // to the next — the 4px gap the seats always had, once the hands are wide
+      // enough to need it, and negative from there on.
+      style={{ "--fan": `${fan.sliver - CARD_WIDTH_PX.sm}px` } as CSSProperties}
       // The padding is for the turn ring. A ring is drawn outside the border
       // box, and a box that clips one axis clips both, so without room to draw
       // in the ring was trimmed off the top of every seat and off the side of
@@ -179,13 +243,14 @@ export function Seats({
       className="relative flex gap-2 overflow-x-auto p-1"
       aria-label="Other players"
     >
-      {others.map((player) => (
+      {others.map((player, seat) => (
         <Seat
           key={player.id}
           player={player}
           room={room}
           game={game}
           shouting={shouting.has(player.id)}
+          rows={fan.rows[seat] ?? 1}
           onCallSunny={onCallSunny}
         />
       ))}

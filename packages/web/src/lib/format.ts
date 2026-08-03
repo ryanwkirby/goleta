@@ -1,8 +1,30 @@
-import type { GameEvent, RoomView, SurrenderReason } from "@goleta/engine";
+import type { Card, GameEvent, RoomView, SurrenderReason } from "@goleta/engine";
 
-import { SUIT_LABEL } from "../components/Card.tsx";
+import { SUIT_GLYPH, SUIT_LABEL } from "../components/Card.tsx";
 
 export type NameOf = (playerId: string) => string;
+
+/** A card as the log names it: `7♠`, not `7S`. */
+const cardName = (card: Card): string => `${card.rank}${SUIT_GLYPH[card.suit]}`;
+
+const SPOKEN_GLYPH: Record<string, string> = {
+  "♣": " of clubs",
+  "♦": " of diamonds",
+  "♥": " of hearts",
+  "♠": " of spades",
+};
+
+/**
+ * The same line with its pips spelled out, for a screen reader.
+ *
+ * A bare `♠` is announced inconsistently and often not at all — at the usual
+ * punctuation settings it's simply dropped, which turns "played 7♠" into
+ * "played 7". The glyph is what you want to see and the wrong thing to hear, so
+ * the log shows one and says the other. Cards come out as "7 of spades", the
+ * same phrasing `PlayingCard` already uses for its own label.
+ */
+export const spellSuits = (line: string): string =>
+  line.replace(/[♣♦♥♠]/g, (glyph) => SPOKEN_GLYPH[glyph] ?? glyph);
 
 export const namerFor = (room: RoomView | null): NameOf => {
   const names = new Map(room?.seats.map((seat) => [seat.id, seat.name]));
@@ -17,17 +39,17 @@ const surrenderPhrase: Record<SurrenderReason, string> = {
 export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
   switch (event.type) {
     case "gameStarted":
-      return `New game. ${event.upcard.rank}${event.upcard.suit} turned up.`;
+      return `New game. ${cardName(event.upcard)} turned up.`;
     case "played":
-      return `${nameOf(event.playerId)} played ${event.card.rank}${event.card.suit}.`;
+      return `${nameOf(event.playerId)} played ${cardName(event.card)}.`;
     case "suitChosen":
       return `${nameOf(event.playerId)} called ${SUIT_LABEL[event.suit]}.`;
     case "drew":
-      return `${nameOf(event.playerId)} drew ${event.card.rank}${event.card.suit}.`;
+      return `${nameOf(event.playerId)} drew ${cardName(event.card)}.`;
     case "reshuffled":
       return `Deck ran out — the pile is shuffled back in, ${event.drawPileSize} to draw.`;
     case "turnedUp": {
-      const cards = event.cards.map((card) => `${card.rank}${card.suit}`).join(", ");
+      const cards = event.cards.map(cardName).join(", ");
       return event.reason === "recycle"
         ? `${cards} turned up. That's the card to match now.`
         : `${cards} turned up off the deck — the card they reached for. That's the card to match now.`;
@@ -40,7 +62,7 @@ export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
       return event.correct ? `${call} — and was right.` : `${call} — and was wrong.`;
     }
     case "surrendered":
-      return `${nameOf(event.playerId)} ${surrenderPhrase[event.reason]}: ${event.card.rank}${event.card.suit}.`;
+      return `${nameOf(event.playerId)} ${surrenderPhrase[event.reason]}: ${cardName(event.card)}.`;
     case "eliminated":
       return `${nameOf(event.playerId)} is out of cards, and out of the game.`;
     case "turnChanged":

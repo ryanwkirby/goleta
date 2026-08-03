@@ -7,7 +7,16 @@ import { cardAnchor, HAND } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { PlayingCard } from "./Card.tsx";
 
-export type HandMode = "play" | "surrender" | "idle";
+/**
+ * `forced` is the play you owe after a Sunny call has landed on you. It plays a
+ * card like `play` does, but it commits on the second tap like `surrender`
+ * does: it is one step of a punishment, and a punishment you can fire off with
+ * a stray thumb is one you never find out you were served (#66).
+ */
+export type HandMode = "play" | "forced" | "surrender" | "idle";
+
+/** The moves that ask twice, because you can't take them back. */
+const CONFIRMS: ReadonlySet<HandMode> = new Set<HandMode>(["forced", "surrender"]);
 
 /** How long the hand takes to close a gap, or open one. */
 const REFLOW_MS = 190;
@@ -137,8 +146,9 @@ export function Hand({
 
   const choose = (card: Card): void => {
     if (mode === "idle") return;
-    // Giving up a card is the one move you can't take back, so it asks twice.
-    if (mode === "surrender" && selected !== card.id) {
+    // The moves you can't take back ask twice. Ordinary play doesn't: it is the
+    // whole rhythm of a turn, and a confirm on every card would wreck it.
+    if (CONFIRMS.has(mode) && selected !== card.id) {
       setSelected(card.id);
       return;
     }
@@ -160,7 +170,7 @@ export function Hand({
             // With help on, the unplayable cards are dimmed. Without it they
             // all look alike. When giving a card up, legality is irrelevant,
             // so nothing is dimmed either way.
-            dimmed={mode === "play" && assist && !playable}
+            dimmed={(mode === "play" || mode === "forced") && assist && !playable}
             selected={selected === card.id}
             onClick={mode === "idle" ? undefined : () => choose(card)}
             // The tooltip is a highlight in slow motion, so it stays quiet too.

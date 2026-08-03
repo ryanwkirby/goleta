@@ -21,6 +21,8 @@ const RESHUFFLE_MS = 260;
 /** Gap between one card's flight and the next in the same batch. */
 const BEAT_MS = 110;
 const TURN_UP_BEAT_MS = 95;
+/** A held pause either side of a Sunny rewind, so it reads as its own moment. */
+const CALL_BEAT_MS = 260;
 /** Cards fan out of the deck this fast, squeezed to fit `DEAL_WINDOW_MS`. */
 const DEAL_BEAT_MS = 38;
 const DEAL_WINDOW_MS = 820;
@@ -177,9 +179,41 @@ export const planFlights = (
         break;
       }
 
+      /**
+       * The rewind, which is the only part of a landed call the table can't
+       * simply read off the cards afterwards. Every card the offender drew
+       * illegally goes back where it came from, and it has to be *seen* going
+       * back: the punishment that follows only makes sense if you watched the
+       * game step backwards first (#66).
+       *
+       * A beat opens the sequence so the call lands before the cards move, and
+       * another closes it so the forced play doesn't tread on the rewind. A
+       * call that missed returns nothing and moves nothing.
+       */
+      case "sunnyCalled": {
+        if (event.returned.length === 0) break;
+        cursor += CALL_BEAT_MS;
+        for (const card of event.returned) {
+          add({
+            card,
+            // By now the rewind has already taken it out of the hand, so the
+            // card's own anchor is gone and the hand as a whole is the origin.
+            from: [cardAnchor(card.id), handOf(game, event.targetId)],
+            to: [DECK],
+            size: "lg",
+            fromSize: sizeOfHand(game, event.targetId),
+            duration: FLIGHT_MS,
+            hides: null,
+            toPile: false,
+          });
+          cursor += BEAT_MS;
+        }
+        cursor += CALL_BEAT_MS;
+        break;
+      }
+
       // Nothing moves for these; the log and the seats already say it.
       case "suitChosen":
-      case "sunnyCalled":
       case "eliminated":
       case "turnChanged":
       case "gameOver":

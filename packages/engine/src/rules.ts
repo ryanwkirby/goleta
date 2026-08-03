@@ -375,7 +375,12 @@ const handleCallSunny = (
 
   const correct = isPlayable(accused, challenge.reach.activeSuit, challenge.reach.topRank);
   const targetId = challenge.drawerId;
-  events.push({ type: "sunnyCalled", callerId, targetId, card: accused, correct });
+  // Read the touched cards while they are still where the offender put them.
+  // A moment from now the rewind will have moved them, and the table wants to
+  // watch that happen rather than find it already done. A call that missed
+  // rewinds nothing, so it returns nothing.
+  const returned = correct && challenge.violation ? findCards(s, challenge.violation.touchedIds) : [];
+  events.push({ type: "sunnyCalled", callerId, targetId, card: accused, correct, returned });
 
   if (!correct) {
     // Nothing happens to either hand — but the caller can't try again until
@@ -540,6 +545,21 @@ const recordDraw = (
  * recycle between the first and last illegal draw can leave one in the face-up
  * pile — including on top of it, which is why this puts nothing back itself.
  */
+/**
+ * The same cards `takeCardsFromPiles` will eventually want, looked up wherever
+ * they are right now and left there. A card drawn illegally is in the
+ * offender's hand unless they have already played it, so both are searched.
+ */
+const findCards = (s: GameState, ids: readonly string[]): Card[] => {
+  const pool = new Map<string, Card>();
+  for (const player of s.players) for (const card of player.hand) pool.set(card.id, card);
+  for (const card of s.discardPile) pool.set(card.id, card);
+  return ids.flatMap((id) => {
+    const card = pool.get(id);
+    return card ? [structuredClone(card)] : [];
+  });
+};
+
 const takeCardsFromPiles = (s: GameState, ids: readonly string[]): Card[] => {
   const wanted = new Set(ids);
   const found = new Map<string, Card>();

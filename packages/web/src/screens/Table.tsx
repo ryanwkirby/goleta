@@ -9,6 +9,7 @@ import { Seats } from "../components/Seats.tsx";
 import {
   SunnyAccusePicker,
   SunnyAnnounce,
+  SunnyCaught,
   SunnyExplainer,
   SuitPicker,
 } from "../components/Sunny.tsx";
@@ -34,7 +35,15 @@ const ANNOUNCE_MS = 3200;
 /** How long you can sit on a turn before the app offers you a hand. */
 const STALL_MS = 5000;
 
-/** What the table is waiting for, said plainly. */
+/**
+ * What the table is waiting for, said plainly.
+ *
+ * The two steps of a landed Sunny call number themselves. Read on its own,
+ * "now the punishment card" tells you nothing about what happened or how much
+ * of it is left, which is exactly how a player ends up wondering what hit them
+ * (#66). Step three isn't a prompt — nobody is asked for it — but it is counted
+ * so the numbering matches what the dialog promised.
+ */
 const prompt = (game: GameView, nameOf: (id: string) => string, assist: boolean): string => {
   const mine = game.waitingOn === game.you;
   switch (game.phase.kind) {
@@ -44,9 +53,10 @@ const prompt = (game: GameView, nameOf: (id: string) => string, assist: boolean)
         : "Deadlock — nobody could move.";
     case "surrender": {
       const yours = game.phase.playerId === game.you;
+      const who = yours ? "You" : nameOf(game.phase.playerId);
       return yours
-        ? "Now the punishment card. Any card in your hand — it doesn't have to match."
-        : `${nameOf(game.phase.playerId)} owes a punishment card.`;
+        ? "☀️ Step 2 of 3 — the punishment card. Any card in your hand; it doesn't have to match."
+        : `${who} owes a punishment card — step 2 of 3.`;
     }
     case "suit":
       // The namer, not the player to move — under Power of Eights the suit is
@@ -55,8 +65,8 @@ const prompt = (game: GameView, nameOf: (id: string) => string, assist: boolean)
       return mine ? "Name a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
     case "sunnyPlay":
       return mine
-        ? "Caught. Make the play you skipped."
-        : `${nameOf(game.turnPlayerId)} has to make the play they skipped.`;
+        ? "☀️ Step 1 of 3 — make the play you skipped. Tap it twice."
+        : `${nameOf(game.turnPlayerId)} has to make the play they skipped — step 1 of 3.`;
     case "action":
       if (!mine) return `${nameOf(game.turnPlayerId)} to play.`;
       // Both of these give the answer away — being told you *must* play is
@@ -91,6 +101,7 @@ export function Table({
   const [announcing, setAnnouncing] = useState(false);
   /** Whose reach you are part-way through accusing, if any. */
   const [accusing, setAccusing] = useState<string | null>(null);
+  const [ackedCall, setAckedCall] = useState<number | null>(null);
   const [finishedGames, setFinishedGames] = useState(gamesFinished);
   const [graduating, setGraduating] = useState(false);
   const [helpedTurn, setHelpedTurn] = useState<number | null>(null);
@@ -105,6 +116,8 @@ export function Table({
   // A call is news before it's a lesson: everyone gets told who called it on
   // whom, and the explanation waits until that banner has been and gone. It is
   // taught by being used, so only first-timers ever see the second part.
+  //
+  // The log is newest first, so this is the latest call, not the first one.
   const lastCall = log.find((entry) => entry.event.type === "sunnyCalled");
   const lastCallId = lastCall?.id;
   const call = lastCall?.event.type === "sunnyCalled" ? lastCall.event : null;
@@ -112,10 +125,27 @@ export function Table({
     if (lastCallId !== undefined) setAnnouncing(true);
   }, [lastCallId]);
 
-  const announcementOver = useCallback(() => {
-    setAnnouncing(false);
+  // The seat a landed call is about gets a dialog instead of the banner. A
+  // timed notice at the top of the screen is the right weight for news about
+  // somebody else and much too light for a punishment you are about to be
+  // walked through — see #66.
+  const caughtYou = call !== null && call.correct && call.targetId === game.you;
+  const showCaught = caughtYou && ackedCall !== lastCallId;
+
+  const explainIfNew = useCallback(() => {
     if (!hasSeenSunny()) setExplainSunny(true);
   }, []);
+
+  const announcementOver = useCallback(() => {
+    setAnnouncing(false);
+    explainIfNew();
+  }, [explainIfNew]);
+
+  const acknowledgeCaught = useCallback(() => {
+    setAckedCall(lastCallId ?? null);
+    setAnnouncing(false);
+    explainIfNew();
+  }, [lastCallId, explainIfNew]);
 
   /**
    * Tapping the sun no longer calls anything — it opens the picker. An
@@ -186,12 +216,18 @@ export function Table({
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
 
-  const mode: HandMode =
-    game.phase.kind === "surrender" && game.phase.playerId === game.you
+  // Dead until the dialog is dismissed. The tap that would have fired the
+  // forced play is very often the tail of the one that drew the card you were
+  // caught for, and a punishment served before you've read it isn't one.
+  const mode: HandMode = showCaught
+    ? "idle"
+    : game.phase.kind === "surrender" && game.phase.playerId === game.you
       ? "surrender"
-      : mine && (game.phase.kind === "action" || game.phase.kind === "sunnyPlay")
-        ? "play"
-        : "idle";
+      : mine && game.phase.kind === "sunnyPlay"
+        ? "forced"
+        : mine && game.phase.kind === "action"
+          ? "play"
+          : "idle";
 
   /** The server stamps the real seat on every intent; this id is a courtesy. */
   const me = game.you ?? "";
@@ -206,9 +242,15 @@ export function Table({
     });
   };
 
+  // What the dialog names: the play they were dodging, still in hand because
+  // the rewind left it there, and the card the rewind took back off them.
+  const legal = new Set(game.legalCardIds);
+  const skipped = you?.hand.filter((card) => legal.has(card.id)) ?? [];
+  const owesPunishment = (you?.hand.length ?? 0) > 1;
+
   return (
     <TableMotion game={game} log={log}>
-      <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <header className="flex items-center gap-2 text-xs text-white/50">
           <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
@@ -313,18 +355,32 @@ export function Table({
           {/* Your own shout, over your own cards, same as everyone else sees. */}
           {shoutingHere ? <HelpShout /> : null}
 
-          <Hand
-            cards={sortHand(you?.hand ?? [], handSort)}
-            legalCardIds={game.legalCardIds}
-            mode={mode}
-            assist={assist}
-            onChoose={onChooseCard}
-          />
+          {/* The same frame every other seat gets when the table is waiting on
+              it. Your own cards aren't in the strip, so the one seat that most
+              wants the highlight was the only one without it.
+
+              On a wrapper rather than on `Hand` itself: that element scrolls
+              its own overflow, and a box that clips one axis clips both, so it
+              would trim its own ring. */}
+          <div
+            className={[
+              "rounded-2xl transition-colors",
+              mine ? "ring-1 ring-amber-300/60" : "",
+            ].join(" ")}
+          >
+            <Hand
+              cards={sortHand(you?.hand ?? [], handSort)}
+              legalCardIds={game.legalCardIds}
+              mode={mode}
+              assist={assist}
+              onChoose={onChooseCard}
+            />
+          </div>
         </div>
 
         <EventLog log={log} nameOf={nameOf} />
 
-        {announcing && call ? (
+        {announcing && call && !caughtYou ? (
           <SunnyAnnounce
             callerName={nameOf(call.callerId)}
             targetName={nameOf(call.targetId)}
@@ -332,6 +388,16 @@ export function Table({
             correct={call.correct}
             onDone={announcementOver}
             ms={ANNOUNCE_MS}
+          />
+        ) : null}
+
+        {showCaught && call ? (
+          <SunnyCaught
+            callerName={nameOf(call.callerId)}
+            skipped={skipped}
+            returned={call.returned}
+            owesPunishment={owesPunishment}
+            onDone={acknowledgeCaught}
           />
         ) : null}
 

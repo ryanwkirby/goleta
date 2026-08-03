@@ -74,6 +74,12 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
 - **The app never highlights other players' legal cards.** Every hand is face
   up, so you can see them; working out whether they had a play is your job.
   Adding that highlight would make Sunny calls trivially automatic.
+- **The seat fan stops tightening while the strip still overflows.** Hands
+  overlap so the table fits, but never past the floor in `lib/fan.ts` — the
+  narrowest sliver that still shows a rank and its suit. Squeezing further would
+  fit more seats on a phone and quietly break the rule above: a hand you can't
+  read is a play you can't spot. Rows are the release valve, not a tighter
+  sliver, and the scrolling left between seats is the accepted cost (#59).
 - **The app does not tell you which of your own cards are playable either**, and
   the turn prompt won't say whether you have a play. That guardrail is offered
   on the rules screen on the way in, lasts until you finish your first game if

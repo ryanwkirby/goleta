@@ -49,7 +49,7 @@ export function App() {
     if (!room) return <Join send={send} connecting={status !== "open"} />;
     if (showRules) {
       return (
-        <div className="flex min-h-full items-start justify-center p-5 sm:items-center">
+        <div className="flex flex-1 items-start justify-center p-5 sm:items-center">
           <Rules
             onDone={dismissRules}
             ctaLabel={room.status === "lobby" ? "To the table" : "Play"}
@@ -84,7 +84,7 @@ export function App() {
   })();
 
   return (
-    <div className="min-h-full bg-felt-950 bg-[radial-gradient(120%_80%_at_50%_0%,var(--color-felt-900),var(--color-felt-950))] text-white">
+    <div className="flex flex-1 flex-col bg-felt-950 bg-[radial-gradient(120%_80%_at_50%_0%,var(--color-felt-900),var(--color-felt-950))] text-white">
       {body}
 
       {error ? (

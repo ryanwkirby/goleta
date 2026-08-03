@@ -112,8 +112,7 @@ export function CardBack({
       aria-hidden
       className={[
         SIZES[size],
-        "shrink-0 bg-felt-800 shadow-lg ring-1 ring-white/10",
-        "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,0.07)_4px,rgba(255,255,255,0.07)_8px)]",
+        "bee-back shrink-0 shadow-lg ring-1 ring-white/10",
         className,
       ].join(" ")}
     />

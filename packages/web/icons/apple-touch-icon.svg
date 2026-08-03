@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>goleta</title>
+  <!--
+    The source for `apple-touch-icon.png`, which is not a resize of the tab
+    icon. iOS puts this on a home screen and applies its own rounded mask, so
+    the tile is square and full-bleed — rounding it here would only show up as a
+    dark seam inside Apple's corners — and the card runs a little larger to fill
+    what the mask leaves. Same three colours, same eight; see
+    `../public/favicon.svg` for where they come from.
+
+    Rebuild with `scripts/build-icons.sh`.
+  -->
+  <defs>
+    <radialGradient id="felt" cx="0.5" cy="0" r="1.1">
+      <stop offset="0" stop-color="#193b2a" />
+      <stop offset="1" stop-color="#07180f" />
+    </radialGradient>
+  </defs>
+
+  <rect width="64" height="64" fill="url(#felt)" />
+
+  <g transform="rotate(-10 32 32)">
+    <g transform="translate(32 32) scale(1.06) translate(-32 -32)">
+      <rect x="15" y="9" width="34" height="46" rx="5" fill="#ffffff" />
+      <path
+        fill="#0e271b"
+        d="M32 14A8.5 8.5 0 1 1 32 31A8.5 8.5 0 1 1 32 14Z
+           M32 27A11.5 11.5 0 1 1 32 50A11.5 11.5 0 1 1 32 27Z
+           M32 18.3A4.2 4.2 0 1 0 32 26.7A4.2 4.2 0 1 0 32 18.3Z
+           M32 32A6.5 6.5 0 1 0 32 45A6.5 6.5 0 1 0 32 32Z"
+      />
+    </g>
+  </g>
+</svg>

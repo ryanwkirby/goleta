@@ -190,7 +190,7 @@ export function Lobby({
     : undefined;
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col gap-5 p-5">
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
       <RoomCode code={room.code} />
 
       {winner ? (

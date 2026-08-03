@@ -27,7 +27,7 @@ export function Join({
   };
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center gap-6 p-5">
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 p-5">
       <header className="text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
         <p className="mt-2 text-balance text-white/60">

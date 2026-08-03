@@ -51,9 +51,13 @@ export const LOOSEST = CARD + GAP;
 /**
  * The narrowest sliver where a rank and its suit are still unambiguously
  * readable. `10` at `text-sm` sitting behind the card's own `p-1` is the binding
- * case — everything else is one glyph — and it wants a shade over half a card.
- * Past here the strip scrolls instead; the scrolling that remains is *between*
- * seats, never inside one.
+ * case — every other rank is one character, and the suit glyph under it is
+ * narrower still. Measured on the shipped font rather than guessed at: `10` is
+ * 15.97px at 14px semibold, which puts its right edge at 19.97px. Half a card
+ * would have shaved it by three hundredths of a pixel; this clears it.
+ *
+ * Past here the strip scrolls instead, and the scrolling that remains is
+ * *between* seats, never inside one.
  */
 export const TIGHTEST = 22;
 

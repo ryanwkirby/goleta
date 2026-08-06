@@ -1,6 +1,6 @@
 # Deployment
 
-goleta runs as a single Node container on the Mac mini's Docker Desktop, on the
+goleta runs as a single Node container on the Mac mini's OrbStack, on the
 same setup as the other services in `~/git` (see `sdge-rate-explorer` for the
 sibling pattern). One process serves the API, the WebSocket and the built web
 bundle, so they share an origin and the tunnel needs only one ingress rule.

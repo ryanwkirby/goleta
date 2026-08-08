@@ -163,9 +163,13 @@ export interface Challenge {
   drawnIds: CardId[];
   /**
    * The offender's hand, and the board they faced, exactly as they stood
-   * immediately before their most recent draw. This is what an accusation is
-   * judged against: a card they only came to hold afterwards must never be
-   * offered, or count, as an accusation.
+   * immediately before the reach a call would be about. This is what an
+   * accusation is judged against: a card they only came to hold afterwards
+   * must never be offered, or count, as an accusation.
+   *
+   * Which reach that is: the most recent one while nothing has been caught,
+   * and then the offending one, frozen alongside `violation.snapshot` from the
+   * same instant. See `recordDraw`.
    */
   reach: SunnyReach;
   violation: {
@@ -223,9 +227,11 @@ export interface GameState {
   sunny: SunnyResolution | null;
   drawsThisTurn: number;
   /**
-   * Draws taken at the table across the whole game, never reset. A wrong
-   * caller's lockout is measured against this rather than against turns, so it
-   * counts down at the same rate regardless of how draws land within a turn.
+   * Reaches for the deck at the table across the whole game, never reset. A
+   * wrong caller's lockout is measured against this rather than against turns,
+   * so it counts down at the same rate regardless of how draws land within a
+   * turn. Counted where the window is — see `recordDraw` — so a reach that
+   * found nothing at all doesn't move it.
    */
   totalDraws: number;
   /**

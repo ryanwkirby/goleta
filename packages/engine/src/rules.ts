@@ -274,7 +274,6 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   const reach = watching
     ? { hand: [...player.hand], activeSuit: s.activeSuit, topRank: topCard(s).rank }
     : null;
-  if (watching) s.totalDraws += 1;
 
   // An empty deck is recycled first, and that recycle is the whole of this
   // action — no card reaches a hand. The card turned up is a new card in play,
@@ -506,11 +505,18 @@ const handleSurrender = (
  * recycled and nothing was drawn — the reach still counts, so the window opens
  * with no card attached to it.
  *
- * `reach` is overwritten on every draw, whether or not it was a violation:
- * it's what an accusation is judged against, and it always means "the hand and
- * board as of the most recent reach." Whichever reach was the actual violation,
- * the card that made it one is still unplayed and still in hand, so it stays
- * accusable through every later reach in the same window too.
+ * `reach` follows the newest reach only while nobody has been caught. The
+ * moment one *is* a violation it freezes, together with the snapshot taken from
+ * the same instant, and every later reach in the window leaves it alone.
+ *
+ * That pairing is the point. An accusation is judged against `reach` and
+ * rewound to `violation.snapshot`, so the two describing different moments is
+ * incoherent — and they come apart the moment the board moves mid-turn, which a
+ * recycle does. The card that made the offence an offence stays in hand, but it
+ * stops being playable against the card the recycle turned up, so judging a
+ * later reach would rule every possible accusation wrong while the violation
+ * still stood. It would also put the cards drawn by the offence itself on the
+ * list of cards you may name. (#74)
  */
 const recordDraw = (
   s: GameState,
@@ -524,7 +530,12 @@ const recordDraw = (
     s.challenge = { drawerId: playerId, drawnIds: [], reach, violation: null, resolved: false };
   }
   const challenge = s.challenge;
-  challenge.reach = reach;
+  if (!challenge.violation) challenge.reach = reach;
+  // Reaches at the table, counted for the lockouts measured against them. A
+  // reach that found nothing at all — an empty deck with nothing to recycle
+  // either — isn't one: no card moved and no window opened for it, so it is
+  // not a beat anybody's lockout should be counting down against.
+  s.totalDraws += 1;
   if (card) challenge.drawnIds.push(card.id);
   // A fresh draw is a fresh chance to be caught, even if an earlier call in
   // this turn has already been settled.

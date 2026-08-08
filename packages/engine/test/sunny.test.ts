@@ -35,6 +35,31 @@ const caughtInTheAct = (): GameState =>
     "a",
   );
 
+/**
+ * A reach that was an offence, then a recycle, then a reach that wasn't.
+ *
+ * A recycle mid-turn is the one thing that moves the board while a window is
+ * open, so it is the one thing that can pull the reach an accusation is judged
+ * against away from the reach that was actually the offence. (#74)
+ *
+ * a holds the 5H against a 3H, so their first reach is an offence. The deck
+ * empties, the recycle turns up a spade, and their next reach — with nothing
+ * playable against that — is honest.
+ */
+const acrossARecycle = (): GameState => {
+  let state = table({
+    hands: { a: ["5H"], b: ["2C"], c: ["3D"] },
+    top: "3H",
+    drawPile: ["2D"],
+    buriedDiscards: ["KS", "QS", "JS", "9S", "7S", "6S"],
+  });
+  state = draw(state, "a"); // the offence: 5H was playable on the 3H
+  state = draw(state, "a"); // deck empty, so this recycles and turns up a spade
+  expect(topCard(state).suit).toBe("S");
+  state = draw(state, "a"); // honest: nothing in hand plays on a spade
+  return state;
+};
+
 describe("a correct call", () => {
   it("forces the skipped play, then a punishment, then turns up what they touched", () => {
     let state = caughtInTheAct();
@@ -194,28 +219,24 @@ describe("naming the card", () => {
     );
   });
 
-  it("cannot be a card drawn by the reach a call would be judged against", () => {
-    // a is caught on the first draw (KD), and reaches a second time before
-    // anyone calls it. The window is judged against the most recent reach, so
-    // the card that reach itself just turned up is never an option — even
-    // though it's sitting in their hand right now — while 5H and the
-    // already-touched KD, both held before this second reach, still are.
+  it("cannot be any card the offence itself put in their hand", () => {
+    // a is caught on the first draw (KD) and reaches again before anyone calls
+    // it. Neither drawn card is ever an option: the window is judged against
+    // the reach that was the offence, and both of these arrived after it. Only
+    // the hand a actually had a choice from is on the list.
     let state = caughtInTheAct();
+    const firstDrawId = handOf(state, "a").at(-1) as string;
     state = draw(state, "a");
-    const secondDrawId = handOf(state, "a").at(-1);
-    expect(secondDrawId).toBeDefined();
+    const secondDrawId = handOf(state, "a").at(-1) as string;
 
-    expect(
-      reject(state, { type: "callSunny", playerId: "b", cardId: secondDrawId as string }),
-    ).toMatch(/wasn't in their hand/);
+    for (const drawn of [firstDrawId, secondDrawId]) {
+      expect(reject(state, { type: "callSunny", playerId: "b", cardId: drawn })).toMatch(
+        /wasn't in their hand/,
+      );
+    }
 
-    // KD was drawn on the *first* reach, so it's a legitimate accusation —
-    // just a wrong one, since it doesn't match the 5S — while an accusation
-    // that's still both present and legal, like 5H, still lands.
     const reachIds = state.challenge?.reach.hand.map((c) => c.id);
-    expect(reachIds).toEqual(["5H#1", "2C#1", "KD#1"]);
-    expect(reachIds).not.toContain(secondDrawId);
-
+    expect(reachIds).toEqual(["5H#1", "2C#1"]);
     expect(state.challenge?.resolved).toBe(false);
     state = call(state, "b", "5H");
     expect(state.phase.kind).toBe("sunnyPlay");
@@ -563,6 +584,47 @@ describe("a call that spans a recycle", () => {
     expect(allCardIds(state)).toHaveLength(total);
     expect(new Set(allCardIds(state)).size).toBe(total);
   });
+
+  it("still judges a call against the reach that was the offence", () => {
+    const state = acrossARecycle();
+    expect(state.challenge?.violation).not.toBeNull();
+
+    // Judged against the 3H they reached from, not the spade now showing.
+    expect(state.challenge?.reach.activeSuit).toBe("H");
+    expect(state.challenge?.reach.topRank).toBe("3");
+
+    // So the call lands, rather than every possible accusation being wrong
+    // while the violation stood.
+    const called = call(state, "b", "5H");
+    expect(called.phase.kind).toBe("sunnyPlay");
+    expect(called.sunnyLockouts["b"] ?? 0).toBe(0);
+  });
+
+  it("still keeps the cards the offence drew off the list", () => {
+    const state = acrossARecycle();
+    expect(state.challenge?.reach.hand.map((c) => c.id)).toEqual(["5H#1"]);
+    expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("2D").id })).toMatch(
+      /wasn't in their hand/,
+    );
+  });
+
+  it("still locks out a caller who was genuinely wrong", () => {
+    // Same shape, but a had nothing playable against the 3H to begin with, so
+    // there was never an offence and naming their one card is simply wrong.
+    let state = table({
+      hands: { a: ["5C"], b: ["2C"], c: ["3D"] },
+      top: "3H",
+      drawPile: ["2D"],
+      buriedDiscards: ["KS", "QS", "JS", "9S", "7S", "6S"],
+    });
+    state = draw(state, "a");
+    state = draw(state, "a");
+    state = draw(state, "a");
+    expect(state.challenge?.violation).toBeNull();
+
+    state = call(state, "b", "5C");
+    expect(state.sunnyLockouts["b"]).toBeGreaterThan(state.totalDraws);
+  });
 });
 
 describe("the challenge window", () => {
@@ -666,5 +728,31 @@ describe("reaching for an empty deck", () => {
     expect(handOf(state, "b")).toEqual(["9C#1", "10C#1"]);
     expect(currentPlayer(state).id).toBe("a");
     expect(state.sunnyLockouts.b).toBeGreaterThan(0);
+  });
+
+  it("counts as a reach only when something actually came of it", () => {
+    // Every card is in a hand, so there is nothing to draw and nothing to
+    // recycle either. No card moves and no window opens, so there is no beat
+    // here for anyone's lockout to count down against. (#74)
+    let state = table({
+      hands: { a: ["5H"], b: ["9C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+    });
+    state = draw(state, "a");
+    expect(state.challenge).toBeNull();
+    expect(state.totalDraws).toBe(0);
+
+    // A reach that recycles the pile is a reach, even though nothing reached a
+    // hand: the window opens on it, so the count has to move with it.
+    let recycling = table({
+      hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["KH", "QH", "JH"],
+    });
+    recycling = draw(recycling, "a");
+    expect(recycling.challenge).not.toBeNull();
+    expect(recycling.totalDraws).toBe(1);
   });
 });

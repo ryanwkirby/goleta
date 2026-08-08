@@ -17,6 +17,7 @@ import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
+import { PEEL_MS } from "../motion/plan.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
@@ -98,6 +99,7 @@ export function Table({
   offline: boolean;
 }) {
   const [explainSunny, setExplainSunny] = useState(false);
+  const [peeling, setPeeling] = useState(false);
   const [announcing, setAnnouncing] = useState(false);
   /** Whose reach you are part-way through accusing, if any. */
   const [accusing, setAccusing] = useState<string | null>(null);
@@ -113,24 +115,36 @@ export function Table({
   const mine = game.waitingOn === game.you;
   const finished = game.status === "over";
 
-  // A call is news before it's a lesson: everyone gets told who called it on
-  // whom, and the explanation waits until that banner has been and gone. It is
-  // taught by being used, so only first-timers ever see the second part.
+  // A call is evidence before it's news, and news before it's a lesson. The
+  // pile peels back to show what the ruling was made on, the banner says what
+  // the ruling was, and the explanation waits until that has been and gone. It
+  // is taught by being used, so only first-timers ever see the third part.
   //
   // The log is newest first, so this is the latest call, not the first one.
   const lastCall = log.find((entry) => entry.event.type === "sunnyCalled");
   const lastCallId = lastCall?.id;
   const call = lastCall?.event.type === "sunnyCalled" ? lastCall.event : null;
   useEffect(() => {
-    if (lastCallId !== undefined) setAnnouncing(true);
+    if (lastCallId === undefined) return;
+    setPeeling(true);
+    const timer = setTimeout(() => {
+      setPeeling(false);
+      setAnnouncing(true);
+    }, PEEL_MS);
+    return () => clearTimeout(timer);
   }, [lastCallId]);
 
   // The seat a landed call is about gets a dialog instead of the banner. A
   // timed notice at the top of the screen is the right weight for news about
   // somebody else and much too light for a punishment you are about to be
   // walked through — see #66.
+  //
+  // It waits for the peel like the banner does: being shown the evidence and
+  // then told what it meant is the order for the offender too, and they of all
+  // people are owed a look at why.
   const caughtYou = call !== null && call.correct && call.targetId === game.you;
-  const showCaught = caughtYou && ackedCall !== lastCallId;
+  const caughtHold = caughtYou && (peeling || ackedCall !== lastCallId);
+  const showCaught = caughtHold && !peeling;
 
   const explainIfNew = useCallback(() => {
     if (!hasSeenSunny()) setExplainSunny(true);
@@ -231,10 +245,11 @@ export function Table({
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
 
-  // Dead until the dialog is dismissed. The tap that would have fired the
-  // forced play is very often the tail of the one that drew the card you were
-  // caught for, and a punishment served before you've read it isn't one.
-  const mode: HandMode = showCaught
+  // Dead from the moment the call lands until the dialog is dismissed. The tap
+  // that would have fired the forced play is very often the tail of the one
+  // that drew the card you were caught for, and a punishment served before
+  // you've watched the evidence and read the sentence isn't one.
+  const mode: HandMode = caughtHold
     ? "idle"
     : game.phase.kind === "surrender" && game.phase.playerId === game.you
       ? "surrender"
@@ -289,6 +304,16 @@ export function Table({
             game={game}
             canDraw={mine && game.phase.kind === "action" && !finished}
             onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
+            peel={
+              peeling && call
+                ? {
+                    evidence: call.evidence,
+                    named: call.card,
+                    callerName: nameOf(call.callerId),
+                    targetName: nameOf(call.targetId),
+                  }
+                : null
+            }
           />
 
           <p

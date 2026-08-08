@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Card, GameEvent, GameView } from "@goleta/engine";
 
 import { DECK, seatAnchor } from "../src/motion/anchors.ts";
-import { planFlights, settlesAt } from "../src/motion/plan.ts";
+import { PEEL_MS, planFlights, settlesAt } from "../src/motion/plan.ts";
 
 const card = (id: string, rank: Card["rank"] = "7", suit: Card["suit"] = "H"): Card => ({
   id,
@@ -37,6 +37,19 @@ const view = (overrides: Partial<GameView> = {}): GameView => ({
   turnNumber: 7,
   ...overrides,
 });
+
+/** A judged call, with the evidence the peel is drawn from. */
+const called = (overrides: Partial<Extract<GameEvent, { type: "sunnyCalled" }>> = {}) =>
+  ({
+    type: "sunnyCalled",
+    callerId: "me",
+    targetId: "them",
+    card: card("t1"),
+    correct: true,
+    returned: [],
+    evidence: { inPlay: card("top"), activeSuit: "H", since: [] },
+    ...overrides,
+  }) satisfies GameEvent;
 
 const ids = () => {
   let next = 0;
@@ -148,14 +161,7 @@ describe("a deal", () => {
 describe("a batch", () => {
   it("plays a resolved Sunny call in the order it happened", () => {
     const { flights } = plan([
-      {
-        type: "sunnyCalled",
-        callerId: "me",
-        targetId: "them",
-        card: card("t1"),
-        correct: true,
-        returned: [],
-      },
+      called(),
       { type: "surrendered", playerId: "them", card: card("t1"), reason: "sunnyPunishment" },
       { type: "turnedUp", cards: [card("u1"), card("u2")], reason: "sunnyTouched" },
       { type: "turnChanged", playerId: "me" },
@@ -169,14 +175,7 @@ describe("a batch", () => {
 
   it("flies what a landed call rewinds back onto the deck, before anything else", () => {
     const { flights } = plan([
-      {
-        type: "sunnyCalled",
-        callerId: "me",
-        targetId: "them",
-        card: card("t1"),
-        correct: true,
-        returned: [card("r1")],
-      },
+      called({ returned: [card("r1")] }),
       { type: "played", playerId: "them", card: card("t1") },
     ]);
 
@@ -192,19 +191,31 @@ describe("a batch", () => {
     expect(flights[1]?.delay).toBeGreaterThan(rewind?.delay ?? 0);
   });
 
+  it("waits for the peel before rewinding anything", () => {
+    // The pile is peeled back over the evidence while this is held, and the
+    // rewind is the consequence — it may not start underneath the thing it is
+    // supposed to follow. (#63)
+    const { flights } = plan([called({ returned: [card("r1")] })]);
+
+    expect(flights[0]?.delay).toBeGreaterThanOrEqual(PEEL_MS);
+  });
+
+  it("holds the peel open even when a burst has to be squeezed", () => {
+    // The cap is on how long the burst takes, not on how long the table waits
+    // before it starts. Compressing the hold would drag the rewind back under
+    // the evidence.
+    const returned = Array.from({ length: 20 }, (_, index) => card(`r${index}`));
+    const { flights } = plan([called({ returned })]);
+
+    expect(flights).toHaveLength(20);
+    expect(flights[0]?.delay).toBeGreaterThanOrEqual(PEEL_MS);
+    expect(settlesAt(flights) - PEEL_MS).toBeLessThan(1400);
+  });
+
   it("moves nothing at all when the call missed", () => {
     // Nothing is rewound, and since #50 nothing is forfeited either — a miss
     // costs the caller a lockout, which is not a thing that flies anywhere.
-    const { flights } = plan([
-      {
-        type: "sunnyCalled",
-        callerId: "me",
-        targetId: "them",
-        card: card("t1"),
-        correct: false,
-        returned: [],
-      },
-    ]);
+    const { flights } = plan([called({ correct: false })]);
 
     expect(flights).toEqual([]);
   });

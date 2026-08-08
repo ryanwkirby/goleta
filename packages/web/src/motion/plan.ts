@@ -23,6 +23,18 @@ const BEAT_MS = 110;
 const TURN_UP_BEAT_MS = 95;
 /** A held pause either side of a Sunny rewind, so it reads as its own moment. */
 const CALL_BEAT_MS = 260;
+/**
+ * How long the pile spends peeled back over a judged call before anything is
+ * allowed to move again: long enough to fan the pile aside and then read the
+ * two cards that decide it, since a glimpse of the evidence would be
+ * decoration rather than evidence.
+ *
+ * The table sees the evidence, then the ruling, then the consequence — a rewind
+ * that started underneath the evidence would be the consequence arriving first.
+ * `Table.tsx` holds the peel itself up for exactly this long, and the ruling
+ * banner follows it. (#63)
+ */
+export const PEEL_MS = 1700;
 /** Cards fan out of the deck this fast, squeezed to fit `DEAL_WINDOW_MS`. */
 const DEAL_BEAT_MS = 38;
 const DEAL_WINDOW_MS = 820;
@@ -186,11 +198,15 @@ export const planFlights = (
        * back: the punishment that follows only makes sense if you watched the
        * game step backwards first (#66).
        *
-       * A beat opens the sequence so the call lands before the cards move, and
-       * another closes it so the forced play doesn't tread on the rewind. A
-       * call that missed returns nothing and moves nothing.
+       * The peel runs first and nothing may move underneath it, so the whole
+       * sequence starts on the far side of it — including anything else that
+       * arrived in the same batch. A beat then opens the rewind so the ruling
+       * lands before the cards move, and another closes it so the forced play
+       * doesn't tread on it. A call that missed moves nothing at all, but it
+       * peels just the same, and the hold is what the table is watching.
        */
       case "sunnyCalled": {
+        cursor += PEEL_MS;
         if (event.returned.length === 0) break;
         cursor += CALL_BEAT_MS;
         for (const card of event.returned) {
@@ -284,12 +300,23 @@ const dealFlights = (
  * Bots move on a timer, and a resolved Sunny call can land half a dozen events
  * at once. Rather than let the table narrate a queue it has already left
  * behind, squeeze the delays so the whole batch still finishes promptly.
+ *
+ * The cap is on how long the burst takes, not on how long the table waits
+ * before it starts. A batch that opens with a deliberate hold — the peel — is
+ * measured from the end of it, because squeezing the hold would drag the rewind
+ * back underneath the evidence it is meant to follow.
  */
 const compress = (flights: FlightPlan[]): FlightPlan[] => {
-  const longest = Math.max(0, ...flights.map((flight) => flight.delay));
-  if (longest <= BATCH_CAP_MS) return flights;
-  const factor = BATCH_CAP_MS / longest;
-  return flights.map((flight) => ({ ...flight, delay: Math.round(flight.delay * factor) }));
+  if (flights.length === 0) return flights;
+  const delays = flights.map((flight) => flight.delay);
+  const held = Math.min(...delays);
+  const span = Math.max(...delays) - held;
+  if (span <= BATCH_CAP_MS) return flights;
+  const factor = BATCH_CAP_MS / span;
+  return flights.map((flight) => ({
+    ...flight,
+    delay: held + Math.round((flight.delay - held) * factor),
+  }));
 };
 
 /** When the last card in a batch comes to rest. */

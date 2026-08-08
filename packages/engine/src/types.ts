@@ -147,6 +147,44 @@ export interface SunnyReach {
 }
 
 /**
+ * The pile as the moment of the reach left it — what a judged call peels back
+ * to show the table.
+ *
+ * Derived on the way out and never stored: it is a handful of cards, all of
+ * which went face up in front of everybody when they were played, arranged to
+ * make one point. `inPlay` is the card the offender was matching against when
+ * they reached for the deck instead, and `since` is everything that has landed
+ * on top of it in the moments between the offence and the call. Put the named
+ * card beside `inPlay` and the ruling reads itself.
+ *
+ * It says nothing a verdict could be reverse-engineered from beyond the verdict
+ * already on the event. `activeSuit` is here because it has to be: a wild 8
+ * overrides the suit you can see, and a pair judged without it reads wrong.
+ */
+export interface SunnyEvidence {
+  /** The card in play at the instant of the reach. */
+  inPlay: Card;
+  /** The suit that had to be matched then, which `inPlay` alone may not say. */
+  activeSuit: Suit;
+  /** What reached the pile after the offence, oldest first. Usually none. */
+  since: Card[];
+}
+
+/**
+ * The face-up pile at the instant a `SunnyReach` describes, frozen alongside it.
+ *
+ * Kept off `SunnyReach` deliberately. That shape crosses the wire to a caller
+ * *before* any verdict exists and the two ends must not drift; this exists only
+ * to build evidence for a call already judged.
+ */
+export interface ReachPile {
+  /** The card that was in play. */
+  inPlay: Card;
+  /** Every card already in the face-up pile, so what came later can be told apart. */
+  ids: CardId[];
+}
+
+/**
  * The Sunny Rule challenge window.
  *
  * Opens on any draw and closes when the *next* player takes their first action,
@@ -172,6 +210,13 @@ export interface Challenge {
    * same instant. See `recordDraw`.
    */
   reach: SunnyReach;
+  /**
+   * The pile at the same instant `reach` describes, frozen with it and by the
+   * same rule. The two are read together to build the evidence a judged call
+   * shows the table, so a version of one against the other's moment would
+   * describe a board nobody ever faced.
+   */
+  reachPile: ReachPile;
   violation: {
     /**
      * The game exactly as it stood *before* the illegal draw. A successful call
@@ -277,6 +322,14 @@ export type GameEvent =
    * them was drawn face up, in front of everybody, and announced by its own
    * `drew` event; the rewind is the table watching that undone, not a peek at
    * what the deck is holding.
+   *
+   * `evidence` is what the table is shown instead of being asked to take the
+   * ruling on faith — the pile as the offence left it, so the card that was
+   * actually in play can be set beside the card `card` names. It goes out to
+   * everybody, offender and spectators included: once a call has been judged
+   * the judgement is public, and so is what it was judged on. It is built on
+   * the way out of a challenge that has just been resolved, never held on the
+   * state, and it carries nothing from the deck.
    */
   | {
       type: "sunnyCalled";
@@ -285,6 +338,7 @@ export type GameEvent =
       card: Card;
       correct: boolean;
       returned: Card[];
+      evidence: SunnyEvidence;
     }
   | { type: "surrendered"; playerId: PlayerId; card: Card; reason: SurrenderReason }
   | { type: "eliminated"; playerId: PlayerId }

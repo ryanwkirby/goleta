@@ -44,8 +44,10 @@ export function Rules({
         </li>
         <li>
           <strong className="text-white">Eights in your hand are wild</strong> and let you name the
-          next suit. They're also a liability: an 8 plays on anything, so while you hold one you can
-          always play, which means you can never draw. An 8 turned up off the deck is just an
+          next suit. They're also bad news: an 8 plays on anything, so holding one means you can
+          never draw, and drawing one ends your turn on the spot. Either way you're a card down.
+          Naming the suit is what you get back — a real lever, since every hand is face up — so an
+          8 is a card to spend well, not one to want. An 8 turned up off the deck is just an
           ordinary 8 — its own suit, nobody names anything.
         </li>
         <li>

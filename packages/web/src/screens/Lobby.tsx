@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
+import type { BotSpeed, ClientMessage, HouseRules, RoomView } from "@goleta/engine";
 
 import { Button, Panel } from "../components/ui.tsx";
 
@@ -36,6 +36,102 @@ const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
   { key: "human", label: "Human", blurb: "A few seconds a turn, like people play." },
   { key: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
 ];
+
+/**
+ * What a table is playing, for everyone who isn't the host and can't see the
+ * switches. Silent when the table plays the game as written.
+ */
+const describeRules = (rules: HouseRules): string => {
+  const on: string[] = [];
+  if (!rules.sunny) on.push("no Sunny Rule");
+  if (rules.eights === "nextPlayerNames") on.push("the Power of Eights");
+  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice");
+  if (on.length === 0) return "Playing the standard rules.";
+  return `House rules: ${on.join(", ")}.`;
+};
+
+/**
+ * The house rules, as a row of switches.
+ *
+ * Every one of these is a rule the game already had written down — two
+ * alternates from the original rules, plus the Sunny Rule, which not every
+ * table wants to play with. Defaults are the game as written, so a host who
+ * never opens this gets exactly what they got before.
+ *
+ * Off is described as plainly as on. A table choosing to drop the Sunny Rule
+ * isn't playing a lesser game, and the copy shouldn't imply it is.
+ */
+function HouseRulesPicker({
+  rules,
+  onChange,
+}: {
+  rules: HouseRules;
+  onChange: (rules: HouseRules) => void;
+}) {
+  const rows: { key: string; label: string; blurb: string; on: boolean; toggle: HouseRules }[] = [
+    {
+      key: "sunny",
+      label: "The Sunny Rule",
+      blurb: rules.sunny
+        ? "Draw with a play in your hand and anyone can call it on you."
+        : "Off. Nobody is watching your hands, and drawing is just drawing.",
+      on: rules.sunny,
+      toggle: { ...rules, sunny: !rules.sunny },
+    },
+    {
+      key: "eights",
+      label: "The Power of Eights",
+      blurb:
+        rules.eights === "nextPlayerNames"
+          ? "The next player names the suit, not whoever played the 8."
+          : "Off. Play an 8 and you name the suit yourself.",
+      on: rules.eights === "nextPlayerNames",
+      toggle: {
+        ...rules,
+        eights: rules.eights === "nextPlayerNames" ? "playerNames" : "nextPlayerNames",
+      },
+    },
+    {
+      key: "seedEight",
+      label: "Dealer's Choice",
+      blurb:
+        rules.seedEight === "dealerNames"
+          ? "An 8 turned up to start is the dealer's suit to name."
+          : "Off. An 8 turned up to start plays as its own suit.",
+      on: rules.seedEight === "dealerNames",
+      toggle: {
+        ...rules,
+        seedEight: rules.seedEight === "dealerNames" ? "natural" : "dealerNames",
+      },
+    },
+  ];
+
+  return (
+    <div className="mt-3 border-t border-white/10 pt-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">House rules</p>
+      <ul className="mt-2 flex flex-col gap-2">
+        {rows.map((row) => (
+          <li key={row.key} className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">{row.label}</p>
+              <p className="text-xs text-white/40">{row.blurb}</p>
+            </div>
+            <Button
+              variant={row.on ? "primary" : "secondary"}
+              className="min-w-16 px-3 py-1.5 text-xs"
+              role="switch"
+              aria-checked={row.on}
+              aria-label={row.label}
+              onClick={() => onChange(row.toggle)}
+            >
+              {row.on ? "On" : "Off"}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /**
  * Only worth showing once there's a bot to pace. It's a table setting rather
@@ -169,6 +265,10 @@ export function Lobby({
               {room.gamesPlayed > 0 ? "Next game" : "Deal"}
             </Button>
           </div>
+          <HouseRulesPicker
+            rules={room.houseRules}
+            onChange={(rules) => send({ t: "setHouseRules", rules })}
+          />
           {anyBots ? (
             <BotSpeedPicker
               speed={room.botSpeed}
@@ -179,6 +279,7 @@ export function Lobby({
       ) : (
         <Panel className="text-center text-sm text-white/60">
           Waiting for {room.seats.find((seat) => seat.isHost)?.name ?? "the host"} to deal.
+          <span className="mt-1 block text-xs text-white/40">{describeRules(room.houseRules)}</span>
           {anyBots ? (
             <span className="mt-1 block text-xs text-white/40">
               Bots play at {room.botSpeed === "human" ? "a human" : "lightning"} speed.

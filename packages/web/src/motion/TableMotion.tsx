@@ -296,9 +296,7 @@ function FlightCard({
         },
         {
           transform: `${place(toX, toY)} scale(1) rotate(0deg)`,
-          // A card given up for a bad call goes to the bottom of the pile. It
-          // can't be drawn under anything on an overlay, so it fades out there.
-          opacity: flight.under ? 0 : 1,
+          opacity: 1,
         },
       ],
       {

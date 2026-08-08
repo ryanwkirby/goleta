@@ -40,12 +40,13 @@ const honestDraw = (): GameState =>
   );
 
 describe("a bot with a call on offer", () => {
-  it("makes it, once the table has agreed to", () => {
+  it("makes it, once the table has agreed to, naming the card it caught them holding", () => {
     const view = redact(illegalDraw(), "b");
-    expect(view.sunnyWouldLand).toBe(true);
+    expect(view.sunnyReach?.hand.map((c) => c.id)).toEqual(["5H#1", "2C#1"]);
     expect(decideBotIntent(view, { callSunny: true })).toEqual({
       type: "callSunny",
       playerId: "b",
+      cardId: "5H#1",
     });
   });
 
@@ -57,9 +58,9 @@ describe("a bot with a call on offer", () => {
   it("never accuses an honest draw, however keen the table is", () => {
     const view = redact(honestDraw(), "b");
     // The button is there — it is there after every draw — and the bot leaves
-    // it alone, because nothing behind it says the draw was illegal.
+    // it alone, because working the reach out finds nothing legal in it.
     expect(view.sunnyCallable).toBe(true);
-    expect(view.sunnyWouldLand).toBe(false);
+    expect(view.sunnyReach?.hand.map((c) => c.id)).toEqual(["2C#1", "3C#1"]);
     expect(decideBotIntent(view, { callSunny: true })?.type).not.toBe("callSunny");
   });
 

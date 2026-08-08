@@ -79,9 +79,9 @@ describe("dealing", () => {
   it("refuses a table that can't be dealt", () => {
     expect(() => startGame(["a"], 1)).toThrow(/at least two/);
     expect(() => startGame(["a", "a", "b"], 1)).toThrow(/unique/);
-    expect(() => startGame(["a", "b", "c"], 1, { deckCount: 1, startingHandSize: 30 })).toThrow(
-      /won't fit/,
-    );
+    expect(() =>
+      startGame(["a", "b", "c"], 1, { ...DEFAULT_OPTIONS, startingHandSize: 30 }),
+    ).toThrow(/won't fit/);
     expect(() => startGame(["a", "b", "c"], 1, DEFAULT_OPTIONS, 3)).toThrow(/no seat 3/);
   });
 });

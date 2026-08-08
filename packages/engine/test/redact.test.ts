@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_OPTIONS, redact, startGame, type GameState } from "../src/index.ts";
-import { draw, table } from "./helpers.ts";
+import { cards, draw, table } from "./helpers.ts";
 
 describe("hands", () => {
   it("are face up: every seat, every viewer, including a spectator", () => {
@@ -27,11 +27,14 @@ describe("what never leaves the server", () => {
     expect(wire).not.toContain("snapshot");
     expect(wire).not.toContain("violation");
     expect(wire).not.toContain("challenge");
+    // The pre-draw hand to accuse from is not part of what's withheld — it's
+    // the one thing about the challenge a caller is actually shown.
+    expect(wire).toContain("5H#1");
   });
 });
 
-describe("the Sunny tell", () => {
-  it("is offered on any draw, and says which of them was actually illegal", () => {
+describe("the Sunny reach", () => {
+  it("hands an eligible caller the offender's pre-draw hand and the board, never whether it lands", () => {
     const guilty = draw(
       table({ hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD"] }),
       "a",
@@ -40,15 +43,25 @@ describe("the Sunny tell", () => {
       table({ hands: { a: ["2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
       "a",
     );
-    // The call is available either way — you may always accuse.
-    for (const state of [guilty, innocent]) {
-      const view = redact(state, "b");
-      expect(view.sunnyCallable).toBe(true);
-      expect(view.sunnyTargetId).toBe("a");
-    }
-    // Whether it would land is what the sun icon spends ten seconds admitting.
-    expect(redact(guilty, "b").sunnyWouldLand).toBe(true);
-    expect(redact(innocent, "b").sunnyWouldLand).toBe(false);
+    // The call is available either way — you may always accuse — and both
+    // hand back exactly the hand and board a caller needs to work legality
+    // out for themselves, never the drawn card itself. Nothing else
+    // distinguishes the two views.
+    expect(redact(guilty, "b").sunnyCallable).toBe(true);
+    expect(redact(guilty, "b").sunnyTargetId).toBe("a");
+    expect(redact(guilty, "b").sunnyReach).toEqual({
+      hand: cards("5H", "2C"),
+      activeSuit: "S",
+      topRank: "5",
+    });
+
+    expect(redact(innocent, "b").sunnyCallable).toBe(true);
+    expect(redact(innocent, "b").sunnyTargetId).toBe("a");
+    expect(redact(innocent, "b").sunnyReach).toEqual({
+      hand: cards("2C"),
+      activeSuit: "S",
+      topRank: "5",
+    });
   });
 
   it("never tells the drawer they've been caught", () => {
@@ -58,8 +71,8 @@ describe("the Sunny tell", () => {
     );
     // A caught player watching their own screen learns nothing, and neither
     // does a spectator, who has no call to make.
-    expect(redact(guilty, "a").sunnyWouldLand).toBe(false);
-    expect(redact(guilty, null).sunnyWouldLand).toBe(false);
+    expect(redact(guilty, "a").sunnyReach).toBeNull();
+    expect(redact(guilty, null).sunnyReach).toBeNull();
   });
 
   it("isn't offered to the drawer, or to anyone once the window shuts", () => {
@@ -106,17 +119,11 @@ describe("what the table can always see", () => {
 
     const surrendering: GameState = {
       ...state,
-      phase: {
-        kind: "surrender",
-        playerId: "b",
-        reason: "sunnyBadCall",
-        resume: { kind: "action" },
-      },
+      phase: { kind: "surrender", playerId: "b", reason: "sunnyPunishment" },
     };
     const view = redact(surrendering, "c");
     expect(view.waitingOn).toBe("b");
-    // `resume` is engine bookkeeping and never reaches the table.
-    expect(view.phase).toEqual({ kind: "surrender", playerId: "b", reason: "sunnyBadCall" });
+    expect(view.phase).toEqual({ kind: "surrender", playerId: "b", reason: "sunnyPunishment" });
   });
 
   it("never names the cards a caught player is about to have turned up", () => {

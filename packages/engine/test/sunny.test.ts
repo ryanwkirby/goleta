@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { applyIntent, currentPlayer, topCard, type GameState } from "../src/index.ts";
+import {
+  SUNNY_LOCKOUT_DRAWS,
+  applyIntent,
+  currentPlayer,
+  topCard,
+  type GameState,
+} from "../src/index.ts";
 import {
   allCardIds,
+  card,
+  cards,
   draw,
   handOf,
   must,
@@ -13,8 +21,8 @@ import {
   table,
 } from "./helpers.ts";
 
-const call = (state: GameState, playerId: string): GameState =>
-  must(state, { type: "callSunny", playerId });
+const call = (state: GameState, playerId: string, spec: string): GameState =>
+  must(state, { type: "callSunny", playerId, cardId: card(spec).id });
 
 /** a is holding a playable 5H and draws anyway. */
 const caughtInTheAct = (): GameState =>
@@ -27,12 +35,37 @@ const caughtInTheAct = (): GameState =>
     "a",
   );
 
+/**
+ * A reach that was an offence, then a recycle, then a reach that wasn't.
+ *
+ * A recycle mid-turn is the one thing that moves the board while a window is
+ * open, so it is the one thing that can pull the reach an accusation is judged
+ * against away from the reach that was actually the offence. (#74)
+ *
+ * a holds the 5H against a 3H, so their first reach is an offence. The deck
+ * empties, the recycle turns up a spade, and their next reach — with nothing
+ * playable against that — is honest.
+ */
+const acrossARecycle = (): GameState => {
+  let state = table({
+    hands: { a: ["5H"], b: ["2C"], c: ["3D"] },
+    top: "3H",
+    drawPile: ["2D"],
+    buriedDiscards: ["KS", "QS", "JS", "9S", "7S", "6S"],
+  });
+  state = draw(state, "a"); // the offence: 5H was playable on the 3H
+  state = draw(state, "a"); // deck empty, so this recycles and turns up a spade
+  expect(topCard(state).suit).toBe("S");
+  state = draw(state, "a"); // honest: nothing in hand plays on a spade
+  return state;
+};
+
 describe("a correct call", () => {
   it("forces the skipped play, then a punishment, then turns up what they touched", () => {
     let state = caughtInTheAct();
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1", "KD#1"]);
 
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     // The rewind puts the drawn card back, so the hand is as it was and the
     // play they were dodging is the first thing they owe.
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1"]);
@@ -59,7 +92,11 @@ describe("a correct call", () => {
   });
 
   it("names the cards the rewind takes back, so the table can watch it happen", () => {
-    const result = applyIntent(caughtInTheAct(), { type: "callSunny", playerId: "b" });
+    const result = applyIntent(caughtInTheAct(), {
+      type: "callSunny",
+      playerId: "b",
+      cardId: card("5H").id,
+    });
     if (!result.ok) throw new Error(result.error);
     const called = result.events.find((event) => event.type === "sunnyCalled");
     expect(called).toMatchObject({ callerId: "b", targetId: "a", correct: true });
@@ -67,17 +104,19 @@ describe("a correct call", () => {
     expect(called?.type === "sunnyCalled" && called.returned.map((c) => c.id)).toEqual(["KD#1"]);
   });
 
-  it("costs two cards from hand — one more than an honest turn would have", () => {
+  it("costs two cards from hand — and naming the card adds nothing to that", () => {
     let state = caughtInTheAct();
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
-    // They started the turn on two cards and finish it on none.
+    // They started the turn on two cards and finish it on none: the skipped
+    // play and the punishment, same as ever. Nothing is added for the caller
+    // having had to name the card correctly.
     expect(handOf(state, "a")).toEqual([]);
   });
 
   it("lets only the caught player choose the punishment card", () => {
-    let state = call(caughtInTheAct(), "b");
+    let state = call(caughtInTheAct(), "b", "5H");
     state = play(state, "a", "5H");
     expect(reject(state, { type: "surrenderCard", playerId: "b", cardId: "9H#1" })).toMatch(
       /isn't your card/,
@@ -99,7 +138,8 @@ describe("a correct call", () => {
     expect(state.challenge?.violation).toBeNull();
     state = draw(state, "a");
 
-    state = call(state, "b");
+    // The 7S they drew honestly is what they're now accused of skipping.
+    state = call(state, "b", "7S");
     // The honestly drawn 7S stays, and is now the card they're made to play.
     expect(handOf(state, "a")).toEqual(["2C#1", "7S#1"]);
     state = play(state, "a", "7S");
@@ -119,7 +159,9 @@ describe("a correct call", () => {
     state = draw(state, "a");
     expect(state.challenge?.violation?.touchedIds).toEqual(["3H#1", "KD#1"]);
 
-    state = call(state, "b");
+    // 5H is the card they were dodging throughout — still nameable, even
+    // though their hand has since picked up two more cards that aren't legal.
+    state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
     expect(pileFromTop(state).slice(0, 4)).toEqual(["KD#1", "3H#1", "2C#1", "5H#1"]);
@@ -135,7 +177,7 @@ describe("a correct call", () => {
       }),
       "a",
     );
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
 
@@ -157,7 +199,9 @@ describe("a correct call", () => {
       }),
       "a",
     );
-    state = call(state, "b");
+    // A wild is always legal, wherever it was reached from — accusing it is
+    // always a correct call.
+    state = call(state, "b", "8C");
     state = play(state, "a", "8C");
     expect(state.phase).toMatchObject({ kind: "surrender", reason: "sunnyPunishment" });
 
@@ -167,12 +211,201 @@ describe("a correct call", () => {
   });
 });
 
+describe("naming the card", () => {
+  it("must be a card the offender actually held before the draw", () => {
+    const state = caughtInTheAct();
+    expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("9H").id })).toMatch(
+      /wasn't in their hand/,
+    );
+  });
+
+  it("cannot be any card the offence itself put in their hand", () => {
+    // a is caught on the first draw (KD) and reaches again before anyone calls
+    // it. Neither drawn card is ever an option: the window is judged against
+    // the reach that was the offence, and both of these arrived after it. Only
+    // the hand a actually had a choice from is on the list.
+    let state = caughtInTheAct();
+    const firstDrawId = handOf(state, "a").at(-1) as string;
+    state = draw(state, "a");
+    const secondDrawId = handOf(state, "a").at(-1) as string;
+
+    for (const drawn of [firstDrawId, secondDrawId]) {
+      expect(reject(state, { type: "callSunny", playerId: "b", cardId: drawn })).toMatch(
+        /wasn't in their hand/,
+      );
+    }
+
+    const reachIds = state.challenge?.reach.hand.map((c) => c.id);
+    expect(reachIds).toEqual(["5H#1", "2C#1"]);
+    expect(state.challenge?.resolved).toBe(false);
+    state = call(state, "b", "5H");
+    expect(state.phase.kind).toBe("sunnyPlay");
+  });
+
+  it("counts any legal card as correct, leaving the choice of which to play to the offender", () => {
+    // Both 5H and 4S are legal against 5S; naming either lands the call, and
+    // the offender still picks which one to actually play.
+    let state = draw(
+      table({
+        hands: { a: ["5H", "4S"], b: ["9C"], c: ["4D"] },
+        top: "5S",
+        drawPile: ["QD", "KD"],
+      }),
+      "a",
+    );
+    state = call(state, "b", "4S");
+    expect(state.phase.kind).toBe("sunnyPlay");
+    expect(reject(state, { type: "playCard", playerId: "a", cardId: card("KD").id })).toBeTruthy();
+    state = play(state, "a", "5H");
+    expect(handOf(state, "a")).toEqual(["4S#1"]);
+  });
+});
+
+describe("a wrong call", () => {
+  it("changes nothing about the position — no card lost by either side", () => {
+    // 2C and 4H are both dead against the 5S, so drawing is entirely honest.
+    let state = draw(
+      table({
+        hands: { a: ["2C", "4H"], b: ["9C", "10C"], c: ["4D"] },
+        top: "5S",
+        drawPile: ["QD", "KD"],
+      }),
+      "a",
+    );
+    const result = applyIntent(state, {
+      type: "callSunny",
+      playerId: "b",
+      cardId: card("2C").id,
+    });
+    if (!result.ok) throw new Error(result.error);
+    const called = result.events.find((event) => event.type === "sunnyCalled");
+    // Nothing is rewound, so there is nothing to fly back to the deck.
+    expect(called?.type === "sunnyCalled" && called.returned).toEqual([]);
+
+    state = call(state, "b", "2C");
+
+    expect(state.challenge?.resolved).toBe(true);
+    expect(handOf(state, "b")).toEqual(["9C#1", "10C#1"]);
+    expect(topCard(state).id).toBe("5S#1");
+    expect(state.activeSuit).toBe("S");
+    // a's turn carries on untouched.
+    expect(currentPlayer(state).id).toBe("a");
+    expect(handOf(state, "a")).toEqual(["2C#1", "4H#1", "KD#1"]);
+    expect(state.phase.kind).toBe("action");
+  });
+
+  it("names the card that was wrongly accused, in the event", () => {
+    const state = draw(
+      table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
+      "a",
+    );
+    const result = applyIntent(state, { type: "callSunny", playerId: "b", cardId: card("2C").id });
+    if (!result.ok) throw new Error(result.error);
+    expect(result.events).toContainEqual({
+      type: "sunnyCalled",
+      callerId: "b",
+      targetId: "a",
+      card: card("2C"),
+      correct: false,
+      // A miss rewinds nothing, so it takes nothing back.
+      returned: [],
+    });
+  });
+
+  it("locks the caller out until three more draws happen at the table", () => {
+    let state = draw(
+      table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD", "3D"] }),
+      "a",
+    );
+    state = call(state, "b", "2C");
+    expect(state.sunnyLockouts.b).toBe(state.totalDraws + SUNNY_LOCKOUT_DRAWS);
+
+    // A fresh draw reopens the window, but b is still shut out of it — the
+    // lockout counts draws at the table, not whether the window is open.
+    state = draw(state, "a");
+    expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
+      /before you can call again/,
+    );
+    // Someone else at the table is untouched by b's lockout.
+    const result = applyIntent(state, { type: "callSunny", playerId: "c", cardId: card("2C").id });
+    expect(result.ok).toBe(true);
+  });
+
+  it("lifts once totalDraws has advanced by three, not before", () => {
+    const base = table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD"] });
+    const locked: GameState = {
+      ...base,
+      challenge: {
+        drawerId: "a",
+        drawnIds: [],
+        reach: { hand: cards("2C"), activeSuit: "S", topRank: "5" },
+        violation: null,
+        resolved: false,
+      },
+      totalDraws: 10,
+      sunnyLockouts: { b: 13 },
+    };
+
+    expect(reject(locked, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
+      /before you can call again/,
+    );
+    const stillLocked = { ...locked, totalDraws: 12 };
+    expect(
+      reject(stillLocked, { type: "callSunny", playerId: "b", cardId: card("2C").id }),
+    ).toMatch(/before you can call again/);
+    const free = { ...locked, totalDraws: 13 };
+    expect(applyIntent(free, { type: "callSunny", playerId: "b", cardId: card("2C").id }).ok).toBe(
+      true,
+    );
+  });
+
+  it("survives the rewind a later correct call performs", () => {
+    // The rewind restores a whole cloned `GameState`, and lockouts live on it.
+    // Restoring them wholesale would refund a wrong call made *before* the
+    // snapshot was taken — b would walk away from a miss because somebody else
+    // later got it right. `handleCallSunny` carries the two counters across the
+    // `Object.assign` by hand; this is what would break if that were dropped.
+    let state = draw(
+      table({
+        hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
+        top: "5S",
+        drawPile: ["QD", "KD"],
+      }),
+      "a",
+    );
+    // b names the 2C, which was dead against the 5S. A miss.
+    state = call(state, "b", "2C");
+    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_DRAWS + 1);
+
+    // a reaches again, reopening the window, and c names the 5H — which really
+    // was playable. That call lands and rewinds the game past b's miss.
+    state = draw(state, "a");
+    state = call(state, "c", "5H");
+    expect(state.phase.kind).toBe("sunnyPlay");
+
+    // b's miss stands, and the draws served against it weren't handed back.
+    expect(state.totalDraws).toBe(2);
+    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_DRAWS + 1);
+  });
+
+  it("is per caller: someone else's lockout doesn't apply to you", () => {
+    let state = draw(
+      table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD", "3D"] }),
+      "a",
+    );
+    state = call(state, "b", "2C");
+    state = draw(state, "a");
+    const result = applyIntent(state, { type: "callSunny", playerId: "c", cardId: card("2C").id });
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe("a call that lands after the fact", () => {
   it("rewinds a card the drawer has already played", () => {
     let state = play(caughtInTheAct(), "a", "5H");
     expect(currentPlayer(state).id).toBe("b");
 
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     // The play is undone: 5H is back in hand and the 5S is showing again.
     expect(topCard(state).id).toBe("5S#1");
     expect(state.activeSuit).toBe("S");
@@ -191,7 +424,7 @@ describe("a call that lands after the fact", () => {
     state = must(state, { type: "chooseSuit", playerId: "a", suit: "D" });
     expect(state.activeSuit).toBe("D");
 
-    state = call(state, "b");
+    state = call(state, "b", "8C");
     expect(state.activeSuit).toBe("S");
     expect(topCard(state).id).toBe("5S#1");
     expect(handOf(state, "a")).toEqual(["8C#1", "2C#1"]);
@@ -205,7 +438,7 @@ describe("a call that lands after the fact", () => {
     state = play(state, "a", "8C");
     expect(state.phase.kind).toBe("suit");
 
-    state = call(state, "b");
+    state = call(state, "b", "8C");
     expect(state.phase.kind).toBe("sunnyPlay");
     expect(topCard(state).id).toBe("5S#1");
   });
@@ -213,84 +446,24 @@ describe("a call that lands after the fact", () => {
   it("closes the moment the next player acts", () => {
     let state = play(caughtInTheAct(), "a", "5H");
     state = play(state, "b", "9H");
-    expect(reject(state, { type: "callSunny", playerId: "c" })).toMatch(/nothing to call/);
-  });
-});
-
-describe("a wrong call", () => {
-  it("buries a card of the caller's at the bottom, changing nothing else", () => {
-    // 2C and 4H are both dead against the 5S, so drawing is entirely honest.
-    let state = draw(
-      table({
-        hands: { a: ["2C", "4H"], b: ["9C", "10C"], c: ["4D"] },
-        top: "5S",
-        drawPile: ["QD", "KD"],
-        buriedDiscards: ["JH"],
-      }),
-      "a",
-    );
-    const result = applyIntent(state, { type: "callSunny", playerId: "b" });
-    if (!result.ok) throw new Error(result.error);
-    const called = result.events.find((event) => event.type === "sunnyCalled");
-    // Nothing is rewound, so there is nothing to fly back to the deck.
-    expect(called?.type === "sunnyCalled" && called.returned).toEqual([]);
-
-    state = call(state, "b");
-    expect(state.phase).toMatchObject({ kind: "surrender", playerId: "b", reason: "sunnyBadCall" });
-
-    state = surrender(state, "b", "10C");
-    // Under everything already played, so the card to match is untouched.
-    expect(state.discardPile.map((c) => c.id)).toEqual(["10C#1", "JH#1", "5S#1"]);
-    expect(topCard(state).id).toBe("5S#1");
-    expect(state.activeSuit).toBe("S");
-    expect(handOf(state, "b")).toEqual(["9C#1"]);
-    // a's turn carries on untouched.
-    expect(currentPlayer(state).id).toBe("a");
-    expect(handOf(state, "a")).toEqual(["2C#1", "4H#1", "KD#1"]);
-    expect(state.phase.kind).toBe("action");
-  });
-
-  it("passes the turn on when it eliminates the player whose turn it now is", () => {
-    // a draws itself out of a turn honestly. b, now on the clock, accuses them
-    // anyway and pays with its last card — so the turn it was holding has to
-    // move along rather than sit with someone who is out.
-    let state = table({
-      hands: { a: ["2C"], b: ["9S"], c: ["4S"] },
-      top: "5S",
-      drawPile: ["6C", "2H", "3D", "4H"],
-    });
-    state = draw(state, "a");
-    state = draw(state, "a");
-    state = draw(state, "a");
-    expect(currentPlayer(state).id).toBe("b");
-
-    state = call(state, "b");
-    state = surrender(state, "b", "9S");
-    expect(state.players.find((p) => p.id === "b")?.eliminated).toBe(true);
-    expect(currentPlayer(state).id).toBe("c");
-    expect(state.phase.kind).toBe("action");
-  });
-
-  it("can eliminate the caller who had nothing to spare", () => {
-    let state = draw(
-      table({ hands: { a: ["2C", "4H"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
-      "a",
-    );
-    state = call(state, "b");
-    state = surrender(state, "b", "9C");
-    expect(state.players.find((p) => p.id === "b")?.eliminated).toBe(true);
-    expect(state.status).toBe("playing");
+    expect(
+      reject(state, { type: "callSunny", playerId: "c", cardId: card("5H").id }),
+    ).toMatch(/nothing to call/);
   });
 });
 
 describe("who may call, and when", () => {
   it("is nobody, before anyone has drawn", () => {
     const state = table({ hands: { a: ["5H"], b: ["9C"], c: ["4D"] }, top: "5S" });
-    expect(reject(state, { type: "callSunny", playerId: "b" })).toMatch(/nothing to call/);
+    expect(
+      reject(state, { type: "callSunny", playerId: "b", cardId: card("5H").id }),
+    ).toMatch(/nothing to call/);
   });
 
   it("is not the drawer", () => {
-    expect(reject(caughtInTheAct(), { type: "callSunny", playerId: "a" })).toMatch(/on yourself/);
+    expect(
+      reject(caughtInTheAct(), { type: "callSunny", playerId: "a", cardId: card("5H").id }),
+    ).toMatch(/on yourself/);
   });
 
   it("is not a player who is already out", () => {
@@ -303,12 +476,16 @@ describe("who may call, and when", () => {
       }),
       "a",
     );
-    expect(reject(state, { type: "callSunny", playerId: "b" })).toMatch(/out of the game/);
+    expect(
+      reject(state, { type: "callSunny", playerId: "b", cardId: card("5H").id }),
+    ).toMatch(/out of the game/);
   });
 
   it("is only the first to speak", () => {
-    const state = call(caughtInTheAct(), "b");
-    expect(reject(state, { type: "callSunny", playerId: "c" })).toMatch(/nothing to call/);
+    const state = call(caughtInTheAct(), "b", "5H");
+    expect(
+      reject(state, { type: "callSunny", playerId: "c", cardId: card("5H").id }),
+    ).toMatch(/nothing to call/);
   });
 
   it("is only the first to speak, even when they were wrong", () => {
@@ -316,9 +493,10 @@ describe("who may call, and when", () => {
       table({ hands: { a: ["2C"], b: ["9C", "10C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
       "a",
     );
-    state = call(state, "b");
-    state = surrender(state, "b", "10C");
-    expect(reject(state, { type: "callSunny", playerId: "c" })).toMatch(/nothing to call/);
+    state = call(state, "b", "2C");
+    expect(
+      reject(state, { type: "callSunny", playerId: "c", cardId: card("2C").id }),
+    ).toMatch(/nothing to call/);
   });
 
   it("reopens on the next draw, so a second offence is still callable", () => {
@@ -326,11 +504,12 @@ describe("who may call, and when", () => {
       table({ hands: { a: ["2C"], b: ["9C", "10C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "7S"] }),
       "a",
     );
-    state = call(state, "b");
-    state = surrender(state, "b", "10C");
+    state = call(state, "b", "2C");
     // The 7S they drew is playable, so drawing again is an offence in itself.
     state = draw(state, "a");
-    expect(must(state, { type: "callSunny", playerId: "c" }).phase.kind).toBe("sunnyPlay");
+    expect(must(state, { type: "callSunny", playerId: "c", cardId: card("7S").id }).phase.kind).toBe(
+      "sunnyPlay",
+    );
   });
 });
 
@@ -341,7 +520,7 @@ describe("a resolution that finishes a player", () => {
       table({ hands: { a: ["5H"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
       "a",
     );
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     state = play(state, "a", "5H");
 
     expect(state.players.find((p) => p.id === "a")?.eliminated).toBe(true);
@@ -356,7 +535,7 @@ describe("a resolution that finishes a player", () => {
       table({ hands: { a: ["5H"], b: ["9C"] }, top: "5S", drawPile: ["QD", "KD"] }),
       "a",
     );
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     expect(state.status).toBe("over");
     expect(state.winnerId).toBe("b");
@@ -367,7 +546,7 @@ describe("a resolution that finishes a player", () => {
       table({ hands: { a: ["5H", "2C"], b: ["9C"] }, top: "5S", drawPile: ["QD", "KD"] }),
       "a",
     );
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
     expect(state.status).toBe("over");
@@ -394,7 +573,7 @@ describe("a call that spans a recycle", () => {
     const drawn = handOf(state, "a").slice(2);
     expect(drawn).toHaveLength(2);
 
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1"]);
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
@@ -405,12 +584,56 @@ describe("a call that spans a recycle", () => {
     expect(allCardIds(state)).toHaveLength(total);
     expect(new Set(allCardIds(state)).size).toBe(total);
   });
+
+  it("still judges a call against the reach that was the offence", () => {
+    const state = acrossARecycle();
+    expect(state.challenge?.violation).not.toBeNull();
+
+    // Judged against the 3H they reached from, not the spade now showing.
+    expect(state.challenge?.reach.activeSuit).toBe("H");
+    expect(state.challenge?.reach.topRank).toBe("3");
+
+    // So the call lands, rather than every possible accusation being wrong
+    // while the violation stood.
+    const called = call(state, "b", "5H");
+    expect(called.phase.kind).toBe("sunnyPlay");
+    expect(called.sunnyLockouts["b"] ?? 0).toBe(0);
+  });
+
+  it("still keeps the cards the offence drew off the list", () => {
+    const state = acrossARecycle();
+    expect(state.challenge?.reach.hand.map((c) => c.id)).toEqual(["5H#1"]);
+    expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("2D").id })).toMatch(
+      /wasn't in their hand/,
+    );
+  });
+
+  it("still locks out a caller who was genuinely wrong", () => {
+    // Same shape, but a had nothing playable against the 3H to begin with, so
+    // there was never an offence and naming their one card is simply wrong.
+    let state = table({
+      hands: { a: ["5C"], b: ["2C"], c: ["3D"] },
+      top: "3H",
+      drawPile: ["2D"],
+      buriedDiscards: ["KS", "QS", "JS", "9S", "7S", "6S"],
+    });
+    state = draw(state, "a");
+    state = draw(state, "a");
+    state = draw(state, "a");
+    expect(state.challenge?.violation).toBeNull();
+
+    state = call(state, "b", "5C");
+    expect(state.sunnyLockouts["b"]).toBeGreaterThan(state.totalDraws);
+  });
 });
 
 describe("the challenge window", () => {
-  it("never tells the caller whether the draw was legal", () => {
+  it("never tells the caller whether a submitted accusation would land", () => {
     // Both games look identical from the outside: someone drew a card, and a
-    // call is available. Only the outcome differs.
+    // call naming the one card both hands have in common is available either
+    // way. Only the outcome differs — 2C is dead against the 5S in both, so
+    // this particular accusation is wrong in both, but the *acceptance* of the
+    // intent itself never depends on the hidden verdict.
     const guilty = caughtInTheAct();
     const innocent = draw(
       table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
@@ -419,7 +642,9 @@ describe("the challenge window", () => {
     for (const state of [guilty, innocent]) {
       expect(state.challenge?.drawerId).toBe("a");
       expect(state.challenge?.resolved).toBe(false);
-      expect(applyIntent(state, { type: "callSunny", playerId: "b" }).ok).toBe(true);
+      expect(
+        applyIntent(state, { type: "callSunny", playerId: "b", cardId: card("2C").id }).ok,
+      ).toBe(true);
     }
   });
 });
@@ -441,7 +666,7 @@ describe("reaching for an empty deck", () => {
     expect(state.challenge?.violation).not.toBeNull();
     expect(state.challenge?.violation?.touchedIds).toEqual([]);
 
-    state = call(state, "b");
+    state = call(state, "b", "5H");
     // The rewind undoes the recycle too, so the 5S is showing again and the
     // play they were dodging is the one they now owe.
     expect(topCard(state).id).toBe("5S#1");
@@ -449,14 +674,44 @@ describe("reaching for an empty deck", () => {
 
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
-    // Nothing to turn up, so the punishment card is left in play.
-    expect(topCard(state).id).toBe("2C#1");
+
+    // Nothing they touched to turn up, so the deck is answered the way an empty
+    // deck always is: the pile is shuffled back and a fresh card comes off it.
+    // Crucially the punishment card is *not* left showing — that would let the
+    // offender choose what the whole table matches next, which is the opposite
+    // of what reaching is supposed to cost them.
+    expect(topCard(state).id).not.toBe("2C#1");
+    // Whatever came up, it is genuinely the card in play: suit and card agree.
+    expect(state.activeSuit).toBe(topCard(state).suit);
+    expect(state.drawPile.length).toBeGreaterThan(0);
+
     expect(currentPlayer(state).id).toBe("b");
+    // The recycle assigns the draw pile outright, so this is the check that it
+    // never does so over cards that were still in it.
     expect(allCardIds(state)).toHaveLength(total);
     expect(new Set(allCardIds(state)).size).toBe(total);
   });
 
-  it("looks the same when the reach was honest, and costs a bad caller a card", () => {
+  it("turns up a card nobody chose, rather than one the offender picked", () => {
+    // The offensive shape of this: `a` is holding a card that would strand the
+    // table and would love to place it. Reaching at an empty deck and inviting
+    // the call must not be a way to do that.
+    let state = table({
+      hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["KH", "QH", "JH"],
+    });
+    state = draw(state, "a");
+    state = call(state, "b", "5H");
+    state = play(state, "a", "5H");
+    state = surrender(state, "a", "2C");
+
+    // The 2C they chose is back in the shuffle with everything else, not on top.
+    expect(state.drawPile.map((c) => c.id)).toContain("2C#1");
+  });
+
+  it("looks the same when the reach was honest, and just locks out a bad caller", () => {
     let state = table({
       hands: { a: ["2C"], b: ["9C", "10C"], c: ["4D"] },
       top: "5S",
@@ -469,9 +724,35 @@ describe("reaching for an empty deck", () => {
     expect(state.challenge?.drawerId).toBe("a");
     expect(state.challenge?.violation).toBeNull();
 
-    state = call(state, "b");
-    state = surrender(state, "b", "10C");
-    expect(handOf(state, "b")).toEqual(["9C#1"]);
+    state = call(state, "b", "2C");
+    expect(handOf(state, "b")).toEqual(["9C#1", "10C#1"]);
     expect(currentPlayer(state).id).toBe("a");
+    expect(state.sunnyLockouts.b).toBeGreaterThan(0);
+  });
+
+  it("counts as a reach only when something actually came of it", () => {
+    // Every card is in a hand, so there is nothing to draw and nothing to
+    // recycle either. No card moves and no window opens, so there is no beat
+    // here for anyone's lockout to count down against. (#74)
+    let state = table({
+      hands: { a: ["5H"], b: ["9C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+    });
+    state = draw(state, "a");
+    expect(state.challenge).toBeNull();
+    expect(state.totalDraws).toBe(0);
+
+    // A reach that recycles the pile is a reach, even though nothing reached a
+    // hand: the window opens on it, so the count has to move with it.
+    let recycling = table({
+      hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
+      top: "5S",
+      drawPile: [],
+      buriedDiscards: ["KH", "QH", "JH"],
+    });
+    recycling = draw(recycling, "a");
+    expect(recycling.challenge).not.toBeNull();
+    expect(recycling.totalDraws).toBe(1);
   });
 });

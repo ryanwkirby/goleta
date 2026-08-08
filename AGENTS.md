@@ -87,25 +87,85 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   back, one turn at a time, and everyone at the table hears you ask (#33).
   Restoring the highlights unconditionally removes the chance to make the
   mistake the Sunny Rule feeds on.
-- **The server does say whether a draw was illegal — slowly.** This one reversed
-  in #31, and the old rule ("that flag must never leave the server") is gone.
-  `GameView.sunnyWouldLand` carries it to anyone who could call, and the sun
-  icon spends ten seconds ramping from barely visible to unmissable. The trade
-  was made with eyes open: a player watching the table still calls it sooner
-  than one who isn't, and a call is available on any draw regardless, so the
-  button's mere presence still reveals nothing. Do not "restore" the old
-  behaviour, and do not shorten the ramp — the ramp *is* the balance.
+- **Whether a draw was illegal never leaves the server.** No field carries it,
+  and nothing on screen — no glow, no ramp, no ordering, no wording — separates
+  a legal draw from an illegal one. The sun has exactly one appearance and it
+  means "somebody reached, and you may accuse them."
+
+  This bullet has been round the houses, so the history is worth keeping. #31
+  reversed the rule and shipped the answer as `GameView.sunnyWouldLand`, behind
+  a ten-second glow ramp, on the reasoning that a wrong call cost the caller a
+  card and free guessing needed a brake somewhere. #50 reversed it back, because
+  requiring the caller to **name the card** is a far better brake: a guess now
+  has to be a specific claim, made out loud, that can be specifically wrong. The
+  tell had nothing left to buy. Both the flag and the ramp are gone; do not
+  reintroduce either, under any name.
+- **What does go out is `sunnyReach` — evidence, not a verdict.** A viewer who
+  could call is sent the offender's hand and the board as they stood before the
+  reach, because an accusation has to name one of those cards. Nothing says
+  which of them was legal. Do not add a `legalCardIds` equivalent for it, do not
+  sort it helpfully, and do not dim the cards that wouldn't have played.
 - **Bots never wait for a Sunny window.** Their pacing is turn rhythm and
   nothing else, and `botPace` has no input that could tell it a call is on
   offer. A window opens on every draw, so a bot that held off would be stalling
   the table almost continuously — and a bot pausing after its own draw so the
-  seat next to it might accuse it is the worst of it. This means the sun's
-  ten-second ramp usually won't finish before an ordinary bot move shuts the
-  window; that is the accepted cost, not a regression. Don't reintroduce a
-  grace period. (#56)
+  seat next to it might accuse it is the worst of it. Don't reintroduce a grace
+  period. (#56)
+- **They do wait for somebody who has actually opened the picker**, which is a
+  different thing and is not #56 coming back. That grace was bots idling on the
+  *possibility* of a call, on every draw, all game. This hangs off an action a
+  person took: tapping the sun sends `composingCall`, and the bots stop until
+  they submit, cancel, the window shuts, or `CALL_HOLD_MS` runs out. Without it
+  the three decisions #50 moved onto the player — spot the reach, read the hand
+  they reached from, name a card — have to fit inside a beat paced for one tap,
+  and they don't. `DEFAULT_BOT_TIMING` is untouched by any of it: the fix is
+  stopping the clock, not stretching every figure at the table to fit the
+  slowest possible call. (#73)
+- **A hold is never broadcast, and it can't be leaned on.** That somebody is
+  weighing a call is not something the table gets told — it would be a tell
+  about a verdict nothing else here gives away. Bots going quiet is visible, and
+  that is accepted: it says somebody is thinking, not that they are right. Only
+  a viewer who could really call may hold, and the deadline is set once per
+  window, so reopening the picker is not a stall button.
 - **The drawer is never told they've been caught**, and neither is a spectator.
-  `sunnyWouldLand` is gated on being able to call. The whole `state.challenge`
-  object, snapshot and all, still never leaves the server.
+  `sunnyReach` is gated on being able to call. The whole `state.challenge`
+  object, snapshot and `violation` and all, never leaves the server.
+- **A wrong call costs no cards.** It locks the caller out for three draws
+  (`SUNNY_LOCKOUT_DRAWS`) and that is all. The old card forfeit was a
+  digital-era invention to stop free guessing; the game's original written rules
+  never had any wrong-call penalty, and naming the card does that job now. The
+  lockout is visible only to the player serving it.
+
+## House rules
+
+A table can vary three things, all of them rules the game already had written
+down: the two alternates from the original rules (**Power of Eights**,
+**Dealer's Choice**) and whether the **Sunny Rule** is played at all. They live
+on `GameOptions`, are chosen by the host in the lobby, and apply at the next
+deal.
+
+Two constraints on anything added here:
+
+- **Options are data, never behaviour.** `applyIntent` clones the state on
+  every intent, `Challenge.violation.snapshot` clones it again, and `persist.ts`
+  puts it through `JSON.stringify`. A function on `GameOptions` throws
+  `DataCloneError` on the first move. Behaviour that varies is looked up from
+  these values in module scope, which is also what keeps `applyIntent(state,
+  intent)`'s signature stable.
+- **`DEFAULT_OPTIONS` is the game as written**, and every alternate defaults
+  off. A table that never opens the lobby controls plays exactly the game it
+  played before, and the existing tests are the check on that.
+
+What a *client* may set is narrower still: `HouseRules` in the protocol carries
+the three toggles and nothing else. `deckCount` and `startingHandSize` are not
+on offer over the wire — they arrive from a browser, and a hand size of nine
+hundred is a denial of service, not a house rule.
+
+The safety net is `simulation.test.ts`, which plays every combination out in
+full. Its three invariants — card conservation, forced play never skipped,
+exactly one winner — say nothing about which rules are in play, so they hold a
+variant to the same standard as the default game. Add a rule, add it to the
+matrix.
 
 ## Architecture
 

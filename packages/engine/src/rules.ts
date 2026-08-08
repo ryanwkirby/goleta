@@ -21,6 +21,7 @@ import {
   type Intent,
   type PlayerId,
   type PlayerState,
+  type SunnyReach,
   type TurnUpReason,
 } from "./types.ts";
 
@@ -66,6 +67,22 @@ export const mustPlay = (state: GameState, player: PlayerState): boolean =>
 export const activePlayers = (state: GameState): PlayerState[] =>
   state.players.filter((p) => !p.eliminated);
 
+/**
+ * The next player still in the game, going round from whoever is to move.
+ *
+ * Only looks — it moves nothing. `advanceTurn` is what actually passes the
+ * turn; this answers "who is next" for a rule that needs to name them ahead of
+ * time, which today means Power of Eights. Undefined when nobody else is left.
+ */
+const nextActivePlayer = (state: GameState): PlayerState | undefined => {
+  const seats = state.players.length;
+  for (let step = 1; step <= seats; step++) {
+    const candidate = state.players[(state.turnIndex + step) % seats];
+    if (candidate && !candidate.eliminated) return candidate;
+  }
+  return undefined;
+};
+
 // ---------------------------------------------------------------------------
 // Setting up
 // ---------------------------------------------------------------------------
@@ -105,27 +122,40 @@ export const startGame = (
     eliminated: false,
   }));
 
-  // An 8 turned up here is natural — its own suit is the suit in play, and
-  // nobody names anything. Nothing gets buried or redealt.
+  // Normally an 8 turned up here is natural — its own suit is the suit in play,
+  // and nobody names anything. Nothing gets buried or redealt.
   const upcard = drawPile.pop();
   if (!upcard) throw new Error("no card to start the face-up pile");
+
+  // Dealer's Choice: an 8 seed is the dealer's to name instead.
+  //
+  // The turn is seated on the *dealer* rather than on the opening player, which
+  // looks wrong until you follow it through: naming a suit always advances the
+  // turn, and advancing from the dealer lands on their left — which is exactly
+  // who opens. So the ordinary rule gets us there with no special case, and
+  // `turnNumber` starts a step back so the first real turn is still turn 1.
+  const dealerNames = options.seedEight === "dealerNames" && isWild(upcard);
 
   return {
     options,
     players,
     // The player immediately to the dealer's left opens.
-    turnIndex: (dealerIndex + 1) % players.length,
+    turnIndex: dealerNames ? dealerIndex : (dealerIndex + 1) % players.length,
     drawPile,
     discardPile: [upcard],
     activeSuit: upcard.suit,
-    phase: { kind: "action" },
+    phase: dealerNames
+      ? { kind: "suit", playerId: players[dealerIndex]?.id ?? "" }
+      : { kind: "action" },
     challenge: null,
     sunny: null,
     drawsThisTurn: 0,
+    totalDraws: 0,
+    sunnyLockouts: {},
     rngSeed: seedAfterShuffle,
     status: "playing",
     winnerId: null,
-    turnNumber: 1,
+    turnNumber: dealerNames ? 0 : 1,
   };
 };
 
@@ -151,7 +181,7 @@ const route = (s: GameState, intent: Intent, events: GameEvent[]): string | null
     case "chooseSuit":
       return handleChooseSuit(s, intent.playerId, intent.suit, events);
     case "callSunny":
-      return handleCallSunny(s, intent.playerId, events);
+      return handleCallSunny(s, intent.playerId, intent.cardId, events);
     case "surrenderCard":
       return handleSurrender(s, intent.playerId, intent.cardId, events);
   }
@@ -202,9 +232,15 @@ const handlePlay = (
 
   if (settlingSunny) return demandPunishment(s, player, events);
 
-  // Playing your last card as an 8 still gets you the suit call on the way out.
+  // Playing your last card as an 8 still gets you the suit call on the way out —
+  // unless the table plays Power of Eights, where the call was never yours.
   if (isWild(card)) {
-    s.phase = { kind: "suit" };
+    const namer =
+      s.options.eights === "nextPlayerNames" ? nextActivePlayer(s)?.id : player.id;
+    // Nobody left to hand it to. Can't happen in practice — a table with one
+    // player standing has already ended above — but the suit has to go
+    // somewhere, so it stays with the player who laid the 8.
+    s.phase = { kind: "suit", playerId: namer ?? player.id };
     return null;
   }
   advanceTurn(s, events);
@@ -222,9 +258,22 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   // Drawing while holding a playable card breaks the rules, and the engine
   // deliberately allows it: that violation is the Sunny Rule's entire subject.
   // What it does instead is remember, so a call can be judged.
-  const inViolation = mustPlay(s, player);
+  //
+  // At a table playing without the rule none of that bookkeeping means
+  // anything, and skipping it is not just tidiness — the snapshot below clones
+  // the entire game state, on every illegal draw, and it is the most expensive
+  // thing this engine does. With the rule off, drawing is just drawing.
+  const watching = s.options.sunny !== null;
+  const inViolation = watching && mustPlay(s, player);
   const alreadyCaught = s.challenge?.drawerId === player.id && s.challenge.violation !== null;
   const snapshot = inViolation && !alreadyCaught ? structuredClone(s) : null;
+
+  // The hand and the board exactly as they stand right now, before anything
+  // about this reach is resolved — what an accusation of this draw is judged
+  // against, and all a caller is ever shown to accuse from.
+  const reach = watching
+    ? { hand: [...player.hand], activeSuit: s.activeSuit, topRank: topCard(s).rank }
+    : null;
 
   // An empty deck is recycled first, and that recycle is the whole of this
   // action — no card reaches a hand. The card turned up is a new card in play,
@@ -238,7 +287,7 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   if (s.drawPile.length === 0) {
     // Every card is in somebody's hand. Nothing to draw, so the turn ends.
     if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
-    else recordDraw(s, player.id, null, inViolation, snapshot);
+    else if (reach) recordDraw(s, player.id, null, inViolation, snapshot, reach);
     return null;
   }
 
@@ -246,7 +295,7 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   player.hand.push(card);
   s.drawsThisTurn += 1;
   events.push({ type: "drew", playerId: player.id, card });
-  recordDraw(s, player.id, card, inViolation, snapshot);
+  if (reach) recordDraw(s, player.id, card, inViolation, snapshot, reach);
 
   const stillStuck = !mustPlay(s, player);
   if (stillStuck && (s.drawsThisTurn >= MAX_DRAWS_PER_TURN || !canRefill(s))) {
@@ -262,22 +311,46 @@ const handleChooseSuit = (
   events: GameEvent[],
 ): string | null => {
   if (s.phase.kind !== "suit") return "there's no suit to name";
-  const player = currentPlayer(s);
-  if (player.id !== playerId) return "it isn't your call";
+  // Whose call it is, not whose turn it is. Under Power of Eights those differ
+  // by one seat, and under Dealer's Choice the game hasn't started yet.
+  if (s.phase.playerId !== playerId) return "it isn't your call";
   const chosen = SUITS.find((candidate) => candidate === suit);
   if (!chosen) return "that isn't a suit";
 
   s.activeSuit = chosen;
-  events.push({ type: "suitChosen", playerId: player.id, suit: chosen });
+  events.push({ type: "suitChosen", playerId, suit: chosen });
+  // Always advance, whoever named it. Each variant seats the turn so that this
+  // one rule lands on the right player: the 8's player under the standard rule,
+  // the 8's player again under Power of Eights (so the namer plays next), and
+  // the dealer under Dealer's Choice (so their left opens).
   advanceTurn(s, events);
   return null;
+};
+
+/**
+ * How many more reaches this player must sit out before they may accuse again.
+ * Zero for anyone free to call, which is almost everyone almost always.
+ *
+ * Written without `Math.max` on purpose: the engine bans the `Math` global
+ * outright, which is how `Math.random` is kept out of a package that has to
+ * replay exactly from a seed.
+ */
+export const sunnyLockedDraws = (s: GameState, playerId: PlayerId): number => {
+  const until = s.sunnyLockouts[playerId] ?? 0;
+  return until > s.totalDraws ? until - s.totalDraws : 0;
 };
 
 const handleCallSunny = (
   s: GameState,
   callerId: PlayerId,
+  cardId: string,
   events: GameEvent[],
 ): string | null => {
+  // Said plainly rather than as "there's nothing to call", which would be true
+  // but would read as "you were too slow" at a table where the rule is off.
+  const rule = s.options.sunny;
+  if (!rule) return "this table isn't playing the Sunny Rule";
+
   // A settled call leaves either `resolved` set or the whole window gone with
   // the rewind, so this one check covers "too late" in all its forms.
   const challenge = s.challenge;
@@ -288,32 +361,51 @@ const handleCallSunny = (
   if (!caller) return "unknown player";
   if (caller.eliminated) return "you're out of the game";
 
-  const violation = challenge.violation;
+  const locked = sunnyLockedDraws(s, callerId);
+  if (locked > 0) {
+    return `your last call missed — ${locked} more ${locked === 1 ? "draw" : "draws"} before you can call again`;
+  }
+
+  // The only cards an accusation may ever name: the offender's hand as it
+  // stood before the draw being challenged. Anything they drew since is not an
+  // option, on the server any more than in the UI.
+  const accused = challenge.reach.hand.find((c) => c.id === cardId);
+  if (!accused) return "that wasn't in their hand when they drew";
+
+  const correct = isPlayable(accused, challenge.reach.activeSuit, challenge.reach.topRank);
   const targetId = challenge.drawerId;
   // Read the touched cards while they are still where the offender put them.
   // A moment from now the rewind will have moved them, and the table wants to
-  // watch that happen rather than find it already done.
-  const returned = violation ? findCards(s, violation.touchedIds) : [];
-  events.push({
-    type: "sunnyCalled",
-    callerId,
-    targetId,
-    correct: violation !== null,
-    returned,
-  });
+  // watch that happen rather than find it already done. A call that missed
+  // rewinds nothing, so it returns nothing.
+  const returned = correct && challenge.violation ? findCards(s, challenge.violation.touchedIds) : [];
+  events.push({ type: "sunnyCalled", callerId, targetId, card: accused, correct, returned });
 
-  if (!violation) {
-    // Accusations aren't free.
+  if (!correct) {
+    // Nothing happens to either hand — but the caller can't try again until
+    // three further draws have happened at the table.
     challenge.resolved = true;
-    s.phase = { kind: "surrender", playerId: callerId, reason: "sunnyBadCall", resume: s.phase };
+    s.sunnyLockouts[callerId] = s.totalDraws + rule.lockoutDraws;
     return null;
   }
 
+  // A named card is only ever legal here if the reach it was judged against
+  // really was a violation, which is exactly when `violation` gets set.
+  const violation = challenge.violation;
+  if (!violation) throw new Error("a correct accusation found no violation to rewind to");
+
   // Rewind to the instant before the illegal draw. Restoring wholesale is what
   // lets the punishment undo whatever the drawer did afterwards — including a
-  // card they've already played and the suit an 8 named.
+  // card they've already played and the suit an 8 named. `totalDraws` and
+  // `sunnyLockouts` are carried forward rather than restored: draws taken and
+  // lockouts earned since then are real and happened at the table regardless
+  // of how this call landed, and the rewind must not hand anyone their call
+  // back.
   const touchedIds = [...violation.touchedIds];
+  const { totalDraws, sunnyLockouts } = s;
   Object.assign(s, structuredClone(violation.snapshot));
+  s.totalDraws = totalDraws;
+  s.sunnyLockouts = sunnyLockouts;
   s.challenge = null;
 
   const target = playerById(s, targetId);
@@ -338,12 +430,7 @@ const demandPunishment = (
   events: GameEvent[],
 ): string | null => {
   if (offender.eliminated || offender.hand.length === 0) return finishSunny(s, events);
-  s.phase = {
-    kind: "surrender",
-    playerId: offender.id,
-    reason: "sunnyPunishment",
-    resume: { kind: "action" },
-  };
+  s.phase = { kind: "surrender", playerId: offender.id, reason: "sunnyPunishment" };
   return null;
 };
 
@@ -355,7 +442,28 @@ const finishSunny = (s: GameState, events: GameEvent[]): string | null => {
   const sunny = s.sunny;
   if (!sunny) return null;
   s.sunny = null;
-  turnUp(s, takeCardsFromPiles(s, sunny.touchedIds), "sunnyTouched", events);
+
+  const touched = takeCardsFromPiles(s, sunny.touchedIds);
+  if (touched.length > 0) {
+    turnUp(s, touched, "sunnyTouched", events);
+  } else if (s.drawPile.length === 0) {
+    // They were caught reaching for an empty deck, so there is nothing they
+    // touched to turn up. The reach still has to produce a new card in play,
+    // and it is drawn the same way any other empty deck is answered: the pile
+    // is shuffled back into a deck and a fresh card comes off it.
+    //
+    // Leaving the punishment card showing instead — which is what this used to
+    // do — handed the offender the choice of what the whole table matches next.
+    // That is backwards. Reaching for the deck costs you control of the board;
+    // it does not buy you a free placement of a card you picked.
+    //
+    // The guard matters: `recycleFaceUpPile` assigns the draw pile outright, so
+    // calling it with cards still in the deck would drop all of them. Nothing
+    // touched implies an empty-deck reach implies a rewind to an empty deck, so
+    // this should always hold — but card conservation is not a thing to assume.
+    recycleFaceUpPile(s, events);
+  }
+
   advanceTurn(s, events);
   return null;
 };
@@ -374,30 +482,18 @@ const handleSurrender = (
   const index = player.hand.findIndex((c) => c.id === cardId);
   if (index === -1) return "that card isn't in your hand";
 
-  const { reason, resume } = s.phase;
+  const { reason } = s.phase;
   const [card] = player.hand.splice(index, 1) as [Card];
 
-  if (reason === "sunnyPunishment") {
-    // Played face up like any other card. It needn't be legal, and it sets no
-    // suit: the touched card lands on top of it a moment later.
-    s.discardPile.push(card);
-  } else {
-    // Buried under everything already played, where it can never become the
-    // card in play. A bad call costs a card and changes nothing else.
-    s.discardPile.unshift(card);
-  }
+  // Played face up like any other card. It needn't be legal, and it sets no
+  // suit: the touched card lands on top of it a moment later.
+  s.discardPile.push(card);
   events.push({ type: "surrendered", playerId, card, reason });
 
   eliminateIfEmpty(s, player, events);
   if (finishIfOver(s, events)) return null;
 
-  if (reason === "sunnyPunishment") return finishSunny(s, events);
-
-  s.phase = resume;
-  // A wrong call made by the player whose turn it now is, paid for with their
-  // last card: there is nobody left to take the turn we resumed into.
-  if (resume.kind === "action" && currentPlayer(s).eliminated) advanceTurn(s, events);
-  return null;
+  return finishSunny(s, events);
 };
 
 // ---------------------------------------------------------------------------
@@ -408,6 +504,19 @@ const handleSurrender = (
  * Opens or extends the challenge window. `card` is null when the deck had to be
  * recycled and nothing was drawn — the reach still counts, so the window opens
  * with no card attached to it.
+ *
+ * `reach` follows the newest reach only while nobody has been caught. The
+ * moment one *is* a violation it freezes, together with the snapshot taken from
+ * the same instant, and every later reach in the window leaves it alone.
+ *
+ * That pairing is the point. An accusation is judged against `reach` and
+ * rewound to `violation.snapshot`, so the two describing different moments is
+ * incoherent — and they come apart the moment the board moves mid-turn, which a
+ * recycle does. The card that made the offence an offence stays in hand, but it
+ * stops being playable against the card the recycle turned up, so judging a
+ * later reach would rule every possible accusation wrong while the violation
+ * still stood. It would also put the cards drawn by the offence itself on the
+ * list of cards you may name. (#74)
  */
 const recordDraw = (
   s: GameState,
@@ -415,11 +524,18 @@ const recordDraw = (
   card: Card | null,
   inViolation: boolean,
   snapshot: GameState | null,
+  reach: SunnyReach,
 ): void => {
   if (!s.challenge || s.challenge.drawerId !== playerId) {
-    s.challenge = { drawerId: playerId, drawnIds: [], violation: null, resolved: false };
+    s.challenge = { drawerId: playerId, drawnIds: [], reach, violation: null, resolved: false };
   }
   const challenge = s.challenge;
+  if (!challenge.violation) challenge.reach = reach;
+  // Reaches at the table, counted for the lockouts measured against them. A
+  // reach that found nothing at all — an empty deck with nothing to recycle
+  // either — isn't one: no card moved and no window opened for it, so it is
+  // not a beat anybody's lockout should be counting down against.
+  s.totalDraws += 1;
   if (card) challenge.drawnIds.push(card.id);
   // A fresh draw is a fresh chance to be caught, even if an earlier call in
   // this turn has already been settled.

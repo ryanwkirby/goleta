@@ -4,6 +4,7 @@ import {
   type ApplyResult,
   type Card,
   type GameState,
+  type GameOptions,
   type Intent,
   type PlayerId,
   type Rank,
@@ -36,6 +37,8 @@ export interface TableSpec {
   turn?: PlayerId;
   /** Players already out of the game. */
   out?: PlayerId[];
+  /** House rules for this position. Defaults to the game as written. */
+  options?: GameOptions;
 }
 
 /**
@@ -53,7 +56,7 @@ export const table = (spec: TableSpec): GameState => {
   if (turnIndex < 0) throw new Error(`no player named ${spec.turn}`);
 
   return {
-    options: DEFAULT_OPTIONS,
+    options: spec.options ?? DEFAULT_OPTIONS,
     players,
     turnIndex,
     drawPile: cards(...(spec.drawPile ?? [])),
@@ -63,6 +66,8 @@ export const table = (spec: TableSpec): GameState => {
     challenge: null,
     sunny: null,
     drawsThisTurn: 0,
+    totalDraws: 0,
+    sunnyLockouts: {},
     rngSeed: 12345,
     status: "playing",
     winnerId: null,

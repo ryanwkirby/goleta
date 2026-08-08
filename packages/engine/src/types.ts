@@ -27,6 +27,9 @@ export const WILD_RANK: Rank = "8";
 /** Most cards a player may draw in one turn. */
 export const MAX_DRAWS_PER_TURN = 3;
 
+/** Draws a wrong caller must sit out before they may call again. */
+export const SUNNY_LOCKOUT_DRAWS = 3;
+
 export type CardId = string;
 export type PlayerId = string;
 
@@ -37,14 +40,61 @@ export interface Card {
   readonly suit: Suit;
 }
 
+/**
+ * Who names the suit after an 8 is played from a hand.
+ *
+ * `nextPlayerNames` is the **Power of Eights** alternate rule. It only swaps
+ * the chooser — the turn still passes to the next player, who then plays
+ * against the suit they just named. That makes an 8 a pure liability: the
+ * player you hand it to will name a suit they can't follow, and get a free
+ * draw out of you.
+ */
+export type EightsRule = "playerNames" | "nextPlayerNames";
+
+/**
+ * What an 8 turned up as the very first card means.
+ *
+ * `natural` plays it as an ordinary 8 of its printed suit. `dealerNames` is the
+ * **Dealer's Choice** alternate rule, where the dealer names the suit instead —
+ * the one advantage dealing carries in this game.
+ */
+export type SeedEightRule = "natural" | "dealerNames";
+
+/**
+ * The Sunny Rule's settings, or `null` at a table that plays without it.
+ *
+ * Null is the rule genuinely not existing rather than a rule that does nothing:
+ * no challenge window is opened, and the per-draw position snapshot that makes
+ * a rewind possible is never taken. See `rules.ts`.
+ */
+export interface SunnyRule {
+  /** Draws a wrong caller sits out before they may accuse again. */
+  readonly lockoutDraws: number;
+}
+
+/**
+ * The house rules for one game. Data only — never functions.
+ *
+ * `applyIntent` clones the state on every intent, `Challenge.violation.snapshot`
+ * clones it again, and `persist.ts` puts it through `JSON.stringify`. Anything
+ * here that isn't structured-cloneable and JSON-serializable breaks all three.
+ * Behaviour that varies is looked up from these values, not stored in them.
+ */
 export interface GameOptions {
   readonly deckCount: number;
   readonly startingHandSize: number;
+  readonly eights: EightsRule;
+  readonly seedEight: SeedEightRule;
+  readonly sunny: SunnyRule | null;
 }
 
+/** The game as written. Every alternate rule is off. */
 export const DEFAULT_OPTIONS: GameOptions = {
   deckCount: 1,
   startingHandSize: 3,
+  eights: "playerNames",
+  seedEight: "natural",
+  sunny: { lockoutDraws: SUNNY_LOCKOUT_DRAWS },
 };
 
 export interface PlayerState {
@@ -56,9 +106,7 @@ export interface PlayerState {
 
 export type SurrenderReason =
   /** The extra card a caught player gives up. Played on top of the pile. */
-  | "sunnyPunishment"
-  /** The card a wrong accusation costs its caller. Buried at the bottom. */
-  | "sunnyBadCall";
+  "sunnyPunishment";
 
 /**
  * What the game is waiting for. Anything other than `action` means one specific
@@ -67,17 +115,36 @@ export type SurrenderReason =
 export type Phase =
   /** The player to move must play a card or draw one. */
   | { kind: "action" }
-  /** They played an 8 from hand and must name the suit. */
-  | { kind: "suit" }
+  /**
+   * A suit is owed. `playerId` is whose call it is, which is *not* always the
+   * player to move: under Power of Eights it is the next seat, and under
+   * Dealer's Choice it is the dealer before anyone has played at all.
+   *
+   * Naming always advances the turn afterwards. That single rule covers every
+   * variant, because each one seats the turn so that advancing lands on the
+   * right player — see `handleChooseSuit`.
+   */
+  | { kind: "suit"; playerId: PlayerId }
   /** A Sunny call landed: they must now make the play they skipped. */
   | { kind: "sunnyPlay" }
-  /**
-   * Someone owes a card of their choosing, legality irrelevant. `resume` is
-   * where play picks back up, and is only meaningful for a bad call — a
-   * punishment is always followed by the rest of the Sunny resolution.
-   */
-  | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason; resume: Phase }
+  /** They were caught and owe the punishment card: any one, legality irrelevant. */
+  | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason }
   | { kind: "over" };
+
+/**
+ * The position a challenged reach was made from: the hand the drawer held and
+ * the board they faced, both frozen at the instant *before* they touched the
+ * deck.
+ *
+ * Named because it is the shape of the accusation on both sides of the wire —
+ * `Challenge.reach` on the server, `GameView.sunnyReach` at the table — and the
+ * two must not be allowed to drift apart.
+ */
+export interface SunnyReach {
+  hand: Card[];
+  activeSuit: Suit;
+  topRank: Rank;
+}
 
 /**
  * The Sunny Rule challenge window.
@@ -85,13 +152,26 @@ export type Phase =
  * Opens on any draw and closes when the *next* player takes their first action,
  * so it can outlive the turn it belongs to — a call arriving after the turn
  * ended rewinds it. `violation` is populated only when the draw was actually
- * illegal, and it never leaves the server: `redact.ts` drops this whole object
- * and sends only whether a call is currently possible.
+ * illegal, and it never leaves the server: `redact.ts` drops this whole object,
+ * sending only whether a call is currently possible and — to whoever could make
+ * one — `reach.hand` to accuse from. Nothing about `violation` itself, or which
+ * of those cards was actually legal, ever goes out.
  */
 export interface Challenge {
   drawerId: PlayerId;
   /** Every card drawn this turn, in order. */
   drawnIds: CardId[];
+  /**
+   * The offender's hand, and the board they faced, exactly as they stood
+   * immediately before the reach a call would be about. This is what an
+   * accusation is judged against: a card they only came to hold afterwards
+   * must never be offered, or count, as an accusation.
+   *
+   * Which reach that is: the most recent one while nothing has been caught,
+   * and then the offending one, frozen alongside `violation.snapshot` from the
+   * same instant. See `recordDraw`.
+   */
+  reach: SunnyReach;
   violation: {
     /**
      * The game exactly as it stood *before* the illegal draw. A successful call
@@ -146,6 +226,19 @@ export interface GameState {
   /** Non-null only while a landed Sunny call is being paid off. */
   sunny: SunnyResolution | null;
   drawsThisTurn: number;
+  /**
+   * Reaches for the deck at the table across the whole game, never reset. A
+   * wrong caller's lockout is measured against this rather than against turns,
+   * so it counts down at the same rate regardless of how draws land within a
+   * turn. Counted where the window is — see `recordDraw` — so a reach that
+   * found nothing at all doesn't move it.
+   */
+  totalDraws: number;
+  /**
+   * Per caller, the `totalDraws` value at which their lockout from a wrong
+   * accusation lifts. Absent or at-or-below `totalDraws` means free to call.
+   */
+  sunnyLockouts: Record<PlayerId, number>;
   rngSeed: number;
   status: "playing" | "over";
   winnerId: PlayerId | null;
@@ -157,7 +250,8 @@ export type Intent =
   | { type: "playCard"; playerId: PlayerId; cardId: CardId }
   | { type: "drawCard"; playerId: PlayerId }
   | { type: "chooseSuit"; playerId: PlayerId; suit: Suit }
-  | { type: "callSunny"; playerId: PlayerId }
+  /** `cardId` is the accused card from the offender's pre-draw hand. */
+  | { type: "callSunny"; playerId: PlayerId; cardId: CardId }
   | { type: "surrenderCard"; playerId: PlayerId; cardId: CardId };
 
 /** Why a card came off the deck rather than out of a hand. */
@@ -172,6 +266,9 @@ export type GameEvent =
   /** A card turned face up off the deck. Always natural, never wild. */
   | { type: "turnedUp"; cards: Card[]; reason: TurnUpReason }
   /**
+   * `card` is the one the caller named. It is public: the accusation is said
+   * out loud, and a wrong one is worth being able to read back afterwards.
+   *
    * `returned` are the cards the rewind takes back off the offender and puts
    * on the deck — empty for a call that missed, and for a reach at an empty
    * deck that brought nothing back.
@@ -185,6 +282,7 @@ export type GameEvent =
       type: "sunnyCalled";
       callerId: PlayerId;
       targetId: PlayerId;
+      card: Card;
       correct: boolean;
       returned: Card[];
     }

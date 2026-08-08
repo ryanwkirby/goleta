@@ -20,12 +20,11 @@ const nameFor = (room: RoomView, id: string): string =>
  * drawer plays and the turn moves on with the window still open, and following
  * the target through that is what keeps the icon pointing at the right head.
  *
- * No target, no sun. On screen it means one thing: you could accuse them.
+ * No target, no sun. On screen it means one thing and only one thing: you could
+ * accuse them. It has never meant you'd be right.
  */
-const sunFor = (game: GameView, playerId: string): "callable" | "telling" | null => {
-  if (!game.sunnyCallable || game.sunnyTargetId !== playerId) return null;
-  return game.sunnyWouldLand ? "telling" : "callable";
-};
+const hasSun = (game: GameView, playerId: string): boolean =>
+  game.sunnyCallable && game.sunnyTargetId === playerId;
 
 function Seat({
   player,
@@ -41,12 +40,12 @@ function Seat({
   shouting: boolean;
   /** How many rows this hand takes at the strip's shared sliver. */
   rows: number;
-  onCallSunny: () => void;
+  onCallSunny: (playerId: string) => void;
 }) {
   const { anchor, isArriving } = useMotion();
   const onClock = game.waitingOn === player.id;
   const out = player.eliminated;
-  const sun = sunFor(game, player.id);
+  const sun = hasSun(game, player.id);
 
   return (
     <li
@@ -67,9 +66,9 @@ function Seat({
         </span>
         {sun ? (
           <SunnySign
-            state={sun}
             targetName={nameFor(room, player.id)}
-            onCall={onCallSunny}
+            lockedDraws={game.sunnyLockedDraws}
+            onCall={() => onCallSunny(player.id)}
             className="self-center"
           />
         ) : null}
@@ -123,7 +122,7 @@ export function Seats({
   room: RoomView;
   game: GameView;
   shouts: Shout[];
-  onCallSunny: () => void;
+  onCallSunny: (playerId: string) => void;
 }) {
   const others = inTurnOrder(game);
   const shouting = new Set(shouts.map((shout) => shout.playerId));
@@ -166,8 +165,8 @@ export function Seats({
    * Eight seats don't fit on a phone, and having to go looking for the person
    * playing — every turn, all game — was the single most tiring thing about
    * watching a full table. `waitingOn` rather than the turn, so it also follows
-   * somebody who owes a card for a call that missed: that is exactly the moment
-   * you want to be looking at them.
+   * somebody who has been caught and owes a punishment card: that is exactly
+   * the moment you want to be looking at them.
    *
    * On your own turn there is nobody in the strip to follow, so it goes hard
    * left — which, rotated, is the player about to follow you, and exactly who

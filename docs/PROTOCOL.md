@@ -47,6 +47,8 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
+| `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
+| `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
 
@@ -75,22 +77,51 @@ can only ever act as itself. There's a test that tries it the other way.
 Hands are not on that list: every hand is face up, so `state` carries all of
 them and `events` go out whole, the same bytes to everybody seated.
 
-### What it does send, and used not to
+Whether a draw was actually illegal is not on that list because it is not on any
+list: no field carries it. `challenge.violation` stays on the server, and
+nothing is derived from it on the way out.
 
-Three fields describe the challenge window: `sunnyCallable`, `sunnyTargetId`,
-and `sunnyWouldLand`.
+### What it does send about the challenge window
 
-The first two are old. `sunnyCallable` is true after **any** draw by somebody
-else, honest or not — the call is always available, so its presence tells you
-nothing.
+Four fields, none of which is the answer.
 
-`sunnyWouldLand` is the answer, and sending it at all reverses a decision this
-document used to state the other way round. It is the tell behind the sun
-icon's glow, and the balance is in how the UI spends it: the glow takes ten
-seconds to go from barely perceptible to unmissable, so a player watching the
-table still gets there before one who isn't. It goes only to viewers who could
-call this instant — never to the drawer, who is not told they've been caught,
-and never to a spectator, who has no call to make.
+`sunnyCallable` is true after **any** draw by somebody else, honest or not — the
+call is always available, so its presence tells you nothing. `sunnyTargetId`
+names who it would land on.
+
+`sunnyReach` is the material for an accusation: the offender's hand and the
+board they faced, frozen at the instant before the draw being challenged. A call
+has to name one of those cards, so a caller has to be able to see them. Nothing
+in it says which was legal — that is the judgement being asked for, and it is
+made from cards that were face up on the table anyway. It goes only to viewers
+who could call this instant: never to the drawer, who is not told they've been
+caught, and never to a spectator, who has no call to make.
+
+`sunnyLockedDraws` is how many draws you personally have left to serve after a
+call that missed. It is about you and nobody else, so it goes to you and nobody
+else.
+
+An earlier revision (#31) did send the answer, as `sunnyWouldLand`, behind a
+ten-second glow. #50 removed it: requiring the caller to name a card makes a
+wrong call specific enough to stand on its own, so the tell was no longer
+buying anything.
+
+## House rules
+
+`RoomView.houseRules` carries what the table is playing: `sunny` (a boolean),
+`eights` and `seedEight`. The host changes them with `{ t: "setHouseRules",
+rules }`, between games only — the server rejects it while a game is running,
+the same as bot speed.
+
+The message is deliberately not `GameOptions`. The engine's options also carry
+a deck count and a starting hand size, and those are never accepted from a
+client: the server validates the three toggles against their permitted values
+and constructs the full options itself. A rule that isn't named in `HouseRules`
+cannot be reached from a browser.
+
+With `sunny` off, the three challenge-window fields above are inert for
+everyone — `sunnyCallable` false, `sunnyReach` null, `sunnyLockedDraws` zero —
+because no challenge window is ever opened in the first place.
 
 ## Bots
 
@@ -119,11 +150,46 @@ possibility of a call — it paces a call a bot is making. It is left long on
 `human` because bots that call correctly would otherwise take every call at the
 table, and a person watching should be able to beat them to one.
 
-One consequence, taken deliberately: the sun icon's ten-second ramp usually will
-not finish before a bot's ordinary move closes the window. Catching a bot's
-illegal draw means seeing it yourself, inside the next bot's beat. The ramp is
-unchanged and still runs in full wherever the window stays open that long, which
-is any window waiting on a person.
+Against a bot's illegal draw, then, a person has only the next bot's beat to
+*notice* it: nothing on screen flags the draw, so catching one means reading the
+table yourself and reading it fast. A window waiting on a person stays open as
+long as that person takes.
+
+Deciding is a different matter, and it gets its own stop.
+
+### Holding the table to name a card
+
+`{ t: "composingCall"; open: boolean }` — sent when the accusation picker opens,
+and again when it closes. While a hold stands, **no bot at the table acts**.
+
+Naming a card is three decisions where tapping the sun used to be one, and the
+figures above have no room in them for that. Stretching them would make every
+bot at the table read as lag, for a wait that matters in a few seconds of a
+whole game. So the clock stops instead, and only for the player who has actually
+started deciding.
+
+This is not the grace period #56 removed. That one had bots idling on the
+possibility of a call, on every draw, all game long. This one hangs off an
+action somebody took, and ends the moment they are done.
+
+- **It ends** on submit, on cancel, when the window shuts for any other reason,
+  on disconnect, or after `CALL_HOLD_MS` — a backstop for a tab that died with
+  the picker open, not a timer anybody is meant to meet.
+- **Only a viewer who could really call may hold**: not the drawer, not a
+  spectator, not a caller serving a lockout.
+- **One hold per window per player.** Reopening the picker reuses the deadline
+  the first opening set, so it can't be worked as a stall button.
+- **Nothing is broadcast.** That somebody is weighing a call is not something
+  the table is told: it would be a tell about a verdict nothing else here gives
+  away. Bots falling quiet is visible, and that is accepted — it says somebody
+  is thinking, not that they are right.
+- **Bots are all it stops.** A person taking their turn is a person playing the
+  game, and their tap is not swallowed because somebody else is deciding. If a
+  human does close the window while you are choosing, your picker goes with it.
+
+A bot picks its accusation the same way a person does, from `sunnyReach` alone:
+it is never told which card was legal, so a bot that can't find one says
+nothing.
 
 ## Connection care
 

@@ -16,11 +16,13 @@ This document is canonical. The engine implements it; the UI explains it.
   so the same player doesn't open every game.
 - Each player is dealt **3 cards**, face up.
 - One card is turned face up to start the **face-up pile**. If it's an 8 it
-  stays — see [natural eights](#natural-eights).
+  stays — see [natural eights](#natural-eights), unless the table is playing
+  [Dealer's Choice](#dealers-choice).
 - The rest becomes the **deck**, face down.
 - **The player to the dealer's left goes first**, and play moves round the
   table in that direction. Dealing is all the dealer does: there is no other
-  advantage or penalty to it.
+  advantage or penalty to it, unless the table has turned
+  [Dealer's Choice](#dealers-choice) on.
 
 There are only ever these two piles. Cards leave a hand for the face-up pile and
 come back to the deck when the face-up pile is recycled. Nothing is ever set
@@ -61,17 +63,45 @@ Draw one card from the deck, into your hand.
   third, your turn ends and you keep all three.
 
 So three draws only happen when you're genuinely, thoroughly stuck — and that's
-the best turn you can have.
+the best turn you can have. The card most likely to spoil one is an
+[8](#eights-are-wild), which is playable on anything and so always cuts a draw
+short.
 
 ### Eights are wild
 
 An 8 **played from your hand** can be played on any card. After playing one, you
 **name the suit** the next player has to match.
 
-Note what this costs you: because an 8 is always playable, and because playing
-is compulsory, **you can never legally draw while you hold an 8.** An 8 in your
-hand is a countdown, not a weapon. Naming the suit on the way out is the
-consolation prize.
+There are two ways an 8 reaches you and both of them are bad.
+
+**Dealt one, you are on a countdown.** Because an 8 is always playable, and
+because playing is compulsory, **you can never legally draw while you hold an
+8.** The best turn in the game is shut to you until it is gone, and you do not
+get to choose when that is.
+
+**Draw one, and your turn stops dead.** Being stuck is the best turn you can
+have — up to three cards into your hand — but the moment a drawn card can be
+played, you have to play it and your turn is over. An 8 can always be played. So
+drawing one ends the turn on the spot: the card goes straight back out, and it
+takes whatever draws you had left with it. Drawn on the first of three, an 8
+costs you the two you never got to take.
+
+Either way it finishes the same, and the finish is the point: **the 8 leaves
+your hand.** That is a card gone, and cards are the only thing keeping you in
+this game.
+
+What softens it is the suit, and that is worth more than a consolation, because
+**every hand is face up, so naming a suit is not a guess.** You can read what
+the players between you and your next turn are holding and pick something that
+does a specific thing to them. With the cards lying right you can name a suit
+nobody can answer and arrange to come back round to a hand you can't play
+either — which is to say, arrange your own draw. Hold more than one 8 and you
+can do it again each time the turn comes back to you.
+
+None of which makes an 8 a card you *want*. You are still a card down, and down
+is the wrong direction. It makes it a card you hope to spend well.
+[The Power of Eights](#the-power-of-eights) is the rule that takes even that
+hope away.
 
 ### Natural eights
 
@@ -81,7 +111,8 @@ play, and nobody names anything. Nothing is buried and nothing is redealt.
 
 This covers all three places a card gets turned up off the deck: the card that
 starts the game, the card turned up after a recycle, and the card flipped by a
-Sunny Rule call.
+Sunny Rule call. The first of those is the one [Dealer's
+Choice](#dealers-choice) overrides.
 
 The distinction is simply whether a hand was involved. Played from a hand, an 8
 is wild. Flipped off the deck, it is an 8 of the suit printed on it.
@@ -110,6 +141,9 @@ cannot simply stop.
 
 Anyone can draw a card. Not everyone is *allowed* to.
 
+This is the one rule a table can [switch off](#playing-without-the-sunny-rule).
+It is on unless somebody says otherwise.
+
 If you take a card from the deck when you had a playable card in your hand, any
 other player still in the game can call **"Sunny Rule!"** on you.
 
@@ -126,11 +160,21 @@ rest are too late, and cost them nothing.
 When somebody draws, a small sun appears beside them — and stays beside them
 until the window shuts, even once play has moved on. Tap it to call. That it is
 there at all says nothing about whether you'd be right; it means only that they
-drew.
+drew, and it looks exactly the same whether they were allowed to or not.
 
-But if the draw really was illegal, the sun begins to glow: faintly at first,
-unmistakably by about ten seconds in. Call it early and you are backing your own
-eyes. Wait for the sun to make up your mind, and everyone watched you wait.
+### Naming the card
+
+**A call has to name a card.** Tapping the sun doesn't accuse anyone by itself:
+it shows you the offender's hand *as it stood immediately before they reached*,
+and you tap the card you say they should have played.
+
+It is that hand and no other. Anything they drew after the reach you are
+challenging was never theirs to play, so it is not on the list and cannot be
+named.
+
+Nothing in the app marks up which of those cards was legal. It is the same
+judgement you would make leaning over a real table — their cards are face up,
+the card in play is face up, and the two are all you need.
 
 It applies to any illegal draw in the turn, not just the first one. Drawing a
 second card when the first card you drew gave you a play is exactly the same
@@ -145,18 +189,26 @@ If nobody calls it, nothing happens. The turn stands as played.
 
 ### If the call is right
 
-The offender, in this order:
+Right means the card you named really was legal against the card in play at the
+moment they reached. The offender, in this order:
 
 1. **Makes the play they skipped**, choosing among the cards that were legal
-   before they reached for the deck.
+   before they reached for the deck. They are not held to the card you named —
+   naming one only had to prove they had one.
 2. **Plays a punishment card** — any one card from the rest of their hand, their
    choice. It does not have to be legal. It goes face up on the pile like any
    other play.
 3. **Turns up the card they touched.** Every card they drew illegally goes face
    up on the pile, and the last of them becomes the new card in play. It is
-   turned up off the deck, so [natural eights](#natural-eights) applies. If they
-   were caught reaching for an empty deck there is nothing to turn up, and the
-   punishment card is left in play instead.
+   turned up off the deck, so [natural eights](#natural-eights) applies.
+
+   If they were caught reaching for an **empty** deck there is nothing they
+   touched to turn up. The deck is then answered the way an empty deck always
+   is: the whole pile — punishment card and all — is
+   [shuffled back](#when-the-deck-runs-out) and a fresh card is turned up to
+   start it again. Nobody chooses that card, which is the point. Reaching for
+   the deck costs you control of the board; it must never hand you a free
+   placement of a card you picked out of your own hand.
 
 Then their turn is over.
 
@@ -171,10 +223,68 @@ anything named would be erased before it could matter.
 
 ### If the call is wrong
 
-The caller **gives up one card** of their choosing. It goes to the **bottom of
-the face-up pile**, underneath everything already played, so it never becomes
-the card in play and changes nothing about the position. Accusations aren't
-free.
+**Nothing happens to anybody's hand.** No card is lost, by the caller or by the
+accused, and the position is exactly as it was.
+
+What a miss costs is your voice: **you cannot call the Sunny Rule again until
+three more cards have been drawn** at the table. Everyone else can still call in
+the meantime, including on the very draw you just got wrong.
+
+That is the whole penalty, and it is deliberately not a card. Having to name a
+specific card is what stops a call being a free guess — you have to be able to
+point at the play they skipped — so a wrong call is already a wrong claim made
+out loud in front of everyone. The lockout just stops you making another one
+immediately.
+
+---
+
+## House rules
+
+Everything above is the game as written, and it is what you get if nobody
+touches anything. A table can vary three things, chosen by the host in the
+lobby before a deal. They apply to the next game, never to one already running.
+
+### Playing without the Sunny Rule
+
+The Sunny Rule can be switched off entirely.
+
+With it off, reaching for the deck while holding a play is simply not an
+offence — there is no accusation to make, no sun appears beside anybody, and
+nothing anywhere in the app suggests otherwise. It is a quieter, friendlier
+game, and a considerably less interesting one. It is also the right setting for
+a table that would rather not have to watch each other.
+
+The must-play rule itself does **not** relax. If you can play, you still must;
+there is simply nobody empowered to do anything about it if you don't.
+
+### The Power of Eights
+
+*From the original written rules.*
+
+Instead of the player who plays an 8 naming the suit, **the next player names
+it** — and then plays against the suit they just named.
+
+An 8 is [bad news either way](#eights-are-wild): a countdown while you hold it, a
+stopped turn if you draw it, and a card gone when it goes. Under the standard
+rule the suit is the one thing you get back for that — the reason an 8 is a card
+you hope to place well rather than simply a card you lost. This rule takes it
+away and hands it to the player your dead turn just passed to, who will name
+something they can't follow and draw off the back of it.
+
+That is the whole of the change, and it is bigger than it looks. Under the
+standard rules an 8 is a bad card you can still do something with. Here it is
+just a bad card.
+
+### Dealer's Choice
+
+*From the original written rules.*
+
+If the card turned up to start the game is an 8, the **dealer names the suit**
+instead of it playing as a [natural eight](#natural-eights).
+
+This is the only advantage dealing carries. It has no effect at all unless the
+seed card happens to be an 8 — four cards in fifty-two, so roughly one game in
+thirteen.
 
 ---
 
@@ -186,8 +296,8 @@ cards are held up, not fanned in secret, and the app plays it the same way.
 That is what makes the Sunny Rule a rule and not a guess: whether someone had a
 play they skipped is there on the table to be seen. The app never marks up
 another player's cards for you — and it won't mark up your own either, once
-you've played a game. Spotting the play, and calling it before the sun does the
-work for you, is the game.
+you've played a game. Spotting the play, and being able to point at it, is the
+game.
 
 ## Asking for a hand
 

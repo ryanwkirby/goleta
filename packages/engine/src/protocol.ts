@@ -9,7 +9,26 @@
  */
 
 import type { GameView } from "./redact.ts";
-import type { GameEvent, Intent, PlayerId, Suit } from "./types.ts";
+import type { EightsRule, GameEvent, Intent, PlayerId, SeedEightRule, Suit } from "./types.ts";
+
+/**
+ * The house rules a table may actually choose, which is deliberately a smaller
+ * thing than `GameOptions`.
+ *
+ * The engine's options also carry `deckCount` and `startingHandSize`, and those
+ * are not on offer: they come from a client, and a hand size of 900 or a deck
+ * count of a million is a denial of service rather than a house rule. The
+ * server maps this onto a full `GameOptions` itself, so the only values that
+ * can ever reach the engine are ones named here.
+ *
+ * `sunny` is a plain boolean this pass — the rule is on or it is off. When the
+ * resolution itself becomes configurable this is where that would widen.
+ */
+export interface HouseRules {
+  eights: EightsRule;
+  seedEight: SeedEightRule;
+  sunny: boolean;
+}
 
 export interface SeatView {
   id: PlayerId;
@@ -35,6 +54,8 @@ export interface RoomView {
   maxPlayers: number;
   lastWinnerId: PlayerId | null;
   botSpeed: BotSpeed;
+  /** What this table is playing. Applies at the next deal, not to a live game. */
+  houseRules: HouseRules;
 }
 
 export type ClientMessage =
@@ -50,6 +71,17 @@ export type ClientMessage =
   | { t: "removeSeat"; playerId: PlayerId }
   /** Host only, between games: how fast the bots at this table play. */
   | { t: "setBotSpeed"; speed: BotSpeed }
+  /** Host only, between games: which rules this table plays by. */
+  | { t: "setHouseRules"; rules: HouseRules }
+  /**
+   * "I've opened the picker to name a card", and then "I'm done with it".
+   *
+   * Holds the bots while a call is being composed, so the window can't shut
+   * under somebody part-way through deciding. Nothing about it is broadcast:
+   * that a player is considering a call is not something the rest of the table
+   * gets told. See `holdCall`.
+   */
+  | { t: "composingCall"; open: boolean }
   /** "I'm stuck." Turns your own highlights back on, and tells the table. */
   | { t: "help" }
   | { t: "ping" };

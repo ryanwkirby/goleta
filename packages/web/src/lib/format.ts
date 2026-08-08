@@ -33,7 +33,6 @@ export const namerFor = (room: RoomView | null): NameOf => {
 
 const surrenderPhrase: Record<SurrenderReason, string> = {
   sunnyPunishment: "played the punishment card",
-  sunnyBadCall: "buried a card for a bad call",
 };
 
 /** One event, as a sentence for the table log. */
@@ -55,10 +54,13 @@ export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
         ? `${cards} turned up. That's the card to match now.`
         : `${cards} turned up off the deck — the card they reached for. That's the card to match now.`;
     }
-    case "sunnyCalled":
-      return event.correct
-        ? `${nameOf(event.callerId)} called the Sunny Rule on ${nameOf(event.targetId)} — and was right.`
-        : `${nameOf(event.callerId)} called the Sunny Rule on ${nameOf(event.targetId)} — and was wrong.`;
+    case "sunnyCalled": {
+      // The named card is the substance of the call, so the log carries it —
+      // it is what makes a wrong call worth reading back afterwards.
+      const named = `${event.card.rank}${event.card.suit}`;
+      const call = `${nameOf(event.callerId)} called the Sunny Rule on ${nameOf(event.targetId)}, naming the ${named}`;
+      return event.correct ? `${call} — and was right.` : `${call} — and was wrong.`;
+    }
     case "surrendered":
       return `${nameOf(event.playerId)} ${surrenderPhrase[event.reason]}: ${cardName(event.card)}.`;
     case "eliminated":

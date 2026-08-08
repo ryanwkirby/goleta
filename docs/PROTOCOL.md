@@ -48,6 +48,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `addBot` / `removeSeat` | host | Between games only. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
+| `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
 
@@ -149,14 +150,46 @@ possibility of a call — it paces a call a bot is making. It is left long on
 `human` because bots that call correctly would otherwise take every call at the
 table, and a person watching should be able to beat them to one.
 
-One consequence, taken deliberately: against a bot's illegal draw, a person has
-only the next bot's beat to get a call in. Nothing on screen flags the draw, and
-an accusation has to name a card, so catching one means reading the table
-yourself and reading it fast. A window waiting on a person stays open as long as
-that person takes.
+Against a bot's illegal draw, then, a person has only the next bot's beat to
+*notice* it: nothing on screen flags the draw, so catching one means reading the
+table yourself and reading it fast. A window waiting on a person stays open as
+long as that person takes.
 
-A bot picks its accusation the same way, from `sunnyReach` alone: it is never
-told which card was legal, so a bot that can't find one says nothing.
+Deciding is a different matter, and it gets its own stop.
+
+### Holding the table to name a card
+
+`{ t: "composingCall"; open: boolean }` — sent when the accusation picker opens,
+and again when it closes. While a hold stands, **no bot at the table acts**.
+
+Naming a card is three decisions where tapping the sun used to be one, and the
+figures above have no room in them for that. Stretching them would make every
+bot at the table read as lag, for a wait that matters in a few seconds of a
+whole game. So the clock stops instead, and only for the player who has actually
+started deciding.
+
+This is not the grace period #56 removed. That one had bots idling on the
+possibility of a call, on every draw, all game long. This one hangs off an
+action somebody took, and ends the moment they are done.
+
+- **It ends** on submit, on cancel, when the window shuts for any other reason,
+  on disconnect, or after `CALL_HOLD_MS` — a backstop for a tab that died with
+  the picker open, not a timer anybody is meant to meet.
+- **Only a viewer who could really call may hold**: not the drawer, not a
+  spectator, not a caller serving a lockout.
+- **One hold per window per player.** Reopening the picker reuses the deadline
+  the first opening set, so it can't be worked as a stall button.
+- **Nothing is broadcast.** That somebody is weighing a call is not something
+  the table is told: it would be a tell about a verdict nothing else here gives
+  away. Bots falling quiet is visible, and that is accepted — it says somebody
+  is thinking, not that they are right.
+- **Bots are all it stops.** A person taking their turn is a person playing the
+  game, and their tap is not swallowed because somebody else is deciding. If a
+  human does close the window while you are choosing, your picker goes with it.
+
+A bot picks its accusation the same way a person does, from `sunnyReach` alone:
+it is never told which card was legal, so a bot that can't find one says
+nothing.
 
 ## Connection care
 

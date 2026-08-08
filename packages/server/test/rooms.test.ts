@@ -9,11 +9,15 @@ import { describe, expect, it } from "vitest";
 import { MAX_TABLE_PLAYERS, MIN_TABLE_PLAYERS, rollSunnyCall } from "@goleta/engine";
 
 import {
+  CALL_HOLD_MS,
   addBot,
   applySeatIntent,
   beginGame,
+  callHeldUntil,
   createRoom,
   createStore,
+  holdCall,
+  markDisconnected,
   nextBotMove,
   roomView,
   setBotSpeed,
@@ -61,7 +65,32 @@ const hostDrawsWithAPlay = (room: Room): void => {
 
   const outcome = applySeatIntent(room, room.hostId, { type: "drawCard", playerId: room.hostId });
   expect(outcome.ok).toBe(true);
-  expect(game.challenge?.violation).not.toBeNull();
+  // Read back off the room: `applySeatIntent` swaps in a new state rather than
+  // mutating the one above, so `game` is the position before the reach.
+  expect(room.game?.challenge?.violation).not.toBeUndefined();
+  expect(room.game?.challenge?.violation).not.toBeNull();
+};
+
+/**
+ * The same, the other way round: a bot reaches with a play in hand, so the
+ * human host is the one who could call it and has a picker to open.
+ */
+const botDrawsWithAPlay = (room: Room): string => {
+  beginGame(room, room.hostId);
+  const game = room.game;
+  if (!game) throw new Error("no game");
+  const bot = room.seats.find((seat) => seat.bot);
+  if (!bot) throw new Error("no bot");
+
+  game.turnIndex = game.players.findIndex((player) => player.id === bot.id);
+  const held = game.players[game.turnIndex]?.hand[0];
+  if (!held) throw new Error("no cards");
+  game.activeSuit = held.suit;
+
+  const outcome = applySeatIntent(room, bot.id, { type: "drawCard", playerId: bot.id });
+  expect(outcome.ok).toBe(true);
+  expect(room.game?.challenge?.drawerId).toBe(bot.id);
+  return bot.id;
 };
 
 describe("passing the deal", () => {
@@ -177,5 +206,90 @@ describe("bots and the Sunny Rule", () => {
     game.challenge = null;
     nextBotMove(room);
     expect(room.sunnyVerdict).toBeNull();
+  });
+});
+
+describe("holding the table to name a card", () => {
+  it("waits on somebody who has the picker open", () => {
+    const room = seatedRoom();
+    botDrawsWithAPlay(room);
+    expect(callHeldUntil(room)).toBe(0);
+
+    holdCall(room, room.hostId, true, 1000);
+    expect(callHeldUntil(room, 1000)).toBe(1000 + CALL_HOLD_MS);
+  });
+
+  it("stops waiting when they submit, cancel, or go away", () => {
+    const room = seatedRoom();
+    botDrawsWithAPlay(room);
+
+    holdCall(room, room.hostId, true, 1000);
+    holdCall(room, room.hostId, false, 1000);
+    expect(callHeldUntil(room, 1000)).toBe(0);
+
+    holdCall(room, room.hostId, true, 1000);
+    markDisconnected(room, room.hostId);
+    expect(callHeldUntil(room, 1000)).toBe(0);
+  });
+
+  it("gives up on its own, so a dead tab can't strand the table", () => {
+    const room = seatedRoom();
+    botDrawsWithAPlay(room);
+    holdCall(room, room.hostId, true, 1000);
+
+    expect(callHeldUntil(room, 1000 + CALL_HOLD_MS - 1)).toBeGreaterThan(0);
+    expect(callHeldUntil(room, 1000 + CALL_HOLD_MS)).toBe(0);
+
+    // And it stays given up: reopening the picker on the same window doesn't
+    // wind it back on.
+    holdCall(room, room.hostId, true, 1000 + CALL_HOLD_MS);
+    expect(callHeldUntil(room, 1000 + CALL_HOLD_MS)).toBe(0);
+  });
+
+  it("goes with the window it was taken out on", () => {
+    const room = seatedRoom();
+    botDrawsWithAPlay(room);
+    holdCall(room, room.hostId, true, 1000);
+
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    game.challenge = null;
+    expect(callHeldUntil(room, 1000)).toBe(0);
+    expect(room.callHolds).toEqual({});
+  });
+
+  it("is one hold per window, so reopening the picker is not a stall button", () => {
+    const room = seatedRoom();
+    botDrawsWithAPlay(room);
+
+    holdCall(room, room.hostId, true, 1000);
+    const deadline = callHeldUntil(room, 1000);
+
+    // Close it and open it again, twenty seconds later. The table stops
+    // waiting when it was always going to.
+    holdCall(room, room.hostId, false, 21_000);
+    holdCall(room, room.hostId, true, 21_000);
+    expect(callHeldUntil(room, 21_000)).toBe(deadline);
+  });
+
+  it("is refused to anyone who couldn't make the call anyway", () => {
+    const room = seatedRoom();
+    const drawer = botDrawsWithAPlay(room);
+
+    // The drawer can't accuse themselves, and a spectator has no call to make.
+    holdCall(room, drawer, true, 1000);
+    holdCall(room, "nobody-in-particular", true, 1000);
+    expect(callHeldUntil(room, 1000)).toBe(0);
+  });
+
+  it("is refused to a caller still serving a lockout", () => {
+    const room = seatedRoom();
+    botDrawsWithAPlay(room);
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    game.sunnyLockouts[room.hostId] = game.totalDraws + 3;
+
+    holdCall(room, room.hostId, true, 1000);
+    expect(callHeldUntil(room, 1000)).toBe(0);
   });
 });

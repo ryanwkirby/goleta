@@ -56,6 +56,21 @@ interface SunnyVerdict {
   call: boolean;
 }
 
+/** One player, part-way through naming a card. See `holdCall`. */
+interface CallHold {
+  /** The window it was taken out on, so it can't outlive it. */
+  window: string;
+  /** When the table stops waiting, whatever the picker is still showing. */
+  until: number;
+  /**
+   * Whether the picker is open right now. A closed hold is kept rather than
+   * dropped, still carrying the deadline it started with: it is the record of
+   * this player having already had their go at this window, and it is what
+   * makes reopening the picker free of any more time.
+   */
+  open: boolean;
+}
+
 export interface Room {
   code: string;
   hostId: PlayerId;
@@ -79,6 +94,8 @@ export interface Room {
   options: GameOptions;
   /** Seeds the table-wide rolls its bots make. One table, one thread of luck. */
   botSeed: number;
+  /** Who currently has the table waiting on them to name a card, by player. */
+  callHolds: Record<PlayerId, CallHold>;
   sunnyVerdict: SunnyVerdict | null;
   game: GameState | null;
   gamesPlayed: number;
@@ -152,6 +169,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     botSpeed: "human",
     options: DEFAULT_OPTIONS,
     botSeed: newSeed(),
+    callHolds: {},
     sunnyVerdict: null,
     game: null,
     gamesPlayed: 0,
@@ -206,6 +224,9 @@ export const markDisconnected = (room: Room, playerId: PlayerId): void => {
   const seat = seatOf(room, playerId);
   if (!seat) return;
   seat.connected = false;
+  // Whatever they were part-way through deciding, they aren't there to finish
+  // it, and the rest of the table shouldn't sit waiting on a closed tab.
+  delete room.callHolds[playerId];
 
   // The host's powers move on so the table isn't stranded mid-session.
   if (room.hostId === playerId) {
@@ -358,6 +379,103 @@ export const applySeatIntent = (
   }
   touch(room);
   return { ok: true, events: result.events };
+};
+
+/**
+ * How long the table will wait on one player composing a Sunny call.
+ *
+ * A backstop, not a timer anybody is meant to meet: submitting, cancelling and
+ * the window closing all lift the hold at once, and this only ever fires for a
+ * picker nobody is behind any more. Long enough that reading a hand of eight
+ * against the card in play — the whole judgement #50 moved onto the player —
+ * never gets cut off, short enough that a tab that died with it open doesn't
+ * strand everyone else.
+ */
+export const CALL_HOLD_MS = 30_000;
+
+/**
+ * The challenge window a hold belongs to, or null when there is nothing to
+ * call at all.
+ *
+ * Same identity `sunnyVerdict` uses: a drawer and the first card of the
+ * window. Two reaches by the same player are one window; somebody else's reach
+ * is a different one, and holds do not carry across.
+ */
+const challengeKey = (room: Room): string | null => {
+  const challenge = room.game?.challenge ?? null;
+  if (!challenge || challenge.resolved) return null;
+  return `${challenge.drawerId}:${challenge.drawnIds[0] ?? ""}`;
+};
+
+/**
+ * A player has opened, or closed, the picker for naming a card.
+ *
+ * Since #50 a call is three decisions — spot the reach, read the hand they
+ * reached from, pick the card you say they should have played — and the bots'
+ * turn rhythm has no room in it for that. So opening the picker stops them.
+ * What makes this different from the grace period #56 deleted is that it hangs
+ * off something a person actually did, rather than bots idling on every draw
+ * against the possibility that somebody might.
+ *
+ * Only somebody who could really make the call may hold: not the drawer, not a
+ * spectator, and not a caller serving a lockout. The deadline is set once per
+ * window, so reopening the picker buys no more time than opening it did —
+ * otherwise it is a stall button, and one that only the player with a reason
+ * to stall can reach.
+ */
+export const holdCall = (
+  room: Room,
+  playerId: PlayerId,
+  open: boolean,
+  now = Date.now(),
+): void => {
+  const window = challengeKey(room);
+  const held = room.callHolds[playerId];
+
+  if (!open) {
+    // Kept, closed, if it belongs to the window still standing — that record is
+    // what stops a second opening buying a second deadline.
+    if (held && held.window === window) held.open = false;
+    else delete room.callHolds[playerId];
+    return;
+  }
+
+  if (window === null) return;
+  const view = gameViewFor(room, playerId);
+  if (!view?.sunnyCallable || view.sunnyLockedDraws > 0) return;
+  if (held?.window === window) {
+    held.open = true;
+    return;
+  }
+  room.callHolds[playerId] = { window, until: now + CALL_HOLD_MS, open: true };
+};
+
+/**
+ * When the bots may move again, or 0 if nothing is holding them.
+ *
+ * Prunes as it goes: a hold whose window has shut, or whose time is up, is
+ * gone rather than merely ignored.
+ *
+ * **Bots are all this stops.** A person taking their turn is a person playing
+ * the game, and their tap has no business being swallowed because somebody
+ * else is thinking. If a human does close the window while you are choosing,
+ * the picker goes with it — which is also what happens leaning over a real
+ * table, and is already handled at the screen.
+ */
+export const callHeldUntil = (room: Room, now = Date.now()): number => {
+  const window = challengeKey(room);
+  let until = 0;
+  for (const [playerId, hold] of Object.entries(room.callHolds)) {
+    // A record from a window that has shut is spent for good, so it goes. One
+    // whose time is merely up stays — closed or not, it is this player's go at
+    // this window, already taken.
+    if (hold.window !== window) {
+      delete room.callHolds[playerId];
+      continue;
+    }
+    if (hold.open && hold.until > now && hold.until > until) until = hold.until;
+  }
+  return until;
 };
 
 /**

@@ -109,9 +109,24 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   nothing else, and `botPace` has no input that could tell it a call is on
   offer. A window opens on every draw, so a bot that held off would be stalling
   the table almost continuously — and a bot pausing after its own draw so the
-  seat next to it might accuse it is the worst of it. A human therefore has only
-  as long as the next bot's ordinary move to get a call in; that is the accepted
-  cost, not a regression. Don't reintroduce a grace period. (#56)
+  seat next to it might accuse it is the worst of it. Don't reintroduce a grace
+  period. (#56)
+- **They do wait for somebody who has actually opened the picker**, which is a
+  different thing and is not #56 coming back. That grace was bots idling on the
+  *possibility* of a call, on every draw, all game. This hangs off an action a
+  person took: tapping the sun sends `composingCall`, and the bots stop until
+  they submit, cancel, the window shuts, or `CALL_HOLD_MS` runs out. Without it
+  the three decisions #50 moved onto the player — spot the reach, read the hand
+  they reached from, name a card — have to fit inside a beat paced for one tap,
+  and they don't. `DEFAULT_BOT_TIMING` is untouched by any of it: the fix is
+  stopping the clock, not stretching every figure at the table to fit the
+  slowest possible call. (#73)
+- **A hold is never broadcast, and it can't be leaned on.** That somebody is
+  weighing a call is not something the table gets told — it would be a tell
+  about a verdict nothing else here gives away. Bots going quiet is visible, and
+  that is accepted: it says somebody is thinking, not that they are right. Only
+  a viewer who could really call may hold, and the deadline is set once per
+  window, so reopening the picker is not a stall button.
 - **The drawer is never told they've been caught**, and neither is a spectator.
   `sunnyReach` is gated on being able to call. The whole `state.challenge`
   object, snapshot and `violation` and all, never leaves the server.

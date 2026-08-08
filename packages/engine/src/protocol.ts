@@ -73,6 +73,15 @@ export type ClientMessage =
   | { t: "setBotSpeed"; speed: BotSpeed }
   /** Host only, between games: which rules this table plays by. */
   | { t: "setHouseRules"; rules: HouseRules }
+  /**
+   * "I've opened the picker to name a card", and then "I'm done with it".
+   *
+   * Holds the bots while a call is being composed, so the window can't shut
+   * under somebody part-way through deciding. Nothing about it is broadcast:
+   * that a player is considering a call is not something the rest of the table
+   * gets told. See `holdCall`.
+   */
+  | { t: "composingCall"; open: boolean }
   /** "I'm stuck." Turns your own highlights back on, and tells the table. */
   | { t: "help" }
   | { t: "ping" };

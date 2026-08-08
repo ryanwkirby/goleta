@@ -151,10 +151,25 @@ export function Table({
    * Tapping the sun no longer calls anything — it opens the picker. An
    * accusation has to name a card, so the tap that starts one can't be the tap
    * that commits it.
+   *
+   * Opening it also stops the bots, which is what makes three decisions fit in
+   * a window paced for one tap. The server decides whether to honour that and
+   * for how long; all this end does is say the picker is open, and say so again
+   * when it isn't.
    */
-  const startAccusing = (playerId: string): void => setAccusing(playerId);
+  const startAccusing = (playerId: string): void => {
+    setAccusing(playerId);
+    send({ t: "composingCall", open: true });
+  };
+
+  const stopAccusing = useCallback((): void => {
+    setAccusing(null);
+    send({ t: "composingCall", open: false });
+  }, [send]);
 
   const accuse = (cardId: string): void => {
+    // No release sent: the call shuts its own window, which drops the hold
+    // server-side. Sending one as well would only race the intent it follows.
     setAccusing(null);
     send({ t: "intent", intent: { type: "callSunny", playerId: game.you ?? "", cardId } });
   };
@@ -164,8 +179,8 @@ export function Table({
   // can no longer name.
   const stillAccusable = game.sunnyCallable && game.sunnyTargetId === accusing;
   useEffect(() => {
-    if (accusing !== null && !stillAccusable) setAccusing(null);
-  }, [accusing, stillAccusable]);
+    if (accusing !== null && !stillAccusable) stopAccusing();
+  }, [accusing, stillAccusable, stopAccusing]);
 
   /**
    * Whether the table is marking up your playable cards. Your first game can
@@ -322,7 +337,7 @@ export function Table({
             targetName={nameOf(accusing)}
             reach={game.sunnyReach}
             onPick={accuse}
-            onCancel={() => setAccusing(null)}
+            onCancel={stopAccusing}
           />
         ) : null}
 

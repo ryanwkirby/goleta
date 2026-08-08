@@ -23,8 +23,10 @@ import {
   addBot,
   applySeatIntent,
   beginGame,
+  callHeldUntil,
   findRoom,
   gameViewFor,
+  holdCall,
   joinRoom,
   markDisconnected,
   nextBotMove,
@@ -169,6 +171,22 @@ export const attachSockets = (
 
   const scheduleBots = (room: Room): void => {
     if (botTimers.has(room.code)) return;
+
+    // Somebody has the picker open and is choosing a card to name. The table
+    // waits on them rather than letting a bot shut the window they're deciding
+    // in — see `holdCall`. Re-checked when the wait is up rather than acted on
+    // then, since the hold may have been lifted and replaced in the meantime.
+    const heldUntil = callHeldUntil(room);
+    if (heldUntil > 0) {
+      const wait = setTimeout(() => {
+        botTimers.delete(room.code);
+        scheduleBots(room);
+      }, heldUntil - Date.now());
+      wait.unref?.();
+      botTimers.set(room.code, wait);
+      return;
+    }
+
     const move = nextBotMove(room);
     if (!move) {
       botTurns.delete(room.code);
@@ -192,6 +210,25 @@ export const attachSockets = (
     }, paceFor(room, move));
     timer.unref?.();
     botTimers.set(room.code, timer);
+  };
+
+  /**
+   * Throw away the move on the clock and work the next one out from scratch.
+   *
+   * A hold going up has to pre-empt a bot already scheduled, or that bot acts
+   * anyway and shuts the very window the hold exists to keep open. Coming down
+   * has to do the same in reverse, so the table starts moving again the moment
+   * the caller is done rather than at a deadline nobody is waiting on.
+   *
+   * It restarts the pace of whatever was pending, which only ever means a bot
+   * call sitting on its own `call` figure: any bot with an ordinary move to
+   * make is waiting on a window that a hold cannot exist inside.
+   */
+  const restartBots = (room: Room): void => {
+    const pending = botTimers.get(room.code);
+    if (pending) clearTimeout(pending);
+    botTimers.delete(room.code);
+    scheduleBots(room);
   };
 
   const attach = (client: Client, room: Room, playerId: PlayerId | null, token: string | null) => {
@@ -233,7 +270,10 @@ export const attachSockets = (
         const outcome = applySeatIntent(room, playerId, message.intent);
         if (!outcome.ok) throw new RoomError(outcome.error ?? "that move isn't allowed");
         broadcast(room, outcome.events);
-        return scheduleBots(room);
+        // Restarted rather than scheduled: a call submitted from the picker
+        // shuts its own window, which lifts the hold, and the table should get
+        // going again now rather than when that hold would have expired.
+        return restartBots(room);
       }
       case "start": {
         const events = beginGame(room, playerId);
@@ -249,6 +289,12 @@ export const attachSockets = (
       case "setHouseRules":
         setHouseRules(room, playerId, message.rules);
         return broadcast(room);
+      case "composingCall":
+        // No broadcast: whether somebody is weighing a call is theirs, and
+        // telling the table would be a tell about a verdict nothing else here
+        // gives away.
+        holdCall(room, playerId, message.open === true);
+        return restartBots(room);
       case "help": {
         // Silently dropped rather than refused: a rejected "help" would put an
         // error banner in front of the one player already asking for a hand.
@@ -294,6 +340,9 @@ export const attachSockets = (
       if (!room) return;
       markDisconnected(room, client.playerId);
       broadcast(room);
+      // They may have gone with the picker still open, so the table could be
+      // waiting on a screen that isn't there any more.
+      restartBots(room);
     });
   });
 

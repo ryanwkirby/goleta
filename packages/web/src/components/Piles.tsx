@@ -1,8 +1,20 @@
-import type { GameView } from "@goleta/engine";
+import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitBadge } from "./Card.tsx";
+import { SunnyPeel } from "./Sunny.tsx";
+
+/**
+ * A judged Sunny call, being shown its working at the pile. Null the rest of
+ * the time, which is nearly always.
+ */
+export interface Peel {
+  evidence: SunnyEvidence;
+  named: Card;
+  callerName: string;
+  targetName: string;
+}
 
 /**
  * A word under a pile, or the room one would take.
@@ -20,10 +32,12 @@ export function Piles({
   game,
   canDraw,
   onDraw,
+  peel = null,
 }: {
   game: GameView;
   canDraw: boolean;
   onDraw: () => void;
+  peel?: Peel | null;
 }) {
   const { anchor, pileFace } = useMotion();
   // The state's top card is the one that has *finished* arriving. While a card
@@ -35,9 +49,14 @@ export function Piles({
   const suitOverridden = game.activeSuit !== shown.suit;
   const cardsLeft = game.drawPileSize;
 
+  // Everything that isn't the evidence steps back while the peel is up. It also
+  // keeps the fan legible where it overhangs the deck or the called suit —
+  // nothing here moves or unmounts, so every anchor stays exactly where it was.
+  const aside = peel ? "opacity-25 transition-opacity duration-300" : "transition-opacity";
+
   return (
     <div className="flex items-center justify-center gap-6">
-      <div className="flex flex-col items-center gap-1.5">
+      <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
         {/*
           Tappable whenever it's your turn, including when you're holding a
           playable card. Drawing then breaks the rules, and letting you do it
@@ -74,23 +93,31 @@ export function Piles({
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
-        {face ? (
-          <PlayingCard card={face} size="lg" anchor={anchor(PILE)} />
-        ) : (
-          <div
-            ref={anchor(PILE)}
-            aria-hidden
-            className="h-32 w-24 rounded-xl border border-dashed border-white/15"
-          />
-        )}
+        {/* The peel is drawn out of this box, so it hangs off the pile without
+            being part of the row: the pile keeps its place, its size and the
+            `PILE` anchor that in-flight cards are aiming at. */}
+        <div className="relative">
+          {face ? (
+            <PlayingCard card={face} size="lg" anchor={anchor(PILE)} />
+          ) : (
+            <div
+              ref={anchor(PILE)}
+              aria-hidden
+              className="h-32 w-24 rounded-xl border border-dashed border-white/15"
+            />
+          )}
+          {peel ? <SunnyPeel {...peel} /> : null}
+        </div>
         {/* `showing` earns its place — paired with `called` under the badge it
             is what explains that the card you can see is not the suit in play.
-            The count of cards already played explained nothing. */}
-        <Caption>{suitOverridden ? "showing" : undefined}</Caption>
+            The count of cards already played explained nothing. It says nothing
+            worth having under a peel, though: the card it is about is the one
+            the evidence is covering up, and the peel labels its own cards. */}
+        <Caption>{suitOverridden && !peel ? "showing" : undefined}</Caption>
       </div>
 
       {suitOverridden ? (
-        <div className="flex flex-col items-center gap-1.5">
+        <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
           <div className="flex h-32 items-center">
             <SuitBadge suit={game.activeSuit} className="text-base" />
           </div>

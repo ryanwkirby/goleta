@@ -6,6 +6,7 @@ import {
   currentPlayer,
   topCard,
   type GameState,
+  type SunnyEvidence,
 } from "../src/index.ts";
 import {
   allCardIds,
@@ -23,6 +24,16 @@ import {
 
 const call = (state: GameState, playerId: string, spec: string): GameState =>
   must(state, { type: "callSunny", playerId, cardId: card(spec).id });
+
+/** The same call, judged for its evidence rather than for what it does. */
+const evidenceOf = (state: GameState, callerId: string, spec: string): SunnyEvidence => {
+  const intent = { type: "callSunny", playerId: callerId, cardId: card(spec).id } as const;
+  const result = applyIntent(state, intent);
+  if (!result.ok) throw new Error(result.error);
+  const called = result.events.find((event) => event.type === "sunnyCalled");
+  if (called?.type !== "sunnyCalled") throw new Error("no call was announced");
+  return called.evidence;
+};
 
 /** a is holding a playable 5H and draws anyway. */
 const caughtInTheAct = (): GameState =>
@@ -309,6 +320,9 @@ describe("a wrong call", () => {
       correct: false,
       // A miss rewinds nothing, so it takes nothing back.
       returned: [],
+      // It still shows its working: the same evidence a landed call shows, so
+      // the table reads the verdict off the two cards rather than the wording.
+      evidence: { inPlay: card("5S"), activeSuit: "S", since: [] },
     });
   });
 
@@ -339,6 +353,7 @@ describe("a wrong call", () => {
         drawerId: "a",
         drawnIds: [],
         reach: { hand: cards("2C"), activeSuit: "S", topRank: "5" },
+        reachPile: { inPlay: card("5S"), ids: [card("5S").id] },
         violation: null,
         resolved: false,
       },
@@ -754,5 +769,103 @@ describe("reaching for an empty deck", () => {
     recycling = draw(recycling, "a");
     expect(recycling.challenge).not.toBeNull();
     expect(recycling.totalDraws).toBe(1);
+  });
+});
+
+/**
+ * What a judged call hands the table so it can read the ruling for itself: the
+ * card that was in play when the offender reached, and whatever has landed on
+ * top of it since. Set the named card beside it and the verdict is legible
+ * without anybody being told it. (#63)
+ */
+describe("the evidence a judged call sends", () => {
+  it("names the card that was in play when they reached, on a call that lands", () => {
+    expect(evidenceOf(caughtInTheAct(), "b", "5H")).toEqual({
+      inPlay: card("5S"),
+      activeSuit: "S",
+      since: [],
+    });
+  });
+
+  it("sends the same shape for a call that missed", () => {
+    // 2C and 4H are both dead against the 5S, so the draw was honest and the
+    // call is wrong — and the table still gets the pair, because the difference
+    // it is meant to see is that the two cards don't match.
+    const honest = draw(
+      table({
+        hands: { a: ["2C", "4H"], b: ["9C", "10C"], c: ["4D"] },
+        top: "5S",
+        drawPile: ["QD", "KD"],
+      }),
+      "a",
+    );
+    expect(evidenceOf(honest, "b", "2C")).toEqual({
+      inPlay: card("5S"),
+      activeSuit: "S",
+      since: [],
+    });
+  });
+
+  it("peels back past what the offender played after the offence", () => {
+    // a reaches while holding the playable 5H, then plays it anyway. The card
+    // the accusation names is now in the pile rather than in their hand, and
+    // the evidence has to say where.
+    let state = caughtInTheAct();
+    state = play(state, "a", "5H");
+    expect(topCard(state).id).toBe("5H#1");
+
+    const evidence = evidenceOf(state, "b", "5H");
+    expect(evidence.inPlay).toEqual(card("5S"));
+    expect(evidence.since.map((c) => c.id)).toEqual(["5H#1"]);
+  });
+
+  it("describes the board as it was, not as a wild 8 has since left it", () => {
+    // The offence, then an 8 played on top of it that renames the suit. The
+    // evidence is the position the accusation is judged against, so it is the
+    // spade that was in play — a diamond here would rule the pair unreadable.
+    let state = draw(
+      table({
+        hands: { a: ["5H", "8C"], b: ["9C"], c: ["4D"] },
+        top: "5S",
+        drawPile: ["QD", "KD"],
+      }),
+      "a",
+    );
+    state = play(state, "a", "8C");
+    state = must(state, { type: "chooseSuit", playerId: "a", suit: "D" });
+    expect(state.activeSuit).toBe("D");
+
+    expect(evidenceOf(state, "b", "5H")).toEqual({
+      inPlay: card("5S"),
+      activeSuit: "S",
+      since: cards("8C"),
+    });
+  });
+
+  it("says nothing about what is buried under the pile, or in the deck", () => {
+    const state = draw(
+      table({
+        hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] },
+        top: "5S",
+        drawPile: ["QD", "KD"],
+        buriedDiscards: ["KC", "QC"],
+      }),
+      "a",
+    );
+    const wire = JSON.stringify(evidenceOf(state, "b", "5H"));
+    // Only the card in play, never the pile it is sitting on: the peel is a
+    // slice off the top, not the archaeology of the whole game.
+    expect(wire).not.toMatch(/KC#1|QC#1/);
+    // And nothing from the deck, which is the one thing the table never learns
+    // early. `KD#1` is the card the offender drew and `QD#1` the next one down.
+    expect(wire).not.toMatch(/KD#1|QD#1/);
+  });
+
+  it("is built fresh for each call rather than kept on the state", () => {
+    // The challenge carries what it needs to build one — the pile at the reach,
+    // frozen with the reach itself — and nothing shaped like an answer.
+    const state = caughtInTheAct();
+    expect(state.challenge?.reachPile).toEqual({ inPlay: card("5S"), ids: ["5S#1"] });
+    expect(JSON.stringify(state.challenge)).not.toContain("evidence");
   });
 });

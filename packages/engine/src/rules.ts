@@ -21,6 +21,9 @@ import {
   type Intent,
   type PlayerId,
   type PlayerState,
+  type Challenge,
+  type ReachPile,
+  type SunnyEvidence,
   type SunnyReach,
   type TurnUpReason,
 } from "./types.ts";
@@ -271,8 +274,17 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   // The hand and the board exactly as they stand right now, before anything
   // about this reach is resolved — what an accusation of this draw is judged
   // against, and all a caller is ever shown to accuse from.
+  //
+  // The pile is frozen from the same instant and travels with it. Only a call
+  // that has been judged is ever shown it, but it has to be taken *now*: by the
+  // time a call is made the offender may have played on top of the card they
+  // reached against, and a wrong call — where there is no `violation.snapshot`
+  // to read it back out of — has just as much of a pile to peel as a right one.
   const reach = watching
     ? { hand: [...player.hand], activeSuit: s.activeSuit, topRank: topCard(s).rank }
+    : null;
+  const reachPile: ReachPile | null = watching
+    ? { inPlay: topCard(s), ids: s.discardPile.map((c) => c.id) }
     : null;
 
   // An empty deck is recycled first, and that recycle is the whole of this
@@ -287,7 +299,9 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   if (s.drawPile.length === 0) {
     // Every card is in somebody's hand. Nothing to draw, so the turn ends.
     if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
-    else if (reach) recordDraw(s, player.id, null, inViolation, snapshot, reach);
+    else if (reach && reachPile) {
+      recordDraw(s, player.id, null, inViolation, snapshot, reach, reachPile);
+    }
     return null;
   }
 
@@ -295,7 +309,7 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   player.hand.push(card);
   s.drawsThisTurn += 1;
   events.push({ type: "drew", playerId: player.id, card });
-  if (reach) recordDraw(s, player.id, card, inViolation, snapshot, reach);
+  if (reach && reachPile) recordDraw(s, player.id, card, inViolation, snapshot, reach, reachPile);
 
   const stillStuck = !mustPlay(s, player);
   if (stillStuck && (s.drawsThisTurn >= MAX_DRAWS_PER_TURN || !canRefill(s))) {
@@ -379,7 +393,19 @@ const handleCallSunny = (
   // watch that happen rather than find it already done. A call that missed
   // rewinds nothing, so it returns nothing.
   const returned = correct && challenge.violation ? findCards(s, challenge.violation.touchedIds) : [];
-  events.push({ type: "sunnyCalled", callerId, targetId, card: accused, correct, returned });
+  // Read before the rewind too, and for the same reason: a moment from now the
+  // restored snapshot will have taken the cards played since the offence back
+  // off the pile, and the evidence is what the pile looked like until then.
+  const evidence = sunnyEvidence(s, challenge);
+  events.push({
+    type: "sunnyCalled",
+    callerId,
+    targetId,
+    card: accused,
+    correct,
+    returned,
+    evidence,
+  });
 
   if (!correct) {
     // Nothing happens to either hand — but the caller can't try again until
@@ -417,6 +443,30 @@ const handleCallSunny = (
   s.sunny = { offenderId: targetId, touchedIds };
   s.phase = { kind: "sunnyPlay" };
   return null;
+};
+
+/**
+ * The pile as the offence left it, built for a call that has just been judged.
+ *
+ * Deliberately assembled here rather than lifted out of `violation.snapshot`.
+ * That snapshot is a whole `GameState` — every hand and the entire deck — and it
+ * does not leave this process; this is three named things, each of which the
+ * table watched go face up. It is also the only version that works for a call
+ * that missed, where there is frequently no snapshot to lift anything out of.
+ *
+ * `since` is what is in the pile now and wasn't at the reach, in the order it
+ * was played. Matching by identity rather than by counting means a recycle
+ * mid-window — the one thing that can shuffle the pile away underneath an open
+ * challenge — leaves nothing recognisable on top rather than a slice of
+ * nonsense, and the peel degrades to the two cards that decide it.
+ */
+const sunnyEvidence = (s: GameState, challenge: Challenge): SunnyEvidence => {
+  const alreadyThere = new Set(challenge.reachPile.ids);
+  return {
+    inPlay: challenge.reachPile.inPlay,
+    activeSuit: challenge.reach.activeSuit,
+    since: s.discardPile.filter((card) => !alreadyThere.has(card.id)),
+  };
 };
 
 /**
@@ -525,12 +575,25 @@ const recordDraw = (
   inViolation: boolean,
   snapshot: GameState | null,
   reach: SunnyReach,
+  reachPile: ReachPile,
 ): void => {
   if (!s.challenge || s.challenge.drawerId !== playerId) {
-    s.challenge = { drawerId: playerId, drawnIds: [], reach, violation: null, resolved: false };
+    s.challenge = {
+      drawerId: playerId,
+      drawnIds: [],
+      reach,
+      reachPile,
+      violation: null,
+      resolved: false,
+    };
   }
   const challenge = s.challenge;
-  if (!challenge.violation) challenge.reach = reach;
+  // Frozen together or not at all: the pile is only ever read against the reach
+  // it was taken with.
+  if (!challenge.violation) {
+    challenge.reach = reach;
+    challenge.reachPile = reachPile;
+  }
   // Reaches at the table, counted for the lockouts measured against them. A
   // reach that found nothing at all — an empty deck with nothing to recycle
   // either — isn't one: no card moved and no window opened for it, so it is

@@ -105,6 +105,26 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   reach, because an accusation has to name one of those cards. Nothing says
   which of them was legal. Do not add a `legalCardIds` equivalent for it, do not
   sort it helpfully, and do not dim the cards that wouldn't have played.
+- **A judged call shows its working, and shows the same working either way.**
+  `sunnyCalled` carries `evidence`: the card that was in play at the reach, the
+  suit that had to be matched then, and whatever has landed on the pile since.
+  The table watches the pile peel back to that moment, with the card in play and
+  the card the caller named both marked, before the ruling is announced (#63).
+
+  Three things about it are load-bearing. It goes to **everyone**, offender and
+  spectators included — the verdict is already public in `sunnyCalled.correct`,
+  so the material it was reached on gives nothing else away. A **wrong** call
+  peels identically to a right one; the difference the table reads is whether
+  the two marked cards match, and a peel that only ran for correct calls would
+  be the tell #50 removed, wearing a hat. And **only those two cards are
+  marked** — never the card they should have named, which would answer the
+  question the ruling deliberately leaves open and make the next call automatic.
+
+  It is derived on the way out and never held on the state. `Challenge` carries
+  `reachPile` — the pile frozen at the same instant as `reach`, and by the same
+  rule — because the offender may play on top of the card they reached against
+  before anybody calls, and a wrong call usually has no `violation.snapshot` to
+  read anything out of. The snapshot itself still never leaves the server.
 - **Bots never wait for a Sunny window.** Their pacing is turn rhythm and
   nothing else, and `botPace` has no input that could tell it a call is on
   offer. A window opens on every draw, so a bot that held off would be stalling
@@ -129,7 +149,9 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   window, so reopening the picker is not a stall button.
 - **The drawer is never told they've been caught**, and neither is a spectator.
   `sunnyReach` is gated on being able to call. The whole `state.challenge`
-  object, snapshot and `violation` and all, never leaves the server.
+  object, snapshot and `violation` and all, never leaves the server. That gate
+  is about a *live* window: once a call has been judged, `sunnyCalled.evidence`
+  goes to the whole table, because by then there is nothing left to give away.
 - **A wrong call costs no cards.** It locks the caller out for three draws
   (`SUNNY_LOCKOUT_DRAWS`) and that is all. The old card forfeit was a
   digital-era invention to stop free guessing; the game's original written rules

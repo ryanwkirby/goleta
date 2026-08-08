@@ -79,7 +79,9 @@ them and `events` go out whole, the same bytes to everybody seated.
 
 Whether a draw was actually illegal is not on that list because it is not on any
 list: no field carries it. `challenge.violation` stays on the server, and
-nothing is derived from it on the way out.
+nothing is derived from it on the way out. Two things *are* derived from the
+challenge — `sunnyReach` while the window is open, and `sunnyCalled.evidence`
+once a call has been judged — and neither reads `violation`.
 
 ### What it does send about the challenge window
 
@@ -105,6 +107,26 @@ An earlier revision (#31) did send the answer, as `sunnyWouldLand`, behind a
 ten-second glow. #50 removed it: requiring the caller to name a card makes a
 wrong call specific enough to stand on its own, so the tell was no longer
 buying anything.
+
+### What a judged call sends, on the event
+
+`sunnyCalled` carries `evidence`: the card that was in play at the reach, the
+suit that had to be matched then, and the cards that have landed on the pile
+since. It is what the table peels the pile back to, so the ruling can be read
+off two cards rather than taken on faith (#63).
+
+It rides on the event rather than on `GameView` deliberately. Events describe
+things that happened in the open and are broadcast whole, which is exactly what
+a judged call is; hanging it there keeps it transient, keeps it out of the
+persisted shape, and leaves the rule that `state.challenge` never leaves the
+server intact everywhere else. It also reaches the offender and spectators,
+which is right — once a call has been judged, everyone is told.
+
+It is a purpose-built payload, derived on the way out. The snapshot it could
+have been lifted from is an entire `GameState`, and it stays where it is. Every
+card in `evidence` went face up in front of the table when it was played, so
+none of it is a disclosure; nothing from the deck is reachable through it, and
+there is no version of it for a window still open.
 
 ## House rules
 

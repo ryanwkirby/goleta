@@ -501,9 +501,18 @@ export function Lobby({
 
         <ul className="mt-3 space-y-1.5">
           {room.seats.map((seat, index) => (
+            /*
+              Held at the height of the tallest row rather than fitted to its own
+              contents. The host's row is the one with no remove button on it, so
+              nothing inside it reaches `Button`'s `min-h-11` and it came out
+              24px shorter than every row under it — a list whose odd one out is
+              the row belonging to whoever is reading the screen. `min-h-16` is
+              that button plus the row's own padding, which is what the seats
+              carrying controls already measure.
+            */
             <li
               key={seat.id}
-              className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
+              className="flex min-h-16 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
             >
               {numbered ? (
                 <span className="w-4 shrink-0 text-xs tabular-nums text-white/30">{index + 1}</span>

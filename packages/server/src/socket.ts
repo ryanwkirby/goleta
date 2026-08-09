@@ -35,6 +35,7 @@ import {
   rejoinRoom,
   removeSeat,
   roomView,
+  seatOf,
   setBotSpeed,
   setHouseRules,
   setIrl,
@@ -268,6 +269,22 @@ export const attachSockets = (
     if (!client.code) throw new RoomError("Join a room first");
     const room = findRoom(store, client.code);
     const playerId = client.playerId;
+    /**
+     * The shared table screen's one auxiliary action: tapping its draw pile
+     * draws for whoever is on the clock (#120).
+     *
+     * The `table` bit is the client's own word for what it is, so this is a
+     * narrowing rather than a permission — see `docs/PROTOCOL.md`. What holds
+     * the line is the conditions around it: `drawCard` only, an IRL room only,
+     * and a seat with a person behind it.
+     *
+     * That last one is the point of `bot`. The pile is drawn tappable to the
+     * whole room and a bot's turn goes past under a finger already reaching, so
+     * without it a tap lands on the bot — and a bot made to draw while holding a
+     * play has been handed a Sunny violation it did not choose, by somebody who
+     * isn't even at the table. Bots are paced and decided on the server for
+     * exactly that reason; nothing off a screen gets to move them.
+     */
     if (
       !playerId &&
       client.table &&
@@ -278,6 +295,7 @@ export const attachSockets = (
     ) {
       const tablePlayerId = room.game.players[room.game.turnIndex]?.id;
       if (!tablePlayerId) throw new RoomError("No player is up");
+      if (seatOf(room, tablePlayerId)?.bot) throw new RoomError("That seat plays itself");
       const outcome = applySeatIntent(room, tablePlayerId, message.intent);
       if (!outcome.ok) throw new RoomError(outcome.error ?? "That move isn't allowed");
       broadcast(room, outcome.events);

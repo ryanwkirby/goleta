@@ -177,8 +177,16 @@ function Playing({
 }) {
   const finished = game.status === "over";
   const asking = new Set(shouts.map((shout) => shout.playerId));
+  // The same conditions the server checks, so the pile is only offered when the
+  // tap will land — including the bot one: a bot's turn passes under a finger
+  // already on its way down, and nothing off this screen moves a bot.
+  const seatOnClock = room.seats.find((seat) => seat.id === game.waitingOn);
   const canDraw =
-    room.irl && game.phase.kind === "action" && !finished && game.waitingOn !== null;
+    room.irl &&
+    game.phase.kind === "action" &&
+    !finished &&
+    seatOnClock !== undefined &&
+    !seatOnClock.bot;
   const latest = log[0]?.event ?? null;
 
   return (

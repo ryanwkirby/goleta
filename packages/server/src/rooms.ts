@@ -162,7 +162,7 @@ const touch = (room: Room): void => {
   room.updatedAt = Date.now();
 };
 
-const seatOf = (room: Room, playerId: PlayerId): Seat | undefined =>
+export const seatOf = (room: Room, playerId: PlayerId): Seat | undefined =>
   room.seats.find((seat) => seat.id === playerId);
 
 export const roomStatus = (room: Room): RoomView["status"] => {

@@ -284,7 +284,32 @@ export function Table({
         <header className="flex items-center gap-2 text-xs text-white/50">
           <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
-          <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
+          {/* The host's reach for the room flag once the lobby is behind them.
+              It is allowed to move mid-game precisely so a table that works out
+              halfway through a hand that they are all sat together can say so,
+              and a control only in the lobby would make that unreachable. */}
+          {room.hostId === game.you ? (
+            <Button
+              variant="ghost"
+              className="ml-auto px-2 py-1 text-xs"
+              role="switch"
+              aria-checked={room.irl}
+              aria-label="We're all in the same room"
+              title={
+                room.irl
+                  ? "Everyone's in the same room. Tap to turn it off."
+                  : "Tap if you're all sitting in the same room."
+              }
+              onClick={() => send({ t: "setIrl", on: !room.irl })}
+            >
+              same room: {room.irl ? "on" : "off"}
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            className={[room.hostId === game.you ? "" : "ml-auto", "px-2 py-1 text-xs"].join(" ")}
+            onClick={onShowRules}
+          >
             rules
           </Button>
           <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onLeave}>

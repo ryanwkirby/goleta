@@ -56,6 +56,13 @@ export interface RoomView {
   botSpeed: BotSpeed;
   /** What this table is playing. Applies at the next deal, not to a live game. */
   houseRules: HouseRules;
+  /**
+   * "We are all sitting in the same room." Presentation, not a rule: it changes
+   * how a phone draws the table and nothing about what is legal, so it lives
+   * here beside `botSpeed` rather than on `HouseRules`, and `packages/engine`
+   * never learns it exists.
+   */
+  irl: boolean;
 }
 
 export type ClientMessage =
@@ -71,6 +78,16 @@ export type ClientMessage =
   | { t: "removeSeat"; playerId: PlayerId }
   /** Host only, between games: how fast the bots at this table play. */
   | { t: "setBotSpeed"; speed: BotSpeed }
+  /**
+   * Host only, at any time: whether this table is sitting in the same room.
+   *
+   * Unlike bot speed and house rules it is *not* frozen mid-game. Those two are
+   * frozen because changing them moves a challenge window somebody may be
+   * watching, or changes what is legal under a live hand. Neither applies to a
+   * flag no timer and no rule reads: a table three turns in that realises they
+   * are all sat together should be able to say so there and then.
+   */
+  | { t: "setIrl"; on: boolean }
   /** Host only, between games: which rules this table plays by. */
   | { t: "setHouseRules"; rules: HouseRules }
   /**
@@ -96,8 +113,19 @@ export type ServerMessage =
    * and it's gone, like speaking.
    */
   | { t: "shout"; playerId: PlayerId; kind: "help" }
-  | { t: "error"; message: string }
+  | { t: "error"; message: string; code?: ErrorCode }
   | { t: "pong" };
+
+/**
+ * A refusal the client has something better to offer for than the sentence.
+ *
+ * Only one so far, and the bar for another is that reading the prose would
+ * otherwise be the only way to tell: a table that scans a QR mid-hand can be
+ * sent to watch instead of being left on a form that will keep failing, and
+ * matching on the wording of an error to work that out is the sort of thing
+ * that breaks the next time somebody rewrites a sentence.
+ */
+export type ErrorCode = "gameUnderWay";
 
 /** Suit names for UI copy, kept next to the protocol so both sides agree. */
 export type SuitKey = Suit;

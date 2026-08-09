@@ -134,6 +134,43 @@ function HouseRulesPicker({
 }
 
 /**
+ * "Are we all in the same room?"
+ *
+ * Not a house rule and not next to them: it changes nothing about the game,
+ * only about how each phone draws it. The copy says what it is for rather than
+ * naming a layout — nobody sitting down to play has an opinion about landscape
+ * hand views, and everybody has one about whether their friends are in the room.
+ *
+ * The one host control with no "between games only" on it, so it stays put once
+ * a game is running. A table that only works out halfway through the first hand
+ * that they are all sat together shouldn't have to finish the game first.
+ */
+function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <div className="mt-3 flex items-center gap-3 border-t border-white/10 pt-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white">We're all in the same room</p>
+        <p className="text-xs text-white/40">
+          {on
+            ? "Phones show your own hand, big, in landscape. Talk to each other."
+            : "Off. Everyone gets the full table on their own screen."}
+        </p>
+      </div>
+      <Button
+        variant={on ? "primary" : "secondary"}
+        className="min-w-16 px-3 py-1.5 text-xs"
+        role="switch"
+        aria-checked={on}
+        aria-label="We're all in the same room"
+        onClick={() => onChange(!on)}
+      >
+        {on ? "On" : "Off"}
+      </Button>
+    </div>
+  );
+}
+
+/**
  * Only worth showing once there's a bot to pace. It's a table setting rather
  * than a personal one — the bots are timed on the server, so everyone watches
  * the same game.
@@ -265,6 +302,7 @@ export function Lobby({
               {room.gamesPlayed > 0 ? "Next game" : "Deal"}
             </Button>
           </div>
+          <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
           <HouseRulesPicker
             rules={room.houseRules}
             onChange={(rules) => send({ t: "setHouseRules", rules })}
@@ -279,6 +317,11 @@ export function Lobby({
       ) : (
         <Panel className="text-center text-sm text-white/60">
           Waiting for {room.seats.find((seat) => seat.isHost)?.name ?? "the host"} to deal.
+          {room.irl ? (
+            <span className="mt-1 block text-xs text-white/40">
+              Everyone's in the same room — turn your phone sideways when the cards come out.
+            </span>
+          ) : null}
           <span className="mt-1 block text-xs text-white/40">{describeRules(room.houseRules)}</span>
           {anyBots ? (
             <span className="mt-1 block text-xs text-white/40">

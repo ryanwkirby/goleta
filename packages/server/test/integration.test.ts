@@ -289,6 +289,32 @@ describe("a room over the wire", () => {
     host.send({ t: "setBotSpeed", speed: "lightning" });
     await guest.until((c) => c.room?.botSpeed === "lightning");
   }, 20_000);
+
+  it("lets the host flip IRL mode with a game already running", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+
+    const guest = await openClient(server.port);
+    guest.send({ t: "join", code: host.code as string, name: "Sam" });
+    await guest.until((c) => c.room !== null);
+    expect(guest.room?.irl).toBe(false);
+
+    guest.send({ t: "setIrl", on: true });
+    await guest.until((c) => c.errors.length > 0);
+    expect(guest.errors.at(-1)).toMatch(/only the host/);
+
+    await fillTable(host);
+    host.send({ t: "start" });
+    await host.until((c) => c.room?.status === "playing");
+
+    // Bot speed would be refused here. This one isn't, because nothing that is
+    // running reads it — and it reaches everyone at the table.
+    host.send({ t: "setIrl", on: true });
+    await guest.until((c) => c.room?.irl === true);
+    expect(guest.room?.status).toBe("playing");
+  }, 20_000);
 });
 
 describe("coming back", () => {
@@ -343,6 +369,8 @@ describe("coming back", () => {
     await fillTable(host);
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
+    host.send({ t: "setIrl", on: true });
+    await host.until((c) => c.room?.irl === true);
     const cardsBefore = host.game?.players.find((p) => p.id === playerId)?.cardCount;
 
     // The deploy: process goes away, disk stays.
@@ -362,6 +390,9 @@ describe("coming back", () => {
 
     expect(returning.room?.status).toBe("playing");
     expect(returning.game?.players.find((p) => p.id === playerId)?.cardCount).toBe(cardsBefore);
+    // Room state, so it is in the snapshot: a table that came back after a
+    // redeploy is still a table sitting in the same room.
+    expect(returning.room?.irl).toBe(true);
   }, 30_000);
 });
 

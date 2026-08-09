@@ -21,6 +21,7 @@ import {
   nextBotMove,
   roomView,
   setBotSpeed,
+  setIrl,
   type Room,
 } from "../src/rooms.ts";
 
@@ -159,6 +160,44 @@ describe("bot speed", () => {
     beginGame(room, room.hostId);
     expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/wait for this game/);
     expect(room.botSpeed).toBe("human");
+  });
+});
+
+describe("IRL mode", () => {
+  it("is off by default, so an online room is untouched", () => {
+    expect(roomView(seatedRoom()).irl).toBe(false);
+  });
+
+  it("is the host's to set", () => {
+    const room = seatedRoom();
+    const guest = room.seats[1]?.id ?? "";
+
+    expect(() => setIrl(room, guest, true)).toThrow(/only the host/);
+    expect(room.irl).toBe(false);
+  });
+
+  it("can be turned on with a game already running, unlike bot speed", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+
+    // The point of the flag: nothing it touches is running, so nothing about a
+    // live hand stops it moving.
+    setIrl(room, room.hostId, true);
+    expect(roomView(room).irl).toBe(true);
+    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/wait for this game/);
+  });
+
+  it("leaves the game itself alone", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    const before = JSON.stringify(room.game);
+
+    setIrl(room, room.hostId, true);
+    setIrl(room, room.hostId, false);
+
+    // No timer moved, no window shifted, no card went anywhere: the engine
+    // never learns this flag exists.
+    expect(JSON.stringify(room.game)).toBe(before);
   });
 });
 

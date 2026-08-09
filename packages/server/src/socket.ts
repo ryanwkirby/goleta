@@ -36,6 +36,7 @@ import {
   roomView,
   setBotSpeed,
   setHouseRules,
+  setIrl,
   type Room,
   type RoomStore,
   type Seat,
@@ -285,6 +286,11 @@ export const attachSockets = (
         return broadcast(room);
       case "setBotSpeed":
         setBotSpeed(room, playerId, message.speed);
+        return broadcast(room);
+      case "setIrl":
+        // No "wait for this game to finish" guard, unlike the two above: this
+        // one reaches nothing that is running. See `setIrl`.
+        setIrl(room, playerId, message.on);
         return broadcast(room);
       case "setHouseRules":
         setHouseRules(room, playerId, message.rules);

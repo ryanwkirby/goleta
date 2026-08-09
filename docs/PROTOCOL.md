@@ -48,6 +48,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `addBot` / `removeSeat` | host | Between games only. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
+| `setIrl` | host | **Any time, including mid-game.** "We're all in the same room"; carried back to everyone on `RoomView`. |
 | `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
@@ -144,6 +145,28 @@ cannot be reached from a browser.
 With `sunny` off, the three challenge-window fields above are inert for
 everyone — `sunnyCallable` false, `sunnyReach` null, `sunnyLockedDraws` zero —
 because no challenge window is ever opened in the first place.
+
+## IRL mode
+
+`RoomView.irl` says this table is sitting in the same room, each holding their
+own phone. The host sets it with `{ t: "setIrl", on }`, and it defaults to off,
+so an online room behaves exactly as it did before the flag existed.
+
+**It is not a house rule, and deliberately not on `HouseRules`.** Everything
+there changes what is legal, is mapped onto `GameOptions`, and reaches
+`applyIntent`. This changes nothing the engine can see: it is presentation, and
+putting it on the rules path would hand the engine an input it must ignore and a
+`GameOptions` field that means nothing to a simulation. It belongs beside
+`botSpeed` — a property of the room.
+
+**It is also the one host setting not frozen mid-game.** Bot speed is frozen
+because changing the pace moves a challenge window somebody may already be
+watching; house rules are frozen because rules changing under a live hand is
+incoherent. Neither applies here. No timer reads it, no legality turns on it,
+and the server does no more than copy it to every client — so a table that gets
+three turns in and realises they are all sat together can flip it there and then.
+
+It is room state, so it is in the snapshot and survives a redeploy.
 
 ## Bots
 

@@ -87,6 +87,13 @@ export interface Room {
    */
   botSpeed: BotSpeed;
   /**
+   * Whether this table is sitting in the same room, each holding their own
+   * phone. Presentation and nothing else: no rule, no timer and no legality
+   * reads it, which is why — unlike bot speed and the house rules below — it
+   * can be changed with a game already running.
+   */
+  irl: boolean;
+  /**
    * This table's house rules, chosen in the lobby and applied at the next deal.
    * Held on the room rather than read off the game so a table keeps its rules
    * between games — and so they can be changed while no game is running.
@@ -167,6 +174,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     seats: [seat],
     dealerId: null,
     botSpeed: "human",
+    irl: false,
     options: DEFAULT_OPTIONS,
     botSeed: newSeed(),
     callHolds: {},
@@ -265,6 +273,26 @@ export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): 
   if (speed !== "human" && speed !== "lightning") fail("no such speed");
 
   room.botSpeed = speed;
+  touch(room);
+};
+
+/**
+ * Whether this table is all in one room, said by the host.
+ *
+ * The one host power with no "wait for this game to finish" on it, and
+ * deliberately so. `setBotSpeed` and `setHouseRules` are frozen mid-game
+ * because each of them reaches something live — a challenge window whose pace
+ * somebody is already watching, or what is legal under a hand already dealt.
+ * This reaches nothing: the engine never sees it, no timer reads it, and every
+ * client that gets it does no more than draw the same game differently. A
+ * table that gets three turns in and realises they are all sat together can
+ * say so there and then.
+ */
+export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
+  requireHost(room, byPlayerId);
+  if (typeof on !== "boolean") fail("IRL mode is on or off");
+
+  room.irl = on;
   touch(room);
 };
 
@@ -556,6 +584,7 @@ export const roomView = (room: Room): RoomView => ({
   lastWinnerId: room.lastWinnerId,
   botSpeed: room.botSpeed,
   houseRules: houseRulesOf(room),
+  irl: room.irl,
 });
 
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>

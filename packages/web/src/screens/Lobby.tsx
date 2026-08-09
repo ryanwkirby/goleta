@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { BotSpeed, ClientMessage, HouseRules, RoomView } from "@goleta/engine";
 
@@ -74,6 +74,16 @@ const describeRules = (rules: HouseRules): string => {
 };
 
 /**
+ * The same sentence for the host, on the front of a drawer that is shut — plus
+ * the bot pace, which is the other thing inside it that a table would notice.
+ */
+const describeTable = (room: RoomView, anyBots: boolean): string => {
+  const rules = describeRules(room.houseRules);
+  if (!anyBots) return rules;
+  return `${rules} Bots at ${room.botSpeed === "human" ? "human" : "lightning"} speed.`;
+};
+
+/**
  * The house rules, as a row of switches.
  *
  * Every one of these is a rule the game already had written down — two
@@ -81,8 +91,13 @@ const describeRules = (rules: HouseRules): string => {
  * table wants to play with. Defaults are the game as written, so a host who
  * never opens this gets exactly what they got before.
  *
- * Off is described as plainly as on. A table choosing to drop the Sunny Rule
- * isn't playing a lesser game, and the copy shouldn't imply it is.
+ * **A row's description doesn't change when the row is switched.** It used to
+ * rewrite itself between "what this rule does" and "Off. what happens instead",
+ * which meant the sentence a host was reading to decide moved the moment they
+ * decided, and flipping a switch twice to reread it landed somewhere different
+ * each time. One fixed line saying what the rule does; the switch says whether
+ * the table is playing it. Nothing here implies a table that drops one is
+ * playing a lesser game.
  */
 function HouseRulesPicker({
   rules,
@@ -95,19 +110,14 @@ function HouseRulesPicker({
     {
       key: "sunny",
       label: "The Sunny Rule",
-      blurb: rules.sunny
-        ? "Draw with a play in your hand and anyone can call it on you."
-        : "Off. Nobody is watching your hands, and drawing is just drawing.",
+      blurb: "Draw with a play in your hand and anyone can call it on you.",
       on: rules.sunny,
       toggle: { ...rules, sunny: !rules.sunny },
     },
     {
       key: "eights",
       label: "The Power of Eights",
-      blurb:
-        rules.eights === "nextPlayerNames"
-          ? "The next player names the suit, not whoever played the 8."
-          : "Off. Play an 8 and you name the suit yourself.",
+      blurb: "The next player names the suit, not whoever played the 8.",
       on: rules.eights === "nextPlayerNames",
       toggle: {
         ...rules,
@@ -117,10 +127,7 @@ function HouseRulesPicker({
     {
       key: "seedEight",
       label: "Dealer's Choice",
-      blurb:
-        rules.seedEight === "dealerNames"
-          ? "An 8 turned up to start is the dealer's suit to name."
-          : "Off. An 8 turned up to start plays as its own suit.",
+      blurb: "An 8 turned up to start is the dealer's suit to name.",
       on: rules.seedEight === "dealerNames",
       toggle: {
         ...rules,
@@ -130,7 +137,7 @@ function HouseRulesPicker({
   ];
 
   return (
-    <div className="mt-3 border-t border-white/10 pt-3">
+    <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">House rules</p>
       <ul className="mt-2 flex flex-col gap-2">
         {rows.map((row) => (
@@ -157,6 +164,49 @@ function HouseRulesPicker({
 }
 
 /**
+ * The settings drawer, shut on arrival.
+ *
+ * Most tables play the game as written and never open this; the ones that do
+ * are being deliberate about it, and a tap is no obstacle to that. Shut, it is
+ * one line saying what the table is playing — which is the part a host who
+ * isn't changing anything actually wants, and it used to be four rows of
+ * switches they had to read to work out.
+ *
+ * The state lives here, so every arrival at a lobby starts collapsed. That is
+ * the intent rather than a side effect: a host who opened it last game was
+ * changing something last game.
+ */
+function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-3 border-t border-white/10 pt-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-white">Table settings</span>
+          <span className="block text-xs text-white/40">{summary}</span>
+        </span>
+        <span
+          aria-hidden
+          className={[
+            "text-white/40 transition-transform",
+            open ? "rotate-180" : "",
+          ].join(" ")}
+        >
+          ▾
+        </span>
+      </button>
+      {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}
+    </div>
+  );
+}
+
+/**
  * "Are we all in the same room?"
  *
  * Not a house rule and not next to them: it changes nothing about the game,
@@ -167,16 +217,18 @@ function HouseRulesPicker({
  * The one host control with no "between games only" on it, so it stays put once
  * a game is running. A table that only works out halfway through the first hand
  * that they are all sat together shouldn't have to finish the game first.
+ *
+ * It is also the one host control left outside the settings drawer. It isn't a
+ * rule — it changes what every person in the room does with their phone, and a
+ * table sitting down together shouldn't have to go looking for it.
  */
 function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
-    <div className="mt-3 flex items-center gap-3 border-t border-white/10 pt-3">
+    <div className="flex items-center gap-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-white">We're all in the same room</p>
         <p className="text-xs text-white/40">
-          {on
-            ? "Phones show your own hand, big, in landscape. Talk to each other."
-            : "Off. Everyone gets the full table on their own screen."}
+          Phones show your own hand, big, in landscape. Talk to each other.
         </p>
       </div>
       <Button
@@ -208,7 +260,7 @@ function BotSpeedPicker({
   const chosen = SPEEDS.find((option) => option.key === speed);
 
   return (
-    <div className="mt-3 border-t border-white/10 pt-3">
+    <div className="border-t border-white/10 pt-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Bot speed</p>
       <div className="mt-2 flex gap-2">
         {SPEEDS.map((option) => (
@@ -228,6 +280,52 @@ function BotSpeedPicker({
   );
 }
 
+/**
+ * Move this seat one place along the table.
+ *
+ * Arrows rather than a drag: a hand-rolled drag on a phone fights the page
+ * scroll for the same gesture, and two buttons are reachable from a keyboard
+ * and a screen reader without any of that. The ends are disabled — the server
+ * treats a move off either end as nothing happening, so a stale tap costs an
+ * error banner nobody needed.
+ */
+function MoveSeat({
+  name,
+  first,
+  last,
+  onMove,
+}: {
+  name: string;
+  first: boolean;
+  last: boolean;
+  onMove: (direction: "up" | "down") => void;
+}) {
+  const arrow = "min-h-0 size-8 shrink-0 px-0 py-0 text-xs";
+
+  return (
+    <span className="flex items-center gap-1">
+      <Button
+        variant="secondary"
+        className={arrow}
+        aria-label={`Move ${name} up`}
+        disabled={first}
+        onClick={() => onMove("up")}
+      >
+        ↑
+      </Button>
+      <Button
+        variant="secondary"
+        className={arrow}
+        aria-label={`Move ${name} down`}
+        disabled={last}
+        onClick={() => onMove("down")}
+      >
+        ↓
+      </Button>
+    </span>
+  );
+}
+
 export function Lobby({
   room,
   playerId,
@@ -243,11 +341,48 @@ export function Lobby({
 }) {
   const isHost = room.hostId === playerId;
   const enough = room.seats.length >= room.minPlayers;
-  const full = room.seats.length >= room.maxPlayers;
+  const tableFull = room.seats.length >= room.maxPlayers;
   const anyBots = room.seats.some((seat) => seat.bot);
   const winner = room.lastWinnerId
     ? room.seats.find((seat) => seat.id === room.lastWinnerId)
     : undefined;
+
+  /**
+   * Seat order is turn order in every room. It is only a table sitting in one
+   * that has a real order for it to disagree with, so that is the only place
+   * the arrows are worth the room they take — the numbers go out to everyone
+   * there, host or not, because working out that the app deals across the table
+   * is something the person sitting in the wrong place spots first.
+   */
+  const numbered = room.irl;
+  const orderable = isHost && room.irl && room.seats.length > 1;
+
+  /**
+   * "Sitting in this order?", asked once, on the first deal into an IRL room.
+   *
+   * A confirmation rather than a block, and a single line rather than an
+   * explanation: getting it wrong is recoverable and getting it right is a
+   * glance. Cleared by the deal it guards, so a table that has said yes is
+   * never asked twice.
+   */
+  const [checkingOrder, setCheckingOrder] = useState(false);
+  const [orderChecked, setOrderChecked] = useState(false);
+  // Turning IRL off, or losing a seat, takes the question away with it.
+  const confirming = checkingOrder && room.irl && enough;
+
+  const deal = (): void => {
+    if (room.irl && !orderChecked) {
+      setCheckingOrder(true);
+      return;
+    }
+    send({ t: "start" });
+  };
+
+  const dealNow = (): void => {
+    setOrderChecked(true);
+    setCheckingOrder(false);
+    send({ t: "start" });
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
@@ -275,13 +410,22 @@ export function Lobby({
           ) : null}
         </div>
 
+        {orderable ? (
+          <p className="mt-1 text-xs text-white/40">Put these in the order you're sitting.</p>
+        ) : null}
+
         <ul className="mt-3 space-y-1.5">
-          {room.seats.map((seat) => (
+          {room.seats.map((seat, index) => (
             <li
               key={seat.id}
               className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
             >
-              <span className="font-medium text-white">{seat.name}</span>
+              {numbered ? (
+                <span className="w-4 shrink-0 text-xs tabular-nums text-white/30">{index + 1}</span>
+              ) : null}
+              {/* Shrinks before the controls do: a long name in an IRL room
+                  shares the row with a remove button and two arrows. */}
+              <span className="min-w-0 truncate font-medium text-white">{seat.name}</span>
               {seat.isHost ? (
                 <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-300">
                   host
@@ -296,47 +440,91 @@ export function Lobby({
               {!seat.connected && !seat.bot ? (
                 <span className="text-xs text-white/40">away</span>
               ) : null}
-              {isHost && seat.id !== room.hostId ? (
-                <Button
-                  variant="ghost"
-                  className="ml-auto px-2 py-1 text-xs"
-                  onClick={() => send({ t: "removeSeat", playerId: seat.id })}
-                >
-                  remove
-                </Button>
-              ) : null}
+              <span className="ml-auto flex shrink-0 items-center gap-1">
+                {isHost && seat.id !== room.hostId ? (
+                  <Button
+                    variant="ghost"
+                    className="px-2 py-1 text-xs"
+                    onClick={() => send({ t: "removeSeat", playerId: seat.id })}
+                  >
+                    remove
+                  </Button>
+                ) : null}
+                {orderable ? (
+                  <MoveSeat
+                    name={seat.name}
+                    first={index === 0}
+                    last={index === room.seats.length - 1}
+                    onMove={(direction) => send({ t: "moveSeat", playerId: seat.id, direction })}
+                  />
+                ) : null}
+              </span>
             </li>
           ))}
+
+          {/* Last in the list, because the end of the list is where the bot it
+              adds turns up: the server pushes new seats onto the end. */}
+          {isHost ? (
+            <li>
+              <Button
+                variant="ghost"
+                full
+                className="justify-start rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-white/60 hover:border-white/25"
+                onClick={() => send({ t: "addBot" })}
+                disabled={tableFull}
+              >
+                <span aria-hidden>+</span> Add a bot
+              </Button>
+            </li>
+          ) : null}
         </ul>
       </Panel>
 
       {isHost ? (
-        <Panel>
-          <div className="flex gap-2">
-            <Button className="flex-1" onClick={() => send({ t: "addBot" })} disabled={full}>
-              Add a bot
-            </Button>
+        <>
+          {/* On its own, under the names it needs four of. It shared a row with
+              "Add a bot" and sat above the settings, which gave equal weight to
+              the button a table presses once and the one it presses never. */}
+          {confirming ? (
+            <Panel>
+              <p className="text-sm font-semibold text-white">Sitting in this order?</p>
+              <div className="mt-3 flex gap-2">
+                <Button className="flex-1" onClick={() => setCheckingOrder(false)}>
+                  Fix the order
+                </Button>
+                <Button variant="primary" className="flex-1" onClick={dealNow}>
+                  {room.gamesPlayed > 0 ? "Next game" : "Deal"}
+                </Button>
+              </div>
+            </Panel>
+          ) : (
             <Button
               variant="primary"
-              className="flex-1"
-              onClick={() => send({ t: "start" })}
+              full
+              className="py-3.5 text-base"
+              onClick={deal}
               disabled={!enough}
             >
               {room.gamesPlayed > 0 ? "Next game" : "Deal"}
             </Button>
-          </div>
-          <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
-          <HouseRulesPicker
-            rules={room.houseRules}
-            onChange={(rules) => send({ t: "setHouseRules", rules })}
-          />
-          {anyBots ? (
-            <BotSpeedPicker
-              speed={room.botSpeed}
-              onPick={(speed) => send({ t: "setBotSpeed", speed })}
-            />
-          ) : null}
-        </Panel>
+          )}
+
+          <Panel>
+            <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
+            <TableSettings summary={describeTable(room, anyBots)}>
+              <HouseRulesPicker
+                rules={room.houseRules}
+                onChange={(rules) => send({ t: "setHouseRules", rules })}
+              />
+              {anyBots ? (
+                <BotSpeedPicker
+                  speed={room.botSpeed}
+                  onPick={(speed) => send({ t: "setBotSpeed", speed })}
+                />
+              ) : null}
+            </TableSettings>
+          </Panel>
+        </>
       ) : (
         <Panel className="text-center text-sm text-white/60">
           Waiting for {room.seats.find((seat) => seat.isHost)?.name ?? "the host"} to deal.

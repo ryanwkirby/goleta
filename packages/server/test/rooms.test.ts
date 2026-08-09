@@ -18,6 +18,7 @@ import {
   createStore,
   holdCall,
   markDisconnected,
+  moveSeat,
   nextBotMove,
   roomView,
   setBotSpeed,
@@ -31,6 +32,9 @@ const seatedRoom = (size = MIN_TABLE_PLAYERS): Room => {
   while (room.seats.length < size) addBot(room, room.hostId);
   return room;
 };
+
+/** The table in the order it is sitting, which is the order it plays in. */
+const seatOrder = (room: Room): string[] => room.seats.map((seat) => seat.name);
 
 const leaderOf = (room: Room): string => {
   const game = room.game;
@@ -140,6 +144,84 @@ describe("seating", () => {
 
     expect(names).toHaveLength(MAX_TABLE_PLAYERS);
     expect(new Set(names).size).toBe(MAX_TABLE_PLAYERS);
+  });
+});
+
+describe("moving a seat", () => {
+  it("swaps a seat with the one it moves past", () => {
+    const room = seatedRoom();
+    const [first, second] = seatOrder(room);
+
+    moveSeat(room, room.hostId, room.seats[1]?.id ?? "", "up");
+    expect(seatOrder(room).slice(0, 2)).toEqual([second, first]);
+
+    moveSeat(room, room.hostId, room.seats[0]?.id ?? "", "down");
+    expect(seatOrder(room).slice(0, 2)).toEqual([first, second]);
+  });
+
+  it("carries a seat the length of the table one place at a time", () => {
+    const room = seatedRoom();
+    const last = room.seats[room.seats.length - 1]?.id ?? "";
+
+    for (let step = room.seats.length - 1; step > 0; step -= 1) {
+      moveSeat(room, room.hostId, last, "up");
+    }
+
+    expect(room.seats[0]?.id).toBe(last);
+    expect(new Set(seatOrder(room)).size).toBe(room.seats.length);
+  });
+
+  it("does nothing at either end rather than refusing", () => {
+    const room = seatedRoom();
+    const before = seatOrder(room);
+
+    // The arrow that would do this is disabled; a tap that arrives anyway means
+    // the table moved, and that is not worth an error banner.
+    expect(() => moveSeat(room, room.hostId, room.seats[0]?.id ?? "", "up")).not.toThrow();
+    expect(() =>
+      moveSeat(room, room.hostId, room.seats[room.seats.length - 1]?.id ?? "", "down"),
+    ).not.toThrow();
+    expect(seatOrder(room)).toEqual(before);
+  });
+
+  it("is the host's to do, and only between games", () => {
+    const room = seatedRoom();
+    const guest = room.seats[1]?.id ?? "";
+    expect(() => moveSeat(room, guest, guest, "up")).toThrow(/only the host/);
+
+    beginGame(room, room.hostId);
+    expect(() => moveSeat(room, room.hostId, guest, "up")).toThrow(/wait for this game/);
+  });
+
+  it("refuses a seat that isn't at this table", () => {
+    const room = seatedRoom();
+    expect(() => moveSeat(room, room.hostId, "someone-who-left", "up")).toThrow(/nobody by that id/);
+  });
+
+  it("needs no IRL room, because the order is real in every room", () => {
+    const room = seatedRoom();
+    expect(room.irl).toBe(false);
+
+    // Which rooms are worth *offering* this in is the lobby's call. Refusing it
+    // here would mean flipping an unrelated presentation flag mid-shuffle threw
+    // an error at the host.
+    moveSeat(room, room.hostId, room.seats[1]?.id ?? "", "up");
+    expect(seatOrder(room)[0]).toBe("Robot");
+  });
+
+  it("passes the deal round the new order", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    expect(room.dealerId).toBe(room.seats[0]?.id);
+
+    // The deal follows the seat list, so a table rearranged between games gets
+    // the same rotation round the order it is now actually sitting in.
+    const third = room.seats[2]?.id ?? "";
+    if (room.game) room.game.status = "over";
+    moveSeat(room, room.hostId, third, "up");
+    beginGame(room, room.hostId);
+
+    expect(room.dealerId).toBe(third);
   });
 });
 

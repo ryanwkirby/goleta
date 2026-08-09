@@ -29,6 +29,7 @@ import {
   holdCall,
   joinRoom,
   markDisconnected,
+  moveSeat,
   nextBotMove,
   createRoom,
   rejoinRoom,
@@ -311,6 +312,9 @@ export const attachSockets = (
       }
       case "removeSeat":
         removeSeat(room, playerId, message.playerId);
+        return broadcast(room);
+      case "moveSeat":
+        moveSeat(room, playerId, message.playerId, message.direction);
         return broadcast(room);
     }
   };

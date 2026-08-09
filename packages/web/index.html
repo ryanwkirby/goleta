@@ -14,6 +14,12 @@
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Only the shared table screen ever offers an install, and it is a pilot
+         (#126) — this link and the file it points at come out with it if the
+         answer is no. `start_url` deliberately overrides iOS's default of
+         pinning whatever URL you installed from: a room code expires, and a
+         home-screen icon that opens a dead room is worse than a re-scan. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>goleta</title>
   </head>
   <body>

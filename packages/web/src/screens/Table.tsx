@@ -417,7 +417,18 @@ export function Table({
 
   return (
     <TableMotion game={game} log={log}>
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      {/* All four, not just the bottom. The top costs nothing in Safari, where
+          the browser's own chrome covers the island — and stops costing nothing
+          the moment this runs standalone. The sides are for the landscape look
+          at the full table, which an online room gets whenever a phone is
+          turned. */}
+      <div
+        className={[
+          "mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-3",
+          "pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+          "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
+        ].join(" ")}
+      >
         <header className="flex items-center gap-2 text-xs text-white/50">
           <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}

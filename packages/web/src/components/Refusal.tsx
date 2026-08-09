@@ -102,7 +102,13 @@ export function SessionError({ error, onDismiss }: { error: GoletaError; onDismi
   return (
     <div
       role="status"
-      className="fixed inset-x-0 top-0 z-40 flex justify-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
+      // Centred across the full width, so in landscape a long refusal reaches
+      // the island at whichever end the hardware is on.
+      className={[
+        "fixed inset-x-0 top-0 z-40 flex justify-center p-3",
+        "pt-[max(0.75rem,env(safe-area-inset-top))]",
+        "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
+      ].join(" ")}
     >
       <div className={["flex max-w-md items-start gap-2.5 rounded-2xl py-3 pl-3.5 pr-2.5 text-sm", SURFACE].join(" ")}>
         <NoSign className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />

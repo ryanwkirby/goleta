@@ -247,6 +247,16 @@ Things that will read as oversights in that view and are not:
   column, and the hand steps down a card size to make it. Laying them over the
   hand was the obvious thing and it covers the cards the picker is asking you to
   compare against — the same trade the full table already refused.
+- **The accusation picker is one row of cards, whatever the offender holds**,
+  fanned by the same arithmetic as everything else here and floored at
+  `PICKER_TIGHTEST`. That is what makes docking work: a picker whose height came
+  in card-row steps had to be capped at a fraction of the column, and then the
+  picker scrolled inside its cap *and* the hand under it scrolled its own
+  overflow, because `handSize` had no rung below `lg` to step down to. It has
+  one now. Nothing in the column scrolls while a call is being composed — do not
+  reintroduce a cap, a wrap or a scroll to fit a bigger hand in. The overlap is
+  a layout, not a hint: every card leaves the same sliver, so it still says
+  nothing about which of them was legal (#96).
 - **The rotate prompt is the mechanism, not a fallback.** `screen.orientation
   .lock()` needs fullscreen and iOS Safari has no implementation, so no page can
   turn somebody's phone. The panel is gated on a coarse pointer and a short side

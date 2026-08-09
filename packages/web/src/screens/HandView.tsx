@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
@@ -8,6 +8,7 @@ import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
 import type { NameOf } from "../lib/format.ts";
 import { handSize, handStep } from "../lib/handFan.ts";
+import { useBox } from "../lib/measure.ts";
 import type { HandMode } from "../components/Hand.tsx";
 import type { HandSort } from "../lib/sort.ts";
 import type { Card } from "@goleta/engine";
@@ -96,21 +97,7 @@ export function HandView({
    * decides the card size, the width decides the overlap.
    */
   const row = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState({ width: 0, height: 0 });
-  useLayoutEffect(() => {
-    const element = row.current;
-    if (!element) return;
-    const watch = new ResizeObserver(([entry]) => {
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      setBox((current) => {
-        const next = { width: Math.floor(width), height: Math.floor(height) };
-        return current.width === next.width && current.height === next.height ? current : next;
-      });
-    });
-    watch.observe(element);
-    return () => watch.disconnect();
-  }, []);
+  const box = useBox(row);
 
   // Measured against the row's *content* box, and the row is the only thing
   // with padding — the hand inside it has none when it is fanning. So this is
@@ -144,12 +131,12 @@ export function HandView({
           fall-back is the whole reason `handSize` reads a height instead of
           being told one.
         */}
-        {/* The cap is enough for the heading, the line under it and two rows of
-            cards before the panel starts scrolling. An offender holding twenty
-            is real, and a picker that grew to fit them would eat the hand it
-            docked above; the hand keeps the rest either way. */}
+        {/* No cap and no scroll: the picker is one row of cards however many
+            the offender is holding, so its height is known and the hand below
+            simply steps down a size to make the room. It used to be capped at a
+            fraction of the column, which left both halves short — see #96. */}
         {accusing !== null && stillAccusable && game.sunnyReach ? (
-          <div className="max-h-[55%] shrink-0 overflow-y-auto px-2 pt-1">
+          <div className="shrink-0 px-2 pt-1">
             <SunnyAccusePicker
               targetName={nameOf(accusing)}
               reach={game.sunnyReach}

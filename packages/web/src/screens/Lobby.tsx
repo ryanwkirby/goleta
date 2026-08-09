@@ -280,6 +280,52 @@ function BotSpeedPicker({
   );
 }
 
+/**
+ * Move this seat one place along the table.
+ *
+ * Arrows rather than a drag: a hand-rolled drag on a phone fights the page
+ * scroll for the same gesture, and two buttons are reachable from a keyboard
+ * and a screen reader without any of that. The ends are disabled — the server
+ * treats a move off either end as nothing happening, so a stale tap costs an
+ * error banner nobody needed.
+ */
+function MoveSeat({
+  name,
+  first,
+  last,
+  onMove,
+}: {
+  name: string;
+  first: boolean;
+  last: boolean;
+  onMove: (direction: "up" | "down") => void;
+}) {
+  const arrow = "min-h-0 size-8 shrink-0 px-0 py-0 text-xs";
+
+  return (
+    <span className="flex items-center gap-1">
+      <Button
+        variant="secondary"
+        className={arrow}
+        aria-label={`Move ${name} up`}
+        disabled={first}
+        onClick={() => onMove("up")}
+      >
+        ↑
+      </Button>
+      <Button
+        variant="secondary"
+        className={arrow}
+        aria-label={`Move ${name} down`}
+        disabled={last}
+        onClick={() => onMove("down")}
+      >
+        ↓
+      </Button>
+    </span>
+  );
+}
+
 export function Lobby({
   room,
   playerId,
@@ -300,6 +346,43 @@ export function Lobby({
   const winner = room.lastWinnerId
     ? room.seats.find((seat) => seat.id === room.lastWinnerId)
     : undefined;
+
+  /**
+   * Seat order is turn order in every room. It is only a table sitting in one
+   * that has a real order for it to disagree with, so that is the only place
+   * the arrows are worth the room they take — the numbers go out to everyone
+   * there, host or not, because working out that the app deals across the table
+   * is something the person sitting in the wrong place spots first.
+   */
+  const numbered = room.irl;
+  const orderable = isHost && room.irl && room.seats.length > 1;
+
+  /**
+   * "Sitting in this order?", asked once, on the first deal into an IRL room.
+   *
+   * A confirmation rather than a block, and a single line rather than an
+   * explanation: getting it wrong is recoverable and getting it right is a
+   * glance. Cleared by the deal it guards, so a table that has said yes is
+   * never asked twice.
+   */
+  const [checkingOrder, setCheckingOrder] = useState(false);
+  const [orderChecked, setOrderChecked] = useState(false);
+  // Turning IRL off, or losing a seat, takes the question away with it.
+  const confirming = checkingOrder && room.irl && enough;
+
+  const deal = (): void => {
+    if (room.irl && !orderChecked) {
+      setCheckingOrder(true);
+      return;
+    }
+    send({ t: "start" });
+  };
+
+  const dealNow = (): void => {
+    setOrderChecked(true);
+    setCheckingOrder(false);
+    send({ t: "start" });
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
@@ -327,13 +410,22 @@ export function Lobby({
           ) : null}
         </div>
 
+        {orderable ? (
+          <p className="mt-1 text-xs text-white/40">Put these in the order you're sitting.</p>
+        ) : null}
+
         <ul className="mt-3 space-y-1.5">
-          {room.seats.map((seat) => (
+          {room.seats.map((seat, index) => (
             <li
               key={seat.id}
               className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
             >
-              <span className="font-medium text-white">{seat.name}</span>
+              {numbered ? (
+                <span className="w-4 shrink-0 text-xs tabular-nums text-white/30">{index + 1}</span>
+              ) : null}
+              {/* Shrinks before the controls do: a long name in an IRL room
+                  shares the row with a remove button and two arrows. */}
+              <span className="min-w-0 truncate font-medium text-white">{seat.name}</span>
               {seat.isHost ? (
                 <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-300">
                   host
@@ -348,15 +440,25 @@ export function Lobby({
               {!seat.connected && !seat.bot ? (
                 <span className="text-xs text-white/40">away</span>
               ) : null}
-              {isHost && seat.id !== room.hostId ? (
-                <Button
-                  variant="ghost"
-                  className="ml-auto px-2 py-1 text-xs"
-                  onClick={() => send({ t: "removeSeat", playerId: seat.id })}
-                >
-                  remove
-                </Button>
-              ) : null}
+              <span className="ml-auto flex shrink-0 items-center gap-1">
+                {isHost && seat.id !== room.hostId ? (
+                  <Button
+                    variant="ghost"
+                    className="px-2 py-1 text-xs"
+                    onClick={() => send({ t: "removeSeat", playerId: seat.id })}
+                  >
+                    remove
+                  </Button>
+                ) : null}
+                {orderable ? (
+                  <MoveSeat
+                    name={seat.name}
+                    first={index === 0}
+                    last={index === room.seats.length - 1}
+                    onMove={(direction) => send({ t: "moveSeat", playerId: seat.id, direction })}
+                  />
+                ) : null}
+              </span>
             </li>
           ))}
 
@@ -383,15 +485,29 @@ export function Lobby({
           {/* On its own, under the names it needs four of. It shared a row with
               "Add a bot" and sat above the settings, which gave equal weight to
               the button a table presses once and the one it presses never. */}
-          <Button
-            variant="primary"
-            full
-            className="py-3.5 text-base"
-            onClick={() => send({ t: "start" })}
-            disabled={!enough}
-          >
-            {room.gamesPlayed > 0 ? "Next game" : "Deal"}
-          </Button>
+          {confirming ? (
+            <Panel>
+              <p className="text-sm font-semibold text-white">Sitting in this order?</p>
+              <div className="mt-3 flex gap-2">
+                <Button className="flex-1" onClick={() => setCheckingOrder(false)}>
+                  Fix the order
+                </Button>
+                <Button variant="primary" className="flex-1" onClick={dealNow}>
+                  {room.gamesPlayed > 0 ? "Next game" : "Deal"}
+                </Button>
+              </div>
+            </Panel>
+          ) : (
+            <Button
+              variant="primary"
+              full
+              className="py-3.5 text-base"
+              onClick={deal}
+              disabled={!enough}
+            >
+              {room.gamesPlayed > 0 ? "Next game" : "Deal"}
+            </Button>
+          )}
 
           <Panel>
             <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />

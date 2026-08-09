@@ -67,7 +67,7 @@ function RoomCode({ code, showQr }: { code: string; showQr: boolean }) {
 }
 
 const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
-  { key: "human", label: "Human", blurb: "A few seconds a turn, like people play." },
+  { key: "human", label: "Human-like", blurb: "A few seconds a turn, like people play." },
   { key: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
 ];
 
@@ -91,7 +91,7 @@ const describeRules = (rules: HouseRules): string => {
 const describeTable = (room: RoomView, anyBots: boolean): string => {
   const rules = describeRules(room.houseRules);
   if (!anyBots) return rules;
-  return `${rules} Bots at ${room.botSpeed === "human" ? "human" : "lightning"} speed.`;
+  return `${rules} Bots at ${room.botSpeed === "human" ? "human-like" : "lightning"} speed.`;
 };
 
 /**
@@ -189,6 +189,12 @@ function HouseRulesPicker({
  *
  * It sits alone on its panel now that the IRL toggle leads the lobby, so it has
  * nothing above it to be divided from and keeps no rule of its own.
+ *
+ * The chevron is deliberately much larger than the label it sits beside. It is
+ * the only thing on the row saying there is anything behind it, and at body-text
+ * size it read as punctuation. "Advanced" rather than "expert" for the same
+ * reason: most tables can leave this shut, and none of them need to have played
+ * before to open it.
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -202,13 +208,13 @@ function TableSettings({ summary, children }: { summary: string; children: React
         className="flex w-full items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-white">Game settings (expert)</span>
+          <span className="block text-sm font-semibold text-white">Advanced settings</span>
           <span className="block text-xs text-white/40">{summary}</span>
         </span>
         <span
           aria-hidden
           className={[
-            "text-white/40 transition-transform",
+            "shrink-0 text-3xl leading-none text-white/60 transition-transform",
             open ? "rotate-180" : "",
           ].join(" ")}
         >
@@ -566,7 +572,7 @@ export function Lobby({
           <span className="mt-1 block text-xs text-white/40">{describeRules(room.houseRules)}</span>
           {anyBots ? (
             <span className="mt-1 block text-xs text-white/40">
-              Bots play at {room.botSpeed === "human" ? "a human" : "lightning"} speed.
+              Bots play at {room.botSpeed === "human" ? "human-like" : "lightning"} speed.
             </span>
           ) : null}
         </Panel>

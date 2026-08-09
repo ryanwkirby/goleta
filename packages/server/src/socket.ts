@@ -343,6 +343,14 @@ export const attachSockets = (
           t: "error",
           message: known ? error.message : "something went wrong",
           ...(known && error.code ? { code: error.code } : {}),
+          // A refused `intent` is a mis-tap and nothing more, so it is the one
+          // refusal the client shows and takes away again. Read off the message
+          // that caused it rather than carried on the error: the engine's
+          // refusals are strings, and the alternative is a class hierarchy for
+          // a distinction this branch already has in front of it. Everything
+          // else here — a full room, a seat that isn't yours, a setting flipped
+          // mid-game — is `session` and stays up.
+          ...(message.t === "intent" ? { kind: "move" as const } : {}),
         });
       }
     });

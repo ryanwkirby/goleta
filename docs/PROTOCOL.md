@@ -60,6 +60,27 @@ of being left on a form that will keep failing. It is the only error code there
 is, and the bar for a second one is that reading the prose would otherwise be
 the only way to tell.
 
+### Refusals come in two weights
+
+A refused `intent` carries `kind: "move"`; every other refusal carries nothing
+and is a `session`. The distinction is how long the news is worth looking at, and
+it is the only thing the client does differently with them (#90).
+
+A **move** is a mis-tap — a card that doesn't match, a turn that isn't yours.
+The hand it was aimed at already says so by not changing, so the words only name
+which of the handful of reasons it was. They land in a pill over the hand, fade
+in, and are gone in under two seconds with nothing to dismiss. That is why the
+engine's refusals are three-word fragments: `Doesn't match`, `Not your turn`,
+`That's three draws`. A **session** refusal — the room is full, the seat isn't
+yours any more, that game is already under way — is something to be read and
+acted on, so it keeps the banner at the top of the screen, five seconds and a
+`dismiss`. `Join` latches the refused room code off the back of that, which a
+refusal that flashed past would take away with it.
+
+The server reads the kind off the message that caused it rather than off the
+error, because the branch that sends refusals already has the client's message
+in front of it — the alternative is a class hierarchy for one bit.
+
 ## Client to server
 
 | Message | Who | Notes |
@@ -90,9 +111,10 @@ can only ever act as itself. There's a test that tries it the other way.
 - `shout` — somebody said something out loud. Not a game event: the position
   doesn't change, it isn't replayed, it isn't in the log, and it goes out
   identically to everyone. Only `help` so far.
-- `error` — a human-readable sentence, and on one refusal a `code`. Rejected
-  moves are ordinary; the engine's refusals are written to be shown to a player
-  as-is.
+- `error` — a short human-readable refusal, on one refusal a `code`, and on a
+  refused `intent` a `kind: "move"`. Rejected moves are ordinary; the engine's
+  refusals are written to be shown to a player as-is, which is why they are
+  fragments rather than sentences — see below.
 - `pong`.
 
 ## What the server never sends

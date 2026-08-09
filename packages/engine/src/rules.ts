@@ -174,8 +174,16 @@ export const applyIntent = (state: GameState, intent: Intent): ApplyResult => {
   return { ok: true, state: next, events };
 };
 
+/**
+ * Every refusal below is shown to a player, as written, and none of them get
+ * long enough to be read twice: they land in a pill above the hand that is gone
+ * in under two seconds (#90). So they are fragments rather than sentences —
+ * three words at the outside, no apology, no explanation of the rule. The card
+ * still sitting in the hand is most of the message; this only says which of the
+ * handful of reasons it was.
+ */
 const route = (s: GameState, intent: Intent, events: GameEvent[]): string | null => {
-  if (s.status === "over") return "the game is over";
+  if (s.status === "over") return "The game is over";
   switch (intent.type) {
     case "playCard":
       return handlePlay(s, intent.playerId, intent.cardId, events);
@@ -208,16 +216,16 @@ const handlePlay = (
   closeWindowIfSomeoneElseActs(s, playerId);
 
   if (s.phase.kind !== "action" && s.phase.kind !== "sunnyPlay") {
-    return "you can't play a card right now";
+    return "Can't play now";
   }
   const player = currentPlayer(s);
-  if (player.id !== playerId) return "it isn't your turn";
+  if (player.id !== playerId) return "Not your turn";
 
   const index = player.hand.findIndex((c) => c.id === cardId);
-  if (index === -1) return "that card isn't in your hand";
+  if (index === -1) return "Not in your hand";
   const card = player.hand[index] as Card;
   if (!isPlayable(card, s.activeSuit, topCard(s).rank)) {
-    return "that card doesn't match the card in play";
+    return "Doesn't match";
   }
 
   // A play made to settle a Sunny call is followed straight away by the
@@ -253,10 +261,10 @@ const handlePlay = (
 const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): string | null => {
   closeWindowIfSomeoneElseActs(s, playerId);
 
-  if (s.phase.kind !== "action") return "you can't draw right now";
+  if (s.phase.kind !== "action") return "Can't draw now";
   const player = currentPlayer(s);
-  if (player.id !== playerId) return "it isn't your turn";
-  if (s.drawsThisTurn >= MAX_DRAWS_PER_TURN) return "you've already drawn three cards";
+  if (player.id !== playerId) return "Not your turn";
+  if (s.drawsThisTurn >= MAX_DRAWS_PER_TURN) return "That's three draws";
 
   // Drawing while holding a playable card breaks the rules, and the engine
   // deliberately allows it: that violation is the Sunny Rule's entire subject.
@@ -324,12 +332,12 @@ const handleChooseSuit = (
   suit: string,
   events: GameEvent[],
 ): string | null => {
-  if (s.phase.kind !== "suit") return "there's no suit to name";
+  if (s.phase.kind !== "suit") return "No suit to name";
   // Whose call it is, not whose turn it is. Under Power of Eights those differ
   // by one seat, and under Dealer's Choice the game hasn't started yet.
-  if (s.phase.playerId !== playerId) return "it isn't your call";
+  if (s.phase.playerId !== playerId) return "Not your call";
   const chosen = SUITS.find((candidate) => candidate === suit);
-  if (!chosen) return "that isn't a suit";
+  if (!chosen) return "Not a suit";
 
   s.activeSuit = chosen;
   events.push({ type: "suitChosen", playerId, suit: chosen });
@@ -363,28 +371,30 @@ const handleCallSunny = (
   // Said plainly rather than as "there's nothing to call", which would be true
   // but would read as "you were too slow" at a table where the rule is off.
   const rule = s.options.sunny;
-  if (!rule) return "this table isn't playing the Sunny Rule";
+  if (!rule) return "No Sunny Rule here";
 
   // A settled call leaves either `resolved` set or the whole window gone with
   // the rewind, so this one check covers "too late" in all its forms.
   const challenge = s.challenge;
-  if (!challenge || challenge.resolved) return "there's nothing to call";
-  if (challenge.drawerId === callerId) return "you can't call it on yourself";
+  if (!challenge || challenge.resolved) return "Nothing to call";
+  if (challenge.drawerId === callerId) return "Not on yourself";
 
   const caller = playerById(s, callerId);
-  if (!caller) return "unknown player";
-  if (caller.eliminated) return "you're out of the game";
+  if (!caller) return "Unknown player";
+  if (caller.eliminated) return "You're out";
 
   const locked = sunnyLockedDraws(s, callerId);
   if (locked > 0) {
-    return `your last call missed — ${locked} more ${locked === 1 ? "draw" : "draws"} before you can call again`;
+    // The one refusal that has to carry a number: the lockout is invisible
+    // otherwise, and "how much longer" is the whole of what it's asking.
+    return `Locked out — ${locked} more ${locked === 1 ? "draw" : "draws"}`;
   }
 
   // The only cards an accusation may ever name: the offender's hand as it
   // stood before the draw being challenged. Anything they drew since is not an
   // option, on the server any more than in the UI.
   const accused = challenge.reach.hand.find((c) => c.id === cardId);
-  if (!accused) return "that wasn't in their hand when they drew";
+  if (!accused) return "They didn't hold it";
 
   const correct = isPlayable(accused, challenge.reach.activeSuit, challenge.reach.topRank);
   const targetId = challenge.drawerId;
@@ -524,13 +534,13 @@ const handleSurrender = (
   cardId: string,
   events: GameEvent[],
 ): string | null => {
-  if (s.phase.kind !== "surrender") return "there's no card to give up";
-  if (s.phase.playerId !== playerId) return "it isn't your card to give up";
+  if (s.phase.kind !== "surrender") return "No card to give up";
+  if (s.phase.playerId !== playerId) return "Not your card to give up";
 
   const player = playerById(s, playerId);
-  if (!player) return "unknown player";
+  if (!player) return "Unknown player";
   const index = player.hand.findIndex((c) => c.id === cardId);
-  if (index === -1) return "that card isn't in your hand";
+  if (index === -1) return "Not in your hand";
 
   const { reason } = s.phase;
   const [card] = player.hand.splice(index, 1) as [Card];

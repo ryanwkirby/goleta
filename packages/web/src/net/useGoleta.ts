@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ClientMessage,
   ErrorCode,
+  ErrorKind,
   GameEvent,
   GameView,
   RoomView,
@@ -33,8 +34,19 @@ export interface Shout {
  * `code` is for the app, on the few refusals it can offer a way out of.
  */
 export interface GoletaError {
+  /**
+   * Bumped on every refusal, including a repeat of one word for word.
+   *
+   * Tap two cards that don't match and the second one has to look like a second
+   * answer — but the words are identical, so React keeps the same element and a
+   * CSS animation that has already run doesn't run again. Keying the pill on
+   * this is what replays it.
+   */
+  id: number;
   message: string;
   code?: ErrorCode;
+  /** How long it's worth showing. See `ErrorKind`. */
+  kind: ErrorKind;
 }
 
 export interface Goleta {
@@ -87,6 +99,7 @@ export const useGoleta = (): Goleta => {
   const closedRef = useRef(false);
   const logIdRef = useRef(0);
   const shoutIdRef = useRef(0);
+  const errorIdRef = useRef(0);
   /** The room we're in, so a reconnect knows what to reclaim. */
   const codeRef = useRef<string | null>(null);
 
@@ -173,7 +186,13 @@ export const useGoleta = (): Goleta => {
             break;
           }
           case "error":
-            setError({ message: message.message, code: message.code });
+            errorIdRef.current += 1;
+            setError({
+              id: errorIdRef.current,
+              message: message.message,
+              code: message.code,
+              kind: message.kind ?? "session",
+            });
             break;
           case "pong":
             break;

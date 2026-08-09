@@ -405,22 +405,25 @@ export function Table({
           {/* The host's reach for the room flag once the lobby is behind them.
               It is allowed to move mid-game precisely so a table that works out
               halfway through a hand that they are all sat together can say so,
-              and a control only in the lobby would make that unreachable. */}
+              and a control only in the lobby would make that unreachable.
+
+              Named the same as the lobby switch — one setting, one word for it,
+              wherever the host happens to be standing when they change it. */}
           {room.hostId === game.you ? (
             <Button
               variant="ghost"
               className="ml-auto px-2 py-1 text-xs"
               role="switch"
               aria-checked={room.irl}
-              aria-label="We're all in the same room"
+              aria-label="Playing in person"
               title={
                 room.irl
-                  ? "Everyone's in the same room. Tap to turn it off."
+                  ? "Everyone's in the same room. Tap for remote play."
                   : "Tap if you're all sitting in the same room."
               }
               onClick={() => send({ t: "setIrl", on: !room.irl })}
             >
-              same room: {room.irl ? "on" : "off"}
+              in person: {room.irl ? "on" : "off"}
             </Button>
           ) : null}
           {/* No way back to the hand here, and none needed: at an IRL table the

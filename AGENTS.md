@@ -125,6 +125,25 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   rule — because the offender may play on top of the card they reached against
   before anybody calls, and a wrong call usually has no `violation.snapshot` to
   read anything out of. The snapshot itself still never leaves the server.
+- **Bots play the card and name the suit the seat ahead of them *can* answer**,
+  which reads as a blunder and is the reversal doing its work. Playing is
+  compulsory, so leaving the next player a match costs them a card; stranding
+  them hands them the best turn in the game. Reading their hand to do it is not
+  the bot cheating and not the view leaking — every hand is face up, and
+  `docs/RULES.md` says naming a suit is not a guess for exactly that reason.
+  What a bot never does is take the answer from `GameView`: `legalCardIds` is
+  its own hand and nobody else's, so anything it concludes about another player
+  it works out from `isPlayable` itself.
+
+  It looks **one seat, one question**, and that ceiling is the design (#107).
+  No counting the deck, no reading further round the table, no modelling what
+  comes back. The old preference — shed your scarcest suit, name the suit you
+  hold least of — survives underneath as the tiebreak, and still decides
+  outright in the two places the reading rule has nothing to say: the play owed
+  for a landed call, which is buried under the punishment card and the turned-up
+  draws before anyone plays against it, and a suit named under **Power of
+  Eights**, where the namer is the player who then has to follow it and the rule
+  would have a bot name a suit against its own hand.
 - **Bots never wait for a Sunny window.** Their pacing is turn rhythm and
   nothing else, and `botPace` has no input that could tell it a call is on
   offer. A window opens on every draw, so a bot that held off would be stalling

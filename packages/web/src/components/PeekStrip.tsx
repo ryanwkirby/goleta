@@ -1,6 +1,7 @@
 import type { GameView, RoomView } from "@goleta/engine";
 
 import type { NameOf } from "../lib/format.ts";
+import { useFullscreen } from "../lib/fullscreen.ts";
 import { calledSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
@@ -16,6 +17,12 @@ import { SunnySign } from "./Sunny.tsx";
  * live, whose turn it is, the sun when a call is on offer, and somebody asking
  * for help. That is the whole list, and the omission that matters is the hands —
  * nobody else's cards appear here at any size.
+ *
+ * One thing on it is not a table fact: the offer of the rest of the screen. It
+ * is here because this is the only surface the landscape view has, and the offer
+ * has to be reachable from the orientation it is about — `RotatePanel` is shown
+ * only to a phone held upright, and a phone already sideways when the cards come
+ * out is deliberately never prompted at all (#125).
  *
  * The ask is on the list because taking help is meant to be public, and at an
  * IRL table every phone is in this view: the upright table draws the shout over
@@ -56,6 +63,7 @@ export function PeekStrip({
   helpFrom: string | null;
 }) {
   const { anchor, pileFace } = useMotion();
+  const fullscreen = useFullscreen();
   const face = pileFace(game.topCard);
   // The same question the full table's pile asks, answered in the same place:
   // a suit that has been named, for the card that is actually up. Null while one
@@ -85,6 +93,31 @@ export function PeekStrip({
       ].join(" ")}
     >
       <span className="font-mono text-xs tracking-[0.2em] text-white/50">{room.code}</span>
+
+      {/*
+        The left end, deliberately: the right is the draw reach (#117) and a
+        control next to it is a control under a thumb aimed at something else.
+
+        It is here rather than on `RotatePanel` because the panel is only ever
+        shown to a phone held *upright*, and a phone already sideways when the
+        cards come out is never prompted — so the one offer of screen space in
+        the app was unreachable from the orientation it was about. Absent, not
+        disabled, where the API doesn't exist, and it takes itself away once
+        fullscreen is held and comes back if the browser drops it.
+      */}
+      {fullscreen.offer ? (
+        <button
+          type="button"
+          onClick={fullscreen.request}
+          className={[
+            "flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-white/40",
+            "transition-colors hover:text-white/70",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+          ].join(" ")}
+        >
+          <span aria-hidden>⤢</span> full screen
+        </button>
+      ) : null}
 
       {/* The card in play, at the same size, so the two piles read as the pair
           they are on the full table. */}

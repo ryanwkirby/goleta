@@ -12,6 +12,11 @@
 
   --animate-help-shout: help-shout 2.6s ease-out forwards;
 
+  /* A refused move, over the hand it was refused from. The whole life of the
+     thing is in the one animation — in, held, out — and `MOVE_MS` clears up
+     after it, so the two figures move together. */
+  --animate-move-refusal: move-refusal 1.8s ease-out forwards;
+
   /* The phone on the rotate panel, showing which way it wants to go. */
   --animate-rotate-hint: rotate-hint 2.6s ease-in-out infinite;
 
@@ -53,6 +58,29 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -2.2rem) scale(1);
+  }
+}
+
+/* The answer to a mis-tap, arriving and leaving on its own. In over ~145ms,
+   held for a second and a half, out over ~215ms — quick enough at both ends
+   that it reads as a flick rather than a thing that has to be waited out, and
+   quicker on the way out than in, so leaving never looks like hesitating. */
+@keyframes move-refusal {
+  0% {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.96);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  88% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0.25rem) scale(0.98);
   }
 }
 
@@ -113,6 +141,21 @@
     70% {
       opacity: 1;
       transform: translate(-50%, -0.5rem);
+    }
+  }
+
+  /* Same three words, for the same second and a half, arriving and leaving
+     where they stand. The fade stays: something has to say this is one answer
+     and then another, and without it a repeat of the same refusal is a pill
+     that never moved. */
+  @keyframes move-refusal {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    8%,
+    88% {
+      opacity: 1;
     }
   }
 

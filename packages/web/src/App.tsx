@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Button } from "./components/ui.tsx";
+import { MoveRefusal, SessionError } from "./components/Refusal.tsx";
 import { hasSeenRules, markRulesSeen, setFirstGameHints } from "./net/identity.ts";
 import { useGoleta } from "./net/useGoleta.ts";
 import { Join } from "./screens/Join.tsx";
@@ -53,12 +53,6 @@ export function App() {
       }
     }
   }, [room, seatedOnce, watching]);
-
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(clearError, 5000);
-    return () => clearTimeout(timer);
-  }, [error, clearError]);
 
   const dismissRules = (): void => {
     markRulesSeen();
@@ -130,22 +124,14 @@ export function App() {
     <div className="flex flex-1 flex-col bg-felt-950 bg-[radial-gradient(120%_80%_at_50%_0%,var(--color-felt-900),var(--color-felt-950))] text-white">
       {body}
 
-      {error ? (
-        <div
-          role="status"
-          className="fixed inset-x-0 top-0 z-40 flex justify-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
-        >
-          <div className="flex max-w-md items-center gap-3 rounded-xl bg-rose-600 px-4 py-2.5 text-sm text-white shadow-xl">
-            <span>{error.message}</span>
-            <Button
-              variant="ghost"
-              className="min-h-0 px-2 py-0.5 text-xs text-white/80"
-              onClick={clearError}
-            >
-              dismiss
-            </Button>
-          </div>
-        </div>
+      {/* Keyed on the refusal rather than on nothing, so a second identical one
+          is a second notice: the element is torn down and rebuilt, which is
+          what restarts both the fade and the clock. */}
+      {error?.kind === "move" ? (
+        <MoveRefusal key={error.id} error={error} onDone={clearError} />
+      ) : null}
+      {error && error.kind !== "move" ? (
+        <SessionError key={error.id} error={error} onDismiss={clearError} />
       ) : null}
     </div>
   );

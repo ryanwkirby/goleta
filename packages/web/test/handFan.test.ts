@@ -97,6 +97,14 @@ describe("fanning your own hand in landscape", () => {
     expect(handStep(10, 40, "xl")).toBe(TIGHTEST);
   });
 
+  it("can keep an IRL landscape hand on screen by fitting past the old floor", () => {
+    const cards = atMostAtTheFloor(PHONE, "xl") + 3;
+    const fitted = handStep(PHONE, cards, "xl", TIGHTEST, true);
+
+    expect(fitted).toBeLessThan(TIGHTEST);
+    expect(handWidth(cards, fitted, "xl")).toBeLessThanOrEqual(PHONE);
+  });
+
   it("keeps the floor absolute, because a thumb is the same width either way", () => {
     // The card gets bigger; the smallest hittable sliver does not.
     expect(handStep(PHONE, 40, "lg")).toBe(handStep(PHONE, 40, "xl"));

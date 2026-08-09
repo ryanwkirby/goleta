@@ -89,11 +89,17 @@ export const handStep = (
   size: CardSize,
   /** Where tightening stops. The picker fans smaller cards, so it sets its own. */
   tightest: number = TIGHTEST,
+  /** Landscape IRL hands prefer a tighter fan over any local scrolling. */
+  fit = false,
 ): number => {
   const loose = loosest(size);
   if (cards <= 1 || available <= 0) return loose;
   for (let step = loose; step > tightest; step -= 1) {
     if (handWidth(cards, step, size) <= available) return step;
+  }
+  if (fit) {
+    const fitted = Math.floor((available - CARD_WIDTH_PX[size]) / Math.max(cards - 1, 1));
+    return Math.max(18, Math.min(tightest, fitted));
   }
   return tightest;
 };

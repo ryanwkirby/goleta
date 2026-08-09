@@ -1,11 +1,17 @@
-import { useLayoutEffect, useRef, useState, type RefCallback } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefCallback,
+} from "react";
 
 import type { Card } from "@goleta/engine";
 
 import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
 import { cardAnchor, HAND } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
-import { PlayingCard } from "./Card.tsx";
+import { CARD_WIDTH_PX, PlayingCard, type CardSize } from "./Card.tsx";
 
 /**
  * `forced` is the play you owe after a Sunny call has landed on you. It plays a
@@ -60,6 +66,8 @@ export function Hand({
   mode,
   assist,
   onChoose,
+  size = "md",
+  step = null,
 }: {
   cards: Card[];
   legalCardIds: string[];
@@ -72,6 +80,14 @@ export function Hand({
    */
   assist: boolean;
   onChoose: (cardId: string) => void;
+  size?: CardSize;
+  /**
+   * Left edge to left edge, in pixels, when the hand has to close up to fit —
+   * see `handFan.ts`. Null spaces the cards out with a plain gap, which is
+   * what the full table has always done and what a wide screen never needs to
+   * improve on.
+   */
+  step?: number | null;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const { anchor, isArriving, reduced } = useMotion();
@@ -157,14 +173,29 @@ export function Hand({
   };
 
   return (
-    <div ref={anchor(HAND)} className="flex items-end gap-1.5 overflow-x-auto px-1 pb-2 pt-6">
+    <div
+      ref={anchor(HAND)}
+      // Cards slide left onto their neighbours by `--fan`, exactly as the seat
+      // strip does it: later cards paint over earlier ones by DOM order, so no
+      // `z-index` is needed. `justify-center` is what makes a short hand sit in
+      // the middle of a wide landscape screen rather than hugging one edge —
+      // `overflow-x-auto` only overrides it once there is genuinely too much.
+      style={step === null ? undefined : ({ "--fan": `${step - CARD_WIDTH_PX[size]}px` } as CSSProperties)}
+      className={[
+        "flex items-end overflow-x-auto pb-2 pt-6",
+        // With a step, the row's width *is* the width the fan was fitted to, so
+        // it keeps no padding of its own — an inset here and an inset in the
+        // arithmetic are two places to disagree, and they did.
+        step === null ? "gap-1.5 px-1" : "justify-center [&>*+*]:ml-[var(--fan)]",
+      ].join(" ")}
+    >
       {cards.map((card) => {
         const playable = legal.has(card.id);
         return (
           <PlayingCard
             key={card.id}
             card={card}
-            size="md"
+            size={size}
             anchor={refFor(card.id)}
             arriving={isArriving(card.id)}
             // With help on, the unplayable cards are dimmed. Without it they

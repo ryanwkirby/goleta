@@ -39,7 +39,7 @@ import type { Card, GameView } from "@goleta/engine";
 import { CardBack, CARD_WIDTH_PX, PlayingCard } from "../components/Card.tsx";
 import type { LoggedEvent } from "../net/useGoleta.ts";
 import { resolveAnchor, type AnchorGeometry, type AnchorKey } from "./anchors.ts";
-import { planFlights, type FlightPlan } from "./plan.ts";
+import { FULL_TABLE, planFlights, type FlightPlan, type TableScale } from "./plan.ts";
 import { usePrefersReducedMotion } from "./reducedMotion.ts";
 
 /** Anything older than this already happened somewhere else. */
@@ -84,10 +84,17 @@ export const useMotion = (): MotionApi => useContext(MotionContext);
 export function TableMotion({
   game,
   log,
+  /**
+   * How big the cards are wherever they come to rest on this screen. The two
+   * layouts draw them at different sizes, and a flight is scaled between its
+   * two ends — so a plan made against the wrong one lands and then pops.
+   */
+  scale = FULL_TABLE,
   children,
 }: {
   game: GameView;
   log: LoggedEvent[];
+  scale?: TableScale;
   children: ReactNode;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -167,6 +174,7 @@ export function TableMotion({
       recent.toReversed().map((entry) => entry.event),
       game,
       () => `f${(sequence.current += 1)}`,
+      scale,
     );
 
     const live: LiveFlight[] = [];
@@ -192,7 +200,7 @@ export function TableMotion({
     }
 
     setFlights((current) => [...current, ...live]);
-  }, [log, game, reduced, geometry, land]);
+  }, [log, game, reduced, geometry, land, scale]);
 
   // 2. Remember where everything is, for the next update to fly out of.
   useLayoutEffect(() => {

@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { ClientMessage, GameEvent, GameView, RoomView, ServerMessage } from "@goleta/engine";
+import type {
+  ClientMessage,
+  ErrorCode,
+  GameEvent,
+  GameView,
+  RoomView,
+  ServerMessage,
+} from "@goleta/engine";
 
 import { forgetIdentity, loadIdentity, saveIdentity } from "./identity.ts";
+import { routeFromHash, setHashCode, type ViewMode } from "./route.ts";
 
 export type ConnectionStatus = "connecting" | "open" | "closed";
 
@@ -20,16 +28,27 @@ export interface Shout {
   kind: "help";
 }
 
+/**
+ * A refusal, as the app has to deal with it. The sentence is for the player;
+ * `code` is for the app, on the few refusals it can offer a way out of.
+ */
+export interface GoletaError {
+  message: string;
+  code?: ErrorCode;
+}
+
 export interface Goleta {
   status: ConnectionStatus;
   room: RoomView | null;
   game: GameView | null;
   playerId: string | null;
+  /** What this browser came to do: take a seat, watch, or be the table screen. */
+  mode: ViewMode;
   /** Most recent first. */
   log: LoggedEvent[];
   /** Whoever is currently asking for help. Empties itself. */
   shouts: Shout[];
-  error: string | null;
+  error: GoletaError | null;
   clearError: () => void;
   send: (message: ClientMessage) => void;
   leave: () => void;
@@ -45,17 +64,6 @@ const socketUrl = (): string => {
   return `${protocol}//${location.host}/ws`;
 };
 
-/** `#/r/ABCD` — the shape of a link you can text to somebody. */
-export const codeFromHash = (): string | null => {
-  const match = /^#\/r\/([A-Za-z0-9]{4})$/.exec(location.hash);
-  return match?.[1]?.toUpperCase() ?? null;
-};
-
-export const setHashCode = (code: string | null): void => {
-  const next = code ? `#/r/${code}` : "";
-  if (location.hash !== next) history.replaceState(null, "", next || location.pathname);
-};
-
 export const useGoleta = (): Goleta => {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [room, setRoom] = useState<RoomView | null>(null);
@@ -63,7 +71,15 @@ export const useGoleta = (): Goleta => {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [log, setLog] = useState<LoggedEvent[]>([]);
   const [shouts, setShouts] = useState<Shout[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<GoletaError | null>(null);
+  /**
+   * Read once, at the top of the session. The URL is how a screen says what it
+   * is for, and nothing after this may change its mind — `welcome` rewrites the
+   * hash, and a watcher whose mode got rewritten there would quietly sit down
+   * at the table on the next reload.
+   */
+  const [route] = useState(() => routeFromHash());
+  const watching = route.mode !== "play";
 
   const socketRef = useRef<WebSocket | null>(null);
   const queueRef = useRef<ClientMessage[]>([]);
@@ -93,11 +109,15 @@ export const useGoleta = (): Goleta => {
         attemptRef.current = 0;
         setStatus("open");
 
-        // Reclaim the seat before anything queued goes out, so the server knows
-        // who is talking.
-        const code = codeRef.current ?? codeFromHash();
-        const identity = code ? loadIdentity(code) : null;
-        if (code && identity) {
+        // Say who is talking before anything queued goes out. A watcher says it
+        // on every connection rather than only the first: watching is stateless,
+        // so there is nothing to reclaim and nothing to check — a dropped socket
+        // or a redeploy just watches again.
+        const code = codeRef.current ?? route.code;
+        const identity = code && !watching ? loadIdentity(code) : null;
+        if (code && watching) {
+          socket.send(JSON.stringify({ t: "watch", code } satisfies ClientMessage));
+        } else if (code && identity) {
           socket.send(
             JSON.stringify({
               t: "rejoin",
@@ -115,7 +135,7 @@ export const useGoleta = (): Goleta => {
         switch (message.t) {
           case "welcome": {
             codeRef.current = message.code;
-            setHashCode(message.code);
+            setHashCode(message.code, route.mode);
             setPlayerId(message.playerId);
             if (message.playerId && message.token) {
               saveIdentity(message.code, { playerId: message.playerId, token: message.token });
@@ -153,7 +173,7 @@ export const useGoleta = (): Goleta => {
             break;
           }
           case "error":
-            setError(message.message);
+            setError({ message: message.message, code: message.code });
             break;
           case "pong":
             break;
@@ -178,17 +198,31 @@ export const useGoleta = (): Goleta => {
       socketRef.current = null;
       closedRef.current = false;
     };
-  }, []);
+  }, [route, watching]);
 
   const leave = useCallback(() => {
     const code = codeRef.current;
-    if (code) forgetIdentity(code);
+    // A watcher has no seat and nothing in `localStorage` to forget. Reaching
+    // for the key anyway would be the one write a watching browser makes.
+    if (code && !watching) forgetIdentity(code);
     codeRef.current = null;
     setHashCode(null);
     location.reload();
-  }, []);
+  }, [watching]);
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { status, room, game, playerId, log, shouts, error, clearError, send, leave };
+  return {
+    status,
+    room,
+    game,
+    playerId,
+    mode: route.mode,
+    log,
+    shouts,
+    error,
+    clearError,
+    send,
+    leave,
+  };
 };

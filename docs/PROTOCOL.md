@@ -35,12 +35,37 @@ owns the seat and nowhere else.
 `watch` joins with no seat at all: a table screen or a spectator sees the board
 and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 
+**A watcher has no identity and writes nothing.** There is no `playerId`, no
+token, and nothing in `localStorage` — so there is also nothing to reclaim. A
+reload just watches again, and so does a reconnection after a dropped socket or
+a redeploy: the client re-sends `watch` on every connection rather than only the
+first, because watching is stateless and there is nothing to check.
+
+Two client entry points reach it, and the difference between them is only what
+gets drawn:
+
+| URL | What it is |
+| --- | --- |
+| `#/r/ABCD/watch` | A person watching the table. |
+| `#/r/ABCD/table` | The same connection, drawn as the shared screen for the middle of the table. |
+
+The mode is in the URL rather than in a message on purpose: a device propped in
+the middle of a table is opened once and left there, and "what this screen is
+for" has to survive a reload without anybody touching it.
+
+There is one more way in. `join` is refused for the length of a game, and that
+refusal carries `code: "gameUnderWay"` alongside its sentence — so somebody who
+has just pointed a camera at a table mid-hand is offered the watch URL instead
+of being left on a form that will keep failing. It is the only error code there
+is, and the bar for a second one is that reading the prose would otherwise be
+the only way to tell.
+
 ## Client to server
 
 | Message | Who | Notes |
 | --- | --- | --- |
 | `create` | anyone | Makes a room, seats you, makes you host. |
-| `join` | anyone | By room code. Refused once a game is under way — watch instead. |
+| `join` | anyone | By room code. Refused once a game is under way, with `code: "gameUnderWay"` so the client can offer to watch. |
 | `rejoin` | seat owner | `playerId` + `token`. |
 | `watch` | anyone | No seat, no cards, no actions. |
 | `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
@@ -48,6 +73,7 @@ and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 | `addBot` / `removeSeat` | host | Between games only. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
+| `setIrl` | host | **Any time, including mid-game.** "We're all in the same room"; carried back to everyone on `RoomView`. |
 | `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
@@ -63,8 +89,9 @@ can only ever act as itself. There's a test that tries it the other way.
 - `shout` — somebody said something out loud. Not a game event: the position
   doesn't change, it isn't replayed, it isn't in the log, and it goes out
   identically to everyone. Only `help` so far.
-- `error` — a human-readable sentence. Rejected moves are ordinary; the engine's
-  refusals are written to be shown to a player as-is.
+- `error` — a human-readable sentence, and on one refusal a `code`. Rejected
+  moves are ordinary; the engine's refusals are written to be shown to a player
+  as-is.
 - `pong`.
 
 ## What the server never sends
@@ -144,6 +171,28 @@ cannot be reached from a browser.
 With `sunny` off, the three challenge-window fields above are inert for
 everyone — `sunnyCallable` false, `sunnyReach` null, `sunnyLockedDraws` zero —
 because no challenge window is ever opened in the first place.
+
+## IRL mode
+
+`RoomView.irl` says this table is sitting in the same room, each holding their
+own phone. The host sets it with `{ t: "setIrl", on }`, and it defaults to off,
+so an online room behaves exactly as it did before the flag existed.
+
+**It is not a house rule, and deliberately not on `HouseRules`.** Everything
+there changes what is legal, is mapped onto `GameOptions`, and reaches
+`applyIntent`. This changes nothing the engine can see: it is presentation, and
+putting it on the rules path would hand the engine an input it must ignore and a
+`GameOptions` field that means nothing to a simulation. It belongs beside
+`botSpeed` — a property of the room.
+
+**It is also the one host setting not frozen mid-game.** Bot speed is frozen
+because changing the pace moves a challenge window somebody may already be
+watching; house rules are frozen because rules changing under a live hand is
+incoherent. Neither applies here. No timer reads it, no legality turns on it,
+and the server does no more than copy it to every client — so a table that gets
+three turns in and realises they are all sat together can flip it there and then.
+
+It is room state, so it is in the snapshot and survives a redeploy.
 
 ## Bots
 

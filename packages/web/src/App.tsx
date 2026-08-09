@@ -8,25 +8,50 @@ import { Lobby } from "./screens/Lobby.tsx";
 import { Rules } from "./screens/Rules.tsx";
 import { Table } from "./screens/Table.tsx";
 
+/**
+ * What a watching screen shows before the table arrives.
+ *
+ * Deliberately almost nothing. A device pointed at a table is opened once and
+ * left alone, so this is what it displays for a second on the way up and again
+ * after every reconnection — and a room that has gone (a code that expired, a
+ * table that finished days ago) leaves it here rather than dropping somebody
+ * into a form they didn't ask for. The error banner over the top says which.
+ */
+function Waiting({ status }: { status: string }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+      <p className="font-mono text-sm uppercase tracking-[0.3em] text-white/40">goleta</p>
+      <p className="text-sm text-white/50">
+        {status === "open" ? "Finding the table…" : "Connecting…"}
+      </p>
+    </div>
+  );
+}
+
 export function App() {
-  const { status, room, game, playerId, log, shouts, error, clearError, send, leave } =
+  const { status, room, game, playerId, mode, log, shouts, error, clearError, send, leave } =
     useGoleta();
   const [showRules, setShowRules] = useState(false);
   const [seatedOnce, setSeatedOnce] = useState(false);
   /** True only for the read on the way in, where the hints are also offered. */
   const [firstRead, setFirstRead] = useState(false);
+  const watching = mode !== "play";
 
   // First time in, explain the game before the lobby. Everything except the
   // Sunny Rule, which people meet by having it called on them.
+  //
+  // Not for a watcher: they have no move to make, a table screen has nobody
+  // standing at it to dismiss anything, and `markRulesSeen` would be the one
+  // thing a watching browser wrote to `localStorage`.
   useEffect(() => {
-    if (room && !seatedOnce) {
+    if (room && !seatedOnce && !watching) {
       setSeatedOnce(true);
       if (!hasSeenRules()) {
         setFirstRead(true);
         setShowRules(true);
       }
     }
-  }, [room, seatedOnce]);
+  }, [room, seatedOnce, watching]);
 
   useEffect(() => {
     if (!error) return;
@@ -46,7 +71,17 @@ export function App() {
   };
 
   const body = (() => {
-    if (!room) return <Join send={send} connecting={status !== "open"} />;
+    if (!room) {
+      // A screen that came here to watch has nothing to fill in: the room is
+      // in the URL and the connection is already on its way. Showing the join
+      // form in the meantime would offer a seat that was never on the table,
+      // and a device propped in the middle of one would flash a name field at
+      // the room every time it reconnected.
+      if (watching) return <Waiting status={status} />;
+      return (
+        <Join send={send} connecting={status !== "open"} underWay={error?.code === "gameUnderWay"} />
+      );
+    }
     if (showRules) {
       return (
         <div className="flex flex-1 items-start justify-center p-5 sm:items-center">
@@ -69,6 +104,9 @@ export function App() {
         />
       );
     }
+    // `watch` and `table` are the same connection and, for now, the same
+    // screen: the spectator's board. The shared screen for the middle of the
+    // table — the one `table` exists to name — is #14.
     return (
       <Table
         room={room}
@@ -93,7 +131,7 @@ export function App() {
           className="fixed inset-x-0 top-0 z-40 flex justify-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
         >
           <div className="flex max-w-md items-center gap-3 rounded-xl bg-rose-600 px-4 py-2.5 text-sm text-white shadow-xl">
-            <span>{error}</span>
+            <span>{error.message}</span>
             <Button
               variant="ghost"
               className="min-h-0 px-2 py-0.5 text-xs text-white/80"

@@ -36,6 +36,7 @@ import {
   roomView,
   setBotSpeed,
   setHouseRules,
+  setIrl,
   type Room,
   type RoomStore,
   type Seat,
@@ -286,6 +287,11 @@ export const attachSockets = (
       case "setBotSpeed":
         setBotSpeed(room, playerId, message.speed);
         return broadcast(room);
+      case "setIrl":
+        // No "wait for this game to finish" guard, unlike the two above: this
+        // one reaches nothing that is running. See `setIrl`.
+        setIrl(room, playerId, message.on);
+        return broadcast(room);
       case "setHouseRules":
         setHouseRules(room, playerId, message.rules);
         return broadcast(room);
@@ -327,9 +333,13 @@ export const attachSockets = (
       try {
         handle(client, message);
       } catch (error) {
-        const text = error instanceof RoomError ? error.message : "something went wrong";
-        if (!(error instanceof RoomError)) console.error("[ws]", error);
-        send(client, { t: "error", message: text });
+        const known = error instanceof RoomError;
+        if (!known) console.error("[ws]", error);
+        send(client, {
+          t: "error",
+          message: known ? error.message : "something went wrong",
+          ...(known && error.code ? { code: error.code } : {}),
+        });
       }
     });
 

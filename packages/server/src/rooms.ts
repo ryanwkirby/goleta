@@ -19,6 +19,7 @@ import {
   topCard,
   type BotSpeed,
   type CardId,
+  type ErrorCode,
   type GameEvent,
   type GameOptions,
   type GameState,
@@ -87,6 +88,13 @@ export interface Room {
    */
   botSpeed: BotSpeed;
   /**
+   * Whether this table is sitting in the same room, each holding their own
+   * phone. Presentation and nothing else: no rule, no timer and no legality
+   * reads it, which is why — unlike bot speed and the house rules below — it
+   * can be changed with a game already running.
+   */
+  irl: boolean;
+  /**
    * This table's house rules, chosen in the lobby and applied at the next deal.
    * Held on the room rather than read off the game so a table keeps its rules
    * between games — and so they can be changed while no game is running.
@@ -121,12 +129,27 @@ const BOT_NAMES = [
   "Cogs",
 ];
 
-export class RoomError extends Error {}
+/**
+ * A refusal written to be shown to a player as-is.
+ *
+ * `code` is the exception: a machine-readable tag on the handful of refusals the
+ * browser can offer a way out of, rather than leaving somebody on a form that
+ * will keep failing. It is not an error taxonomy and shouldn't become one — the
+ * sentence is still the message.
+ */
+export class RoomError extends Error {
+  readonly code: ErrorCode | undefined;
+
+  constructor(message: string, code?: ErrorCode) {
+    super(message);
+    this.code = code;
+  }
+}
 
 // Explicitly annotated so TypeScript treats a bare `fail(...)` as terminating
 // the branch and narrows what follows.
-const fail: (message: string) => never = (message) => {
-  throw new RoomError(message);
+const fail: (message: string, code?: ErrorCode) => never = (message, code) => {
+  throw new RoomError(message, code);
 };
 
 /** Names are shown to everyone at the table, so they get cleaned on the way in. */
@@ -167,6 +190,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     seats: [seat],
     dealerId: null,
     botSpeed: "human",
+    irl: false,
     options: DEFAULT_OPTIONS,
     botSeed: newSeed(),
     callHolds: {},
@@ -191,7 +215,10 @@ export const joinRoom = (
 ): { room: Room; seat: Seat } => {
   const room = findRoom(store, code);
   if (room.game && room.game.status === "playing") {
-    fail("that game is already under way — you can watch, or wait for the next one");
+    // Tagged, because "watch instead" is a real offer the Join screen can make
+    // and matching on the wording of this sentence to spot it would break the
+    // next time somebody rewrites it.
+    fail("that game is already under way — you can watch, or wait for the next one", "gameUnderWay");
   }
   if (room.seats.length >= MAX_TABLE_PLAYERS) fail("that room is full");
 
@@ -265,6 +292,26 @@ export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): 
   if (speed !== "human" && speed !== "lightning") fail("no such speed");
 
   room.botSpeed = speed;
+  touch(room);
+};
+
+/**
+ * Whether this table is all in one room, said by the host.
+ *
+ * The one host power with no "wait for this game to finish" on it, and
+ * deliberately so. `setBotSpeed` and `setHouseRules` are frozen mid-game
+ * because each of them reaches something live — a challenge window whose pace
+ * somebody is already watching, or what is legal under a hand already dealt.
+ * This reaches nothing: the engine never sees it, no timer reads it, and every
+ * client that gets it does no more than draw the same game differently. A
+ * table that gets three turns in and realises they are all sat together can
+ * say so there and then.
+ */
+export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
+  requireHost(room, byPlayerId);
+  if (typeof on !== "boolean") fail("IRL mode is on or off");
+
+  room.irl = on;
   touch(room);
 };
 
@@ -556,6 +603,7 @@ export const roomView = (room: Room): RoomView => ({
   lastWinnerId: room.lastWinnerId,
   botSpeed: room.botSpeed,
   houseRules: houseRulesOf(room),
+  irl: room.irl,
 });
 
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>

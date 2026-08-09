@@ -75,6 +75,8 @@ class TestClient {
   room: RoomView | null = null;
   game: GameView | null = null;
   errors: string[] = [];
+  /** The same refusals with everything the wire carried, `kind` included. */
+  refusals: Array<Extract<ServerMessage, { t: "error" }>> = [];
   private waiters: Array<(m: ServerMessage) => boolean> = [];
 
   constructor(port: number) {
@@ -90,7 +92,10 @@ class TestClient {
         this.room = message.room;
         this.game = message.game;
       }
-      if (message.t === "error") this.errors.push(message.message);
+      if (message.t === "error") {
+        this.errors.push(message.message);
+        this.refusals.push(message);
+      }
       this.waiters = this.waiters.filter((waiter) => !waiter(message));
     });
   }
@@ -251,8 +256,44 @@ describe("a room over the wire", () => {
       intent: { type: "drawCard", playerId: onClock ?? "" },
     });
     await impostor.until((c) => c.errors.length > 0);
-    expect(impostor.errors.at(-1)).toMatch(/isn't your turn/);
+    expect(impostor.errors.at(-1)).toMatch(/Not your turn/);
     expect(impostor.game?.turnNumber).toBe(before);
+  }, 20_000);
+
+  it("marks a refused move as one, and leaves everything else alone", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+
+    const guest = await openClient(server.port);
+    guest.send({ t: "join", code: host.code as string, name: "Sam" });
+    await guest.until((c) => c.room !== null);
+
+    // A host-only message from a guest: news to be read and acted on, so it
+    // arrives unmarked and the client leaves it up.
+    guest.send({ t: "addBot" });
+    await guest.until((c) => c.refusals.length > 0);
+    expect(guest.refusals.at(-1)?.kind).toBeUndefined();
+
+    await fillTable(host);
+    host.send({ t: "start" });
+    await host.until((c) => c.room?.status === "playing");
+    await guest.until((c) => c.game !== null);
+
+    // A refused intent is a mis-tap, whatever the reason. Whoever isn't on the
+    // clock has one to hand: a card, out of turn.
+    const waiting = guest.game?.waitingOn;
+    const offTurn = waiting === guest.playerId ? host : guest;
+    const before = offTurn.refusals.length;
+    const card = offTurn.game?.players.find((p) => p.id === offTurn.playerId)?.hand?.[0];
+    offTurn.send({
+      t: "intent",
+      intent: { type: "playCard", playerId: offTurn.playerId ?? "", cardId: card?.id ?? "" },
+    });
+    await offTurn.until((c) => c.refusals.length > before);
+    expect(offTurn.refusals.at(-1)?.message).toBe("Not your turn");
+    expect(offTurn.refusals.at(-1)?.kind).toBe("move");
   }, 20_000);
 
   it("keeps host powers to the host", async () => {

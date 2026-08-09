@@ -123,7 +123,7 @@ export type ServerMessage =
    * and it's gone, like speaking.
    */
   | { t: "shout"; playerId: PlayerId; kind: "help" }
-  | { t: "error"; message: string; code?: ErrorCode }
+  | { t: "error"; message: string; code?: ErrorCode; kind?: ErrorKind }
   | { t: "pong" };
 
 /**
@@ -136,6 +136,23 @@ export type ServerMessage =
  * that breaks the next time somebody rewrites a sentence.
  */
 export type ErrorCode = "gameUnderWay";
+
+/**
+ * How long a refusal is worth looking at, which is the only thing the client
+ * does differently with them.
+ *
+ * A `move` is a mis-tap — a card that doesn't match, a turn that isn't yours.
+ * The hand it was aimed at already says so by not changing, so the words are a
+ * confirmation and they go away on their own. Everything else is a `session`:
+ * the room is full, the seat isn't yours, the game is already under way. Those
+ * are read, thought about and acted on, so they sit there until they're
+ * dismissed.
+ *
+ * Not an `ErrorCode`. A code says *which* refusal this is and exists so the
+ * client can offer a way out of it; this says how heavy the news is, and every
+ * refusal has an answer.
+ */
+export type ErrorKind = "move" | "session";
 
 /** Suit names for UI copy, kept next to the protocol so both sides agree. */
 export type SuitKey = Suit;

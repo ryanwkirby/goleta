@@ -176,7 +176,26 @@ export function HandView({
             the foot of the screen: this view exists because your own cards were
             the thing you decide from and were getting a fifth of the display,
             and parking them at the bottom of an empty field is only half a fix. */}
-        <div ref={row} className="relative flex min-h-0 flex-1 flex-col justify-center px-1">
+        {/*
+          The side insets go on the measured box, which is what makes the fan
+          honour them for free: `useBox` reads the content box, so `handStep`
+          below is handed the width the cards actually get and closes the fan up
+          by the rules it already has. Nothing subtracts hardware by hand.
+
+          It costs the fan ~59pt of width on the island side, and that is the
+          trade being taken deliberately. `fan.ts` has a floor because a card you
+          cannot read is a play you cannot spot, and an end card behind the
+          island is that same failure by another route — so the fan tightens,
+          which is the release valve it already has. Letting the row bleed would
+          keep the arithmetic looking healthy while the hardware overruled it.
+        */}
+        <div
+          ref={row}
+          className={[
+            "relative flex min-h-0 flex-1 flex-col justify-center",
+            "pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]",
+          ].join(" ")}
+        >
           {/* Your own shout, over your own cards, same as everyone else sees. */}
           {shouting ? <HelpShout /> : null}
 
@@ -206,7 +225,13 @@ export function HandView({
 
       {/* One line at the foot: what the table is waiting for, and the way back
           to the whole of it. */}
-      <footer className="flex shrink-0 items-center gap-3 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-0.5">
+      <footer
+        className={[
+          "flex shrink-0 items-center gap-3 pt-0.5",
+          "pb-[max(0.25rem,env(safe-area-inset-bottom))]",
+          "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
+        ].join(" ")}
+      >
         {stalled ? <HelpLink onAsk={onAskForHelp} /> : null}
         {/* Yours alone: the server sends this to nobody else. */}
         {game.sunnyLockedDraws > 0 ? (

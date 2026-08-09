@@ -71,8 +71,19 @@ export function PeekStrip({
         ? "your turn"
         : `${nameOf(waiting)} to play`;
 
+  // The side insets are the landscape ones, and they are why this strip has
+  // ends worth protecting: the room code sits at the left end and the turn
+  // prompt and the sun are pushed to the right by `ml-auto`, so on a phone with
+  // an island one or the other is behind hardware, and which one depends on
+  // which way the phone was turned. The border still runs the full width — the
+  // felt and its edge bleed, the content insets.
   return (
-    <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-3 py-1">
+    <header
+      className={[
+        "flex shrink-0 items-center gap-3 border-b border-white/10 py-1",
+        "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
+      ].join(" ")}
+    >
       <span className="font-mono text-xs tracking-[0.2em] text-white/50">{room.code}</span>
 
       {/* The card in play, at the same size, so the two piles read as the pair

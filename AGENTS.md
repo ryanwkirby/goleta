@@ -220,6 +220,26 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   without relying on colour at all. Both weights share `SURFACE` in
   `Refusal.tsx`; they differ in shape, life and whether there is anything to
   dismiss, and in nothing else.
+- **The felt bleeds to the physical edge; the content insets from it.**
+  `index.html` opts into `viewport-fit=cover`, so the four
+  `env(safe-area-inset-*)` values are this app's problem — and `body` already
+  paints the felt behind everything precisely so nothing here needs a
+  background of its own. Insets go on the content layers, always as
+  `max(designed-padding,env(…))` so the hardware is a floor rather than a
+  replacement, and never as a blanket padding on `#root` — that is a flex column
+  with `min-height:100%`, and padding there fights the `h-dvh` in `HandView` and
+  `TableScreen` and pushes their bottoms off the screen. No user-agent checks
+  anywhere: `env()` already answers per rotation and gives zero on hardware with
+  nothing to avoid, so nothing needs to know what a phone is (#124).
+
+  **In landscape the fan gives up width to the island rather than sliding under
+  it**, which is the one real cost in here and is deliberate. The insets sit on
+  the row `useBox` measures, so `handStep` is handed the corrected width and
+  closes the fan up by the rules it already has — nothing subtracts hardware by
+  hand. `fan.ts` has a floor because a card you cannot read is a play you cannot
+  spot, and an end card behind the island is that same failure arriving by a
+  different route. Letting the row bleed would keep the arithmetic looking
+  healthy while the hardware quietly overruled it.
 
 ## House rules
 

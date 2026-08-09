@@ -16,6 +16,7 @@ import {
 } from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
+import { MoveRefusal } from "../components/Refusal.tsx";
 import { namerFor } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
@@ -32,7 +33,7 @@ import {
   saveHandSort,
   wantsFirstGameHints,
 } from "../net/identity.ts";
-import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
+import type { GoletaError, LoggedEvent, Shout } from "../net/useGoleta.ts";
 import { HandView } from "./HandView.tsx";
 
 /** How long the table looks at "X called it on Y" before anything else. */
@@ -89,6 +90,7 @@ export function Table({
   game,
   log,
   shouts,
+  refusal,
   send,
   onLeave,
   onShowRules,
@@ -98,6 +100,8 @@ export function Table({
   game: GameView;
   log: LoggedEvent[];
   shouts: Shout[];
+  /** A refused move, to be shown against the hand it was refused from. */
+  refusal: GoletaError | null;
   send: (message: ClientMessage) => void;
   onLeave: () => void;
   onShowRules: () => void;
@@ -364,6 +368,7 @@ export function Table({
           mode={mode}
           assist={assist}
           onChooseCard={onChooseCard}
+          refusal={refusal}
           canDraw={mine && game.phase.kind === "action" && !finished}
           onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
           prompt={prompt(game, nameOf, assist)}
@@ -552,10 +557,14 @@ export function Table({
                 would trim its own ring. */}
             <div
               className={[
-                "rounded-2xl transition-colors",
+                "relative rounded-2xl transition-colors",
                 mine ? "ring-1 ring-amber-300/60" : "",
               ].join(" ")}
             >
+              {/* Hung off the top edge of your own cards, keyed so a second
+                  refusal in the same words is a second answer rather than a
+                  pill that never moved. */}
+              {refusal ? <MoveRefusal key={refusal.id} error={refusal} /> : null}
               <Hand
                 cards={sortHand(you?.hand ?? [], handSort)}
                 legalCardIds={game.legalCardIds}

@@ -1,23 +1,3 @@
-import { useState } from "react";
-
-import { Button } from "./ui.tsx";
-
-/**
- * Whether this browser can be asked to stay in landscape once it gets there.
- *
- * `screen.orientation.lock()` only works from fullscreen and iOS Safari does
- * not implement it at all, so this is Chrome on Android in practice. Read once
- * at module scope: nothing about it changes while a page is open, and a control
- * that appeared halfway through a hand would be worse than one that never did.
- */
-const canLock = (): boolean => {
-  if (typeof document === "undefined") return false;
-  const orientation = screen.orientation as ScreenOrientation & {
-    lock?: (to: string) => Promise<void>;
-  };
-  return typeof orientation?.lock === "function" && !!document.documentElement.requestFullscreen;
-};
-
 /**
  * A phone held upright at a table it can't draw, asked to turn.
  *
@@ -27,7 +7,18 @@ const canLock = (): boolean => {
  * phone for them. Which is fine — everybody at an IRL table is sitting down,
  * this happens once, and it is the same gesture as picking up a hand of cards.
  *
- * There is no way past it and no "continue anyway": the hand view is a
+ * **And nothing here reaches for that lock even where it exists.** It used to,
+ * behind a "keep it landscape" button, which froze the app's only view switch:
+ * once locked, turning the phone upright did nothing, `useIsPortrait` never
+ * flipped, and that player could not reach the full table with everybody's
+ * hands face up for the rest of the session. A button that quietly deletes half
+ * the app, offered on the one panel whose whole job is teaching the gesture it
+ * disables. The screen space it was bundled with is worth having and is offered
+ * on its own in the peek strip, where a sideways phone can actually reach it —
+ * fullscreen survives a rotation, which is the behaviour wanted all along and
+ * the thing the lock was preventing (#125).
+ *
+ * There is no way past this and no "continue anyway": the hand view is a
  * landscape layout, and a portrait phone showing half of it would be worse than
  * a phone asking to be turned.
  *
@@ -38,27 +29,6 @@ const canLock = (): boolean => {
  * app has stopped talking to anyone".
  */
 export function RotatePanel({ offline }: { offline: boolean }) {
-  const [supported] = useState(canLock);
-  const [asked, setAsked] = useState(false);
-
-  /**
-   * Fullscreen, then hold it there. Failure is silent and changes nothing —
-   * the panel is still up, the phone still turns, and an error banner about an
-   * optional convenience would be noise over a screen that is already one
-   * instruction long.
-   */
-  const lock = async (): Promise<void> => {
-    setAsked(true);
-    try {
-      await document.documentElement.requestFullscreen();
-      await (
-        screen.orientation as ScreenOrientation & { lock?: (to: string) => Promise<void> }
-      ).lock?.("landscape");
-    } catch {
-      /* not on this browser, not today */
-    }
-  };
-
   return (
     <div
       role="dialog"
@@ -75,15 +45,6 @@ export function RotatePanel({ offline }: { offline: boolean }) {
           table. You should be able to see everyone else's phone screen.
         </p>
       </div>
-
-      {/* No dead control where it can't work: a button that does nothing on iOS
-          would read as the app being broken rather than the platform being
-          what it is. */}
-      {supported ? (
-        <Button variant="secondary" onClick={() => void lock()}>
-          {asked ? "Turn it now" : "Keep it landscape"}
-        </Button>
-      ) : null}
 
       {/* The one thing a blocked player still needs, and the reason it isn't
           left behind the panel. */}

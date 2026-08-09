@@ -38,10 +38,9 @@ export function Rules({
         </li>
         <li>
           <strong className="text-white">
-            Every hand is <em>face up</em>.
+            Everyone's cards are <em>face up</em>.
           </strong>{" "}
-          Nobody's cards are a secret, all game. Whether someone had a play they skipped is there
-          to be seen — spotting it is on you.
+          Everyone can see everyone else's cards, all game.
         </li>
         <li>
           <strong className="text-white">
@@ -52,24 +51,23 @@ export function Rules({
         </li>
         <li>
           <strong className="text-white">
-            Being <em>stuck</em> is good.
+            Being stuck is <em>good</em>.
           </strong>{" "}
-          With nothing playable you draw a card, which is exactly what you want. Still stuck? Draw
+          With nothing playable you draw a card (which is exactly what you want). Still stuck? Draw
           again, up to three.
         </li>
         <li>
           <strong className="text-white">
             Eights are <em>wild</em>.
           </strong>{" "}
-          An 8 plays on anything, so holding one means you can never draw, and drawing one ends
-          your turn on the spot. Naming the next suit is what you get back.
+          An 8 plays on anything, and after playing one, you get to name the suit.
         </li>
       </ol>
 
       <p className="mt-5 rounded-xl bg-white/5 p-3 text-sm text-white/70">
-        The one thing you're not allowed to do is draw when you had a play. If someone gets shady
-        about it, you can call them out — shine a little sunlight on the situation. You'll find out
-        how when it happens.
+        The one thing you're <em className="font-semibold text-white">not</em> allowed to do is
+        draw when you had a play. If someone is acting shady, you can call them out — shine some
+        sunlight on the situation. ☀️
       </p>
 
       {onChooseHints ? (

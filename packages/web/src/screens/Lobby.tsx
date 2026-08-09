@@ -188,7 +188,7 @@ function TableSettings({ summary, children }: { summary: string; children: React
         className="flex w-full items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-white">Table settings</span>
+          <span className="block text-sm font-semibold text-white">Game settings (expert)</span>
           <span className="block text-xs text-white/40">{summary}</span>
         </span>
         <span
@@ -358,12 +358,16 @@ export function Lobby({
   const orderable = isHost && room.irl && room.seats.length > 1;
 
   /**
-   * "Sitting in this order?", asked once, on the first deal into an IRL room.
+   * "Does the seat order look correct?", asked once, on the first deal into an
+   * IRL room.
    *
    * A confirmation rather than a block, and a single line rather than an
    * explanation: getting it wrong is recoverable and getting it right is a
    * glance. Cleared by the deal it guards, so a table that has said yes is
    * never asked twice.
+   *
+   * Both answers say which one they are — "No, I'll fix it" and "Yes, let's
+   * play". A pair of bare verbs made the reader work out which button meant no.
    */
   const [checkingOrder, setCheckingOrder] = useState(false);
   const [orderChecked, setOrderChecked] = useState(false);
@@ -487,13 +491,15 @@ export function Lobby({
               the button a table presses once and the one it presses never. */}
           {confirming ? (
             <Panel>
-              <p className="text-sm font-semibold text-white">Sitting in this order?</p>
+              <p className="text-sm font-semibold text-white">
+                Just checking: Does the seat order look correct?
+              </p>
               <div className="mt-3 flex gap-2">
                 <Button className="flex-1" onClick={() => setCheckingOrder(false)}>
-                  Fix the order
+                  No, I'll fix it
                 </Button>
                 <Button variant="primary" className="flex-1" onClick={dealNow}>
-                  {room.gamesPlayed > 0 ? "Next game" : "Deal"}
+                  Yes, let's play
                 </Button>
               </div>
             </Panel>
@@ -505,7 +511,7 @@ export function Lobby({
               onClick={deal}
               disabled={!enough}
             >
-              {room.gamesPlayed > 0 ? "Next game" : "Deal"}
+              Continue
             </Button>
           )}
 

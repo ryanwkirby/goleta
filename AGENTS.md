@@ -202,11 +202,11 @@ order is real in every room; it is only a table sitting in one that has a
 physical order for it to disagree with, and a game that deals across the table
 and back gets noticed three turns in, when it's too late to fix. So the lobby
 numbers the seats and gives the host up and down arrows, and the first deal into
-an IRL room asks *"Sitting in this order?"* once. `moveSeat` on the wire is
-deliberately **not** gated on `irl`: which rooms are worth offering arrows in is
-a presentation call, and refusing the message would throw an error at a host who
-flipped an unrelated setting mid-shuffle. Moving off either end does nothing
-rather than refusing, for the same reason.
+an IRL room asks *"Does the seat order look correct?"* once. `moveSeat` on the
+wire is deliberately **not** gated on `irl`: which rooms are worth offering
+arrows in is a presentation call, and refusing the message would throw an error
+at a host who flipped an unrelated setting mid-shuffle. Moving off either end
+does nothing rather than refusing, for the same reason.
 
 A table has **two views, one brain**. `Table.tsx` holds all the state — the
 Sunny state machine, the stall timer, the assist, the sort — and picks a layout

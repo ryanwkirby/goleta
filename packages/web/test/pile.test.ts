@@ -18,6 +18,7 @@ const view = (overrides: Partial<GameView> = {}): GameView => ({
   phase: { kind: "action" },
   topCard: card("top", "7", "H"),
   activeSuit: "H",
+  namedSuit: null,
   drawPileSize: 20,
   discardPileSize: 4,
   drawsThisTurn: 0,
@@ -41,7 +42,22 @@ describe("whether the pile says a suit has been called", () => {
 
   it("names the suit once somebody has named it", () => {
     const eight = card("e", "8", "S");
-    expect(calledSuit(view({ topCard: eight, activeSuit: "C" }), eight)).toBe("C");
+    expect(calledSuit(view({ topCard: eight, activeSuit: "C", namedSuit: "C" }), eight)).toBe("C");
+  });
+
+  it("names it when the namer picked the 8's own suit", () => {
+    // The play this used to hide (#114). Naming the suit already on the card is
+    // how you leave the next seat something to follow, and the comparison this
+    // replaced could not tell it apart from nobody having named anything.
+    const eight = card("e", "8", "S");
+    expect(calledSuit(view({ topCard: eight, activeSuit: "S", namedSuit: "S" }), eight)).toBe("S");
+  });
+
+  it("says nothing for an 8 that was turned up rather than played", () => {
+    // A natural 8 — seeded, recycled, or flipped by a Sunny call. Its own suit
+    // is in play because it is printed on it, and nobody chose anything.
+    const eight = card("e", "8", "D");
+    expect(calledSuit(view({ topCard: eight, activeSuit: "D" }), eight)).toBeNull();
   });
 
   it("says nothing while a suit is owed and nobody has answered", () => {
@@ -78,13 +94,23 @@ describe("whether the pile says a suit has been called", () => {
     expect(calledSuit(view({ topCard: turned, activeSuit: "S" }), stillShowing)).toBeNull();
   });
 
+  it("says nothing about a card that has been played over", () => {
+    // The named suit belongs to the card it was named on. Once something else
+    // is up, a badge still holding the old answer would describe a board that
+    // has moved on.
+    const named = card("e", "8", "S");
+    const nowUp = card("k", "K", "C");
+    const game = view({ topCard: nowUp, activeSuit: "C", namedSuit: "H" });
+    expect(calledSuit(game, named)).toBeNull();
+  });
+
   it("says nothing when there is no card up at all", () => {
     expect(calledSuit(view(), null)).toBeNull();
   });
 
   it("names it again the moment the flight lands", () => {
     const eight = card("e", "8", "S");
-    const game = view({ topCard: eight, activeSuit: "D" });
+    const game = view({ topCard: eight, activeSuit: "D", namedSuit: "D" });
     expect(calledSuit(game, null)).toBeNull();
     expect(calledSuit(game, eight)).toBe("D");
   });

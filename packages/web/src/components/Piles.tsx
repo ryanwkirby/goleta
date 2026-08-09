@@ -45,9 +45,10 @@ export function Piles({
   // is still on its way here the pile keeps showing the card it is landing on,
   // and shows nothing at all through a deal, until the upcard drops.
   const face = pileFace(game.topCard);
-  // The named suit only needs saying when it isn't the one you can see — and
-  // only when somebody has actually named one for the card that is up. Both
-  // conditions live in `calledSuit`; the peek strip asks it the same question.
+  // Said whenever somebody has actually named one for the card that is up —
+  // including when they named the suit already printed on it, which is a play
+  // and not a no-op. That condition lives in `calledSuit`; the peek strip asks
+  // it the same question.
   const called = calledSuit(game, face);
   const cardsLeft = game.drawPileSize;
 
@@ -111,9 +112,12 @@ export function Piles({
           {peel ? <SunnyPeel {...peel} /> : null}
         </div>
         {/* `showing` earns its place — paired with `called` under the badge it
-            is what explains that the card you can see is not the suit in play.
-            The count of cards already played explained nothing. It says nothing
-            worth having under a peel, though: the card it is about is the one
+            is what explains that the card you can see is not what the table is
+            answering. It stays right when a namer picks the 8's own suit: the
+            pair then says the suit was chosen and chosen to match, which is a
+            play, and two labelled columns say it without a word of special
+            casing. The count of cards already played explained nothing. It says
+            nothing worth having under a peel, though: the card it is about is the one
             the evidence is covering up, and the peel labels its own cards. */}
         <Caption>{called && !peel ? "showing" : undefined}</Caption>
       </div>

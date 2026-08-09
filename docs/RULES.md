@@ -286,6 +286,9 @@ This is the only advantage dealing carries. It has no effect at all unless the
 seed card happens to be an 8 — four cards in fifty-two, so roughly one game in
 thirteen.
 
+The lobby switch calls it **Dealer's Choice on Eight**, which puts that condition
+in the name. It is this rule under a longer label, not a different one.
+
 ---
 
 ## Hands are face up

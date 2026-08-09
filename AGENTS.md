@@ -176,6 +176,16 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   digital-era invention to stop free guessing; the game's original written rules
   never had any wrong-call penalty, and naming the card does that job now. The
   lockout is visible only to the player serving it.
+- **`namedSuit` is on the game state and no rule reads it.** That is not dead
+  state. `activeSuit` says which suit must be matched; `namedSuit` says a person
+  *chose* it, and the second is not recoverable from the first. A namer who picks
+  the 8's own suit leaves a state identical to a natural 8 seeded at the start,
+  turned up by a recycle, or played to settle a Sunny call — and naming your own
+  suit is a real play, the one that leaves the next seat something to follow. The
+  pile used to infer it by comparing `activeSuit` against the printed card, and
+  was silent on exactly that play (#114). Set only in `chooseSuit`, cleared
+  wherever the card in play changes, and read only by `lib/pile.ts`. Don't move
+  it into `activeSuit`, and don't tidy it away for having no rule behind it.
 - **A refused move is answered against the hand, and every other notice at the
   top of the screen.** That looks like an inconsistency and is the point. The
   top belongs to the Sunny announcement, which is the one thing at this table

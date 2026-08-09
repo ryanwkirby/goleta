@@ -62,6 +62,14 @@ export interface GameView {
   phase: PhaseView;
   topCard: Card;
   activeSuit: Suit;
+  /**
+   * The suit somebody named for the card in play, or null when nobody did.
+   * Public the moment it is chosen — naming a suit is done out loud at a real
+   * table, and `suitChosen` already goes out to everyone. It is here because
+   * `activeSuit` cannot answer it: a name that matches the 8's own suit is
+   * indistinguishable from no name at all (#114).
+   */
+  namedSuit: Suit | null;
   drawPileSize: number;
   discardPileSize: number;
   drawsThisTurn: number;
@@ -146,6 +154,7 @@ export const redact = (state: GameState, viewerId: PlayerId | null): GameView =>
     phase: phaseView(state),
     topCard: topCard(state),
     activeSuit: state.activeSuit,
+    namedSuit: state.namedSuit,
     drawPileSize: state.drawPile.length,
     discardPileSize: state.discardPile.length,
     drawsThisTurn: state.drawsThisTurn,

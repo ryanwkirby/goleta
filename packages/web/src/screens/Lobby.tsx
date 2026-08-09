@@ -91,7 +91,7 @@ const describeRules = (rules: HouseRules): string => {
   const on: string[] = [];
   if (!rules.sunny) on.push("no Sunny Rule");
   if (rules.eights === "nextPlayerNames") on.push("the Power of Eights");
-  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice");
+  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice on Eight");
   if (on.length === 0) return "Playing the standard rules.";
   return `House rules: ${on.join(", ")}.`;
 };
@@ -121,6 +121,16 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
  * each time. One fixed line saying what the rule does; the switch says whether
  * the table is playing it. Nothing here implies a table that drops one is
  * playing a lesser game.
+ *
+ * Two things the wording is careful about. **The Sunny line offers the draw
+ * before it names the cost** — "you can draw any time, but others can call you
+ * out" — because stating the violation as a condition reads as though the app is
+ * about to stop you, and it never will: the draw pile stays tappable with no
+ * warning, which is the whole rule (see AGENTS.md). And **Dealer's Choice on
+ * Eight carries its condition in its name**, since the rule does nothing at all
+ * unless the card turned up to start happens to be an 8 — about one game in
+ * thirteen. `docs/RULES.md` still calls it Dealer's Choice, which is its name in
+ * the original written rules.
  */
 function HouseRulesPicker({
   rules,
@@ -133,7 +143,7 @@ function HouseRulesPicker({
     {
       key: "sunny",
       label: "The Sunny Rule",
-      blurb: "Draw with a play in your hand and anyone can call it on you.",
+      blurb: "You can draw any time, but others can call you out.",
       on: rules.sunny,
       toggle: { ...rules, sunny: !rules.sunny },
     },
@@ -149,8 +159,8 @@ function HouseRulesPicker({
     },
     {
       key: "seedEight",
-      label: "Dealer's Choice",
-      blurb: "An 8 turned up to start is the dealer's suit to name.",
+      label: "Dealer's Choice on Eight",
+      blurb: "If the first card of the game is an 8, the dealer gets to choose the suit.",
       on: rules.seedEight === "dealerNames",
       toggle: {
         ...rules,
@@ -202,11 +212,17 @@ function HouseRulesPicker({
  * It sits alone on its panel now that the IRL toggle leads the lobby, so it has
  * nothing above it to be divided from and keeps no rule of its own.
  *
- * The chevron is deliberately much larger than the label it sits beside. It is
+ * The triangle is deliberately much larger than the label it sits beside. It is
  * the only thing on the row saying there is anything behind it, and at body-text
  * size it read as punctuation. "Advanced" rather than "expert" for the same
  * reason: most tables can leave this shut, and none of them need to have played
  * before to open it.
+ *
+ * It is a **disclosure** triangle — `▸` shut, `▾` open — and not the `▾`/`▴` pair
+ * it started as. That pair is a scroll gesture, "more below / less below", and it
+ * said nothing about the one thing this row is for. Shut, this points at the
+ * label it will open; open, it points down the panel it opened. Drawn as one
+ * glyph rotated rather than two, so the turn is the animation.
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -227,10 +243,10 @@ function TableSettings({ summary, children }: { summary: string; children: React
           aria-hidden
           className={[
             "shrink-0 text-3xl leading-none text-white/60 transition-transform",
-            open ? "rotate-180" : "",
+            open ? "rotate-90" : "",
           ].join(" ")}
         >
-          ▾
+          ▸
         </span>
       </button>
       {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}
@@ -238,10 +254,18 @@ function TableSettings({ summary, children }: { summary: string; children: React
   );
 }
 
-/** The two answers, named. `irl` is the flag each one sets. */
+/**
+ * The two answers, named. `irl` is the flag each one sets.
+ *
+ * In person leads, because it is the answer that changes the most: it numbers
+ * the seats, offers the order arrows, puts the QR up, and sends every phone into
+ * the landscape hand view. Remote play is still what a new room *is* — see
+ * `createRoom` — and the order of the buttons has nothing to do with which one
+ * is selected.
+ */
 const PLACES: { key: string; label: string; irl: boolean }[] = [
-  { key: "remote", label: "Remote play", irl: false },
   { key: "irl", label: "In person", irl: true },
+  { key: "remote", label: "Remote play", irl: false },
 ];
 
 /**
@@ -258,9 +282,12 @@ const PLACES: { key: string; label: string; irl: boolean }[] = [
  * question with two real answers should say both out loud, the same way the
  * seat-order check does.
  *
- * The line underneath doesn't change when the switch does, for the reason
- * `HouseRulesPicker` doesn't either: a description that rewrites itself the
- * moment you decide moves the sentence you were reading to decide with.
+ * **And nothing explains them.** There was a line under the pair describing what
+ * in-person mode does to a phone — a QR, a hand, landscape — which is two
+ * mechanisms answering a question already asked in four words. Naming both
+ * answers is what made it redundant: a host picking between "in person" and
+ * "remote play" is not deciding about a layout, and the QR appearing directly
+ * under the tap says the rest better than a sentence above it could.
  *
  * The one host control with no "between games only" on it, so it stays put once
  * a game is running. A table that only works out halfway through the first hand
@@ -292,9 +319,6 @@ function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => v
           </Button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-white/40">
-        In person puts a code up to scan, and gives every phone its own hand, big, in landscape.
-      </p>
     </div>
   );
 }
@@ -471,7 +495,7 @@ export function Lobby({
       <Panel>
         <div className="flex items-baseline justify-between">
           <h2 className="font-semibold text-white">
-            At the table{" "}
+            Players{" "}
             <span className="text-white/40">
               ({room.seats.length}/{room.maxPlayers})
             </span>
@@ -487,9 +511,18 @@ export function Lobby({
 
         <ul className="mt-3 space-y-1.5">
           {room.seats.map((seat, index) => (
+            /*
+              Held at the height of the tallest row rather than fitted to its own
+              contents. The host's row is the one with no remove button on it, so
+              nothing inside it reaches `Button`'s `min-h-11` and it came out
+              24px shorter than every row under it — a list whose odd one out is
+              the row belonging to whoever is reading the screen. `min-h-16` is
+              that button plus the row's own padding, which is what the seats
+              carrying controls already measure.
+            */
             <li
               key={seat.id}
-              className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
+              className="flex min-h-16 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
             >
               {numbered ? (
                 <span className="w-4 shrink-0 text-xs tabular-nums text-white/30">{index + 1}</span>

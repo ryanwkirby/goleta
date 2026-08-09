@@ -5,6 +5,7 @@ import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 import { EventLog } from "../components/EventLog.tsx";
 import { Hand, HandSortButton, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
+import { RotatePanel } from "../components/RotatePanel.tsx";
 import { Seats } from "../components/Seats.tsx";
 import {
   SunnyAccusePicker,
@@ -17,18 +18,23 @@ import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
-import { PEEL_MS } from "../motion/plan.ts";
+import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
+import { PEEK_TABLE, PEEL_MS } from "../motion/plan.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
   hasSeenSunny,
   loadHandSort,
+  loadTableView,
   markSunnySeen,
   recordGameFinished,
   saveHandSort,
+  saveTableView,
   wantsFirstGameHints,
+  type TableView,
 } from "../net/identity.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
+import { HandView } from "./HandView.tsx";
 
 /** How long the table looks at "X called it on Y" before anything else. */
 const ANNOUNCE_MS = 3200;
@@ -110,6 +116,10 @@ export function Table({
   const [stalled, setStalled] = useState(false);
   const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
   const [wantedHints] = useState(wantsFirstGameHints);
+  /** Which way you last looked at an IRL table. Per device, not per room. */
+  const [view, setView] = useState<TableView>(loadTableView);
+  const phone = useIsPhone();
+  const portrait = useIsPortrait();
   const nameOf = namerFor(room);
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
@@ -291,6 +301,86 @@ export function Table({
   const skipped = you?.hand.filter((card) => legal.has(card.id)) ?? [];
   const owesPunishment = (you?.hand.length ?? 0) > 1;
 
+  /**
+   * Whether this screen is a phone at a table of people in the same room.
+   *
+   * All three have to hold, and none of them is a user agent: the room says it
+   * is an IRL table, the viewport says this is a phone rather than a tablet
+   * propped at one, and there is a game running. The lobby and the screens
+   * between games are untouched by any of it, and an online room never sees a
+   * word of it.
+   */
+  const irlPhone = room.irl && phone && seated && !finished;
+
+  /**
+   * A judged call takes the whole table back, whichever view you were in.
+   *
+   * The peel rewinds the pile to the moment of the reach with two cards marked
+   * and then announces the ruling (#63) — the one moment in this game the whole
+   * table is meant to watch happen. It cannot play out in a 40px strip, so the
+   * hand view hands over for the length of it, offender's dialog included, and
+   * comes back when it is done.
+   */
+  const judging = peeling || announcing || caughtHold;
+  const compact = irlPhone && !portrait && view === "hand" && !judging;
+
+  const showFullTable = (): void => {
+    setView("full");
+    saveTableView("full");
+  };
+
+  const showHandView = (): void => {
+    setView("hand");
+    saveTableView("hand");
+  };
+
+  // A landscape layout on a phone held upright shows half of itself, and no web
+  // page can turn somebody's phone for them — so the prompt *is* the mechanism
+  // (#79). Nothing pauses behind it: the game is on the server, and a player
+  // holding their phone the wrong way is late, not somebody the table waits on.
+  if (irlPhone && portrait && view === "hand") return <RotatePanel offline={offline} />;
+
+  if (compact) {
+    return (
+      <TableMotion game={game} log={log} scale={PEEK_TABLE}>
+        <HandView
+          room={room}
+          game={game}
+          nameOf={nameOf}
+          send={send}
+          offline={offline}
+          cards={sortHand(you?.hand ?? [], handSort)}
+          mode={mode}
+          assist={assist}
+          onChooseCard={onChooseCard}
+          canDraw={mine && game.phase.kind === "action" && !finished}
+          onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
+          prompt={prompt(game, nameOf, assist)}
+          mine={mine}
+          handSort={handSort}
+          onCycleSort={cycleSort}
+          stalled={stalled}
+          onAskForHelp={askForHelp}
+          shouting={shoutingHere}
+          accusing={accusing}
+          stillAccusable={stillAccusable}
+          onStartAccusing={startAccusing}
+          onStopAccusing={stopAccusing}
+          onAccuse={accuse}
+          onShowFullTable={showFullTable}
+        />
+        {explainSunny ? (
+          <SunnyExplainer
+            onDone={() => {
+              markSunnySeen();
+              setExplainSunny(false);
+            }}
+          />
+        ) : null}
+      </TableMotion>
+    );
+  }
+
   return (
     <TableMotion game={game} log={log}>
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -318,9 +408,25 @@ export function Table({
               same room: {room.irl ? "on" : "off"}
             </Button>
           ) : null}
+          {/* The way back, and only where there is somewhere to go back to: a
+              phone at an IRL table that has chosen the whole table over its own
+              hand. It sits with the toggle the hand view puts in the same
+              corner, so swapping either way is the same tap in the same place. */}
+          {irlPhone && view === "full" ? (
+            <Button
+              variant="ghost"
+              className={[room.hostId === game.you ? "" : "ml-auto", "px-2 py-1 text-xs"].join(" ")}
+              onClick={showHandView}
+            >
+              <span aria-hidden>⇄</span> my hand
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
-            className={[room.hostId === game.you ? "" : "ml-auto", "px-2 py-1 text-xs"].join(" ")}
+            className={[
+              room.hostId === game.you || (irlPhone && view === "full") ? "" : "ml-auto",
+              "px-2 py-1 text-xs",
+            ].join(" ")}
             onClick={onShowRules}
           >
             rules

@@ -458,38 +458,50 @@ export function SunnyAccusePicker({
   reach,
   onPick,
   onCancel,
+  compact = false,
 }: {
   targetName: string;
   reach: SunnyReach;
   onPick: (cardId: string) => void;
   onCancel: () => void;
+  /**
+   * Landscape, where the whole viewport is about 350px tall (#78).
+   *
+   * The cards drop a size and the second line of explanation goes, because a
+   * picker that grew past the hand it is docked over would cover the cards it
+   * is asking you to compare against — which is the one thing it must never do.
+   * Nothing about *which* cards are offered changes: it is still the whole
+   * pre-draw hand, still at equal weight, still unsorted and undimmed.
+   */
+  compact?: boolean;
 }) {
   return (
     <section
       aria-label={`Name the card ${targetName} should have played`}
       className={[
-        "sticky bottom-2 z-20 rounded-2xl bg-felt-900/95 p-3 shadow-xl",
-        "ring-1 ring-amber-300/40 backdrop-blur",
+        "z-20 rounded-2xl bg-felt-900/95 shadow-xl ring-1 ring-amber-300/40 backdrop-blur",
+        compact ? "p-2" : "sticky bottom-2 p-3",
       ].join(" ")}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold text-amber-300">
+        <h2 className="truncate text-sm font-semibold text-amber-300">
           <span aria-hidden>☀️</span> What should {targetName} have played?
         </h2>
-        <Button variant="ghost" className="-my-1 px-2 py-1 text-xs" onClick={onCancel}>
+        <Button variant="ghost" className="-my-1 shrink-0 px-2 py-1 text-xs" onClick={onCancel}>
           never mind
         </Button>
       </div>
-      <p className="mt-1 text-xs text-white/50">
-        Their hand as it was when they reached. Get it wrong and you can't call again for three
-        draws.
+      <p className={["text-xs text-white/50", compact ? "mt-0.5" : "mt-1"].join(" ")}>
+        {compact
+          ? "Their hand as it was when they reached."
+          : "Their hand as it was when they reached. Get it wrong and you can't call again for three draws."}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className={["flex flex-wrap", compact ? "mt-1.5 gap-1.5" : "mt-2 gap-2"].join(" ")}>
         {reach.hand.map((card) => (
           <PlayingCard
             key={card.id}
             card={card}
-            size="md"
+            size={compact ? "sm" : "md"}
             onClick={() => onPick(card.id)}
             title={`Accuse them of skipping the ${card.rank}${SUIT_GLYPH[card.suit]}`}
           />
@@ -511,7 +523,14 @@ export function SunnyAccusePicker({
  * Your own cards aren't tappable during this phase anyway, so there is no move
  * to fumble while it's up.
  */
-export function SuitPicker({ onPick }: { onPick: (suit: "C" | "D" | "H" | "S") => void }) {
+export function SuitPicker({
+  onPick,
+  compact = false,
+}: {
+  onPick: (suit: "C" | "D" | "H" | "S") => void;
+  /** Landscape: one row of four, shorter, and the aside goes. */
+  compact?: boolean;
+}) {
   const suits = [
     { key: "H", glyph: "♥", label: "Hearts", red: true },
     { key: "D", glyph: "♦", label: "Diamonds", red: true },
@@ -523,17 +542,19 @@ export function SuitPicker({ onPick }: { onPick: (suit: "C" | "D" | "H" | "S") =
     <section
       aria-label="Name a suit"
       className={[
-        "sticky bottom-2 z-20 rounded-2xl bg-felt-900/95 p-3 shadow-xl",
-        "ring-1 ring-amber-300/40 backdrop-blur",
+        "z-20 rounded-2xl bg-felt-900/95 shadow-xl ring-1 ring-amber-300/40 backdrop-blur",
+        compact ? "p-2" : "sticky bottom-2 p-3",
       ].join(" ")}
     >
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold text-amber-300">Name a suit</h2>
-        <p className="truncate text-xs text-white/50">
-          Take your time — every hand is still up there.
-        </p>
+        {compact ? null : (
+          <p className="truncate text-xs text-white/50">
+            Take your time — every hand is still up there.
+          </p>
+        )}
       </div>
-      <div className="mt-2 grid grid-cols-4 gap-2">
+      <div className={["grid grid-cols-4", compact ? "mt-1.5 gap-1.5" : "mt-2 gap-2"].join(" ")}>
         {suits.map((suit) => (
           <button
             key={suit.key}
@@ -541,8 +562,9 @@ export function SuitPicker({ onPick }: { onPick: (suit: "C" | "D" | "H" | "S") =
             onClick={() => onPick(suit.key)}
             aria-label={suit.label}
             className={[
-              "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl bg-white",
-              "text-2xl font-semibold shadow-lg transition-transform hover:-translate-y-0.5",
+              "flex flex-col items-center justify-center gap-0.5 rounded-xl bg-white",
+              compact ? "min-h-11 text-xl" : "min-h-14 text-2xl",
+              "font-semibold shadow-lg transition-transform hover:-translate-y-0.5",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
               suit.red ? "text-rose-600" : "text-slate-900",
             ].join(" ")}

@@ -189,6 +189,47 @@ exactly one winner — say nothing about which rules are in play, so they hold a
 variant to the same standard as the default game. Add a rule, add it to the
 matrix.
 
+## IRL mode
+
+`RoomView.irl` says a table is sitting in the same room, each holding their own
+phone. It is **presentation, never rules**: the host sets it, `packages/engine`
+never learns it exists, and it is deliberately not on `GameOptions` or
+`HouseRules`. It is also the one host setting not frozen mid-game, because
+nothing it touches is running — see `docs/PROTOCOL.md`.
+
+A table has **two views, one brain**. `Table.tsx` holds all the state — the
+Sunny state machine, the stall timer, the assist, the sort — and picks a layout
+at the bottom. `HandView` is the landscape one: your hand at `xl`, and a peek
+strip carrying the table centre. Anything that needs table state belongs on
+`Table`; the layouts are given what to draw.
+
+Things that will read as oversights in that view and are not:
+
+- **The peek strip shows no hands, at any size.** It carries the room code, the
+  piles, the card in play, whose turn and the sun, and that is the whole list.
+  It can be that thin because `sunnyReach` already feeds the picker the evidence
+  a call is made from; seeing every hand is what *noticing* a reach is easier
+  with, and the toggle to the full table is the answer to that. A sliver too
+  small to read a rank off is worse than nothing (`fan.ts` has a floor for
+  exactly this).
+- **The draw pile in the strip stays tappable when you hold a play**, with no
+  warning, same as everywhere else. A compressed view is a tempting place to
+  quietly add a guard rail; it isn't one.
+- **A judged call hands the screen back to the full table.** The peel rewinds
+  the pile with two cards marked and then rules on it (#63) — the one moment the
+  whole table watches — and it cannot play out in a 40px strip. The hand view
+  steps aside for `peeling || announcing || caughtHold`, offender's dialog
+  included, and comes back after.
+- **Both pickers dock rather than overlay.** They take their room out of the
+  column, and the hand steps down a card size to make it. Laying them over the
+  hand was the obvious thing and it covers the cards the picker is asking you to
+  compare against — the same trade the full table already refused.
+- **The rotate prompt is the mechanism, not a fallback.** `screen.orientation
+  .lock()` needs fullscreen and iOS Safari has no implementation, so no page can
+  turn somebody's phone. The panel is gated on a coarse pointer and a short side
+  under 500px — never on a user agent — so a portrait iPad is never blocked, and
+  nothing pauses behind it.
+
 ## Architecture
 
 npm workspaces monorepo, one Docker image, one process.

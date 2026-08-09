@@ -12,21 +12,30 @@ export const SUIT_LABEL: Record<Suit, string> = {
 
 export const isRed = (suit: Suit): boolean => suit === "D" || suit === "H";
 
-export type CardSize = "sm" | "md" | "lg";
+/**
+ * `xl` exists for one screen: a phone in landscape at an IRL table, where your
+ * own hand is the entire point of the display and there is finally the height
+ * to draw it properly (#78). Nothing else uses it and nothing else should — on
+ * any layout that has a seat strip to fit as well, it is simply too big.
+ */
+export type CardSize = "sm" | "md" | "lg" | "xl";
 
 const SIZES: Record<CardSize, string> = {
   sm: "h-14 w-10 text-sm rounded-md p-1",
   md: "h-24 w-[4.25rem] text-xl rounded-lg p-1.5",
   lg: "h-32 w-24 text-2xl rounded-xl p-2",
+  xl: "h-44 w-33 text-4xl rounded-2xl p-2.5",
 };
 
 /**
- * The widths above, in pixels at the default root font size. Only the *ratio*
- * between two of these is ever used — to size a card in flight against the one
- * it is flying towards — so a browser zoom or a bigger root font doesn't skew
- * it. Keep them in step with `SIZES` anyway.
+ * The widths above, in pixels at the default root font size. Two things read
+ * them: the *ratio* between a pair, to size a card in flight against the one it
+ * is flying towards, and the arithmetic in `handFan.ts`. A browser zoom or a
+ * bigger root font skews neither — the first is a ratio, and the second is
+ * fitted against a width that was measured at the same zoom. Keep them in step
+ * with `SIZES` anyway.
  */
-export const CARD_WIDTH_PX: Record<CardSize, number> = { sm: 40, md: 68, lg: 96 };
+export const CARD_WIDTH_PX: Record<CardSize, number> = { sm: 40, md: 68, lg: 96, xl: 132 };
 
 interface CardProps {
   card: CardModel;

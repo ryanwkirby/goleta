@@ -68,6 +68,40 @@ export interface Planned {
   emptiesPile: boolean;
 }
 
+/**
+ * How big the cards are where they come to rest, which is not the same on every
+ * screen the table has.
+ *
+ * A flight is drawn at its destination's size and scaled from its origin's, so
+ * these numbers are the difference between a card that lands and one that lands
+ * and then pops. The layout owns them; this module only has to be told.
+ */
+export interface TableScale {
+  /** Your own cards. */
+  hand: CardSize;
+  /** The draw pile and the card in play — one size, they sit side by side. */
+  pile: CardSize;
+  /** Somebody else's hand in the seat strip. */
+  seat: CardSize;
+}
+
+/** The whole table on one screen: your hand under a strip of everyone else's. */
+export const FULL_TABLE: TableScale = { hand: "md", pile: "lg", seat: "sm" };
+
+/**
+ * A phone in landscape (#78): your hand takes the screen, and the piles shrink
+ * into the peek strip. No seats are drawn at all, so `seat` is only what a
+ * flight to one *would* have been — those flights find no anchor and are
+ * dropped, which `TableMotion` already handles.
+ *
+ * `hand` is the size the row settles on when it has the height for it, which is
+ * every landscape phone. On a shorter box `handFan.ts` drops the cards to `lg`
+ * and a card in flight lands one size large — a shrink of a few pixels on a
+ * viewport nobody is playing at, and not worth threading a measurement through
+ * the motion layer for.
+ */
+export const PEEK_TABLE: TableScale = { hand: "xl", pile: "sm", seat: "sm" };
+
 const isYou = (game: GameView, playerId: PlayerId): boolean => game.you === playerId;
 
 /** Where a player's cards live on screen. */
@@ -78,13 +112,14 @@ const handOf = (game: GameView, playerId: PlayerId): AnchorKey =>
 const cardOrHand = (game: GameView, playerId: PlayerId, cardId: string | null): AnchorKey[] =>
   cardId === null ? [handOf(game, playerId)] : [cardAnchor(cardId), handOf(game, playerId)];
 
-const sizeOfHand = (game: GameView, playerId: PlayerId): CardSize =>
-  isYou(game, playerId) ? "md" : "sm";
+const sizeOfHand = (game: GameView, playerId: PlayerId, scale: TableScale): CardSize =>
+  isYou(game, playerId) ? scale.hand : scale.seat;
 
 export const planFlights = (
   events: readonly GameEvent[],
   game: GameView,
   nextId: () => string,
+  scale: TableScale = FULL_TABLE,
 ): Planned => {
   const flights: FlightPlan[] = [];
   let emptiesPile = false;
@@ -100,7 +135,7 @@ export const planFlights = (
     switch (event.type) {
       case "gameStarted": {
         emptiesPile = true;
-        cursor = dealFlights(event.upcard, game, nextId, cursor, flights);
+        cursor = dealFlights(event.upcard, game, nextId, cursor, flights, scale);
         break;
       }
 
@@ -111,8 +146,8 @@ export const planFlights = (
             ? [cardAnchor(event.card.id), HAND]
             : [cardAnchor(event.card.id), seatAnchor(event.playerId)],
           to: [PILE],
-          size: "lg",
-          fromSize: sizeOfHand(game, event.playerId),
+          size: scale.pile,
+          fromSize: sizeOfHand(game, event.playerId, scale),
           duration: FLIGHT_MS,
           hides: null,
           toPile: true,
@@ -126,8 +161,8 @@ export const planFlights = (
           card: event.card,
           from: [DECK],
           to: cardOrHand(game, event.playerId, event.card.id),
-          size: sizeOfHand(game, event.playerId),
-          fromSize: "lg",
+          size: sizeOfHand(game, event.playerId, scale),
+          fromSize: scale.pile,
           duration: FLIGHT_MS,
           hides: event.card.id,
           toPile: false,
@@ -142,8 +177,8 @@ export const planFlights = (
             card,
             from: [DECK],
             to: [PILE],
-            size: "lg",
-            fromSize: "lg",
+            size: scale.pile,
+            fromSize: scale.pile,
             duration: FLIGHT_MS,
             hides: null,
             toPile: true,
@@ -163,8 +198,8 @@ export const planFlights = (
             ? [cardAnchor(event.card.id), HAND]
             : [cardAnchor(event.card.id), seatAnchor(event.playerId)],
           to: [PILE],
-          size: "lg",
-          fromSize: sizeOfHand(game, event.playerId),
+          size: scale.pile,
+          fromSize: sizeOfHand(game, event.playerId, scale),
           duration: FLIGHT_MS,
           hides: null,
           toPile: true,
@@ -179,8 +214,8 @@ export const planFlights = (
             card: null,
             from: [PILE],
             to: [DECK],
-            size: "lg",
-            fromSize: "lg",
+            size: scale.pile,
+            fromSize: scale.pile,
             duration: RESHUFFLE_MS,
             hides: null,
             toPile: false,
@@ -216,8 +251,8 @@ export const planFlights = (
             // card's own anchor is gone and the hand as a whole is the origin.
             from: [cardAnchor(card.id), handOf(game, event.targetId)],
             to: [DECK],
-            size: "lg",
-            fromSize: sizeOfHand(game, event.targetId),
+            size: scale.pile,
+            fromSize: sizeOfHand(game, event.targetId, scale),
             duration: FLIGHT_MS,
             hides: null,
             toPile: false,
@@ -252,6 +287,7 @@ const dealFlights = (
   nextId: () => string,
   start: number,
   out: FlightPlan[],
+  scale: TableScale,
 ): number => {
   const rounds = Math.max(0, ...game.players.map((player) => player.cardCount));
   const total = game.players.reduce((sum, player) => sum + player.cardCount, 0) + 1;
@@ -267,8 +303,8 @@ const dealFlights = (
         card: null,
         from: [DECK],
         to: cardOrHand(game, player.id, card?.id ?? null),
-        size: sizeOfHand(game, player.id),
-        fromSize: "lg",
+        size: sizeOfHand(game, player.id, scale),
+        fromSize: scale.pile,
         delay: cursor,
         duration: DEAL_MS,
         hides: card?.id ?? null,
@@ -283,8 +319,8 @@ const dealFlights = (
     card: upcard,
     from: [DECK],
     to: [PILE],
-    size: "lg",
-    fromSize: "lg",
+    size: scale.pile,
+    fromSize: scale.pile,
     delay: cursor,
     duration: FLIGHT_MS,
     hides: null,

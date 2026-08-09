@@ -37,9 +37,24 @@ generation note identifying the agent.
 
 ## Deploy
 
-This repo has **no auto-deploy runner**. After merging, if a running instance
-needs the change, deploy to Docker manually from the repo root with `docker
-compose up -d --build`. (Docs-only changes need no deploy.)
+Merging to `main` deploys. A repo-scoped self-hosted runner on the Mac mini —
+the only machine with the `goleta` label — force-checks-out `main` in
+`/Users/ryan/git/goleta`, rebuilds with `docker compose up -d --build`, and then
+polls port 8063 until it answers. **Let the run finish and confirm its health
+check rather than rebuilding by hand**; a hand-run build racing the runner is
+two deploys landing on one live table.
+
+It runs on push to `main` and on manual dispatch, never on `pull_request`, so
+nothing off a branch executes on the machine that holds the rooms. Docs-only
+changes still trigger it and that is fine — the image rebuild is cheap and the
+health check is the point.
+
+If the runner is ever down, the manual path is unchanged: `docker compose up -d
+--build` from the repo root. The runner is installed at
+`/Users/ryan/actions-runner-goleta` — **outside** this tree, unlike the sibling
+repos, because `"type": "module"` in the root `package.json` would otherwise be
+inherited by the runner's own CommonJS service script and kill it on startup.
+`docs/DEPLOYMENT.md` has the symptom.
 
 Public at **https://goleta.ryankirby.net**, port 8063 on the Mac mini, through
 the shared `cloudflared-tunnel` container. See `docs/DEPLOYMENT.md`.

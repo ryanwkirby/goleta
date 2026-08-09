@@ -2,16 +2,26 @@ import { useState } from "react";
 
 import type { BotSpeed, ClientMessage, HouseRules, RoomView } from "@goleta/engine";
 
+import { QrCode } from "../components/QrCode.tsx";
 import { Button, Panel } from "../components/ui.tsx";
+import { joinLink } from "../net/route.ts";
 
-const shareLink = (code: string): string => `${location.origin}/#/r/${code}`;
-
+/**
+ * How everyone else gets in: read it out, text it, or hold it up.
+ *
+ * The QR is not a replacement for the code — getting five people to a table
+ * used to mean saying four characters aloud and watching four people type them
+ * *and* the URL, and this is a faster path to exactly the same place. Anyone
+ * seated can show it, host or not: whoever is dealing usually will, but
+ * restricting it buys nothing and costs the one person whose phone is nearest.
+ */
 function RoomCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
+  const link = joinLink(code);
 
   const copy = async (): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(shareLink(code));
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -25,7 +35,20 @@ function RoomCode({ code }: { code: string }) {
       <p className="mt-1 font-mono text-5xl font-semibold tracking-[0.3em] text-amber-300">
         {code}
       </p>
-      <Button variant="ghost" className="mt-2" onClick={() => void copy()}>
+
+      {/* Sized to be scannable from the other side of a table without taking
+          the lobby over: the seat list is what people are actually watching
+          once they're in. */}
+      <div className="mt-3 flex justify-center">
+        <QrCode
+          value={link}
+          label={`Scan to join room ${code}`}
+          className="w-44 max-w-[55%] p-2.5"
+        />
+      </div>
+      <p className="mt-2 text-xs text-white/40">Point a camera at it, or type the code.</p>
+
+      <Button variant="ghost" className="mt-1" onClick={() => void copy()}>
         {copied ? "Link copied" : "Copy invite link"}
       </Button>
     </div>

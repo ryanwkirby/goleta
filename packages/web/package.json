@@ -11,7 +11,8 @@
   "dependencies": {
     "@goleta/engine": "*",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "uqr": "^0.1.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.2",

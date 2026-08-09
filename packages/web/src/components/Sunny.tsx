@@ -98,11 +98,13 @@ function Marked({
   label,
   size,
   lift = false,
+  irl = false,
 }: {
   card: Card;
   label: string;
   size: CardSize;
   lift?: boolean;
+  irl?: boolean;
 }) {
   return (
     <span
@@ -120,7 +122,7 @@ function Marked({
       >
         {label}
       </span>
-      <PlayingCard card={card} size={size} />
+      <PlayingCard card={card} size={size} mirrored={irl} />
     </span>
   );
 }
@@ -153,12 +155,14 @@ export function SunnyPeel({
   named,
   callerName,
   targetName,
+  irl = false,
 }: {
   evidence: SunnyEvidence;
   /** The card the caller named. Marked wherever it now happens to be. */
   named: Card;
   callerName: string;
   targetName: string;
+  irl?: boolean;
 }) {
   const { inPlay, since, activeSuit } = evidence;
   // They may have gone on to play the very card they stand accused of holding.
@@ -178,7 +182,7 @@ export function SunnyPeel({
           that landed they are already the same card, which is what lets the
           peel hand off into the rewind without the pile jumping. */}
       <span aria-hidden className="pointer-events-none absolute left-0 top-0">
-        <Marked card={inPlay} label="was in play" size="lg" />
+        <Marked card={inPlay} label="was in play" size="lg" irl={irl} />
       </span>
 
       {/* Played since the offence, fanned off the top — oldest first, so the
@@ -208,9 +212,9 @@ export function SunnyPeel({
             }
           >
             {card.id === named.id ? (
-              <Marked card={card} label="named" size="md" lift />
+              <Marked card={card} label="named" size="md" lift irl={irl} />
             ) : (
-              <PlayingCard card={card} size="md" />
+              <PlayingCard card={card} size="md" mirrored={irl} />
             )}
           </span>
         ))}
@@ -226,7 +230,7 @@ export function SunnyPeel({
             "-translate-y-1/2 animate-peel-mark",
           ].join(" ")}
         >
-          <Marked card={named} label="named" size="md" lift />
+          <Marked card={named} label="named" size="md" lift irl={irl} />
         </span>
       )}
     </>
@@ -469,6 +473,7 @@ export function SunnyAccusePicker({
   onPick,
   onCancel,
   compact = false,
+  irl = false,
 }: {
   targetName: string;
   reach: SunnyReach;
@@ -493,6 +498,7 @@ export function SunnyAccusePicker({
    * sliver, so it says nothing about which of them was legal.
    */
   compact?: boolean;
+  irl?: boolean;
 }) {
   const row = useRef<HTMLDivElement>(null);
   const { width } = useBox(row);
@@ -542,6 +548,7 @@ export function SunnyAccusePicker({
             key={card.id}
             card={card}
             size={compact ? "sm" : "md"}
+            mirrored={irl}
             onClick={() => onPick(card.id)}
             title={`Accuse them of skipping the ${card.rank}${SUIT_GLYPH[card.suit]}`}
           />

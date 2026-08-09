@@ -9,10 +9,12 @@
  *   - `#/r/ABCD/table`   — the same connection, drawn as the shared screen for
  *                          the middle of the table (#14).
  *
- * The last two are the same `watch` on the wire and differ only in what gets
- * drawn, which is why the mode lives in the URL rather than in a message: a
- * device propped in the middle of a table is opened once and left there, and
- * "what this screen is for" has to survive a reload without anybody touching it.
+ * The last two are both `watch` on the wire, and the table one adds a `table`
+ * bit so the server can offer it the draw-only auxiliary action (#120) — it is
+ * still a watcher, and everything else it might send is refused. The mode lives
+ * in the URL rather than in a message because a device propped in the middle of
+ * a table is opened once and left there, and "what this screen is for" has to
+ * survive a reload without anybody touching it.
  */
 
 export type ViewMode = "play" | "watch" | "table";

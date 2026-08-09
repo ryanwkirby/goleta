@@ -37,14 +37,24 @@ const FLAT_OUT = {
   lightning: { firstMove: 2, nextMove: 2, call: 2 },
 };
 
-const startServer = async (dataDir: string): Promise<Harness> => {
+/**
+ * Bots that sit on their hands, for the one test that needs to catch a table
+ * mid-bot-turn. Flat out, the seat is a bot for microseconds and there is no
+ * moment to send anything into; here the turn is simply parked.
+ */
+const DAWDLING = {
+  human: { firstMove: 30_000, nextMove: 30_000, call: 30_000 },
+  lightning: { firstMove: 30_000, nextMove: 30_000, call: 30_000 },
+};
+
+const startServer = async (dataDir: string, botTiming = FLAT_OUT): Promise<Harness> => {
   const store = loadRooms(dataDir, 60_000);
   const persistence = startPersistence(store, dataDir, 5);
   const server: Server = createServer((_, res) => res.end("ok"));
   const detach = attachSockets(server, {
     store,
     onChange: () => persistence.save(),
-    botTiming: FLAT_OUT,
+    botTiming,
   });
 
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -153,6 +163,35 @@ const fillTable = async (host: TestClient, size = MIN_TABLE_PLAYERS): Promise<vo
     host.send({ t: "addBot" });
     await host.until((c) => (c.room?.seats.length ?? 0) > seated);
   }
+};
+
+/**
+ * A full table of people with a game running, in a room the host has marked as
+ * sitting in the same room. What the shared table screen exists for.
+ */
+const seatIrlTable = async (
+  port: number,
+  host: TestClient,
+  { irl = true }: { irl?: boolean } = {},
+): Promise<TestClient[]> => {
+  host.send({ t: "create", name: "Ryan" });
+  await host.until((c) => c.room !== null);
+  const code = host.code as string;
+
+  const guests = await Promise.all([openClient(port), openClient(port), openClient(port)]);
+  // oxlint-disable no-await-in-loop -- seats join one at a time, like the lobby.
+  for (const [index, guest] of guests.entries()) {
+    guest.send({ t: "join", code, name: `Guest ${index + 1}` });
+    await guest.until((c) => c.room !== null);
+  }
+
+  if (irl) {
+    host.send({ t: "setIrl", on: true });
+    await host.until((c) => c.room?.irl === true);
+  }
+  host.send({ t: "start" });
+  await host.until((c) => c.room?.status === "playing");
+  return guests;
 };
 
 /**
@@ -515,6 +554,144 @@ describe("what the wire carries", () => {
     expect(screen.playerId).toBeNull();
     expect(screen.game?.you).toBeNull();
     expect(screen.game?.sunnyCallable).toBe(false);
+    screen.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
+    await screen.until((c) => c.errors.length > 0);
+    expect(screen.errors.at(-1)).toMatch(/watching this table/);
+  }, 20_000);
+
+  it("lets an IRL shared table screen draw for the current player", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    await seatIrlTable(server.port, host);
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code: host.code as string, table: true });
+    await screen.until((c) => c.game !== null);
+    expect(screen.playerId).toBeNull();
+
+    const waiting = screen.game?.waitingOn as string;
+    const before = screen.game?.players.find((player) => player.id === waiting)?.cardCount ?? 0;
+    screen.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
+    await screen.until((c) => {
+      const player = c.game?.players.find((candidate) => candidate.id === waiting);
+      return (player?.cardCount ?? 0) > before;
+    });
+
+    expect(screen.game?.players.find((player) => player.id === waiting)?.cardCount).toBe(before + 1);
+  }, 20_000);
+
+  it("lets the shared table screen draw and nothing else", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    await seatIrlTable(server.port, host);
+    const code = host.code as string;
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code, table: true });
+    await screen.until((c) => c.game !== null);
+
+    // The bit widens exactly one message. Everything else a seat may send is
+    // refused on the same line an ordinary watcher meets — it holds no cards to
+    // play, has no suit to name, and #16 keeps the accusation off a screen the
+    // whole room can read over.
+    const card = screen.game?.players.find((p) => p.id === screen.game?.waitingOn)?.hand?.[0];
+    const seatedOnly: ClientMessage[] = [
+      { t: "intent", intent: { type: "playCard", playerId: "", cardId: card?.id ?? "x" } },
+      { t: "intent", intent: { type: "chooseSuit", playerId: "", suit: "H" } },
+      { t: "intent", intent: { type: "callSunny", playerId: "", cardId: card?.id ?? "x" } },
+      { t: "intent", intent: { type: "surrenderCard", playerId: "", cardId: card?.id ?? "x" } },
+      { t: "composingCall", open: true },
+      { t: "help" },
+      { t: "setIrl", on: false },
+    ];
+
+    // oxlint-disable no-await-in-loop -- one refusal at a time, in order.
+    for (const message of seatedOnly) {
+      const seen = screen.errors.length;
+      screen.send(message);
+      await screen.until((c) => c.errors.length > seen);
+      expect(screen.errors.at(-1)).toMatch(/watching this table/);
+    }
+
+    expect(host.room?.irl).toBe(true);
+  }, 20_000);
+
+  it("keeps the shared-screen draw out of an online room", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    await seatIrlTable(server.port, host, { irl: false });
+
+    // The `table` bit is the client's own word for what it is, so `irl` is the
+    // gate that matters: a room of strangers must never take a move from a
+    // browser that simply said it was furniture.
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code: host.code as string, table: true });
+    await screen.until((c) => c.game !== null);
+
+    const waiting = screen.game?.waitingOn as string;
+    const before = screen.game?.players.find((player) => player.id === waiting)?.cardCount ?? 0;
+    screen.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
+    await screen.until((c) => c.errors.length > 0);
+
+    expect(screen.errors.at(-1)).toMatch(/watching this table/);
+    expect(screen.game?.players.find((player) => player.id === waiting)?.cardCount).toBe(before);
+  }, 20_000);
+
+  it("will not draw for a bot from the shared table screen", async () => {
+    const server = await startServer(tempDir(), DAWDLING);
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    await fillTable(host);
+    host.send({ t: "setIrl", on: true });
+    await host.until((c) => c.room?.irl === true);
+    host.send({ t: "start" });
+    await host.until((c) => c.room?.status === "playing");
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code: host.code as string, table: true });
+    await screen.until((c) => c.game !== null);
+
+    const bots = new Set(host.room?.seats.filter((seat) => seat.bot).map((seat) => seat.id));
+    // Hand the turn on until a bot has it. The bots are parked, so it stays
+    // there for as long as the assertion needs.
+    // oxlint-disable no-await-in-loop -- one move at a time, waiting on each.
+    for (let step = 0; step < 12 && !bots.has(host.game?.waitingOn ?? ""); step += 1) {
+      const view = host.game;
+      if (view?.waitingOn !== host.playerId) break;
+      if (view.phase.kind === "suit") {
+        host.send({ t: "intent", intent: { type: "chooseSuit", playerId: "", suit: "H" } });
+      } else if (view.legalCardIds.length > 0) {
+        const cardId = view.legalCardIds[0] as string;
+        host.send({ t: "intent", intent: { type: "playCard", playerId: "", cardId } });
+      } else {
+        host.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
+      }
+      await host.next((m) => m.t === "state", 8000).catch(() => undefined);
+    }
+
+    const waiting = screen.game?.waitingOn as string;
+    expect(bots.has(waiting)).toBe(true);
+    const before = screen.game?.players.find((player) => player.id === waiting)?.cardCount ?? 0;
+
+    screen.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
+    await screen.until((c) => c.errors.length > 0);
+
+    expect(screen.errors.at(-1)).toMatch(/plays itself/);
+    expect(screen.game?.players.find((player) => player.id === waiting)?.cardCount).toBe(before);
+  }, 20_000);
+
+  it("still refuses an ordinary watcher the draw in an IRL room", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    await seatIrlTable(server.port, host);
+
+    // No `table` bit, so nothing widens: a spectator on `#/r/ABCD/watch` is
+    // exactly as mute as they were before the shared screen existed.
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code: host.code as string });
+    await screen.until((c) => c.game !== null);
+
     screen.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
     await screen.until((c) => c.errors.length > 0);
     expect(screen.errors.at(-1)).toMatch(/watching this table/);

@@ -35,6 +35,7 @@ import {
   rejoinRoom,
   removeSeat,
   roomView,
+  seatOf,
   setBotSpeed,
   setHouseRules,
   setIrl,
@@ -111,6 +112,8 @@ interface Client {
   code: string | null;
   /** Null for a table screen or spectator: they see the board and hold no cards. */
   playerId: PlayerId | null;
+  /** True only for the auxiliary device at the middle of an IRL table. */
+  table: boolean;
   alive: boolean;
   lastShoutAt: number;
 }
@@ -258,13 +261,46 @@ export const attachSockets = (
     }
     if (message.t === "watch") {
       const room = findRoom(store, message.code);
+      client.table = message.table === true;
       return attach(client, room, null, null);
     }
 
-    // Everything below needs a seat at a table.
+    // Everything below needs a table.
     if (!client.code) throw new RoomError("Join a room first");
     const room = findRoom(store, client.code);
     const playerId = client.playerId;
+    /**
+     * The shared table screen's one auxiliary action: tapping its draw pile
+     * draws for whoever is on the clock (#120).
+     *
+     * The `table` bit is the client's own word for what it is, so this is a
+     * narrowing rather than a permission — see `docs/PROTOCOL.md`. What holds
+     * the line is the conditions around it: `drawCard` only, an IRL room only,
+     * and a seat with a person behind it.
+     *
+     * That last one is the point of `bot`. The pile is drawn tappable to the
+     * whole room and a bot's turn goes past under a finger already reaching, so
+     * without it a tap lands on the bot — and a bot made to draw while holding a
+     * play has been handed a Sunny violation it did not choose, by somebody who
+     * isn't even at the table. Bots are paced and decided on the server for
+     * exactly that reason; nothing off a screen gets to move them.
+     */
+    if (
+      !playerId &&
+      client.table &&
+      message.t === "intent" &&
+      message.intent.type === "drawCard" &&
+      room.irl &&
+      room.game?.phase.kind === "action"
+    ) {
+      const tablePlayerId = room.game.players[room.game.turnIndex]?.id;
+      if (!tablePlayerId) throw new RoomError("No player is up");
+      if (seatOf(room, tablePlayerId)?.bot) throw new RoomError("That seat plays itself");
+      const outcome = applySeatIntent(room, tablePlayerId, message.intent);
+      if (!outcome.ok) throw new RoomError(outcome.error ?? "That move isn't allowed");
+      broadcast(room, outcome.events);
+      return restartBots(room);
+    }
     if (!playerId) throw new RoomError("You're watching this table, not playing it");
 
     switch (message.t) {
@@ -320,7 +356,14 @@ export const attachSockets = (
   };
 
   wss.on("connection", (socket: WebSocket) => {
-    const client: Client = { socket, code: null, playerId: null, alive: true, lastShoutAt: 0 };
+    const client: Client = {
+      socket,
+      code: null,
+      playerId: null,
+      table: false,
+      alive: true,
+      lastShoutAt: 0,
+    };
     clients.add(client);
 
     socket.on("pong", () => {

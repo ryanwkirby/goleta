@@ -44,6 +44,23 @@ export const TIGHTEST = 44;
  */
 export const PICKER_TIGHTEST = 28;
 
+/**
+ * The floor for a hand that has been told to fit rather than scroll (#117).
+ *
+ * Below `TIGHTEST`, which the comment above calls absolute — and it still is,
+ * *as a tap floor*. What changes here is that there is no longer a tap to
+ * protect: a hand fitted past this point stops committing on the first tap, so
+ * the first one only has to land on the right card to raise it, and the second
+ * is aimed at a whole card lifted clear of its neighbours. The floor left is
+ * the reading one `fan.ts` uses for the seat strip, and this sits above it.
+ *
+ * It binds far later than it looks. A landscape phone holds sixteen `xl` cards
+ * at `TIGHTEST` and the simulation's worst hand across three hundred games is
+ * twelve, so the squeeze is for small phones and freak endgames, not for the
+ * ordinary turn.
+ */
+export const FIT_TIGHTEST = 18;
+
 /** No overlap at all: a whole card and its gap. Nothing is ever looser. */
 export const loosest = (size: CardSize): number => CARD_WIDTH_PX[size] + GAP;
 
@@ -89,11 +106,21 @@ export const handStep = (
   size: CardSize,
   /** Where tightening stops. The picker fans smaller cards, so it sets its own. */
   tightest: number = TIGHTEST,
+  /**
+   * Landscape IRL hands prefer a tighter fan over any local scrolling, down to
+   * `FIT_TIGHTEST` — past which they scroll after all, because a hand that big
+   * has left legibility behind as well as the tap.
+   */
+  fit = false,
 ): number => {
   const loose = loosest(size);
   if (cards <= 1 || available <= 0) return loose;
   for (let step = loose; step > tightest; step -= 1) {
     if (handWidth(cards, step, size) <= available) return step;
+  }
+  if (fit) {
+    const fitted = Math.floor((available - CARD_WIDTH_PX[size]) / Math.max(cards - 1, 1));
+    return Math.max(FIT_TIGHTEST, Math.min(tightest, fitted));
   }
   return tightest;
 };

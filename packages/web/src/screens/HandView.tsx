@@ -115,7 +115,7 @@ export function HandView({
   // with padding — the hand inside it has none when it is fanning. So this is
   // the width the cards actually get, with nothing subtracted by hand.
   const size = handSize(box.height);
-  const step = handStep(box.width, cards.length, size);
+  const step = handStep(box.width, cards.length, size, undefined, true);
   const me = game.you ?? "";
 
   return (
@@ -156,6 +156,7 @@ export function HandView({
               onPick={onAccuse}
               onCancel={onStopAccusing}
               compact
+              irl
             />
           </div>
         ) : null}
@@ -196,6 +197,8 @@ export function HandView({
               onChoose={onChooseCard}
               size={size}
               step={step}
+              irl
+              fit
             />
           </div>
         </div>

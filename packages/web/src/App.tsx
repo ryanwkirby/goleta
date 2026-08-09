@@ -111,6 +111,7 @@ export function App() {
           log={log}
           shouts={shouts}
           offline={status !== "open"}
+          send={send}
         />
       );
     }

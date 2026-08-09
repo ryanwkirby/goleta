@@ -75,37 +75,11 @@ export function PeekStrip({
     <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-3 py-1">
       <span className="font-mono text-xs tracking-[0.2em] text-white/50">{room.code}</span>
 
-      {/*
-        Tappable whenever it's your turn, including when you're holding a card
-        you could play. Drawing then breaks the rules, and letting you do it
-        without a word of warning is the entire point of the Sunny Rule. No
-        disabled state, no confirmation — see AGENTS.md. A compressed strip is a
-        tempting place to quietly add one; it isn't one.
-      */}
-      <button
-        type="button"
-        onClick={onDraw}
-        disabled={!canDraw}
-        aria-label={`Draw a card — ${game.drawPileSize} left`}
-        className={[
-          "relative flex items-center gap-1.5 rounded-lg transition-transform",
-          canDraw
-            ? "cursor-pointer hover:-translate-y-0.5 focus-visible:-translate-y-0.5"
-            : "cursor-not-allowed opacity-60",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-        ].join(" ")}
-      >
-        <CardBack size="sm" anchor={anchor(DECK)} />
-        <span aria-hidden className="font-mono text-xs tabular-nums text-white/60">
-          {game.drawPileSize}
-        </span>
-      </button>
-
       {/* The card in play, at the same size, so the two piles read as the pair
           they are on the full table. */}
       <div className="flex items-center gap-1.5">
         {face ? (
-          <PlayingCard card={face} size="sm" anchor={anchor(PILE)} />
+          <PlayingCard card={face} size="sm" anchor={anchor(PILE)} mirrored={room.irl} />
         ) : (
           <div
             ref={anchor(PILE)}
@@ -151,6 +125,32 @@ export function PeekStrip({
           className="shrink-0"
         />
       ) : null}
+
+      {/*
+        Tappable whenever it's your turn, including when you're holding a card
+        you could play. Drawing then breaks the rules, and letting you do it
+        without a word of warning is the entire point of the Sunny Rule. No
+        disabled state, no confirmation — see AGENTS.md. In IRL landscape it
+        belongs on the right edge, where a right-handed reach covers least.
+      */}
+      <button
+        type="button"
+        onClick={onDraw}
+        disabled={!canDraw}
+        aria-label={`Draw a card — ${game.drawPileSize} left`}
+        className={[
+          "relative flex shrink-0 items-center gap-1.5 rounded-lg transition-transform",
+          canDraw
+            ? "cursor-pointer hover:-translate-y-0.5 focus-visible:-translate-y-0.5"
+            : "cursor-not-allowed opacity-60",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+        ].join(" ")}
+      >
+        <CardBack size="sm" anchor={anchor(DECK)} />
+        <span aria-hidden className="font-mono text-xs tabular-nums text-white/60">
+          {game.drawPileSize}
+        </span>
+      </button>
     </header>
   );
 }

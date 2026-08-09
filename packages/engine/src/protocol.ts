@@ -71,7 +71,7 @@ export type ClientMessage =
   /** Reclaim a seat after a reload, a dropped connection or a redeploy. */
   | { t: "rejoin"; code: string; playerId: PlayerId; token: string }
   /** A screen that shows the table and holds no cards. */
-  | { t: "watch"; code: string }
+  | { t: "watch"; code: string; table?: boolean }
   | { t: "intent"; intent: Intent }
   | { t: "start" }
   | { t: "addBot" }

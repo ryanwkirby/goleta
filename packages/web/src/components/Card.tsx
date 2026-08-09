@@ -40,6 +40,8 @@ export const CARD_WIDTH_PX: Record<CardSize, number> = { sm: 40, md: 68, lg: 96,
 interface CardProps {
   card: CardModel;
   size?: CardSize;
+  /** In-person cards need to be readable from both sides of the table. */
+  mirrored?: boolean;
   /** Dimmed but still legible: you can see it, you just can't play it. */
   dimmed?: boolean;
   selected?: boolean;
@@ -57,6 +59,7 @@ interface CardProps {
 export function PlayingCard({
   card,
   size = "md",
+  mirrored = false,
   dimmed = false,
   selected = false,
   onClick,
@@ -83,7 +86,7 @@ export function PlayingCard({
         "relative flex shrink-0 flex-col items-start overflow-hidden bg-white font-semibold leading-none shadow-lg",
         "ring-1 ring-black/10 transition-transform duration-150",
         dimmed ? "opacity-45 saturate-50" : "",
-        selected ? "-translate-y-3 ring-2 ring-amber-400" : "",
+        selected ? "z-20 -translate-y-3 ring-2 ring-amber-400" : "",
         onClick ? "cursor-pointer hover:-translate-y-2 focus-visible:-translate-y-2" : "",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
         colour,
@@ -101,6 +104,12 @@ export function PlayingCard({
       >
         {glyph}
       </span>
+      {mirrored ? (
+        <span className="absolute bottom-[0.25em] right-[0.25em] rotate-180 text-right leading-[1.05]">
+          {card.rank}
+          <span className="block text-[0.85em]">{glyph}</span>
+        </span>
+      ) : null}
     </Tag>
   );
 }

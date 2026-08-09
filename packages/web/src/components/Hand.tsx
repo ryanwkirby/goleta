@@ -1,4 +1,6 @@
 import {
+  useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -8,6 +10,7 @@ import {
 
 import type { Card } from "@goleta/engine";
 
+import { TIGHTEST } from "../lib/handFan.ts";
 import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
 import { cardAnchor, HAND } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
@@ -68,6 +71,8 @@ export function Hand({
   onChoose,
   size = "md",
   step = null,
+  irl = false,
+  fit = false,
 }: {
   cards: Card[];
   legalCardIds: string[];
@@ -88,15 +93,34 @@ export function Hand({
    * improve on.
    */
   step?: number | null;
+  /** IRL cards carry mirrored indices so the far side of the table can read them. */
+  irl?: boolean;
+  /**
+   * A fitted landscape hand closes up rather than scrolling, and may be squeezed
+   * past the tap floor to do it. Once it has been, one tap only raises a card
+   * and the second commits — the tap target is gone, so the confirm replaces it.
+   * Merely overlapping is not enough; see `choose`.
+   */
+  fit?: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const { anchor, isArriving, reduced } = useMotion();
   const legal = new Set(legalCardIds);
 
+  const hand = useRef<HTMLDivElement>(null);
+  const handAnchor = anchor(HAND);
+  const setHandRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      hand.current = element;
+      return handAnchor(element);
+    },
+    [handAnchor],
+  );
   const nodes = useRef(new Map<string, HTMLElement>());
   const places = useRef(new Map<string, [number, number]>());
   const reflows = useRef(new Map<string, Animation>());
   const refs = useRef(new Map<string, RefCallback<HTMLElement>>());
+  const previousCards = useRef<ReadonlySet<string>>(new Set(cards.map((card) => card.id)));
 
   /**
    * One stable ref per card doing two jobs: telling the motion layer where this
@@ -152,6 +176,43 @@ export function Hand({
     }
   });
 
+  useLayoutEffect(() => {
+    const before = previousCards.current;
+    const drawn = cards.find((card) => !before.has(card.id));
+    previousCards.current = new Set(cards.map((card) => card.id));
+    if (!drawn) return;
+
+    const row = hand.current;
+    const card = nodes.current.get(drawn.id);
+    if (!row || !card) return;
+
+    const left = card.offsetLeft;
+    const right = left + card.offsetWidth;
+    const visibleLeft = row.scrollLeft;
+    const visibleRight = visibleLeft + row.clientWidth;
+    let next = visibleLeft;
+    if (left < visibleLeft) next = left;
+    else if (right > visibleRight) next = right - row.clientWidth;
+    if (Math.abs(next - visibleLeft) < 1) return;
+
+    const gliding = !reduced && document.visibilityState === "visible";
+    row.scrollTo({ left: next, behavior: gliding ? "smooth" : "auto" });
+  }, [cards, reduced]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const cancel = (event: PointerEvent): void => {
+      if (hand.current?.contains(event.target as Node)) return;
+      setSelected(null);
+    };
+    document.addEventListener("pointerdown", cancel);
+    return () => document.removeEventListener("pointerdown", cancel);
+  }, [selected]);
+
+  useEffect(() => {
+    if (selected && !cards.some((card) => card.id === selected)) setSelected(null);
+  }, [cards, selected]);
+
   // No invitation to stay and watch: by the time most people read this the game
   // has finished, and being told to sit tight for an ending that already
   // happened reads as an app that doesn't know what state it's in. The table
@@ -166,9 +227,20 @@ export function Hand({
 
   const choose = (card: Card): void => {
     if (mode === "idle") return;
-    // The moves you can't take back ask twice. Ordinary play doesn't: it is the
-    // whole rhythm of a turn, and a confirm on every card would wreck it.
-    if (CONFIRMS.has(mode) && selected !== card.id) {
+    // Squeezed past the tap floor, not merely overlapping. Any overlap at all
+    // starts at seven cards on a landscape phone, where the cards still leave
+    // 116px to aim at and there is nothing to disambiguate — asking twice there
+    // is the confirm-on-every-card the comment below rules out, and a hand only
+    // ever reaches about a dozen (the simulation's worst across 300 games), so
+    // it would have been the normal case rather than the exception. Below
+    // `TIGHTEST` the sliver is genuinely thinner than a thumb, which is the
+    // condition #117 names and the only one worth a second tap.
+    const tight = step !== null && step < TIGHTEST;
+    const mustConfirm = CONFIRMS.has(mode) || (fit && tight);
+    // The moves you can't take back ask twice, and so does a card too thin to
+    // be sure you hit. Ordinary play doesn't: it is the whole rhythm of a turn,
+    // and a confirm on every card would wreck it.
+    if (mustConfirm && selected !== card.id) {
       setSelected(card.id);
       return;
     }
@@ -178,7 +250,7 @@ export function Hand({
 
   return (
     <div
-      ref={anchor(HAND)}
+      ref={setHandRef}
       // Cards slide left onto their neighbours by `--fan`, exactly as the seat
       // strip does it: later cards paint over earlier ones by DOM order, so no
       // `z-index` is needed. `justify-center` is what makes a short hand sit in
@@ -192,12 +264,22 @@ export function Hand({
         // clipped — and the bottom never needed to, so it never got it. Nobody
         // read the pair together until the turn ring was drawn around them and
         // the hand sat visibly low in its own frame.
-        "flex items-end overflow-x-auto py-4",
+        "flex items-end py-4",
         // With a step, the row's width *is* the width the fan was fitted to, so
         // it keeps no padding of its own — an inset here and an inset in the
         // arithmetic are two places to disagree, and they did.
-        step === null ? "gap-1.5 px-1" : "justify-center [&>*+*]:ml-[var(--fan)]",
+        // Still `auto` rather than `hidden` on the fanned branch. A fitted hand
+        // fits by construction, so the scrollbar never appears — but `fit` has a
+        // floor, and past it clipping the ends silently would hide cards the
+        // turn needs. Scrolling is the release valve, exactly as it is for the
+        // seat strip (#59).
+        step === null
+          ? "gap-1.5 overflow-x-auto px-1"
+          : "justify-center overflow-x-auto [&>*+*]:ml-[var(--fan)]",
       ].join(" ")}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) setSelected(null);
+      }}
     >
       {cards.map((card) => {
         const playable = legal.has(card.id);
@@ -206,6 +288,7 @@ export function Hand({
             key={card.id}
             card={card}
             size={size}
+            mirrored={irl}
             anchor={refFor(card.id)}
             arriving={isArriving(card.id)}
             // With help on, the unplayable cards are dimmed. Without it they

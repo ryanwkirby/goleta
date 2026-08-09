@@ -238,10 +238,18 @@ function TableSettings({ summary, children }: { summary: string; children: React
   );
 }
 
-/** The two answers, named. `irl` is the flag each one sets. */
+/**
+ * The two answers, named. `irl` is the flag each one sets.
+ *
+ * In person leads, because it is the answer that changes the most: it numbers
+ * the seats, offers the order arrows, puts the QR up, and sends every phone into
+ * the landscape hand view. Remote play is still what a new room *is* — see
+ * `createRoom` — and the order of the buttons has nothing to do with which one
+ * is selected.
+ */
 const PLACES: { key: string; label: string; irl: boolean }[] = [
-  { key: "remote", label: "Remote play", irl: false },
   { key: "irl", label: "In person", irl: true },
+  { key: "remote", label: "Remote play", irl: false },
 ];
 
 /**
@@ -258,9 +266,12 @@ const PLACES: { key: string; label: string; irl: boolean }[] = [
  * question with two real answers should say both out loud, the same way the
  * seat-order check does.
  *
- * The line underneath doesn't change when the switch does, for the reason
- * `HouseRulesPicker` doesn't either: a description that rewrites itself the
- * moment you decide moves the sentence you were reading to decide with.
+ * **And nothing explains them.** There was a line under the pair describing what
+ * in-person mode does to a phone — a QR, a hand, landscape — which is two
+ * mechanisms answering a question already asked in four words. Naming both
+ * answers is what made it redundant: a host picking between "in person" and
+ * "remote play" is not deciding about a layout, and the QR appearing directly
+ * under the tap says the rest better than a sentence above it could.
  *
  * The one host control with no "between games only" on it, so it stays put once
  * a game is running. A table that only works out halfway through the first hand
@@ -292,9 +303,6 @@ function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => v
           </Button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-white/40">
-        In person puts a code up to scan, and gives every phone its own hand, big, in landscape.
-      </p>
     </div>
   );
 }

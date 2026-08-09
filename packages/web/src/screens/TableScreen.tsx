@@ -7,6 +7,7 @@ import { Piles } from "../components/Piles.tsx";
 import { QrCode } from "../components/QrCode.tsx";
 import { PlayingCard, SUIT_GLYPH } from "../components/Card.tsx";
 import { Seats } from "../components/Seats.tsx";
+import { TableInstall } from "../components/TableInstall.tsx";
 import { Button } from "../components/ui.tsx";
 import { namerFor } from "../lib/format.ts";
 import { fitScale, TABLE_DESIGN } from "../lib/fitScale.ts";
@@ -162,6 +163,12 @@ function Waiting({ room }: { room: RoomView }) {
           <p className="mt-6 text-2xl text-amber-300">Needs {room.minPlayers} to deal.</p>
         ) : null}
       </div>
+
+      {/* Waiting state only, never over a game: a propped screen is set up
+          before the cards come out, which is also when the host is standing at
+          it — and #119's invite flow is the moment it gets put there. A pilot;
+          see `TableInstall`. */}
+      <TableInstall />
     </div>
   );
 }

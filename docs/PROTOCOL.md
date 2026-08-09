@@ -33,7 +33,9 @@ someone else's hand, so it is never broadcast — it goes to the one browser tha
 owns the seat and nowhere else.
 
 `watch` joins with no seat at all: a table screen or a spectator sees the board
-and holds no cards. Watchers can't act, and can't call the Sunny Rule.
+and holds no cards. Ordinary watchers can't act, and can't call the Sunny Rule.
+A shared table screen sends the same message with `table: true`; in an IRL room
+that one bit permits only tapping the draw pile for the current player.
 
 **A watcher has no identity and writes nothing.** There is no `playerId`, no
 token, and nothing in `localStorage` — so there is also nothing to reclaim. A
@@ -41,13 +43,14 @@ reload just watches again, and so does a reconnection after a dropped socket or
 a redeploy: the client re-sends `watch` on every connection rather than only the
 first, because watching is stateless and there is nothing to check.
 
-Two client entry points reach it, and the difference between them is only what
-gets drawn:
+Two client entry points reach it. They both watch, but the table URL identifies
+itself on the watch message so the server can allow the draw-only shared-screen
+action:
 
 | URL | What it is |
 | --- | --- |
 | `#/r/ABCD/watch` | A person watching the table. |
-| `#/r/ABCD/table` | The same connection, drawn as the shared screen for the middle of the table. |
+| `#/r/ABCD/table` | A shared screen for the middle of an IRL table. |
 
 The mode is in the URL rather than in a message on purpose: a device propped in
 the middle of a table is opened once and left there, and "what this screen is
@@ -93,8 +96,8 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `create` | anyone | Makes a room, seats you, makes you host. |
 | `join` | anyone | By room code. Refused once a game is under way, with `code: "gameUnderWay"` so the client can offer to watch. |
 | `rejoin` | seat owner | `playerId` + `token`. |
-| `watch` | anyone | No seat, no cards, no actions. |
-| `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
+| `watch` | anyone | No seat and no cards. `table: true` marks the shared IRL table screen. |
+| `intent` | seated, plus shared table draw | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. A `table: true` watcher may send only `drawCard`, only in IRL mode, and the server stamps it as the current player. |
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order. Off either end does nothing rather than refusing. |

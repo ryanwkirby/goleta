@@ -520,6 +520,45 @@ describe("what the wire carries", () => {
     expect(screen.errors.at(-1)).toMatch(/watching this table/);
   }, 20_000);
 
+  it("lets an IRL shared table screen draw for the current player", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    const code = host.code as string;
+
+    const guests = await Promise.all([
+      openClient(server.port),
+      openClient(server.port),
+      openClient(server.port),
+    ]);
+    // oxlint-disable no-await-in-loop -- seats join one at a time, like the lobby.
+    for (const [index, guest] of guests.entries()) {
+      guest.send({ t: "join", code, name: `Guest ${index + 1}` });
+      await guest.until((c) => c.room !== null);
+    }
+
+    host.send({ t: "setIrl", on: true });
+    await host.until((c) => c.room?.irl === true);
+    host.send({ t: "start" });
+    await host.until((c) => c.room?.status === "playing");
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code, table: true });
+    await screen.until((c) => c.game !== null);
+    expect(screen.playerId).toBeNull();
+
+    const waiting = screen.game?.waitingOn as string;
+    const before = screen.game?.players.find((player) => player.id === waiting)?.cardCount ?? 0;
+    screen.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
+    await screen.until((c) => {
+      const player = c.game?.players.find((candidate) => candidate.id === waiting);
+      return (player?.cardCount ?? 0) > before;
+    });
+
+    expect(screen.game?.players.find((player) => player.id === waiting)?.cardCount).toBe(before + 1);
+  }, 20_000);
+
   it("refuses a watcher every message that belongs to a seat", async () => {
     const server = await startServer(tempDir());
     const host = await openClient(server.port);

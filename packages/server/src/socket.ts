@@ -111,6 +111,8 @@ interface Client {
   code: string | null;
   /** Null for a table screen or spectator: they see the board and hold no cards. */
   playerId: PlayerId | null;
+  /** True only for the auxiliary device at the middle of an IRL table. */
+  table: boolean;
   alive: boolean;
   lastShoutAt: number;
 }
@@ -258,13 +260,29 @@ export const attachSockets = (
     }
     if (message.t === "watch") {
       const room = findRoom(store, message.code);
+      client.table = message.table === true;
       return attach(client, room, null, null);
     }
 
-    // Everything below needs a seat at a table.
+    // Everything below needs a table.
     if (!client.code) throw new RoomError("Join a room first");
     const room = findRoom(store, client.code);
     const playerId = client.playerId;
+    if (
+      !playerId &&
+      client.table &&
+      message.t === "intent" &&
+      message.intent.type === "drawCard" &&
+      room.irl &&
+      room.game?.phase.kind === "action"
+    ) {
+      const tablePlayerId = room.game.players[room.game.turnIndex]?.id;
+      if (!tablePlayerId) throw new RoomError("No player is up");
+      const outcome = applySeatIntent(room, tablePlayerId, message.intent);
+      if (!outcome.ok) throw new RoomError(outcome.error ?? "That move isn't allowed");
+      broadcast(room, outcome.events);
+      return restartBots(room);
+    }
     if (!playerId) throw new RoomError("You're watching this table, not playing it");
 
     switch (message.t) {
@@ -320,7 +338,14 @@ export const attachSockets = (
   };
 
   wss.on("connection", (socket: WebSocket) => {
-    const client: Client = { socket, code: null, playerId: null, alive: true, lastShoutAt: 0 };
+    const client: Client = {
+      socket,
+      code: null,
+      playerId: null,
+      table: false,
+      alive: true,
+      lastShoutAt: 0,
+    };
     clients.add(client);
 
     socket.on("pong", () => {

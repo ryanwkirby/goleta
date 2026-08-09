@@ -326,16 +326,18 @@ An optional extra device at `#/r/ABCD/table`, showing the middle of the table.
 **Nothing depends on it existing** — it is why the phone view carries its own
 peek strip.
 
-- **It shows no hand, at any size, ever.** A screen in the middle of a room is
-  visible to everyone including whoever is walking past. Seats get a name, a
-  count, and — for the couple of seconds it lasts — that they have asked for
-  help.
-- **It cannot act**, and that is enforced at the server rather than here: it
-  joins as a watcher (#16), and every seated message is refused.
-- **It is drawn without `TableMotion`.** Cards flying between hands nobody can
-  see would describe movement this screen doesn't show, and the flight layer
-  portals to the body where the board's scaling can't reach it. The peel is CSS
-  on the pile and runs regardless.
+- **Its default view is the shared centre.** Seats get names at the screen
+  edges, the piles get the room, and a player asking for help is shown against
+  their name. It can toggle to a watcher-like hand strip for bot-heavy rooms,
+  but the centre piles stay large there too.
+- **It has exactly one auxiliary action.** It still joins as a watcher (#16),
+  with a `table` bit on the watch message. In an IRL room, while the game is
+  waiting on an ordinary action, tapping its draw pile draws for the current
+  player. Every other seated message is refused; it cannot play, name a suit or
+  call Sunny.
+- **It is drawn without `TableMotion`.** The flight layer portals to the body
+  where the board's scaling can't reach it. Draws get a local flight toward the
+  player's edge; the peel is CSS on the pile and runs regardless.
 - **One design, scaled** (`fitScale.ts`), rather than each piece in viewport
   units. Sizing every piece independently gets the type right and the
   *relationships* wrong — a board recomposing itself at every aspect ratio is

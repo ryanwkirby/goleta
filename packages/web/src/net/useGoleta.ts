@@ -129,7 +129,13 @@ export const useGoleta = (): Goleta => {
         const code = codeRef.current ?? route.code;
         const identity = code && !watching ? loadIdentity(code) : null;
         if (code && watching) {
-          socket.send(JSON.stringify({ t: "watch", code } satisfies ClientMessage));
+          socket.send(
+            JSON.stringify({
+              t: "watch",
+              code,
+              ...(route.mode === "table" ? { table: true } : {}),
+            } satisfies ClientMessage),
+          );
         } else if (code && identity) {
           socket.send(
             JSON.stringify({

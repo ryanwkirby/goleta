@@ -44,6 +44,16 @@ export const hashFor = (code: string, mode: ViewMode = "play"): string =>
   mode === "play" ? `#/r/${code}` : `#/r/${code}/${mode}`;
 
 /**
+ * The whole link, for texting to somebody or printing into a QR.
+ *
+ * Built from `location` rather than from a configured origin, so it is right on
+ * localhost, on the LAN address a phone uses against the dev server, and on
+ * goleta.ryankirby.net, without any of them being written down anywhere.
+ */
+export const joinLink = (code: string, mode: ViewMode = "play"): string =>
+  `${location.origin}/${hashFor(code, mode)}`;
+
+/**
  * Puts the room in the address bar, keeping whatever this screen came here to
  * be. A watcher that had its mode rewritten to a seat on the first `welcome`
  * would watch until the next reload and then sit down.

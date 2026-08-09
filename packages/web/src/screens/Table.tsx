@@ -39,8 +39,15 @@ import { HandView } from "./HandView.tsx";
 /** How long the table looks at "X called it on Y" before anything else. */
 const ANNOUNCE_MS = 3200;
 
-/** How long you can sit on a turn before the app offers you a hand. */
-const STALL_MS = 5000;
+/**
+ * How long you can sit on a turn before the app offers you a hand.
+ *
+ * Seven seconds, not five. Five is inside the length of an ordinary turn at a
+ * table where people are talking to each other, so the offer kept turning up on
+ * turns nobody was stuck on — and an offer of help you didn't need is the app
+ * saying it thinks you do.
+ */
+const STALL_MS = 7000;
 
 /**
  * What the table is waiting for, said plainly.
@@ -253,8 +260,8 @@ export function Table({
     if (played === 1 && wantedHints) setGraduating(true);
   }, [lastGameOverId, game.you, wantedHints]);
 
-  // Five seconds on a turn you haven't moved on, and the app offers a hand.
-  // Every fresh draw restarts the clock: you're deciding again.
+  // A while on a turn you haven't moved on, and the app offers a hand. Every
+  // fresh draw restarts the clock: you're deciding again.
   const couldUseHelp = mine && game.phase.kind === "action" && !finished && !assist;
   useEffect(() => {
     setStalled(false);

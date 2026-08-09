@@ -206,7 +206,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
 };
 
 export const findRoom = (store: RoomStore, code: string): Room =>
-  store.get(normaliseCode(code)) ?? fail("no room with that code");
+  store.get(normaliseCode(code)) ?? fail("No room with that code");
 
 export const joinRoom = (
   store: RoomStore,
@@ -218,9 +218,9 @@ export const joinRoom = (
     // Tagged, because "watch instead" is a real offer the Join screen can make
     // and matching on the wording of this sentence to spot it would break the
     // next time somebody rewrites it.
-    fail("that game is already under way — you can watch, or wait for the next one", "gameUnderWay");
+    fail("That game is already under way — you can watch, or wait for the next one", "gameUnderWay");
   }
-  if (room.seats.length >= MAX_TABLE_PLAYERS) fail("that room is full");
+  if (room.seats.length >= MAX_TABLE_PLAYERS) fail("That room is full");
 
   const seat = newSeatFor(cleanName(name), false);
   room.seats.push(seat);
@@ -236,7 +236,7 @@ export const rejoinRoom = (
 ): { room: Room; seat: Seat } => {
   const room = findRoom(store, code);
   const seat = seatOf(room, playerId);
-  if (!seat || seat.token !== token) fail("that seat isn't yours any more");
+  if (!seat || seat.token !== token) fail("That seat isn't yours any more");
 
   seat.connected = true;
   // Somebody has to be able to start the next game. If everyone else has
@@ -268,13 +268,13 @@ export const markDisconnected = (room: Room, playerId: PlayerId): void => {
 // ---------------------------------------------------------------------------
 
 const requireHost = (room: Room, playerId: PlayerId): void => {
-  if (room.hostId !== playerId) fail("only the host can do that");
+  if (room.hostId !== playerId) fail("Only the host can do that");
 };
 
 export const addBot = (room: Room, byPlayerId: PlayerId): void => {
   requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("wait for this game to finish");
-  if (room.seats.length >= MAX_TABLE_PLAYERS) fail("that room is full");
+  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
+  if (room.seats.length >= MAX_TABLE_PLAYERS) fail("That room is full");
 
   const taken = new Set(room.seats.map((s) => s.name));
   const name = BOT_NAMES.find((candidate) => !taken.has(candidate)) ?? "Bot";
@@ -288,8 +288,8 @@ export const addBot = (room: Room, byPlayerId: PlayerId): void => {
  */
 export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): void => {
   requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("wait for this game to finish");
-  if (speed !== "human" && speed !== "lightning") fail("no such speed");
+  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
+  if (speed !== "human" && speed !== "lightning") fail("No such speed");
 
   room.botSpeed = speed;
   touch(room);
@@ -325,14 +325,14 @@ export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
  */
 export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRules): void => {
   requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("wait for this game to finish");
+  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
   if (rules.eights !== "playerNames" && rules.eights !== "nextPlayerNames") {
-    fail("no such rule for eights");
+    fail("No such rule for eights");
   }
   if (rules.seedEight !== "natural" && rules.seedEight !== "dealerNames") {
-    fail("no such rule for the seed card");
+    fail("No such rule for the seed card");
   }
-  if (typeof rules.sunny !== "boolean") fail("the Sunny Rule is on or off");
+  if (typeof rules.sunny !== "boolean") fail("The Sunny Rule is on or off");
 
   room.options = {
     ...DEFAULT_OPTIONS,
@@ -372,11 +372,11 @@ export const moveSeat = (
   direction: "up" | "down",
 ): void => {
   requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("wait for this game to finish");
-  if (direction !== "up" && direction !== "down") fail("a seat moves up or down");
+  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
+  if (direction !== "up" && direction !== "down") fail("A seat moves up or down");
 
   const from = room.seats.findIndex((seat) => seat.id === target);
-  if (from === -1) fail("nobody by that id is at this table");
+  if (from === -1) fail("Nobody by that id is at this table");
 
   const to = direction === "up" ? from - 1 : from + 1;
   // Off either end is a no-op rather than a refusal: the arrow that would do it
@@ -393,8 +393,8 @@ export const moveSeat = (
 
 export const removeSeat = (room: Room, byPlayerId: PlayerId, target: PlayerId): void => {
   requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("wait for this game to finish");
-  if (target === room.hostId) fail("the host can't be removed");
+  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
+  if (target === room.hostId) fail("The host can't be removed");
 
   room.seats = room.seats.filter((seat) => seat.id !== target);
   touch(room);
@@ -416,9 +416,9 @@ const nextDealerIndex = (room: Room): number => {
 
 export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
   requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("that game is already under way");
+  if (roomStatus(room) === "playing") fail("That game is already under way");
   if (room.seats.length < MIN_TABLE_PLAYERS) {
-    fail(`goleta needs ${MIN_TABLE_PLAYERS} players — add a bot to make up the numbers`);
+    fail(`Goleta needs ${MIN_TABLE_PLAYERS} players — add a bot to make up the numbers`);
   }
 
   const dealerIndex = nextDealerIndex(room);
@@ -454,8 +454,8 @@ export const applySeatIntent = (
   intent: Intent,
 ): IntentOutcome => {
   const game = room.game;
-  if (!game) return { ok: false, error: "no game is running", events: [] };
-  if (!seatOf(room, playerId)) return { ok: false, error: "you aren't seated here", events: [] };
+  if (!game) return { ok: false, error: "No game is running", events: [] };
+  if (!seatOf(room, playerId)) return { ok: false, error: "You aren't seated here", events: [] };
 
   const result = applyIntent(game, { ...intent, playerId });
   if (!result.ok) return { ok: false, error: result.error, events: [] };

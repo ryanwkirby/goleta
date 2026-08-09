@@ -262,15 +262,15 @@ export const attachSockets = (
     }
 
     // Everything below needs a seat at a table.
-    if (!client.code) throw new RoomError("join a room first");
+    if (!client.code) throw new RoomError("Join a room first");
     const room = findRoom(store, client.code);
     const playerId = client.playerId;
-    if (!playerId) throw new RoomError("you're watching this table, not playing it");
+    if (!playerId) throw new RoomError("You're watching this table, not playing it");
 
     switch (message.t) {
       case "intent": {
         const outcome = applySeatIntent(room, playerId, message.intent);
-        if (!outcome.ok) throw new RoomError(outcome.error ?? "that move isn't allowed");
+        if (!outcome.ok) throw new RoomError(outcome.error ?? "That move isn't allowed");
         broadcast(room, outcome.events);
         // Restarted rather than scheduled: a call submitted from the picker
         // shuts its own window, which lifts the hold, and the table should get
@@ -332,7 +332,7 @@ export const attachSockets = (
       try {
         message = JSON.parse(String(raw)) as ClientMessage;
       } catch {
-        return send(client, { t: "error", message: "that wasn't valid JSON" });
+        return send(client, { t: "error", message: "That wasn't valid JSON" });
       }
       try {
         handle(client, message);
@@ -341,7 +341,7 @@ export const attachSockets = (
         if (!known) console.error("[ws]", error);
         send(client, {
           t: "error",
-          message: known ? error.message : "something went wrong",
+          message: known ? error.message : "Something went wrong",
           ...(known && error.code ? { code: error.code } : {}),
           // A refused `intent` is a mis-tap and nothing more, so it is the one
           // refusal the client shows and takes away again. Read off the message

@@ -39,6 +39,20 @@ protocol, and a mixed `http` page would try `ws:` and be blocked.
 
 ## Redeploying after a change
 
+**Merging to `main` deploys.** The `Deploy` workflow runs on a repo-scoped
+self-hosted runner on the Mac mini, force-checks-out `main` in
+`/Users/ryan/git/goleta`, rebuilds, prunes dangling images and then polls
+`http://localhost:8063/` for up to a minute. Watch the run rather than
+rebuilding by hand — a manual build racing the runner is two deploys landing on
+one live table. `concurrency` queues overlapping runs instead of cancelling
+them, for the same reason.
+
+It is triggered by `push` to `main` and by manual dispatch, and deliberately
+never by `pull_request`: the runner is the machine holding the rooms, and
+nothing off an unmerged branch should execute there.
+
+If the runner is down, or you're deploying something unmerged on purpose:
+
 ```bash
 git pull
 docker compose up -d --build
@@ -54,10 +68,35 @@ automatically. Two things follow from that:
 - If you change the persisted shape, version it and handle the old one. A
   version mismatch is treated as "start clean", which is honest but loses games.
 
-There's no CI auto-deploy runner for this repo, matching the other small apps
-here — self-hosted runners are registered per repo and it isn't worth one for
-this. GitHub Actions runs lint, typecheck, tests and a docker build on
-`ubuntu-latest`; deploying is the manual step above.
+CI proper still runs on `ubuntu-latest` — lint, typecheck, tests and a docker
+build, on every pull request. The Mac mini runner does deploys only.
+
+### The runner itself
+
+Registered per repo, as on `kcrw-datafetcher` and `radionova-datafetcher`, with
+the label `goleta`. It runs as a launchd agent, so it comes back with the
+machine:
+
+```bash
+cd /Users/ryan/actions-runner-goleta
+./svc.sh status      # is it up
+./svc.sh stop|start  # bounce it
+```
+
+**It lives outside the working tree, and that part is not cosmetic.** The other
+repos here keep the runner in `<repo>/actions-runner`; do not copy that here.
+This repo's root `package.json` has `"type": "module"`, and Node resolves a
+file's module system from the nearest `package.json` up the tree — so a runner
+installed inside this repo has its own `bin/RunnerService.js`, which is
+CommonJS, read as ESM. It dies on startup with `ReferenceError: require is not
+defined in ES module scope` and reports offline while `svc.sh status` cheerfully
+says it started. Installing it at `/Users/ryan/actions-runner-goleta` puts it
+out of reach of this repo's `package.json` for good, including across the
+runner's own auto-updates.
+
+Because it's a launchd agent it has **no access to the login keychain**, which
+is why the deploy step authenticates its `git fetch` with the workflow token
+rather than relying on git's `osxkeychain` credential helper.
 
 ## Checking it worked
 

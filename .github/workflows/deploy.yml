@@ -1,0 +1,53 @@
+name: Deploy
+
+# Continuous deployment to the Mac mini's OrbStack.
+#
+# Runs only on push to main (i.e. a merged PR) and on manual dispatch — never
+# on pull_request — so untrusted branch code is never executed on the runner.
+# The job runs on the self-hosted runner installed on the Mac mini, which is
+# the only machine carrying the `goleta` label.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never let two deploys overlap; queue them instead of cancelling. A redeploy
+# restarts the process holding every live room, so the one thing worse than a
+# deploy landing mid-game is two of them landing mid-game.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, goleta]
+    steps:
+      - name: Sync working tree to origin/main and (re)deploy
+        working-directory: /Users/ryan/git/goleta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Authenticate the fetch with the workflow token. The runner is a
+          # launchd agent with no access to the login keychain, so git's
+          # osxkeychain credential helper can't supply HTTPS credentials.
+          git fetch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" main
+          # Force-checkout main to exactly match what we just fetched, whatever
+          # branch the working tree happens to be on (deploy target tracks main).
+          git checkout -B main FETCH_HEAD
+          docker compose up -d --build
+          docker image prune -f
+
+      - name: Wait for healthy
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8063/ >/dev/null 2>&1; then
+              echo "Service healthy after ${i} attempt(s)."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Service failed health check; recent logs:"
+          docker compose -f /Users/ryan/git/goleta/docker-compose.yml logs --tail=80 || true
+          exit 1

@@ -10,6 +10,7 @@ import {
 
 import type { Card } from "@goleta/engine";
 
+import { TIGHTEST } from "../lib/handFan.ts";
 import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
 import { cardAnchor, HAND } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
@@ -95,8 +96,10 @@ export function Hand({
   /** IRL cards carry mirrored indices so the far side of the table can read them. */
   irl?: boolean;
   /**
-   * A fitted landscape hand overlaps by design. Once overlap is real, one tap
-   * only raises a card; the second tap commits.
+   * A fitted landscape hand closes up rather than scrolling, and may be squeezed
+   * past the tap floor to do it. Once it has been, one tap only raises a card
+   * and the second commits — the tap target is gone, so the confirm replaces it.
+   * Merely overlapping is not enough; see `choose`.
    */
   fit?: boolean;
 }) {
@@ -224,10 +227,19 @@ export function Hand({
 
   const choose = (card: Card): void => {
     if (mode === "idle") return;
-    const overlapping = step !== null && step < CARD_WIDTH_PX[size] + 6;
-    const mustConfirm = CONFIRMS.has(mode) || (fit && overlapping);
-    // The moves you can't take back ask twice. Ordinary play doesn't: it is the
-    // whole rhythm of a turn, and a confirm on every card would wreck it.
+    // Squeezed past the tap floor, not merely overlapping. Any overlap at all
+    // starts at seven cards on a landscape phone, where the cards still leave
+    // 116px to aim at and there is nothing to disambiguate — asking twice there
+    // is the confirm-on-every-card the comment below rules out, and a hand only
+    // ever reaches about a dozen (the simulation's worst across 300 games), so
+    // it would have been the normal case rather than the exception. Below
+    // `TIGHTEST` the sliver is genuinely thinner than a thumb, which is the
+    // condition #117 names and the only one worth a second tap.
+    const tight = step !== null && step < TIGHTEST;
+    const mustConfirm = CONFIRMS.has(mode) || (fit && tight);
+    // The moves you can't take back ask twice, and so does a card too thin to
+    // be sure you hit. Ordinary play doesn't: it is the whole rhythm of a turn,
+    // and a confirm on every card would wreck it.
     if (mustConfirm && selected !== card.id) {
       setSelected(card.id);
       return;
@@ -256,7 +268,14 @@ export function Hand({
         // With a step, the row's width *is* the width the fan was fitted to, so
         // it keeps no padding of its own — an inset here and an inset in the
         // arithmetic are two places to disagree, and they did.
-        step === null ? "gap-1.5 overflow-x-auto px-1" : "justify-center overflow-x-hidden [&>*+*]:ml-[var(--fan)]",
+        // Still `auto` rather than `hidden` on the fanned branch. A fitted hand
+        // fits by construction, so the scrollbar never appears — but `fit` has a
+        // floor, and past it clipping the ends silently would hide cards the
+        // turn needs. Scrolling is the release valve, exactly as it is for the
+        // seat strip (#59).
+        step === null
+          ? "gap-1.5 overflow-x-auto px-1"
+          : "justify-center overflow-x-auto [&>*+*]:ml-[var(--fan)]",
       ].join(" ")}
       onClick={(event) => {
         if (event.target === event.currentTarget) setSelected(null);

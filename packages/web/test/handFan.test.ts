@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CARD_WIDTH_PX } from "../src/components/Card.tsx";
 import {
+  FIT_TIGHTEST,
   PICKER_TIGHTEST,
   TIGHTEST,
   handSize,
@@ -103,6 +104,23 @@ describe("fanning your own hand in landscape", () => {
 
     expect(fitted).toBeLessThan(TIGHTEST);
     expect(handWidth(cards, fitted, "xl")).toBeLessThanOrEqual(PHONE);
+  });
+
+  it("asks fitting for nothing until the tap floor is actually reached", () => {
+    // What the second tap costs is the rhythm of a turn, so the fan has to be
+    // genuinely past `TIGHTEST` before `Hand` starts asking — and a real hand
+    // never gets there on a phone this wide. Twelve is the worst the simulation
+    // reaches across three hundred games; sixteen is what fits at the floor.
+    for (let cards = 1; cards <= atMostAtTheFloor(PHONE, "xl"); cards += 1) {
+      expect(handStep(PHONE, cards, "xl", TIGHTEST, true)).toBeGreaterThanOrEqual(TIGHTEST);
+    }
+  });
+
+  it("stops fitting at its own floor rather than shaving a hand to stripes", () => {
+    // Past here the sliver has left legibility behind as well as the tap, and
+    // the row goes back to scrolling — see `Hand`.
+    expect(handStep(PHONE, 400, "xl", TIGHTEST, true)).toBe(FIT_TIGHTEST);
+    expect(handStep(PHONE, 400, "xl", TIGHTEST, true)).toBeGreaterThan(0);
   });
 
   it("keeps the floor absolute, because a thumb is the same width either way", () => {

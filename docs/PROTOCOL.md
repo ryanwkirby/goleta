@@ -71,6 +71,7 @@ the only way to tell.
 | `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
 | `addBot` / `removeSeat` | host | Between games only. |
+| `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order. Off either end does nothing rather than refusing. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
 | `setIrl` | host | **Any time, including mid-game.** "We're all in the same room"; carried back to everyone on `RoomView`. |
@@ -193,6 +194,15 @@ and the server does no more than copy it to every client — so a table that get
 three turns in and realises they are all sat together can flip it there and then.
 
 It is room state, so it is in the snapshot and survives a redeploy.
+
+**Seat order is turn order, and `moveSeat` is not gated on `irl`.** Online the
+order is arbitrary and nobody has a reason to care; a table sitting in one room
+has a physical order for it to disagree with, and a game that deals across the
+table and back gets noticed three turns in. Which rooms are worth showing the
+arrows in is a presentation call and stays in the lobby — the wire refuses only
+what it always refused, a non-host and a game in progress. Gating it on a flag
+the host can flip at any moment would throw an error at somebody mid-shuffle for
+changing an unrelated setting.
 
 ## Bots
 

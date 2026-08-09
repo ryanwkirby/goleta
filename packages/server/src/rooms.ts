@@ -350,6 +350,47 @@ export const houseRulesOf = (room: Room): HouseRules => ({
   sunny: room.options.sunny !== null,
 });
 
+/**
+ * Move a seat one place along the table order, which is also the turn order.
+ *
+ * Online that order is arbitrary and nobody has a reason to care. A table all
+ * sitting in the same room has a physical order for it to disagree with, and a
+ * game that deals across the table and back gets noticed three turns in, when
+ * it is too late to fix — so the host can put the seats in the order the people
+ * are actually in.
+ *
+ * `irl` is deliberately not checked. The order is real in every room; IRL is
+ * only where anyone bothers, and which rooms are worth offering arrows in is a
+ * judgement about presentation that belongs in the lobby. Gating the wire on a
+ * flag the host can flip at any moment would hand somebody an error mid-shuffle
+ * for changing an unrelated setting.
+ */
+export const moveSeat = (
+  room: Room,
+  byPlayerId: PlayerId,
+  target: PlayerId,
+  direction: "up" | "down",
+): void => {
+  requireHost(room, byPlayerId);
+  if (roomStatus(room) === "playing") fail("wait for this game to finish");
+  if (direction !== "up" && direction !== "down") fail("a seat moves up or down");
+
+  const from = room.seats.findIndex((seat) => seat.id === target);
+  if (from === -1) fail("nobody by that id is at this table");
+
+  const to = direction === "up" ? from - 1 : from + 1;
+  // Off either end is a no-op rather than a refusal: the arrow that would do it
+  // is already disabled, so arriving here means the table moved under somebody's
+  // thumb, and an error banner is a poor answer to a tap that changed nothing.
+  const neighbour = room.seats[to];
+  const moved = room.seats[from];
+  if (!neighbour || !moved) return;
+
+  room.seats[to] = moved;
+  room.seats[from] = neighbour;
+  touch(room);
+};
+
 export const removeSeat = (room: Room, byPlayerId: PlayerId, target: PlayerId): void => {
   requireHost(room, byPlayerId);
   if (roomStatus(room) === "playing") fail("wait for this game to finish");

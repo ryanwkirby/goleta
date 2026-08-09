@@ -76,6 +76,16 @@ export type ClientMessage =
   | { t: "start" }
   | { t: "addBot" }
   | { t: "removeSeat"; playerId: PlayerId }
+  /**
+   * Host only, between games: move a seat one place along the table order.
+   *
+   * One place at a time rather than a whole `order: PlayerId[]`, because an
+   * order posted from a browser can arrive after a seat has left, and a stale
+   * permutation is a worse thing to reconcile than a swap that no longer
+   * applies. Seat order is turn order everywhere; it is only a table sitting in
+   * one room that has a physical order for it to disagree with.
+   */
+  | { t: "moveSeat"; playerId: PlayerId; direction: "up" | "down" }
   /** Host only, between games: how fast the bots at this table play. */
   | { t: "setBotSpeed"; speed: BotSpeed }
   /**

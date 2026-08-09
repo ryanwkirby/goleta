@@ -2,8 +2,8 @@ import { useRef } from "react";
 
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
-import { Hand, HandSortButton } from "../components/Hand.tsx";
-import { HelpLink, HelpShout } from "../components/Help.tsx";
+import { Hand } from "../components/Hand.tsx";
+import { HelpShout } from "../components/Help.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
@@ -30,6 +30,11 @@ export interface HandViewProps {
   refusal: GoletaError | null;
   canDraw: boolean;
   onDraw: () => void;
+  /**
+   * Furniture rather than cards, so all of it goes straight through to the
+   * strip. This screen is your hand and a line across the top of it, and
+   * nothing here is drawn underneath any more (#131).
+   */
   prompt: string;
   mine: boolean;
   handSort: HandSort;
@@ -60,6 +65,13 @@ export interface HandViewProps {
  * people, where your own cards, the thing you actually have to decide from, got
  * a fifth of the screen. Here they get most of it, at the size the pile used to
  * be, and the table centre peeks over the top (#78).
+ *
+ * Since #131 they get the rest of it as well. There is a strip and there is the
+ * hand, and nothing under it: the line of small print that used to sit at the
+ * foot cost a card size — `handSize` reads what the row is left — and every item
+ * on it was quiet enough to move up into the strip instead. What the table is
+ * waiting for is said in the strip's own words now, which were a shorter version
+ * of the same sentence.
  *
  * Everything else that used to live down the side of the table has to fit in
  * one short, wide viewport, and the rule for all of it is the same: it docks
@@ -120,6 +132,11 @@ export function HandView({
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
+      {/* Everything that isn't your cards, in one line across the top. The row
+          of furniture that used to sit under them is gone: it cost the hand a
+          card size, and none of what was on it — the prompt the strip was
+          already saying a thinner version of, the sort control, the offer of
+          help, the draws left on a missed call — is worth one (#131). */}
       <PeekStrip
         room={room}
         game={game}
@@ -129,6 +146,13 @@ export function HandView({
         onCallSunny={onStartAccusing}
         offline={offline}
         helpFrom={helpFrom}
+        prompt={prompt}
+        mine={mine}
+        sortable={cards.length > 1}
+        handSort={handSort}
+        onCycleSort={onCycleSort}
+        stalled={stalled}
+        onAskForHelp={onAskForHelp}
       />
 
       <div className="flex min-h-0 flex-1 flex-col">
@@ -189,10 +213,20 @@ export function HandView({
           which is the release valve it already has. Letting the row bleed would
           keep the arithmetic looking healthy while the hardware overruled it.
         */}
+        {/*
+          The bottom inset is on this row too, now that nothing sits under it.
+          It is the footer's old `pb` moved up rather than a new rule: the felt
+          bleeds to the edge and the content insets from it, and the hand is the
+          bottom-most content there is. `useBox` reads the content box, so the
+          height `handSize` is handed already has the home indicator taken off —
+          which is the difference between a rung it can hold and a rung that
+          draws its bottom row of cards under a swipe bar.
+        */}
         <div
           ref={row}
           className={[
             "relative flex min-h-0 flex-1 flex-col justify-center",
+            "pb-[max(0.25rem,env(safe-area-inset-bottom))]",
             "pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]",
           ].join(" ")}
         >
@@ -222,39 +256,6 @@ export function HandView({
           </div>
         </div>
       </div>
-
-      {/* One line at the foot: what the table is waiting for, and the way back
-          to the whole of it. */}
-      <footer
-        className={[
-          "flex shrink-0 items-center gap-3 pt-0.5",
-          "pb-[max(0.25rem,env(safe-area-inset-bottom))]",
-          "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
-        ].join(" ")}
-      >
-        {stalled ? <HelpLink onAsk={onAskForHelp} /> : null}
-        {/* Yours alone: the server sends this to nobody else. */}
-        {game.sunnyLockedDraws > 0 ? (
-          <span className="shrink-0 text-xs text-white/35" aria-live="polite">
-            <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
-            {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
-          </span>
-        ) : null}
-
-        <p
-          className={[
-            "min-w-0 flex-1 truncate text-center text-xs",
-            mine ? "font-semibold text-amber-300" : "text-white/50",
-          ].join(" ")}
-          aria-live="polite"
-        >
-          {prompt}
-        </p>
-
-        {cards.length > 1 ? (
-          <HandSortButton sort={handSort} onCycle={onCycleSort} className="shrink-0" />
-        ) : null}
-      </footer>
     </div>
   );
 }

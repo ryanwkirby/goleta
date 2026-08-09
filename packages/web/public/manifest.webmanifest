@@ -1,0 +1,25 @@
+{
+  "name": "goleta",
+  "short_name": "goleta",
+  "description": "Crazy Eights, reversed: you want to keep cards. 3-6 players, no accounts.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#07180f",
+  "background_color": "#07180f",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    }
+  ]
+}

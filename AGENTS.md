@@ -420,6 +420,24 @@ peek strip.
   units. Sizing every piece independently gets the type right and the
   *relationships* wrong — a board recomposing itself at every aspect ratio is
   exactly what a screen propped at a table shows up.
+- **It is the one surface that offers an install, and that is a pilot (#126).**
+  The open question is whether an install prompt belongs in this app at all —
+  the identity model is *no accounts, scan a code, play*, and "add this to your
+  home screen" is the first thing here that sounds like a signup even though it
+  isn't. It is offered here because the friction is lowest and the payoff
+  highest: the screen is propped once, by the host, before anything is running,
+  and it holds no identity to lose crossing into an installed app's separate
+  storage container — which a *phone* would, coming back as a new player with an
+  orphaned seat. Which offer appears is four capability questions and never a
+  user agent: already standalone, then `beforeinstallprompt`, then `"standalone"
+  in navigator` (iOS's home-screen model, so the offer is words and the Share
+  sheet — and why an iPad gets the install rather than fullscreen, which leaves
+  a non-dismissible overlay button on a screen nobody is going to tidy), then
+  plain fullscreen for a laptop or a TV. It shows in the waiting state only,
+  never over a game, and one tap dismisses it for good. **Nothing may start
+  depending on a shared screen being installed**, exactly as nothing depends on
+  one existing — removing the pilot is deleting `TableInstall.tsx`, the manifest
+  and its `<link>`, and this bullet.
 
 ### Wake locks
 

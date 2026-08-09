@@ -12,6 +12,9 @@
 
   --animate-help-shout: help-shout 2.6s ease-out forwards;
 
+  /* The phone on the rotate panel, showing which way it wants to go. */
+  --animate-rotate-hint: rotate-hint 2.6s ease-in-out infinite;
+
   /* The pile peeling back off a Sunny call. `forwards` on both: the evidence
      has to stay up and stay legible for the rest of the beat, not spring back
      the moment it has finished arriving. */
@@ -50,6 +53,22 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -2.2rem) scale(1);
+  }
+}
+
+/* Upright, then over, then held there — the gesture the panel is asking for,
+   demonstrated rather than described. */
+@keyframes rotate-hint {
+  0%,
+  25% {
+    transform: rotate(0deg);
+  }
+  45%,
+  85% {
+    transform: rotate(90deg);
+  }
+  100% {
+    transform: rotate(0deg);
   }
 }
 
@@ -112,6 +131,15 @@
     to {
       opacity: 1;
       transform: translateY(-50%);
+    }
+  }
+
+  /* The heading says it in words. Anyone who asked for less movement gets the
+     phone already lying the way they're being asked to hold theirs. */
+  @keyframes rotate-hint {
+    from,
+    to {
+      transform: rotate(90deg);
     }
   }
 }

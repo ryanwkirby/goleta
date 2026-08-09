@@ -202,11 +202,17 @@ function HouseRulesPicker({
  * It sits alone on its panel now that the IRL toggle leads the lobby, so it has
  * nothing above it to be divided from and keeps no rule of its own.
  *
- * The chevron is deliberately much larger than the label it sits beside. It is
+ * The triangle is deliberately much larger than the label it sits beside. It is
  * the only thing on the row saying there is anything behind it, and at body-text
  * size it read as punctuation. "Advanced" rather than "expert" for the same
  * reason: most tables can leave this shut, and none of them need to have played
  * before to open it.
+ *
+ * It is a **disclosure** triangle — `▸` shut, `▾` open — and not the `▾`/`▴` pair
+ * it started as. That pair is a scroll gesture, "more below / less below", and it
+ * said nothing about the one thing this row is for. Shut, this points at the
+ * label it will open; open, it points down the panel it opened. Drawn as one
+ * glyph rotated rather than two, so the turn is the animation.
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -227,10 +233,10 @@ function TableSettings({ summary, children }: { summary: string; children: React
           aria-hidden
           className={[
             "shrink-0 text-3xl leading-none text-white/60 transition-transform",
-            open ? "rotate-180" : "",
+            open ? "rotate-90" : "",
           ].join(" ")}
         >
-          ▾
+          ▸
         </span>
       </button>
       {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}

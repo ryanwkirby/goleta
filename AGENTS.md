@@ -157,6 +157,14 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   digital-era invention to stop free guessing; the game's original written rules
   never had any wrong-call penalty, and naming the card does that job now. The
   lockout is visible only to the player serving it.
+- **A refused move is answered at the bottom of the screen, and every other
+  notice at the top.** That looks like an inconsistency and is the point: the
+  top belongs to the Sunny announcement, which is the one thing at this table
+  nobody may miss, and a refusal is reachable while one is up. A pill landing on
+  the ruling would cover the more important news with the less. It also puts the
+  answer where the thumb that earned it already is. Both halves of the split are
+  in `Refusal.tsx`, and the engine's refusals are written as three-word
+  fragments to fit it — do not lengthen them back into sentences (#90).
 
 ## House rules
 

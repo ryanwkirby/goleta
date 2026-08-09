@@ -3,9 +3,12 @@ import { Button, Panel } from "../components/ui.tsx";
 /**
  * What a new player is told on their way in.
  *
- * The Sunny Rule is deliberately absent. It is live from the first game, but
- * you meet it by having it called on you — and the app explains it at that
- * moment, when it will actually stick.
+ * The Sunny Rule gets an allusion and nothing more: reaching when you had a
+ * play is a thing you can be caught doing. Not its name, not the window, not
+ * naming the card, not the penalty. It is live from the first game, but you
+ * meet it by having it called on you — and `SunnyExplainer` teaches it at that
+ * moment, when it will actually stick. The hint is only there so the sun is not
+ * the first you have heard of the idea.
  *
  * First time through, this is also where you say whether you want the training
  * wheels for that game. Asking is the point: being given help you didn't ask
@@ -62,6 +65,12 @@ export function Rules({
           your turn on the spot. Naming the next suit is what you get back.
         </li>
       </ol>
+
+      <p className="mt-5 rounded-xl bg-white/5 p-3 text-sm text-white/70">
+        The one thing you're not allowed to do is draw when you had a play. If someone gets shady
+        about it, you can call them out — shine a little sunlight on the situation. You'll find out
+        how when it happens.
+      </p>
 
       {onChooseHints ? (
         <div className="mt-5 border-t border-white/10 pt-4">

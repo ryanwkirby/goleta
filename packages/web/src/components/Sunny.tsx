@@ -401,8 +401,9 @@ export function SunnyCaught({
 
 /**
  * Shown the first time the rule touches you — which is how you're meant to
- * learn it. It is deliberately left out of the joining explainer, and it waits
- * behind the announcement above so you know what you're being taught about.
+ * learn it. The joining explainer alludes to it and stops there, so this is
+ * where every mechanic arrives, and it waits behind the announcement above so
+ * you know what you're being taught about.
  */
 export function SunnyExplainer({ onDone }: { onDone: () => void }) {
   return (
@@ -410,7 +411,7 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
       <div className="w-full max-w-md rounded-2xl bg-felt-900 p-5 ring-1 ring-amber-300/30">
         <h2 className="text-xl font-semibold text-amber-300">☀️ The Sunny Rule</h2>
         <p className="mt-2 text-sm leading-relaxed text-white/80">
-          Nobody told you about this one on the way in. Here it is.
+          You were told there'd be a way to call somebody out. This is it.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-white/80">
           If you take a card from the deck when you had a card you could have played, anyone else

@@ -78,6 +78,50 @@ function JoinQr({ code }: { code: string }) {
   );
 }
 
+function SharedScreenInvite({
+  code,
+  onClose,
+}: {
+  code: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const link = joinLink(code, "table");
+
+  const copy = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add a shared screen"
+      onClick={onClose}
+    >
+      <Panel className="w-full max-w-sm text-center" onClick={(event) => event.stopPropagation()}>
+        <p className="text-sm font-semibold text-white">Add a shared screen</p>
+        <div className="mt-4 flex justify-center">
+          <QrCode value={link} label={`Scan for shared screen in room ${code}`} className="w-64 p-4" />
+        </div>
+        <Button variant="ghost" className="mt-3" onClick={() => void copy()}>
+          {copied ? "Link copied" : "Copy shared-screen link"}
+        </Button>
+        <Button variant="secondary" full className="mt-3" onClick={onClose}>
+          Done
+        </Button>
+      </Panel>
+    </div>
+  );
+}
+
 const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
   { key: "human", label: "Human-like", blurb: "A few seconds a turn, like people play." },
   { key: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
@@ -449,6 +493,7 @@ export function Lobby({
    */
   const [checkingOrder, setCheckingOrder] = useState(false);
   const [orderChecked, setOrderChecked] = useState(false);
+  const [sharingScreen, setSharingScreen] = useState(false);
   // Turning IRL off, or losing a seat, takes the question away with it.
   const confirming = checkingOrder && room.irl && enough;
 
@@ -581,8 +626,24 @@ export function Lobby({
               </Button>
             </li>
           ) : null}
+          {room.irl ? (
+            <li>
+              <Button
+                variant="ghost"
+                full
+                className="justify-start rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-white/60 hover:border-white/25"
+                onClick={() => setSharingScreen(true)}
+              >
+                <span aria-hidden>+</span> Add a shared screen
+              </Button>
+            </li>
+          ) : null}
         </ul>
       </Panel>
+
+      {sharingScreen ? (
+        <SharedScreenInvite code={room.code} onClose={() => setSharingScreen(false)} />
+      ) : null}
 
       {isHost ? (
         <>

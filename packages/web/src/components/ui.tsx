@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "sunny" | "danger";
 
@@ -39,9 +39,14 @@ export function Button({
   );
 }
 
-export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Panel({
+  children,
+  className = "",
+  ...props
+}: { children: ReactNode; className?: string } & HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      {...props}
       className={[
         "rounded-2xl bg-black/25 p-5 ring-1 ring-white/10 backdrop-blur-sm",
         className,

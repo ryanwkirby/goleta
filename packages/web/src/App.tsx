@@ -7,6 +7,7 @@ import { Join } from "./screens/Join.tsx";
 import { Lobby } from "./screens/Lobby.tsx";
 import { Rules } from "./screens/Rules.tsx";
 import { Table } from "./screens/Table.tsx";
+import { TableScreen } from "./screens/TableScreen.tsx";
 
 /**
  * What a watching screen shows before the table arrives.
@@ -93,6 +94,13 @@ export function App() {
         </div>
       );
     }
+    // A device pointed at the middle of a table and left there. It takes the
+    // room in every state — lobby, game and finished alike — because it is the
+    // one screen in the room nobody walks over to touch.
+    if (mode === "table") {
+      return <TableScreen room={room} game={game} log={log} offline={status !== "open"} />;
+    }
+
     if (room.status === "lobby" || !game) {
       return (
         <Lobby
@@ -104,9 +112,6 @@ export function App() {
         />
       );
     }
-    // `watch` and `table` are the same connection and, for now, the same
-    // screen: the spectator's board. The shared screen for the middle of the
-    // table — the one `table` exists to name — is #14.
     return (
       <Table
         room={room}

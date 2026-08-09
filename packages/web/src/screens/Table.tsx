@@ -39,8 +39,15 @@ import { HandView } from "./HandView.tsx";
 /** How long the table looks at "X called it on Y" before anything else. */
 const ANNOUNCE_MS = 3200;
 
-/** How long you can sit on a turn before the app offers you a hand. */
-const STALL_MS = 5000;
+/**
+ * How long you can sit on a turn before the app offers you a hand.
+ *
+ * Seven seconds, not five. Five is inside the length of an ordinary turn at a
+ * table where people are talking to each other, so the offer kept turning up on
+ * turns nobody was stuck on — and an offer of help you didn't need is the app
+ * saying it thinks you do.
+ */
+const STALL_MS = 7000;
 
 /**
  * What the table is waiting for, said plainly.
@@ -253,8 +260,8 @@ export function Table({
     if (played === 1 && wantedHints) setGraduating(true);
   }, [lastGameOverId, game.you, wantedHints]);
 
-  // Five seconds on a turn you haven't moved on, and the app offers a hand.
-  // Every fresh draw restarts the clock: you're deciding again.
+  // A while on a turn you haven't moved on, and the app offers a hand. Every
+  // fresh draw restarts the clock: you're deciding again.
   const couldUseHelp = mine && game.phase.kind === "action" && !finished && !assist;
   useEffect(() => {
     setStalled(false);
@@ -276,6 +283,17 @@ export function Table({
   };
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
+
+  /**
+   * Somebody else's ask, for the landscape view to carry.
+   *
+   * Yours goes over your own cards there, same as it does upright. Everybody
+   * else's had no seat to rise off and was dropped on the floor, which made an
+   * IRL table — where every phone is in that view — the one place a public ask
+   * for help was private. The latest one: they last a couple of seconds and two
+   * at once in a 40px strip is a queue, not a shout.
+   */
+  const helpFrom = shouts.findLast((shout) => shout.playerId !== game.you) ?? null;
 
   // Dead from the moment the call lands until the dialog is dismissed. The tap
   // that would have fired the forced play is very often the tail of the one
@@ -378,6 +396,7 @@ export function Table({
           stalled={stalled}
           onAskForHelp={askForHelp}
           shouting={shoutingHere}
+          helpFrom={helpFrom ? nameOf(helpFrom.playerId) : null}
           accusing={accusing}
           stillAccusable={stillAccusable}
           onStartAccusing={startAccusing}
@@ -405,22 +424,25 @@ export function Table({
           {/* The host's reach for the room flag once the lobby is behind them.
               It is allowed to move mid-game precisely so a table that works out
               halfway through a hand that they are all sat together can say so,
-              and a control only in the lobby would make that unreachable. */}
+              and a control only in the lobby would make that unreachable.
+
+              Named the same as the lobby switch — one setting, one word for it,
+              wherever the host happens to be standing when they change it. */}
           {room.hostId === game.you ? (
             <Button
               variant="ghost"
               className="ml-auto px-2 py-1 text-xs"
               role="switch"
               aria-checked={room.irl}
-              aria-label="We're all in the same room"
+              aria-label="Playing in person"
               title={
                 room.irl
-                  ? "Everyone's in the same room. Tap to turn it off."
+                  ? "Everyone's in the same room. Tap for remote play."
                   : "Tap if you're all sitting in the same room."
               }
               onClick={() => send({ t: "setIrl", on: !room.irl })}
             >
-              same room: {room.irl ? "on" : "off"}
+              in person: {room.irl ? "on" : "off"}
             </Button>
           ) : null}
           {/* No way back to the hand here, and none needed: at an IRL table the

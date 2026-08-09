@@ -104,7 +104,15 @@ export function App() {
     // room in every state — lobby, game and finished alike — because it is the
     // one screen in the room nobody walks over to touch.
     if (mode === "table") {
-      return <TableScreen room={room} game={game} log={log} offline={status !== "open"} />;
+      return (
+        <TableScreen
+          room={room}
+          game={game}
+          log={log}
+          shouts={shouts}
+          offline={status !== "open"}
+        />
+      );
     }
 
     if (room.status === "lobby" || !game) {

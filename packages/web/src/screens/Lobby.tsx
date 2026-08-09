@@ -7,22 +7,15 @@ import { Button, Panel } from "../components/ui.tsx";
 import { joinLink } from "../net/route.ts";
 
 /**
- * How everyone else gets in: read it out, text it, or hold it up.
+ * How everyone else gets in: read it out, or text it.
  *
- * The QR is not a replacement for the code — getting five people to a table
- * used to mean saying four characters aloud and watching four people type them
- * *and* the URL, and this is a faster path to exactly the same place. Anyone
- * seated can show it, host or not: whoever is dealing usually will, but
- * restricting it buys nothing and costs the one person whose phone is nearest.
- *
- * **It is only up in an IRL room**, because holding a phone up across a table is
- * the whole of what it is for. In a room whose players are somewhere else it is
- * a picture of a link they cannot point a camera at, taking the top third of the
- * lobby to say so. The code and the copy button are what that room uses, and
- * they keep their place either way — the block above the seats must not jump
- * when the host changes their mind about the flag.
+ * Four characters and a link, and nothing whose height depends on a switch
+ * further down the screen. The QR used to live in here and grew out of the
+ * middle of it, which pushed the copy button down the moment the host said the
+ * table was in person — the answer landing above the question that caused it.
+ * It has its own block now, under the switch. See `JoinQr`.
  */
-function RoomCode({ code, showQr }: { code: string; showQr: boolean }) {
+function RoomCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
   const link = joinLink(code);
 
@@ -42,26 +35,45 @@ function RoomCode({ code, showQr }: { code: string; showQr: boolean }) {
       <p className="mt-1 font-mono text-5xl font-semibold tracking-[0.3em] text-amber-300">
         {code}
       </p>
-
-      {/* Sized to be scannable from the other side of a table without taking
-          the lobby over: the seat list is what people are actually watching
-          once they're in. */}
-      {showQr ? (
-        <>
-          <div className="mt-3 flex justify-center">
-            <QrCode
-              value={link}
-              label={`Scan to join room ${code}`}
-              className="w-44 max-w-[55%] p-2.5"
-            />
-          </div>
-          <p className="mt-2 text-xs text-white/40">Point a camera at it, or type the code.</p>
-        </>
-      ) : null}
-
       <Button variant="ghost" className="mt-1" onClick={() => void copy()}>
         {copied ? "Link copied" : "Copy invite link"}
       </Button>
+    </div>
+  );
+}
+
+/**
+ * The thing you hold up across a table.
+ *
+ * Not a replacement for the code — getting five people to a table used to mean
+ * saying four characters aloud and watching four people type them *and* the
+ * URL, and this is a faster path to exactly the same place. Anyone seated can
+ * show it, host or not: whoever is dealing usually will, but restricting it
+ * buys nothing and costs the one person whose phone is nearest.
+ *
+ * **Only up at an in-person table**, because holding a phone up across one is
+ * the whole of what it is for. For players who are somewhere else it is a
+ * picture of a link they cannot point a camera at, taking the top third of the
+ * lobby to say so.
+ *
+ * It sits directly under the switch that turns it on, which is why it is its own
+ * block rather than part of `RoomCode` — a host who has just said "in person"
+ * should see the QR appear below the tap, not above it.
+ *
+ * Sized to be scannable from the other side of a table without taking the lobby
+ * over: the seat list is what people are actually watching once they're in.
+ */
+function JoinQr({ code }: { code: string }) {
+  return (
+    <div className="text-center">
+      <div className="flex justify-center">
+        <QrCode
+          value={joinLink(code)}
+          label={`Scan to join room ${code}`}
+          className="w-44 max-w-[55%] p-2.5"
+        />
+      </div>
+      <p className="mt-2 text-xs text-white/40">Point a camera at it, or type the code.</p>
     </div>
   );
 }
@@ -226,13 +238,29 @@ function TableSettings({ summary, children }: { summary: string; children: React
   );
 }
 
+/** The two answers, named. `irl` is the flag each one sets. */
+const PLACES: { key: string; label: string; irl: boolean }[] = [
+  { key: "remote", label: "Remote play", irl: false },
+  { key: "irl", label: "In person", irl: true },
+];
+
 /**
- * "Are we all in the same room?"
+ * Where everybody is.
  *
  * Not a house rule and not next to them: it changes nothing about the game,
  * only about how each phone draws it. The copy says what it is for rather than
  * naming a layout — nobody sitting down to play has an opinion about landscape
  * hand views, and everybody has one about whether their friends are in the room.
+ *
+ * **Both answers are named**, as two halves of a switch rather than an On/Off
+ * beside a sentence. The old shape stated one of them — "We're all in the same
+ * room" — and left the host to infer that Off meant the rest of the world; a
+ * question with two real answers should say both out loud, the same way the
+ * seat-order check does.
+ *
+ * The line underneath doesn't change when the switch does, for the reason
+ * `HouseRulesPicker` doesn't either: a description that rewrites itself the
+ * moment you decide moves the sentence you were reading to decide with.
  *
  * The one host control with no "between games only" on it, so it stays put once
  * a game is running. A table that only works out halfway through the first hand
@@ -247,23 +275,26 @@ function TableSettings({ summary, children }: { summary: string; children: React
  */
 function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-white">We're all in the same room</p>
-        <p className="text-xs text-white/40">
-          Phones show your own hand, big, in landscape. Talk to each other.
-        </p>
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
+        Where is everyone?
+      </p>
+      <div className="mt-2 flex gap-2">
+        {PLACES.map((place) => (
+          <Button
+            key={place.key}
+            variant={place.irl === on ? "primary" : "secondary"}
+            className="flex-1"
+            aria-pressed={place.irl === on}
+            onClick={() => onChange(place.irl)}
+          >
+            {place.label}
+          </Button>
+        ))}
       </div>
-      <Button
-        variant={on ? "primary" : "secondary"}
-        className="min-w-16 px-3 py-1.5 text-xs"
-        role="switch"
-        aria-checked={on}
-        aria-label="We're all in the same room"
-        onClick={() => onChange(!on)}
-      >
-        {on ? "On" : "Off"}
-      </Button>
+      <p className="mt-2 text-xs text-white/40">
+        In person puts a code up to scan, and gives every phone its own hand, big, in landscape.
+      </p>
     </div>
   );
 }
@@ -413,7 +444,7 @@ export function Lobby({
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
-      <RoomCode code={room.code} showQr={room.irl} />
+      <RoomCode code={room.code} />
 
       {winner ? (
         <Panel className="text-center">
@@ -431,6 +462,11 @@ export function Lobby({
           <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
         </Panel>
       ) : null}
+
+      {/* Directly under the switch that turns it on, and shown to everyone
+          seated: the phone nearest the newcomer is the one that gets held up,
+          and it isn't always the host's. */}
+      {room.irl ? <JoinQr code={room.code} /> : null}
 
       <Panel>
         <div className="flex items-baseline justify-between">
@@ -523,7 +559,7 @@ export function Lobby({
           {confirming ? (
             <Panel>
               <p className="text-sm font-semibold text-white">
-                Just checking: Does the seat order look correct?
+                Does the seat order look correct?
               </p>
               <div className="mt-3 flex gap-2">
                 <Button className="flex-1" onClick={() => setCheckingOrder(false)}>

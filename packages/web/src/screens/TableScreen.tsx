@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import type { GameView, RoomView } from "@goleta/engine";
 
+import { HelpAsk } from "../components/Help.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { QrCode } from "../components/QrCode.tsx";
 import { SUIT_GLYPH } from "../components/Card.tsx";
@@ -10,7 +11,7 @@ import { fitScale, TABLE_DESIGN } from "../lib/fitScale.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { joinLink } from "../net/route.ts";
-import type { LoggedEvent } from "../net/useGoleta.ts";
+import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
 
 /**
  * The middle of the table, on a screen in the middle of the table.
@@ -43,11 +44,18 @@ export function TableScreen({
   room,
   game,
   log,
+  shouts,
   offline,
 }: {
   room: RoomView;
   game: GameView | null;
   log: LoggedEvent[];
+  /**
+   * Asking for help is meant to be public, and this is the most public surface
+   * in the room. It is a name and a word — no cards, nothing about whose turn
+   * it is going well.
+   */
+  shouts: Shout[];
   offline: boolean;
 }) {
   const nameOf = namerFor(room);
@@ -86,7 +94,14 @@ export function TableScreen({
         className="relative flex shrink-0 flex-col items-center justify-center gap-6 p-10"
       >
         {game ? (
-          <Playing room={room} game={game} nameOf={nameOf} call={call} peeling={peeling} />
+          <Playing
+            room={room}
+            game={game}
+            nameOf={nameOf}
+            call={call}
+            peeling={peeling}
+            shouts={shouts}
+          />
         ) : (
           <Waiting room={room} />
         )}
@@ -150,14 +165,17 @@ function Playing({
   nameOf,
   call,
   peeling,
+  shouts,
 }: {
   room: RoomView;
   game: GameView;
   nameOf: (playerId: string) => string;
   call: ReturnType<typeof useJudgedCall>["call"];
   peeling: boolean;
+  shouts: Shout[];
 }) {
   const finished = game.status === "over";
+  const asking = new Set(shouts.map((shout) => shout.playerId));
 
   return (
     <>
@@ -196,7 +214,9 @@ function Playing({
         </div>
       </div>
 
-      {/* Counts, not hands — see the note at the top of this file. */}
+      {/* Counts, not hands — see the note at the top of this file. Plus, for a
+          couple of seconds, whoever has just asked for a hand: the ask is
+          supposed to be heard by the room, and this screen is the room's. */}
       <ul className="mt-4 flex flex-wrap items-baseline justify-center gap-x-8 gap-y-2">
         {game.players.map((player) => {
           const onClock = game.waitingOn === player.id;
@@ -220,6 +240,8 @@ function Playing({
               >
                 {player.eliminated ? "out" : player.cardCount}
               </span>
+              {/* No name on it: it is already sitting next to theirs. */}
+              {asking.has(player.id) ? <HelpAsk className="text-2xl" /> : null}
             </li>
           );
         })}

@@ -152,10 +152,14 @@ export function Hand({
     }
   });
 
+  // No invitation to stay and watch: by the time most people read this the game
+  // has finished, and being told to sit tight for an ending that already
+  // happened reads as an app that doesn't know what state it's in. The table
+  // below is still there for anyone who wants the rest of it.
   if (cards.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-white/50">
-        You're out of cards, and out of the game. Stay and watch how it ends.
+        You're out of cards, and out of the game.
       </p>
     );
   }

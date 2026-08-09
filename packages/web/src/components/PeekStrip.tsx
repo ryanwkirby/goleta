@@ -5,6 +5,7 @@ import { calledSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SUIT_GLYPH, SUIT_LABEL, isRed } from "./Card.tsx";
+import { HelpAsk } from "./Help.tsx";
 import { SunnySign } from "./Sunny.tsx";
 
 /**
@@ -12,9 +13,15 @@ import { SunnySign } from "./Sunny.tsx";
  *
  * **This carries the table centre and nothing more:** the room code, the draw
  * pile and its count, the card in play with the suit named over it when an 8 is
- * live, whose turn it is, and the sun when a call is on offer. That is the whole
- * list, and the omission that matters is the hands — nobody else's cards appear
- * here at any size.
+ * live, whose turn it is, the sun when a call is on offer, and somebody asking
+ * for help. That is the whole list, and the omission that matters is the hands —
+ * nobody else's cards appear here at any size.
+ *
+ * The ask is on the list because taking help is meant to be public, and at an
+ * IRL table every phone is in this view: the upright table draws the shout over
+ * the asker's seat, and with no seats here it had nowhere to land and was simply
+ * dropped. It says who asked and nothing else. Nobody's cards are involved, so
+ * none of what follows is bent by carrying it.
  *
  * It can be this thin because the accusation picker already carries the
  * evidence. `sunnyReach` sends the offender's hand and the board as it stood
@@ -36,6 +43,7 @@ export function PeekStrip({
   onDraw,
   onCallSunny,
   offline,
+  helpFrom,
 }: {
   room: RoomView;
   game: GameView;
@@ -44,6 +52,8 @@ export function PeekStrip({
   onDraw: () => void;
   onCallSunny: (playerId: string) => void;
   offline: boolean;
+  /** Somebody else asking for a hand, by name. Your own goes over your cards. */
+  helpFrom: string | null;
 }) {
   const { anchor, pileFace } = useMotion();
   const face = pileFace(game.topCard);
@@ -117,7 +127,15 @@ export function PeekStrip({
         ) : null}
       </div>
 
-      <span className="ml-auto truncate text-xs text-white/60" aria-live="polite">
+      {/* Before the turn indicator rather than after it: the sun keeps the end
+          of the strip, and a shout is the one thing here that isn't a standing
+          fact — it arrives, it is read, it goes. */}
+      {helpFrom ? <HelpAsk name={helpFrom} className="ml-auto text-xs" /> : null}
+
+      <span
+        className={[helpFrom ? "" : "ml-auto", "truncate text-xs text-white/60"].join(" ")}
+        aria-live="polite"
+      >
         {turn}
       </span>
 

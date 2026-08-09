@@ -13,6 +13,12 @@ import { Button, Panel } from "../components/ui.tsx";
  * First time through, this is also where you say whether you want the training
  * wheels for that game. Asking is the point: being given help you didn't ask
  * for is how a game teaches you it thinks you need it.
+ *
+ * That offer is a question and two named answers, and says nothing about the
+ * mechanism. What the help does, how long it lasts and what happens after are
+ * three things you learn by playing one game with it — and a paragraph
+ * explaining all three is a paragraph read by somebody who hasn't seen a card
+ * yet.
  */
 export function Rules({
   onDone,
@@ -46,14 +52,13 @@ export function Rules({
           <strong className="text-white">
             If you <em>can</em> play, you <em>must</em>.
           </strong>{" "}
-          Match the card showing by rank or suit, and you have no choice — you play it. A hand full
-          of playable cards is a hand that's draining away.
+          Match the card showing by rank or suit, and you have no choice — you play it.
         </li>
         <li>
           <strong className="text-white">
             Being stuck is <em>good</em>.
           </strong>{" "}
-          With nothing playable you draw a card (which is exactly what you want). Still stuck? Draw
+          With nothing playable, you draw a card (which is exactly what you want). Still stuck? Draw
           again, up to three.
         </li>
         <li>
@@ -65,23 +70,19 @@ export function Rules({
       </ol>
 
       <p className="mt-5 rounded-xl bg-white/5 p-3 text-sm text-white/70">
-        The one thing you're <em className="font-semibold text-white">not</em> allowed to do is
-        draw when you had a play. If someone is acting shady, you can call them out — shine some
-        sunlight on the situation. ☀️
+        Don't draw cards unless you're forced to. If someone's acting shady, you can call them out
+        — shine some sunlight on the situation. ☀️
       </p>
 
       {onChooseHints ? (
         <div className="mt-5 border-t border-white/10 pt-4">
-          <p className="text-sm text-white/70">
-            For your first game the table can dim the cards you can't play, so your move is
-            always the obvious one. After that it stops either way.
-          </p>
+          <p className="text-sm text-white/70">Want some help your first game?</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button variant="primary" className="flex-1" onClick={() => onChooseHints(true)}>
-              Dim them for me
+              Yes, guide me
             </Button>
             <Button variant="secondary" className="flex-1" onClick={() => onChooseHints(false)}>
-              I'll spot them myself
+              No, I've got it
             </Button>
           </div>
         </div>

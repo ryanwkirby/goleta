@@ -141,7 +141,7 @@ function Waiting({ room }: { room: RoomView }) {
 
       <div className="text-center">
         <p className="text-xl uppercase tracking-widest text-white/40">
-          At the table ({room.seats.length}/{room.maxPlayers})
+          Players ({room.seats.length}/{room.maxPlayers})
         </p>
         <p className="mt-3 max-w-4xl text-balance text-4xl font-semibold text-white">
           {room.seats.length > 0

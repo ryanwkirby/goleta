@@ -91,7 +91,7 @@ const describeRules = (rules: HouseRules): string => {
   const on: string[] = [];
   if (!rules.sunny) on.push("no Sunny Rule");
   if (rules.eights === "nextPlayerNames") on.push("the Power of Eights");
-  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice");
+  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice on Eight");
   if (on.length === 0) return "Playing the standard rules.";
   return `House rules: ${on.join(", ")}.`;
 };
@@ -121,6 +121,16 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
  * each time. One fixed line saying what the rule does; the switch says whether
  * the table is playing it. Nothing here implies a table that drops one is
  * playing a lesser game.
+ *
+ * Two things the wording is careful about. **The Sunny line offers the draw
+ * before it names the cost** — "you can draw any time, but others can call you
+ * out" — because stating the violation as a condition reads as though the app is
+ * about to stop you, and it never will: the draw pile stays tappable with no
+ * warning, which is the whole rule (see AGENTS.md). And **Dealer's Choice on
+ * Eight carries its condition in its name**, since the rule does nothing at all
+ * unless the card turned up to start happens to be an 8 — about one game in
+ * thirteen. `docs/RULES.md` still calls it Dealer's Choice, which is its name in
+ * the original written rules.
  */
 function HouseRulesPicker({
   rules,
@@ -133,7 +143,7 @@ function HouseRulesPicker({
     {
       key: "sunny",
       label: "The Sunny Rule",
-      blurb: "Draw with a play in your hand and anyone can call it on you.",
+      blurb: "You can draw any time, but others can call you out.",
       on: rules.sunny,
       toggle: { ...rules, sunny: !rules.sunny },
     },
@@ -149,8 +159,8 @@ function HouseRulesPicker({
     },
     {
       key: "seedEight",
-      label: "Dealer's Choice",
-      blurb: "An 8 turned up to start is the dealer's suit to name.",
+      label: "Dealer's Choice on Eight",
+      blurb: "If the first card of the game is an 8, the dealer gets to choose the suit.",
       on: rules.seedEight === "dealerNames",
       toggle: {
         ...rules,
@@ -485,7 +495,7 @@ export function Lobby({
       <Panel>
         <div className="flex items-baseline justify-between">
           <h2 className="font-semibold text-white">
-            At the table{" "}
+            Players{" "}
             <span className="text-white/40">
               ({room.seats.length}/{room.maxPlayers})
             </span>

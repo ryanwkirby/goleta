@@ -308,7 +308,7 @@ describe("a room over the wire", () => {
 
     guest.send({ t: "addBot" });
     await guest.until((c) => c.errors.length > 0);
-    expect(guest.errors.at(-1)).toMatch(/only the host/);
+    expect(guest.errors.at(-1)).toMatch(/Only the host/);
     expect(guest.room?.seats).toHaveLength(2);
   }, 20_000);
 
@@ -325,7 +325,7 @@ describe("a room over the wire", () => {
 
     guest.send({ t: "setBotSpeed", speed: "lightning" });
     await guest.until((c) => c.errors.length > 0);
-    expect(guest.errors.at(-1)).toMatch(/only the host/);
+    expect(guest.errors.at(-1)).toMatch(/Only the host/);
 
     host.send({ t: "setBotSpeed", speed: "lightning" });
     await guest.until((c) => c.room?.botSpeed === "lightning");
@@ -344,7 +344,7 @@ describe("a room over the wire", () => {
 
     guest.send({ t: "setIrl", on: true });
     await guest.until((c) => c.errors.length > 0);
-    expect(guest.errors.at(-1)).toMatch(/only the host/);
+    expect(guest.errors.at(-1)).toMatch(/Only the host/);
 
     await fillTable(host);
     host.send({ t: "start" });

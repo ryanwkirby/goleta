@@ -187,15 +187,15 @@ describe("moving a seat", () => {
   it("is the host's to do, and only between games", () => {
     const room = seatedRoom();
     const guest = room.seats[1]?.id ?? "";
-    expect(() => moveSeat(room, guest, guest, "up")).toThrow(/only the host/);
+    expect(() => moveSeat(room, guest, guest, "up")).toThrow(/Only the host/);
 
     beginGame(room, room.hostId);
-    expect(() => moveSeat(room, room.hostId, guest, "up")).toThrow(/wait for this game/);
+    expect(() => moveSeat(room, room.hostId, guest, "up")).toThrow(/Wait for this game/);
   });
 
   it("refuses a seat that isn't at this table", () => {
     const room = seatedRoom();
-    expect(() => moveSeat(room, room.hostId, "someone-who-left", "up")).toThrow(/nobody by that id/);
+    expect(() => moveSeat(room, room.hostId, "someone-who-left", "up")).toThrow(/Nobody by that id/);
   });
 
   it("needs no IRL room, because the order is real in every room", () => {
@@ -237,10 +237,10 @@ describe("bot speed", () => {
   it("is the host's to set, and only between games", () => {
     const room = seatedRoom();
     const guest = room.seats[1]?.id ?? "";
-    expect(() => setBotSpeed(room, guest, "lightning")).toThrow(/only the host/);
+    expect(() => setBotSpeed(room, guest, "lightning")).toThrow(/Only the host/);
 
     beginGame(room, room.hostId);
-    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/wait for this game/);
+    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/Wait for this game/);
     expect(room.botSpeed).toBe("human");
   });
 });
@@ -254,7 +254,7 @@ describe("IRL mode", () => {
     const room = seatedRoom();
     const guest = room.seats[1]?.id ?? "";
 
-    expect(() => setIrl(room, guest, true)).toThrow(/only the host/);
+    expect(() => setIrl(room, guest, true)).toThrow(/Only the host/);
     expect(room.irl).toBe(false);
   });
 
@@ -266,7 +266,7 @@ describe("IRL mode", () => {
     // live hand stops it moving.
     setIrl(room, room.hostId, true);
     expect(roomView(room).irl).toBe(true);
-    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/wait for this game/);
+    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/Wait for this game/);
   });
 
   it("leaves the game itself alone", () => {

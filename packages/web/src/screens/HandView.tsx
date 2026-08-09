@@ -4,6 +4,7 @@ import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
 import { Hand, HandSortButton } from "../components/Hand.tsx";
 import { HelpLink, HelpShout } from "../components/Help.tsx";
+import { MoveRefusal } from "../components/Refusal.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
 import type { NameOf } from "../lib/format.ts";
@@ -11,6 +12,7 @@ import { handSize, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
 import type { HandMode } from "../components/Hand.tsx";
 import type { HandSort } from "../lib/sort.ts";
+import type { GoletaError } from "../net/useGoleta.ts";
 import type { Card } from "@goleta/engine";
 
 export interface HandViewProps {
@@ -24,6 +26,8 @@ export interface HandViewProps {
   mode: HandMode;
   assist: boolean;
   onChooseCard: (cardId: string) => void;
+  /** A refused move, shown against the top edge of the hand — same as upright. */
+  refusal: GoletaError | null;
   canDraw: boolean;
   onDraw: () => void;
   prompt: string;
@@ -74,6 +78,7 @@ export function HandView({
   mode,
   assist,
   onChooseCard,
+  refusal,
   canDraw,
   onDraw,
   prompt,
@@ -168,10 +173,13 @@ export function HandView({
 
           <div
             className={[
-              "rounded-2xl transition-colors",
+              "relative rounded-2xl transition-colors",
               mine ? "ring-1 ring-amber-300/60" : "",
             ].join(" ")}
           >
+            {/* The same answer in the same place as upright: turning the phone
+                must not move where a refusal appears. */}
+            {refusal ? <MoveRefusal key={refusal.id} error={refusal} /> : null}
             <Hand
               cards={cards}
               legalCardIds={game.legalCardIds}

@@ -68,14 +68,19 @@ it is the only thing the client does differently with them (#90).
 
 A **move** is a mis-tap — a card that doesn't match, a turn that isn't yours.
 The hand it was aimed at already says so by not changing, so the words only name
-which of the handful of reasons it was. They land in a pill over the hand, fade
-in, and are gone in under two seconds with nothing to dismiss. That is why the
-engine's refusals are three-word fragments: `Doesn't match`, `Not your turn`,
-`That's three draws`. A **session** refusal — the room is full, the seat isn't
-yours any more, that game is already under way — is something to be read and
-acted on, so it keeps the banner at the top of the screen, five seconds and a
-`dismiss`. `Join` latches the refused room code off the back of that, which a
-refusal that flashed past would take away with it.
+which of the handful of reasons it was. They land in a pill hung off the top
+edge of your own cards, fade in, and are gone in under two seconds with nothing
+to dismiss. That is why the engine's refusals are three-word fragments:
+`Doesn't match`, `Not your turn`, `That's three draws`. A **session** refusal —
+the room is full, the seat isn't yours any more, that game is already under way
+— is something to be read and acted on, so it keeps the panel at the top of the
+screen, five seconds and an ✕. `Join` latches the refused room code off the back
+of that, which a refusal that flashed past would take away with it.
+
+Both are drawn on the same surface with the same sign, so **every refusal is
+written the same way**, whichever side of the wire it comes from: sentence case,
+no full stop. Two of them sitting in the same typeface an inch apart, one
+capitalised and one not, is the first thing anybody would notice.
 
 The server reads the kind off the message that caused it rather than off the
 error, because the branch that sends refusals already has the client's message

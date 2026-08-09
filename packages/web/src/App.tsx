@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { MoveRefusal, SessionError } from "./components/Refusal.tsx";
+import { MOVE_MS, SESSION_MS, SessionError } from "./components/Refusal.tsx";
 import { hasSeenRules, markRulesSeen, setFirstGameHints } from "./net/identity.ts";
 import { useGoleta } from "./net/useGoleta.ts";
 import { Join } from "./screens/Join.tsx";
@@ -53,6 +53,18 @@ export function App() {
       }
     }
   }, [room, seatedOnce, watching]);
+
+  // Every refusal clears itself, and it is timed here rather than inside
+  // whichever component draws it. A move refusal is placed against the hand by
+  // the layout that is showing, so there are arrangements — a watcher, a seat
+  // between layouts — where nothing draws it at all, and a timer that lived in
+  // the drawing would never start. Keyed on `id`, so a second refusal restarts
+  // the clock exactly as a remount used to.
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(clearError, error.kind === "move" ? MOVE_MS : SESSION_MS);
+    return () => clearTimeout(timer);
+  }, [error?.id, error?.kind, clearError]);
 
   const dismissRules = (): void => {
     markRulesSeen();
@@ -112,6 +124,9 @@ export function App() {
         game={game}
         log={log}
         shouts={shouts}
+        // Handed down rather than drawn here: it belongs immediately above your
+        // own cards, and the hand is two components away. See `Refusal.tsx`.
+        refusal={error?.kind === "move" ? error : null}
         send={send}
         onLeave={leave}
         onShowRules={() => setShowRules(true)}
@@ -124,12 +139,8 @@ export function App() {
     <div className="flex flex-1 flex-col bg-felt-950 bg-[radial-gradient(120%_80%_at_50%_0%,var(--color-felt-900),var(--color-felt-950))] text-white">
       {body}
 
-      {/* Keyed on the refusal rather than on nothing, so a second identical one
-          is a second notice: the element is torn down and rebuilt, which is
-          what restarts both the fade and the clock. */}
-      {error?.kind === "move" ? (
-        <MoveRefusal key={error.id} error={error} onDone={clearError} />
-      ) : null}
+      {/* The move refusal is drawn by the table, against the hand it answers.
+          This is everything else. */}
       {error && error.kind !== "move" ? (
         <SessionError key={error.id} error={error} onDismiss={clearError} />
       ) : null}

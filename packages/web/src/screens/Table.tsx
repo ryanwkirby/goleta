@@ -114,6 +114,16 @@ export function Table({
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
   const finished = game.status === "over";
+  /**
+   * Whether there is a seat behind this screen at all.
+   *
+   * A watcher gets the board — seats, hands, piles, the log, calls as they are
+   * judged — and none of the furniture that belongs to a seat: no hand frame
+   * over no cards, no sort control over nothing, no offer of help nobody can
+   * take, no turn ring that will never light. `mine` is already false for them
+   * everywhere it is read, so this is only about what is drawn at all.
+   */
+  const seated = game.you !== null;
 
   // A call is evidence before it's news, and news before it's a lesson. The
   // pile peels back to show what the ruling was made on, the banner says what
@@ -146,9 +156,12 @@ export function Table({
   const caughtHold = caughtYou && (peeling || ackedCall !== lastCallId);
   const showCaught = caughtHold && !peeling;
 
+  // Taught to players, by having it happen to them. A spectator has no call to
+  // make and a table screen has nobody to read it, so neither is stopped to be
+  // taught the rule — and neither writes the "seen it" flag on the way past.
   const explainIfNew = useCallback(() => {
-    if (!hasSeenSunny()) setExplainSunny(true);
-  }, []);
+    if (seated && !hasSeenSunny()) setExplainSunny(true);
+  }, [seated]);
 
   const announcementOver = useCallback(() => {
     setAnnouncing(false);
@@ -399,49 +412,53 @@ export function Table({
           />
         ) : null}
 
-        <div className="relative flex flex-col">
-          {/* Kept clear whether or not the offer is showing, so the hand
-              doesn't move under your fingers when it appears. */}
-          <div className="flex min-h-7 items-center gap-2 px-1">
-            {stalled ? <HelpLink onAsk={askForHelp} /> : null}
-            {/* Yours alone: the server sends this to nobody else, and a missed
-                call is not something the table needs announcing. */}
-            {game.sunnyLockedDraws > 0 ? (
-              <span className="text-xs text-white/35" aria-live="polite">
-                <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
-                {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
-              </span>
-            ) : null}
-            {(you?.hand.length ?? 0) > 1 ? (
-              <HandSortButton sort={handSort} onCycle={cycleSort} className="ml-auto" />
-            ) : null}
+        {/* Everything from here to the log belongs to a seat. A watcher is
+            shown the table and nothing that implies they are at it. */}
+        {seated ? (
+          <div className="relative flex flex-col">
+            {/* Kept clear whether or not the offer is showing, so the hand
+                doesn't move under your fingers when it appears. */}
+            <div className="flex min-h-7 items-center gap-2 px-1">
+              {stalled ? <HelpLink onAsk={askForHelp} /> : null}
+              {/* Yours alone: the server sends this to nobody else, and a missed
+                  call is not something the table needs announcing. */}
+              {game.sunnyLockedDraws > 0 ? (
+                <span className="text-xs text-white/35" aria-live="polite">
+                  <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
+                  {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
+                </span>
+              ) : null}
+              {(you?.hand.length ?? 0) > 1 ? (
+                <HandSortButton sort={handSort} onCycle={cycleSort} className="ml-auto" />
+              ) : null}
+            </div>
+
+            {/* Your own shout, over your own cards, same as everyone else sees. */}
+            {shoutingHere ? <HelpShout /> : null}
+
+            {/* The same frame every other seat gets when the table is waiting on
+                it. Your own cards aren't in the strip, so the one seat that most
+                wants the highlight was the only one without it.
+
+                On a wrapper rather than on `Hand` itself: that element scrolls
+                its own overflow, and a box that clips one axis clips both, so it
+                would trim its own ring. */}
+            <div
+              className={[
+                "rounded-2xl transition-colors",
+                mine ? "ring-1 ring-amber-300/60" : "",
+              ].join(" ")}
+            >
+              <Hand
+                cards={sortHand(you?.hand ?? [], handSort)}
+                legalCardIds={game.legalCardIds}
+                mode={mode}
+                assist={assist}
+                onChoose={onChooseCard}
+              />
+            </div>
           </div>
-
-          {/* Your own shout, over your own cards, same as everyone else sees. */}
-          {shoutingHere ? <HelpShout /> : null}
-
-          {/* The same frame every other seat gets when the table is waiting on
-              it. Your own cards aren't in the strip, so the one seat that most
-              wants the highlight was the only one without it.
-
-              On a wrapper rather than on `Hand` itself: that element scrolls
-              its own overflow, and a box that clips one axis clips both, so it
-              would trim its own ring. */}
-          <div
-            className={[
-              "rounded-2xl transition-colors",
-              mine ? "ring-1 ring-amber-300/60" : "",
-            ].join(" ")}
-          >
-            <Hand
-              cards={sortHand(you?.hand ?? [], handSort)}
-              legalCardIds={game.legalCardIds}
-              mode={mode}
-              assist={assist}
-              onChoose={onChooseCard}
-            />
-          </div>
-        </div>
+        ) : null}
 
         <EventLog log={log} nameOf={nameOf} />
 

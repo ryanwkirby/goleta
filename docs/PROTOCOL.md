@@ -35,12 +35,37 @@ owns the seat and nowhere else.
 `watch` joins with no seat at all: a table screen or a spectator sees the board
 and holds no cards. Watchers can't act, and can't call the Sunny Rule.
 
+**A watcher has no identity and writes nothing.** There is no `playerId`, no
+token, and nothing in `localStorage` — so there is also nothing to reclaim. A
+reload just watches again, and so does a reconnection after a dropped socket or
+a redeploy: the client re-sends `watch` on every connection rather than only the
+first, because watching is stateless and there is nothing to check.
+
+Two client entry points reach it, and the difference between them is only what
+gets drawn:
+
+| URL | What it is |
+| --- | --- |
+| `#/r/ABCD/watch` | A person watching the table. |
+| `#/r/ABCD/table` | The same connection, drawn as the shared screen for the middle of the table. |
+
+The mode is in the URL rather than in a message on purpose: a device propped in
+the middle of a table is opened once and left there, and "what this screen is
+for" has to survive a reload without anybody touching it.
+
+There is one more way in. `join` is refused for the length of a game, and that
+refusal carries `code: "gameUnderWay"` alongside its sentence — so somebody who
+has just pointed a camera at a table mid-hand is offered the watch URL instead
+of being left on a form that will keep failing. It is the only error code there
+is, and the bar for a second one is that reading the prose would otherwise be
+the only way to tell.
+
 ## Client to server
 
 | Message | Who | Notes |
 | --- | --- | --- |
 | `create` | anyone | Makes a room, seats you, makes you host. |
-| `join` | anyone | By room code. Refused once a game is under way — watch instead. |
+| `join` | anyone | By room code. Refused once a game is under way, with `code: "gameUnderWay"` so the client can offer to watch. |
 | `rejoin` | seat owner | `playerId` + `token`. |
 | `watch` | anyone | No seat, no cards, no actions. |
 | `intent` | seated | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. |
@@ -64,8 +89,9 @@ can only ever act as itself. There's a test that tries it the other way.
 - `shout` — somebody said something out loud. Not a game event: the position
   doesn't change, it isn't replayed, it isn't in the log, and it goes out
   identically to everyone. Only `help` so far.
-- `error` — a human-readable sentence. Rejected moves are ordinary; the engine's
-  refusals are written to be shown to a player as-is.
+- `error` — a human-readable sentence, and on one refusal a `code`. Rejected
+  moves are ordinary; the engine's refusals are written to be shown to a player
+  as-is.
 - `pong`.
 
 ## What the server never sends

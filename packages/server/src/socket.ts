@@ -333,9 +333,13 @@ export const attachSockets = (
       try {
         handle(client, message);
       } catch (error) {
-        const text = error instanceof RoomError ? error.message : "something went wrong";
-        if (!(error instanceof RoomError)) console.error("[ws]", error);
-        send(client, { t: "error", message: text });
+        const known = error instanceof RoomError;
+        if (!known) console.error("[ws]", error);
+        send(client, {
+          t: "error",
+          message: known ? error.message : "something went wrong",
+          ...(known && error.code ? { code: error.code } : {}),
+        });
       }
     });
 

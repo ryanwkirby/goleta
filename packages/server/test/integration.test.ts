@@ -478,4 +478,66 @@ describe("what the wire carries", () => {
     await screen.until((c) => c.errors.length > 0);
     expect(screen.errors.at(-1)).toMatch(/watching this table/);
   }, 20_000);
+
+  it("refuses a watcher every message that belongs to a seat", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    const code = host.code as string;
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code });
+    await screen.until((c) => c.room !== null);
+
+    // Every message below the seat check in `handle`. A watcher can hold no
+    // table, take no turn, deal no cards and change no settings — including
+    // the ones a host would be allowed, since a watcher is not one.
+    const seatedOnly: ClientMessage[] = [
+      { t: "intent", intent: { type: "drawCard", playerId: "" } },
+      { t: "start" },
+      { t: "addBot" },
+      { t: "removeSeat", playerId: host.playerId as string },
+      { t: "setBotSpeed", speed: "lightning" },
+      { t: "setHouseRules", rules: { eights: "nextPlayerNames", seedEight: "natural", sunny: true } },
+      { t: "setIrl", on: true },
+      { t: "composingCall", open: true },
+      { t: "help" },
+    ];
+
+    // oxlint-disable no-await-in-loop -- one refusal at a time, in order.
+    for (const message of seatedOnly) {
+      const seen = screen.errors.length;
+      screen.send(message);
+      await screen.until((c) => c.errors.length > seen);
+      expect(screen.errors.at(-1)).toMatch(/watching this table/);
+    }
+
+    // And none of it touched the room.
+    expect(host.room?.seats).toHaveLength(1);
+    expect(host.room?.botSpeed).toBe("human");
+    expect(host.room?.irl).toBe(false);
+  }, 20_000);
+
+  it("sends somebody who scans a table mid-game to watch instead of a dead end", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    const code = host.code as string;
+    await fillTable(host);
+    host.send({ t: "start" });
+    await host.until((c) => c.room?.status === "playing");
+
+    const latecomer = await openClient(server.port);
+    latecomer.send({ t: "join", code, name: "Sam" });
+    const refusal = await latecomer.next((m) => m.t === "error");
+
+    // The sentence is for them; the code is for the Join screen, which offers
+    // the watch URL rather than leaving them on a form that will keep failing.
+    expect(refusal).toMatchObject({ t: "error", code: "gameUnderWay" });
+    latecomer.send({ t: "watch", code });
+    await latecomer.until((c) => c.game !== null);
+    expect(latecomer.game?.you).toBeNull();
+  }, 20_000);
 });

@@ -19,6 +19,7 @@ import {
   topCard,
   type BotSpeed,
   type CardId,
+  type ErrorCode,
   type GameEvent,
   type GameOptions,
   type GameState,
@@ -128,12 +129,27 @@ const BOT_NAMES = [
   "Cogs",
 ];
 
-export class RoomError extends Error {}
+/**
+ * A refusal written to be shown to a player as-is.
+ *
+ * `code` is the exception: a machine-readable tag on the handful of refusals the
+ * browser can offer a way out of, rather than leaving somebody on a form that
+ * will keep failing. It is not an error taxonomy and shouldn't become one — the
+ * sentence is still the message.
+ */
+export class RoomError extends Error {
+  readonly code: ErrorCode | undefined;
+
+  constructor(message: string, code?: ErrorCode) {
+    super(message);
+    this.code = code;
+  }
+}
 
 // Explicitly annotated so TypeScript treats a bare `fail(...)` as terminating
 // the branch and narrows what follows.
-const fail: (message: string) => never = (message) => {
-  throw new RoomError(message);
+const fail: (message: string, code?: ErrorCode) => never = (message, code) => {
+  throw new RoomError(message, code);
 };
 
 /** Names are shown to everyone at the table, so they get cleaned on the way in. */
@@ -199,7 +215,10 @@ export const joinRoom = (
 ): { room: Room; seat: Seat } => {
   const room = findRoom(store, code);
   if (room.game && room.game.status === "playing") {
-    fail("that game is already under way — you can watch, or wait for the next one");
+    // Tagged, because "watch instead" is a real offer the Join screen can make
+    // and matching on the wording of this sentence to spot it would break the
+    // next time somebody rewrites it.
+    fail("that game is already under way — you can watch, or wait for the next one", "gameUnderWay");
   }
   if (room.seats.length >= MAX_TABLE_PLAYERS) fail("that room is full");
 

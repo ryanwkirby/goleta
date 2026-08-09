@@ -46,6 +46,37 @@ export function HelpShout({ name }: { name?: string }) {
 }
 
 /**
+ * The same shout, in a line of furniture rather than over a hand.
+ *
+ * Taking help is never quiet — that is the whole deal — but the two screens
+ * that draw nobody else's cards had nothing for somebody else's ask to rise
+ * off, so it landed nowhere and an IRL table full of landscape phones was the
+ * one place where help was silent. It goes in the peek strip and on the shared
+ * table screen instead, which is where each of those views keeps the facts that
+ * belong to the whole table.
+ *
+ * It takes a name where it is drawn on its own — a shout with no name is no use
+ * in a strip that isn't next to anybody's seat — and goes without one where it
+ * is already sat beside the person who made it. Same amber as the seat's, and
+ * no rise: there is nothing here to rise off, and a pill sliding around a 40px
+ * strip is motion describing nothing.
+ */
+export function HelpAsk({ name, className = "" }: { name?: string; className?: string }) {
+  return (
+    <span
+      role="status"
+      className={[
+        "shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 font-semibold",
+        "text-felt-950",
+        className,
+      ].join(" ")}
+    >
+      {name ? `${name}: help!` : "help!"}
+    </span>
+  );
+}
+
+/**
  * Your first finished game, and the moment the highlights go away.
  *
  * Two sentences. It used to be four paragraphs explaining a change you were

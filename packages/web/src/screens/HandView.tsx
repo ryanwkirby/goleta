@@ -37,6 +37,12 @@ export interface HandViewProps {
   stalled: boolean;
   onAskForHelp: () => void;
   shouting: boolean;
+  /**
+   * Somebody else asking for a hand, by name — drawn in the strip, because this
+   * view has no seats for it to rise off and a table that can't see the ask is
+   * a table where help stopped being public.
+   */
+  helpFrom: string | null;
   /** The Sunny call being composed, if any — the state lives on `Table`. */
   accusing: string | null;
   stillAccusable: boolean;
@@ -88,6 +94,7 @@ export function HandView({
   stalled,
   onAskForHelp,
   shouting,
+  helpFrom,
   accusing,
   stillAccusable,
   onStartAccusing,
@@ -121,6 +128,7 @@ export function HandView({
         onDraw={onDraw}
         onCallSunny={onStartAccusing}
         offline={offline}
+        helpFrom={helpFrom}
       />
 
       <div className="flex min-h-0 flex-1 flex-col">

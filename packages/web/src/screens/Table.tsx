@@ -284,6 +284,17 @@ export function Table({
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
 
+  /**
+   * Somebody else's ask, for the landscape view to carry.
+   *
+   * Yours goes over your own cards there, same as it does upright. Everybody
+   * else's had no seat to rise off and was dropped on the floor, which made an
+   * IRL table — where every phone is in that view — the one place a public ask
+   * for help was private. The latest one: they last a couple of seconds and two
+   * at once in a 40px strip is a queue, not a shout.
+   */
+  const helpFrom = shouts.findLast((shout) => shout.playerId !== game.you) ?? null;
+
   // Dead from the moment the call lands until the dialog is dismissed. The tap
   // that would have fired the forced play is very often the tail of the one
   // that drew the card you were caught for, and a punishment served before
@@ -385,6 +396,7 @@ export function Table({
           stalled={stalled}
           onAskForHelp={askForHelp}
           shouting={shoutingHere}
+          helpFrom={helpFrom ? nameOf(helpFrom.playerId) : null}
           accusing={accusing}
           stillAccusable={stillAccusable}
           onStartAccusing={startAccusing}

@@ -248,12 +248,19 @@ down or handed over.
 Things that will read as oversights in that view and are not:
 
 - **The peek strip shows no hands, at any size.** It carries the room code, the
-  piles, the card in play, whose turn and the sun, and that is the whole list.
-  It can be that thin because `sunnyReach` already feeds the picker the evidence
-  a call is made from; seeing every hand is what *noticing* a reach is easier
-  with, and turning the phone upright is the answer to that. A sliver too
-  small to read a rank off is worse than nothing (`fan.ts` has a floor for
-  exactly this).
+  piles, the card in play, whose turn, the sun, and somebody asking for help,
+  and that is the whole list. It can be that thin because `sunnyReach` already
+  feeds the picker the evidence a call is made from; seeing every hand is what
+  *noticing* a reach is easier with, and turning the phone upright is the answer
+  to that. A sliver too small to read a rank off is worse than nothing
+  (`fan.ts` has a floor for exactly this).
+- **The ask for help is on that list because it has to be somewhere.** Taking
+  help is public by design (#33) and the upright table draws the shout over the
+  asker's seat — but an IRL table is every phone in the landscape view, which
+  has no seats, so somebody else's ask landed nowhere at all and the one room
+  where it was meant to be loudest was the one where it was silent (#105). It
+  names who asked, carries nothing else, and the shared table screen shows the
+  same thing against the seat. Your own still rises off your own cards.
 - **The draw pile in the strip stays tappable when you hold a play**, with no
   warning, same as everywhere else. A compressed view is a tempting place to
   quietly add a guard rail; it isn't one.
@@ -291,8 +298,9 @@ An optional extra device at `#/r/ABCD/table`, showing the middle of the table.
 peek strip.
 
 - **It shows no hand, at any size, ever.** A screen in the middle of a room is
-  visible to everyone including whoever is walking past. Seats get a name and a
-  count.
+  visible to everyone including whoever is walking past. Seats get a name, a
+  count, and — for the couple of seconds it lasts — that they have asked for
+  help.
 - **It cannot act**, and that is enforced at the server rather than here: it
   joins as a watcher (#16), and every seated message is refused.
 - **It is drawn without `TableMotion`.** Cards flying between hands nobody can

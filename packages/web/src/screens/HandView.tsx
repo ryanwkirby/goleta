@@ -6,7 +6,6 @@ import { Hand, HandSortButton } from "../components/Hand.tsx";
 import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
-import { Button } from "../components/ui.tsx";
 import type { NameOf } from "../lib/format.ts";
 import { handSize, handStep } from "../lib/handFan.ts";
 import type { HandMode } from "../components/Hand.tsx";
@@ -39,7 +38,6 @@ export interface HandViewProps {
   onStartAccusing: (playerId: string) => void;
   onStopAccusing: () => void;
   onAccuse: (cardId: string) => void;
-  onShowFullTable: () => void;
 }
 
 /**
@@ -60,8 +58,10 @@ export interface HandViewProps {
  *
  * What is *not* here is anybody else's hand, at any size. A sliver too small to
  * read a rank off is worse than nothing — `fan.ts` has a floor for exactly that
- * reason — so the toggle to the full table is where hands live, and it is
- * available the whole time a game is running rather than only on your turn.
+ * reason — so the full table is where hands live, and it is one turn of the
+ * phone away the whole time a game is running rather than only on your turn.
+ * Upright is the table, sideways is your hand, and nothing on either screen
+ * needs tapping to say so.
  */
 export function HandView({
   room,
@@ -87,7 +87,6 @@ export function HandView({
   onStartAccusing,
   onStopAccusing,
   onAccuse,
-  onShowFullTable,
 }: HandViewProps) {
   /**
    * The room the hand has to spend, measured rather than assumed — the same
@@ -224,13 +223,6 @@ export function HandView({
         {cards.length > 1 ? (
           <HandSortButton sort={handSort} onCycle={onCycleSort} className="shrink-0" />
         ) : null}
-        <Button
-          variant="ghost"
-          className="min-h-0 shrink-0 px-2 py-1 text-xs"
-          onClick={onShowFullTable}
-        >
-          <span aria-hidden>⇄</span> full table
-        </Button>
       </footer>
     </div>
   );

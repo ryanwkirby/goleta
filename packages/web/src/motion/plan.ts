@@ -95,12 +95,12 @@ export const FULL_TABLE: TableScale = { hand: "md", pile: "lg", seat: "sm" };
  * dropped, which `TableMotion` already handles.
  *
  * `hand` is the size the row settles on when it has the height for it, which is
- * every landscape phone. On a shorter box `handFan.ts` drops the cards to `lg`
+ * every landscape phone. On a shorter box `handFan.ts` drops the cards a rung
  * and a card in flight lands one size large — a shrink of a few pixels on a
  * viewport nobody is playing at, and not worth threading a measurement through
  * the motion layer for.
  */
-export const PEEK_TABLE: TableScale = { hand: "xl", pile: "sm", seat: "sm" };
+export const PEEK_TABLE: TableScale = { hand: "2xl", pile: "sm", seat: "sm" };
 
 const isYou = (game: GameView, playerId: PlayerId): boolean => game.you === playerId;
 

@@ -15,19 +15,21 @@ import {
 const PHONE = 828;
 
 /** The largest hand that still fits without scrolling, once fully closed up. */
-const atMostAtTheFloor = (available: number, size: "lg" | "xl"): number => {
+const atMostAtTheFloor = (available: number, size: "lg" | "xl" | "2xl"): number => {
   let cards = 1;
   while (handWidth(cards + 1, TIGHTEST, size) <= available) cards += 1;
   return cards;
 };
 
 describe("how big the cards go", () => {
-  it("takes the big size on a landscape phone, where the row has the height", () => {
-    // A 390px viewport, less the peek strip and the footer.
-    expect(handSize(300)).toBe("xl");
+  it("takes the biggest size on a landscape phone, where the row has the height", () => {
+    // A 390px viewport, less the peek strip — and nothing else, since #131 took
+    // the row of furniture off the bottom and gave the height to the cards.
+    expect(handSize(300)).toBe("2xl");
   });
 
   it("falls back rather than rendering a row taller than its own box", () => {
+    expect(handSize(240)).toBe("xl");
     expect(handSize(180)).toBe("lg");
     expect(handSize(0)).toBe("md");
   });
@@ -43,9 +45,10 @@ describe("how big the cards go", () => {
   it("keeps every rung tall enough for the card it names, plus the lift", () => {
     // 32px of padding on the row, and 14px of it is the lift a selected card
     // takes; a rung that didn't clear its own card is a clipped row.
-    const CARD_HEIGHT = { md: 96, lg: 128, xl: 176 };
+    const CARD_HEIGHT = { md: 96, lg: 128, xl: 176, "2xl": 240 };
     const PADDING = 32;
     for (const [height, size] of [
+      [280, "2xl"],
       [216, "xl"],
       [168, "lg"],
       [136, "md"],
@@ -53,6 +56,13 @@ describe("how big the cards go", () => {
       expect(handSize(height)).toBe(size);
       expect(height).toBeGreaterThanOrEqual(CARD_HEIGHT[size] + PADDING);
     }
+  });
+
+  it("goes up a rung rather than sideways: every step is a bigger card", () => {
+    // The rungs are one design at four sizes, so the fan arithmetic can read a
+    // width off the size it was handed and get the card that is drawn.
+    expect(CARD_WIDTH_PX.lg).toBeLessThan(CARD_WIDTH_PX.xl);
+    expect(CARD_WIDTH_PX.xl).toBeLessThan(CARD_WIDTH_PX["2xl"]);
   });
 
   it("answers from the height alone, so a hand's size never says how big it is", () => {
@@ -84,7 +94,7 @@ describe("fanning your own hand in landscape", () => {
   });
 
   it("fits every hand it tightens for, so nothing has to be scrolled to be read", () => {
-    for (const size of ["lg", "xl"] as const) {
+    for (const size of ["lg", "xl", "2xl"] as const) {
       const most = atMostAtTheFloor(PHONE, size);
       for (let cards = 1; cards <= most; cards += 1) {
         expect(handWidth(cards, handStep(PHONE, cards, size), size)).toBeLessThanOrEqual(PHONE);
@@ -131,8 +141,19 @@ describe("fanning your own hand in landscape", () => {
 
   it("holds a real hand at the big size without scrolling", () => {
     // Eight is the size the issue asks about, and twelve is a late game where
-    // drawing has been going well.
+    // drawing has been going well. The bigger card costs three of the margin
+    // and keeps the answer: fifteen fit at the floor, and the tap floor is what
+    // binds first either way.
     expect(atMostAtTheFloor(PHONE, "xl")).toBeGreaterThanOrEqual(12);
+    expect(atMostAtTheFloor(PHONE, "2xl")).toBeGreaterThanOrEqual(12);
+  });
+
+  it("does not buy the bigger card with the second tap", () => {
+    // A wider card eats the same width the fan spends on slivers, so the rung
+    // above `xl` has to be paid for out of the margin and not out of the tap
+    // floor. Twelve is the worst hand the simulation reaches across three
+    // hundred games, and it is still a one-tap hand at the biggest size.
+    expect(handStep(PHONE, 12, "2xl", TIGHTEST, true)).toBeGreaterThanOrEqual(TIGHTEST);
   });
 
   it("has nothing to fan before it has been measured", () => {

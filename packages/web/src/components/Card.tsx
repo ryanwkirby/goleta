@@ -15,16 +15,29 @@ export const isRed = (suit: Suit): boolean => suit === "D" || suit === "H";
 /**
  * `xl` exists for one screen: a phone in landscape at an IRL table, where your
  * own hand is the entire point of the display and there is finally the height
- * to draw it properly (#78). Nothing else uses it and nothing else should — on
- * any layout that has a seat strip to fit as well, it is simply too big.
+ * to draw it properly (#78). On any layout that has a seat strip to fit as
+ * well, it is simply too big — the shared table screen borrows it for the two
+ * centre piles, which are that screen's whole subject, and nothing else should.
+ *
+ * `2xl` is the same screen once the row of furniture under the hand was gone
+ * (#131). `xl` was never the biggest card that fitted; it was the biggest one
+ * that fitted with a footer, and the landscape row is around 300px on every
+ * phone this view is for. The type steps up with it, because the index in the
+ * corner is what a fanned hand is read from and the phone is on a table rather
+ * than in your face. This one really is for the hand alone: `handSize` is the
+ * only thing that names it.
  */
-export type CardSize = "sm" | "md" | "lg" | "xl";
+export type CardSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
 const SIZES: Record<CardSize, string> = {
   sm: "h-14 w-10 text-sm rounded-md p-1",
   md: "h-24 w-[4.25rem] text-xl rounded-lg p-1.5",
   lg: "h-32 w-24 text-2xl rounded-xl p-2",
   xl: "h-44 w-33 text-4xl rounded-2xl p-2.5",
+  // 52px of rank, and the two indices still clear each other: each is 1.94×
+  // its own font size once the suit under it is counted, so 101px apiece in a
+  // card 240 tall with 12 of padding at the top and 13 under the mirrored one.
+  "2xl": "h-60 w-45 text-[3.25rem] rounded-3xl p-3",
 };
 
 /**
@@ -35,7 +48,13 @@ const SIZES: Record<CardSize, string> = {
  * fitted against a width that was measured at the same zoom. Keep them in step
  * with `SIZES` anyway.
  */
-export const CARD_WIDTH_PX: Record<CardSize, number> = { sm: 40, md: 68, lg: 96, xl: 132 };
+export const CARD_WIDTH_PX: Record<CardSize, number> = {
+  sm: 40,
+  md: 68,
+  lg: 96,
+  xl: 132,
+  "2xl": 180,
+};
 
 interface CardProps {
   card: CardModel;

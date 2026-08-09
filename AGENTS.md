@@ -312,8 +312,20 @@ down or handed over.
 Things that will read as oversights in that view and are not:
 
 - **The peek strip shows no hands, at any size.** It carries the room code, the
-  piles, the card in play, whose turn, the sun, and somebody asking for help,
-  and that is the whole list. It can be that thin because `sunnyReach` already
+  piles, the card in play, whose turn, the sun, somebody asking for help, and
+  the offer of the rest of the screen, and that is the whole list. The
+  fullscreen offer is the one item on it that is not a table fact, and it is
+  here because this is the only surface the landscape view has: `RotatePanel` is
+  shown only to a phone held *upright*, and a phone already sideways when the
+  cards come out is deliberately never prompted — so an offer that lived there
+  was unreachable from the orientation it was about. It is feature-detected on
+  `requestFullscreen` existing, never on a user agent, so an iPhone gets no
+  control rather than a dead one; it takes itself away once fullscreen is held
+  and comes back when the browser drops it, which the exit gesture and
+  backgrounding both do. Don't persist a preference for it — re-entry needs a
+  gesture regardless, so a stored one could never be honoured silently, and it
+  would be a second staler source of truth about a state the browser already
+  reports (the reasoning that removed `goleta:table-view`). It can be that thin because `sunnyReach` already
   feeds the picker the evidence a call is made from; seeing every hand is what
   *noticing* a reach is easier with, and turning the phone upright is the answer
   to that. A sliver too small to read a rank off is worse than nothing
@@ -354,6 +366,15 @@ Things that will read as oversights in that view and are not:
   nothing pauses behind it. It blocks the *first* upright look at each deal and
   nothing after it: once this phone has been turned, upright is a view rather
   than a mistake.
+
+  **Nothing anywhere reaches for that lock, including where it exists.** The
+  panel used to offer it behind a "keep it landscape" button, and it froze the
+  app's only view switch: locked, turning the phone upright did nothing,
+  `useIsPortrait` never flipped, and that player could not reach the full table
+  for the rest of the session. Half the app, deleted by a button, on the one
+  screen whose whole job is teaching the gesture it disabled. **Fullscreen
+  without the lock is the whole of what was worth having** — it survives a
+  rotation, so a player who takes it in landscape still has it upright (#125).
 
 ### The shared table screen
 

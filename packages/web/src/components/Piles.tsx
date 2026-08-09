@@ -1,5 +1,6 @@
 import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 
+import { calledSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitBadge } from "./Card.tsx";
@@ -44,9 +45,10 @@ export function Piles({
   // is still on its way here the pile keeps showing the card it is landing on,
   // and shows nothing at all through a deal, until the upcard drops.
   const face = pileFace(game.topCard);
-  const shown = face ?? game.topCard;
-  // The named suit only needs saying when it isn't the one you can see.
-  const suitOverridden = game.activeSuit !== shown.suit;
+  // The named suit only needs saying when it isn't the one you can see — and
+  // only when somebody has actually named one for the card that is up. Both
+  // conditions live in `calledSuit`; the peek strip asks it the same question.
+  const called = calledSuit(game, face);
   const cardsLeft = game.drawPileSize;
 
   // Everything that isn't the evidence steps back while the peel is up. It also
@@ -113,13 +115,13 @@ export function Piles({
             The count of cards already played explained nothing. It says nothing
             worth having under a peel, though: the card it is about is the one
             the evidence is covering up, and the peel labels its own cards. */}
-        <Caption>{suitOverridden && !peel ? "showing" : undefined}</Caption>
+        <Caption>{called && !peel ? "showing" : undefined}</Caption>
       </div>
 
-      {suitOverridden ? (
+      {called ? (
         <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
           <div className="flex h-32 items-center">
-            <SuitBadge suit={game.activeSuit} className="text-base" />
+            <SuitBadge suit={called} className="text-base" />
           </div>
           <Caption>called</Caption>
         </div>

@@ -1,6 +1,7 @@
 import type { GameView, RoomView } from "@goleta/engine";
 
 import type { NameOf } from "../lib/format.ts";
+import { calledSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SUIT_GLYPH, SUIT_LABEL, isRed } from "./Card.tsx";
@@ -46,8 +47,10 @@ export function PeekStrip({
 }) {
   const { anchor, pileFace } = useMotion();
   const face = pileFace(game.topCard);
-  const shown = face ?? game.topCard;
-  const suitOverridden = game.activeSuit !== shown.suit;
+  // The same question the full table's pile asks, answered in the same place:
+  // a suit that has been named, for the card that is actually up. Null while one
+  // is owed and while a flight is still landing — see `calledSuit`.
+  const called = calledSuit(game, face);
   const target = game.sunnyCallable ? game.sunnyTargetId : null;
 
   const waiting = game.waitingOn;
@@ -101,15 +104,15 @@ export function PeekStrip({
           />
         )}
         {/* The named suit only needs saying when it isn't the one you can see. */}
-        {suitOverridden ? (
+        {called ? (
           <span
             className={[
               "rounded-full bg-white/10 px-1.5 py-0.5 text-sm font-semibold",
-              isRed(game.activeSuit) ? "text-rose-300" : "text-slate-100",
+              isRed(called) ? "text-rose-300" : "text-slate-100",
             ].join(" ")}
-            aria-label={`${SUIT_LABEL[game.activeSuit]} called`}
+            aria-label={`${SUIT_LABEL[called]} called`}
           >
-            <span aria-hidden>{SUIT_GLYPH[game.activeSuit]}</span>
+            <span aria-hidden>{SUIT_GLYPH[called]}</span>
           </span>
         ) : null}
       </div>

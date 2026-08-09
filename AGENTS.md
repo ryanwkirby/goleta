@@ -293,9 +293,9 @@ does nothing rather than refusing, for the same reason.
 
 A table has **two views, one brain**. `Table.tsx` holds all the state — the
 Sunny state machine, the stall timer, the assist, the sort — and picks a layout
-at the bottom. `HandView` is the landscape one: your hand at `xl`, and a peek
-strip carrying the table centre. Anything that needs table state belongs on
-`Table`; the layouts are given what to draw.
+at the bottom. `HandView` is the landscape one: a peek strip, and the whole of
+the rest of the screen given to your hand. Anything that needs table state
+belongs on `Table`; the layouts are given what to draw.
 
 **Which way up the phone is picks between them, and nothing else does.**
 Sideways is your hand, upright is the whole table. There is no stored
@@ -311,10 +311,10 @@ down or handed over.
 
 Things that will read as oversights in that view and are not:
 
-- **The peek strip shows no hands, at any size.** It carries the room code, the
-  piles, the card in play, whose turn, the sun, somebody asking for help, and
-  the offer of the rest of the screen, and that is the whole list. The
-  fullscreen offer is the one item on it that is not a table fact, and it is
+- **The peek strip shows no hands, at any size.** Of the table it carries the
+  room code, the piles, the card in play, what the table is waiting for, the
+  sun, and somebody asking for help — and that is the whole list. The
+  fullscreen offer is the first item on it that is not a table fact, and it is
   here because this is the only surface the landscape view has: `RotatePanel` is
   shown only to a phone held *upright*, and a phone already sideways when the
   cards come out is deliberately never prompted — so an offer that lived there
@@ -330,6 +330,25 @@ Things that will read as oversights in that view and are not:
   *noticing* a reach is easier with, and turning the phone upright is the answer
   to that. A sliver too small to read a rank off is worse than nothing
   (`fan.ts` has a floor for exactly this).
+- **The rest of this view's furniture is on the strip too, and there is no row
+  under the cards.** The sort control, the offer of help when you have sat on a
+  turn, and the draws left on a missed call used to sit in a footer, and the
+  footer cost the hand a card size: `handSize` reads the height the row is left,
+  so a line of small print is paid for in cards (#131). What the table is
+  waiting for is said there in full rather than as whose turn it is, because the
+  prompt is a superset of the line the strip already carried.
+
+  It is **one line that never wraps**, and the give is inside the small print at
+  the left, which wraps within itself. A row that wraps has to wrap whatever no
+  longer fits, and the last child here is the draw pile — the one thing on the
+  strip that has to be reachable, and a card's height to push onto a second
+  line. Two lines of small print are shorter than the pile card beside them, so
+  the crowded hand costs the cards nothing.
+- **A card drawn `mirrored` has no ghost pip.** The big faded suit in the
+  bottom-right corner is the corner the second index sits in, so in an IRL room
+  it was decoration underneath an upside-down rank, on the screens where reading
+  a rank off a sliver is the whole job (#130). Online rooms keep it — nothing is
+  drawn over it there.
 - **The ask for help is on that list because it has to be somewhere.** Taking
   help is public by design (#33) and the upright table draws the shout over the
   asker's seat — but an IRL table is every phone in the landscape view, which

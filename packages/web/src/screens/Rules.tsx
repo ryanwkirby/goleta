@@ -24,43 +24,44 @@ export function Rules({
   return (
     <Panel className="max-w-lg">
       <h2 className="text-xl font-semibold text-white">How goleta works</h2>
-      <p className="mt-1 text-sm text-white/60">
-        It's Crazy Eights, backwards. Read this bit — the backwards part matters.
-      </p>
+      <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
 
       <ol className="mt-5 space-y-4 text-sm leading-relaxed text-white/80">
         <li>
-          <strong className="text-white">You want to keep your cards.</strong> Run out and you're
-          out of the game. The last player still holding cards wins.
+          <strong className="text-white">
+            You want to <em>keep</em> your cards.
+          </strong>{" "}
+          Run out and you're out of the game. The last player still holding cards wins.
         </li>
         <li>
-          <strong className="text-white">If you can play, you must.</strong> Match the card showing
-          by rank or suit, and you have no choice — you play it. A hand full of playable cards is a
-          hand that's draining away.
+          <strong className="text-white">
+            Every hand is <em>face up</em>.
+          </strong>{" "}
+          Nobody's cards are a secret, all game. Whether someone had a play they skipped is there
+          to be seen — spotting it is on you.
         </li>
         <li>
-          <strong className="text-white">Being stuck is good.</strong> With nothing playable you
-          draw a card, which is exactly what you want. Still stuck? Draw again, up to three.
+          <strong className="text-white">
+            If you <em>can</em> play, you <em>must</em>.
+          </strong>{" "}
+          Match the card showing by rank or suit, and you have no choice — you play it. A hand full
+          of playable cards is a hand that's draining away.
         </li>
         <li>
-          <strong className="text-white">Eights in your hand are wild</strong> and let you name the
-          next suit. They're also bad news: an 8 plays on anything, so holding one means you can
-          never draw, and drawing one ends your turn on the spot. Either way you're a card down.
-          Naming the suit is what you get back — a real lever, since every hand is face up — so an
-          8 is a card to spend well, not one to want. An 8 turned up off the deck is just an
-          ordinary 8 — its own suit, nobody names anything.
+          <strong className="text-white">
+            Being <em>stuck</em> is good.
+          </strong>{" "}
+          With nothing playable you draw a card, which is exactly what you want. Still stuck? Draw
+          again, up to three.
         </li>
         <li>
-          <strong className="text-white">When the deck runs out</strong> the whole played pile gets
-          shuffled back into it, and a fresh card is turned up. The card everyone was matching
-          changes — that's normal, not a glitch.
+          <strong className="text-white">
+            Eights are <em>wild</em>.
+          </strong>{" "}
+          An 8 plays on anything, so holding one means you can never draw, and drawing one ends
+          your turn on the spot. Naming the next suit is what you get back.
         </li>
       </ol>
-
-      <p className="mt-5 rounded-xl bg-white/5 p-3 text-sm text-white/70">
-        Every hand is face up, all game. Whether someone had a play they skipped is there to be
-        seen — spotting it is on you.
-      </p>
 
       {onChooseHints ? (
         <div className="mt-5 border-t border-white/10 pt-4">

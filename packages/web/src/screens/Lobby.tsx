@@ -164,11 +164,16 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
  * reason: most tables can leave this shut, and none of them need to have played
  * before to open it.
  *
- * It is a **disclosure** triangle — `▸` shut, `▾` open — and not the `▾`/`▴` pair
+ * It is a **disclosure** triangle — `◂` shut, `▾` open — and not the `▾`/`▴` pair
  * it started as. That pair is a scroll gesture, "more below / less below", and it
  * said nothing about the one thing this row is for. Shut, this points at the
  * label it will open; open, it points down the panel it opened. Drawn as one
  * glyph rotated rather than two, so the turn is the animation.
+ *
+ * Shut it points **left**, because the triangle is at the right-hand end of the
+ * row and everything it is about is to its left: the label, the summary line,
+ * and the panel that unfolds under them. It used to point `▸`, at the edge of
+ * the card and nothing else (#137).
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -189,10 +194,10 @@ function TableSettings({ summary, children }: { summary: string; children: React
           aria-hidden
           className={[
             "shrink-0 text-3xl leading-none text-white/60 transition-transform",
-            open ? "rotate-90" : "",
+            open ? "-rotate-90" : "",
           ].join(" ")}
         >
-          ▸
+          ◂
         </span>
       </button>
       {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}

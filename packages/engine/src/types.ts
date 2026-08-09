@@ -266,6 +266,24 @@ export interface GameState {
    * the 8's own suit.
    */
   activeSuit: Suit;
+  /**
+   * The suit somebody *named* for the card in play, or null when nobody did.
+   *
+   * No rule reads this and nothing about play depends on it — `activeSuit` is
+   * still the suit to match, and is set the same way whether it came off a
+   * choice or off the printed card. This records only that a choice happened,
+   * because that is not recoverable afterwards: a natural 8 seeded at the start,
+   * a natural 8 turned up by a recycle or a Sunny call, and an 8 played to
+   * settle a call all leave the state looking exactly like a named one.
+   *
+   * The comparison it replaces — `activeSuit !== topCard.suit` — was wrong in
+   * one direction, and it was the interesting one: a player who names the 8's
+   * own suit is making a real play, and the table was shown nothing at all
+   * (#114).
+   *
+   * Set by `chooseSuit` and cleared wherever the card in play changes.
+   */
+  namedSuit: Suit | null;
   phase: Phase;
   challenge: Challenge | null;
   /** Non-null only while a landed Sunny call is being paid off. */

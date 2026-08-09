@@ -23,6 +23,7 @@ const view = (overrides: Partial<GameView> = {}): GameView => ({
   phase: { kind: "action" },
   topCard: card("top"),
   activeSuit: "H",
+  namedSuit: null,
   drawPileSize: 20,
   discardPileSize: 4,
   drawsThisTurn: 0,

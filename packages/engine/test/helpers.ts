@@ -31,6 +31,12 @@ export interface TableSpec {
   top: string;
   /** Defaults to the top card's suit, as it would be outside a wild. */
   activeSuit?: Suit;
+  /**
+   * A suit somebody named for the card on top, if this position is meant to
+   * have arrived at one. Presentation only — no rule reads it — so positions
+   * that aren't about it leave it null and nothing changes.
+   */
+  namedSuit?: Suit;
   drawPile?: string[];
   /** Cards under the top of the face-up pile, for recycle tests. */
   buriedDiscards?: string[];
@@ -62,6 +68,7 @@ export const table = (spec: TableSpec): GameState => {
     drawPile: cards(...(spec.drawPile ?? [])),
     discardPile: [...cards(...(spec.buriedDiscards ?? [])), top],
     activeSuit: spec.activeSuit ?? top.suit,
+    namedSuit: spec.namedSuit ?? null,
     phase: { kind: "action" },
     challenge: null,
     sunny: null,

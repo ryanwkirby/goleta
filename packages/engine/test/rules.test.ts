@@ -198,6 +198,58 @@ describe("wild eights", () => {
   });
 });
 
+/**
+ * The record that a suit was *chosen*, as opposed to read off the card. No rule
+ * reads it — every assertion here is about what the table gets told (#114).
+ */
+describe("a named suit, recorded as named", () => {
+  it("is null until somebody answers, and holds the answer afterwards", () => {
+    let state = table({ hands: { a: ["8C", "3H"], b: ["9D"], c: ["2H"] }, top: "5S" });
+    state = play(state, "a", "8C");
+    // The 8 is down and the suit is owed. `activeSuit` still holds the spades
+    // that were live before it, which is nobody's choice.
+    expect(state.namedSuit).toBeNull();
+
+    state = must(state, { type: "chooseSuit", playerId: "a", suit: "D" });
+    expect(state.namedSuit).toBe("D");
+  });
+
+  it("records a namer who picked the 8's own suit", () => {
+    // The play that used to be invisible: `activeSuit` comes out equal to the
+    // card's printed suit, exactly as it would have if nobody had chosen at all.
+    let state = table({ hands: { a: ["8C", "3H"], b: ["9D"], c: ["2H"] }, top: "5S" });
+    state = play(state, "a", "8C");
+    state = must(state, { type: "chooseSuit", playerId: "a", suit: "C" });
+    expect(state.activeSuit).toBe("C");
+    expect(state.namedSuit).toBe("C");
+  });
+
+  it("is spent by the next card played over it", () => {
+    let state = table({ hands: { a: ["8C", "3H"], b: ["9D"], c: ["2H"] }, top: "5S" });
+    state = play(state, "a", "8C");
+    state = must(state, { type: "chooseSuit", playerId: "a", suit: "D" });
+    state = play(state, "b", "9D");
+    expect(state.namedSuit).toBeNull();
+  });
+
+  it("is null for a natural 8 seeded at the start", () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      expect(startGame(["a", "b", "c"], seed).namedSuit).toBeNull();
+    }
+  });
+
+  it("is null for a natural 8 turned up off the deck", () => {
+    // Same position as the recycle test above: the 8 becomes the card in play
+    // because it was flipped, not because anyone chose it.
+    const state = draw(
+      table({ hands: { a: ["2C"], b: ["9D"] }, top: "5S", drawPile: [], buriedDiscards: ["8H"] }),
+      "a",
+    );
+    expect(topCard(state).rank).toBe("8");
+    expect(state.namedSuit).toBeNull();
+  });
+});
+
 describe("running out of cards", () => {
   it("eliminates a player whose hand empties and passes over them", () => {
     let state = table({ hands: { a: ["5H"], b: ["9H"], c: ["2C"] }, top: "5S" });

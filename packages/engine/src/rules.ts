@@ -147,6 +147,9 @@ export const startGame = (
     drawPile,
     discardPile: [upcard],
     activeSuit: upcard.suit,
+    // Nothing has been named yet, Dealer's Choice included: the dealer is being
+    // asked, and `chooseSuit` is what records the answer.
+    namedSuit: null,
     phase: dealerNames
       ? { kind: "suit", playerId: players[dealerIndex]?.id ?? "" }
       : { kind: "action" },
@@ -236,6 +239,10 @@ const handlePlay = (
   player.hand.splice(index, 1);
   s.discardPile.push(card);
   if (settlingSunny || !isWild(card)) s.activeSuit = card.suit;
+  // A new card in play, so any name attached to the last one is spent. A wild 8
+  // asks for one below and `chooseSuit` sets it; an 8 settling a call names
+  // nothing, and lands here with the rest.
+  s.namedSuit = null;
   events.push({ type: "played", playerId: player.id, card });
 
   eliminateIfEmpty(s, player, events);
@@ -340,6 +347,9 @@ const handleChooseSuit = (
   if (!chosen) return "Not a suit";
 
   s.activeSuit = chosen;
+  // The one place a suit is chosen rather than read off a card. It may well be
+  // the 8's own suit, which is a real play and not a no-op — see `namedSuit`.
+  s.namedSuit = chosen;
   events.push({ type: "suitChosen", playerId, suit: chosen });
   // Always advance, whoever named it. Each variant seats the turn so that this
   // one rule lands on the right player: the 8's player under the standard rule,
@@ -546,8 +556,11 @@ const handleSurrender = (
   const [card] = player.hand.splice(index, 1) as [Card];
 
   // Played face up like any other card. It needn't be legal, and it sets no
-  // suit: the touched card lands on top of it a moment later.
+  // suit: the touched card lands on top of it a moment later. It does clear any
+  // name, for the same reason a play does — whatever was named was named against
+  // a card this one is now sitting on.
   s.discardPile.push(card);
+  s.namedSuit = null;
   events.push({ type: "surrendered", playerId, card, reason });
 
   eliminateIfEmpty(s, player, events);
@@ -684,6 +697,7 @@ const turnUp = (
   if (!last) return;
   s.discardPile.push(...cards);
   s.activeSuit = last.suit;
+  s.namedSuit = null;
   events.push({ type: "turnedUp", cards: [...cards], reason });
 };
 

@@ -476,6 +476,7 @@ export function Table({
             game={game}
             canDraw={mine && game.phase.kind === "action" && !finished}
             onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
+            irl={room.irl}
             peel={
               peeling && call
                 ? {
@@ -535,6 +536,7 @@ export function Table({
             reach={game.sunnyReach}
             onPick={accuse}
             onCancel={stopAccusing}
+            irl={room.irl}
           />
         ) : null}
 
@@ -593,6 +595,7 @@ export function Table({
                 mode={mode}
                 assist={assist}
                 onChoose={onChooseCard}
+                irl={room.irl}
               />
             </div>
           </div>

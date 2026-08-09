@@ -102,6 +102,7 @@ function Seat({
                 key={card.id}
                 card={card}
                 size="sm"
+                mirrored={room.irl}
                 anchor={anchor(cardAnchor(card.id))}
                 arriving={isArriving(card.id)}
               />

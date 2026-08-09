@@ -3,7 +3,7 @@ import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 import { calledSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
-import { CardBack, PlayingCard, SuitBadge } from "./Card.tsx";
+import { CardBack, PlayingCard, SuitBadge, type CardSize } from "./Card.tsx";
 import { SunnyPeel } from "./Sunny.tsx";
 
 /**
@@ -34,11 +34,15 @@ export function Piles({
   canDraw,
   onDraw,
   peel = null,
+  irl = false,
+  size = "lg",
 }: {
   game: GameView;
   canDraw: boolean;
   onDraw: () => void;
   peel?: Peel | null;
+  irl?: boolean;
+  size?: Extract<CardSize, "lg" | "xl">;
 }) {
   const { anchor, pileFace } = useMotion();
   // The state's top card is the one that has *finished* arriving. While a card
@@ -56,6 +60,8 @@ export function Piles({
   // keeps the fan legible where it overhangs the deck or the called suit —
   // nothing here moves or unmounts, so every anchor stays exactly where it was.
   const aside = peel ? "opacity-25 transition-opacity duration-300" : "transition-opacity";
+  const pileBox = size === "xl" ? "h-44 w-33 rounded-2xl" : "h-32 w-24 rounded-xl";
+  const suitBox = size === "xl" ? "h-44" : "h-32";
 
   return (
     <div className="flex items-center justify-center gap-6">
@@ -81,7 +87,7 @@ export function Piles({
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
           ].join(" ")}
         >
-          <CardBack size="lg" anchor={anchor(DECK)} />
+          <CardBack size={size} anchor={anchor(DECK)} />
           {/* Sat on the lattice rather than on a flat colour now, so it brings
               its own dark to stand on. */}
           <span aria-hidden className="absolute inset-x-0 bottom-2 flex justify-center">
@@ -101,15 +107,15 @@ export function Piles({
             `PILE` anchor that in-flight cards are aiming at. */}
         <div className="relative">
           {face ? (
-            <PlayingCard card={face} size="lg" anchor={anchor(PILE)} />
+            <PlayingCard card={face} size={size} anchor={anchor(PILE)} mirrored={irl} />
           ) : (
             <div
               ref={anchor(PILE)}
               aria-hidden
-              className="h-32 w-24 rounded-xl border border-dashed border-white/15"
+              className={[pileBox, "border border-dashed border-white/15"].join(" ")}
             />
           )}
-          {peel ? <SunnyPeel {...peel} /> : null}
+          {peel ? <SunnyPeel {...peel} irl={irl} /> : null}
         </div>
         {/* `showing` earns its place — paired with `called` under the badge it
             is what explains that the card you can see is not what the table is
@@ -124,7 +130,7 @@ export function Piles({
 
       {called ? (
         <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
-          <div className="flex h-32 items-center">
+          <div className={["flex items-center", suitBox].join(" ")}>
             <SuitBadge suit={called} className="text-base" />
           </div>
           <Caption>called</Caption>

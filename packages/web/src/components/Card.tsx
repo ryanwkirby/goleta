@@ -96,20 +96,27 @@ export function PlayingCard({
         {card.rank}
         <span className="block text-[0.85em]">{glyph}</span>
       </span>
-      {/* The big pip sits in whatever room is left rather than claiming its
-          own row, so the face can't grow taller than the card. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 translate-x-[15%] translate-y-[18%] text-[2.6em] opacity-25"
-      >
-        {glyph}
-      </span>
+      {/* The big pip sits in whatever room is left rather than claiming its own
+          row, so the face can't grow taller than the card.
+
+          Not drawn on a mirrored card at all (#130). The corner it fades into
+          is the corner the second index sits in, so at an IRL table it is a
+          ghost suit under an upside-down rank — decoration in front of the one
+          thing these cards exist to be read for. Online rooms keep it, because
+          nothing is drawn over it there. */}
       {mirrored ? (
         <span className="absolute bottom-[0.25em] right-[0.25em] rotate-180 text-right leading-[1.05]">
           {card.rank}
           <span className="block text-[0.85em]">{glyph}</span>
         </span>
-      ) : null}
+      ) : (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 right-0 translate-x-[15%] translate-y-[18%] text-[2.6em] opacity-25"
+        >
+          {glyph}
+        </span>
+      )}
     </Tag>
   );
 }

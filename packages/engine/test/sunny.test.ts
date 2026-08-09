@@ -81,7 +81,7 @@ describe("a correct call", () => {
     // play they were dodging is the first thing they owe.
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1"]);
     expect(state.phase.kind).toBe("sunnyPlay");
-    expect(reject(state, { type: "drawCard", playerId: "a" })).toMatch(/can't draw/);
+    expect(reject(state, { type: "drawCard", playerId: "a" })).toMatch(/Can't draw/);
 
     state = play(state, "a", "5H");
     expect(state.phase).toMatchObject({
@@ -130,10 +130,10 @@ describe("a correct call", () => {
     let state = call(caughtInTheAct(), "b", "5H");
     state = play(state, "a", "5H");
     expect(reject(state, { type: "surrenderCard", playerId: "b", cardId: "9H#1" })).toMatch(
-      /isn't your card/,
+      /Not your card to give up/,
     );
     expect(reject(state, { type: "surrenderCard", playerId: "a", cardId: "9H#1" })).toMatch(
-      /isn't in your hand/,
+      /Not in your hand/,
     );
   });
 
@@ -226,7 +226,7 @@ describe("naming the card", () => {
   it("must be a card the offender actually held before the draw", () => {
     const state = caughtInTheAct();
     expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("9H").id })).toMatch(
-      /wasn't in their hand/,
+      /They didn't hold it/,
     );
   });
 
@@ -242,7 +242,7 @@ describe("naming the card", () => {
 
     for (const drawn of [firstDrawId, secondDrawId]) {
       expect(reject(state, { type: "callSunny", playerId: "b", cardId: drawn })).toMatch(
-        /wasn't in their hand/,
+        /They didn't hold it/,
       );
     }
 
@@ -338,7 +338,7 @@ describe("a wrong call", () => {
     // lockout counts draws at the table, not whether the window is open.
     state = draw(state, "a");
     expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
-      /before you can call again/,
+      /Locked out/,
     );
     // Someone else at the table is untouched by b's lockout.
     const result = applyIntent(state, { type: "callSunny", playerId: "c", cardId: card("2C").id });
@@ -362,12 +362,12 @@ describe("a wrong call", () => {
     };
 
     expect(reject(locked, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
-      /before you can call again/,
+      /Locked out/,
     );
     const stillLocked = { ...locked, totalDraws: 12 };
     expect(
       reject(stillLocked, { type: "callSunny", playerId: "b", cardId: card("2C").id }),
-    ).toMatch(/before you can call again/);
+    ).toMatch(/Locked out/);
     const free = { ...locked, totalDraws: 13 };
     expect(applyIntent(free, { type: "callSunny", playerId: "b", cardId: card("2C").id }).ok).toBe(
       true,
@@ -463,7 +463,7 @@ describe("a call that lands after the fact", () => {
     state = play(state, "b", "9H");
     expect(
       reject(state, { type: "callSunny", playerId: "c", cardId: card("5H").id }),
-    ).toMatch(/nothing to call/);
+    ).toMatch(/Nothing to call/);
   });
 });
 
@@ -472,7 +472,7 @@ describe("who may call, and when", () => {
     const state = table({ hands: { a: ["5H"], b: ["9C"], c: ["4D"] }, top: "5S" });
     expect(
       reject(state, { type: "callSunny", playerId: "b", cardId: card("5H").id }),
-    ).toMatch(/nothing to call/);
+    ).toMatch(/Nothing to call/);
   });
 
   it("is not the drawer", () => {
@@ -493,14 +493,14 @@ describe("who may call, and when", () => {
     );
     expect(
       reject(state, { type: "callSunny", playerId: "b", cardId: card("5H").id }),
-    ).toMatch(/out of the game/);
+    ).toMatch(/You're out/);
   });
 
   it("is only the first to speak", () => {
     const state = call(caughtInTheAct(), "b", "5H");
     expect(
       reject(state, { type: "callSunny", playerId: "c", cardId: card("5H").id }),
-    ).toMatch(/nothing to call/);
+    ).toMatch(/Nothing to call/);
   });
 
   it("is only the first to speak, even when they were wrong", () => {
@@ -511,7 +511,7 @@ describe("who may call, and when", () => {
     state = call(state, "b", "2C");
     expect(
       reject(state, { type: "callSunny", playerId: "c", cardId: card("2C").id }),
-    ).toMatch(/nothing to call/);
+    ).toMatch(/Nothing to call/);
   });
 
   it("reopens on the next draw, so a second offence is still callable", () => {
@@ -619,7 +619,7 @@ describe("a call that spans a recycle", () => {
     const state = acrossARecycle();
     expect(state.challenge?.reach.hand.map((c) => c.id)).toEqual(["5H#1"]);
     expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("2D").id })).toMatch(
-      /wasn't in their hand/,
+      /They didn't hold it/,
     );
   });
 

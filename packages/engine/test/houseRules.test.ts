@@ -43,7 +43,7 @@ describe("the Power of Eights", () => {
     expect(state.phase).toEqual({ kind: "suit", playerId: "b" });
     expect(currentPlayer(state).id).toBe("a");
     expect(reject(state, { type: "chooseSuit", playerId: "a", suit: "H" })).toMatch(
-      /isn't your call/,
+      /Not your call/,
     );
 
     // b names hearts, and then it is b's turn to play against hearts.
@@ -157,7 +157,7 @@ describe("Dealer's Choice", () => {
     expect(topCard(state).rank).toBe("8");
     // The dealer is seat 0 and owes the suit; nobody may play yet.
     expect(state.phase).toEqual({ kind: "suit", playerId: "a" });
-    expect(reject(state, { type: "drawCard", playerId: "b" })).toMatch(/can't draw/);
+    expect(reject(state, { type: "drawCard", playerId: "b" })).toMatch(/Can't draw/);
 
     state = nameSuit(state, "a", "H");
     expect(state.activeSuit).toBe("H");
@@ -222,7 +222,7 @@ describe("a table playing without the Sunny Rule", () => {
   it("says the rule is off rather than that you were too slow", () => {
     const state = illegalDraw(noSunny);
     expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("5H").id })).toMatch(
-      /isn't playing the Sunny Rule/,
+      /No Sunny Rule here/,
     );
   });
 

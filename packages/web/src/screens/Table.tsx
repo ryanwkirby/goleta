@@ -18,8 +18,10 @@ import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
+import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
-import { PEEK_TABLE, PEEL_MS } from "../motion/plan.ts";
+import { useWakeLock } from "../lib/wakeLock.ts";
+import { PEEK_TABLE } from "../motion/plan.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
@@ -105,8 +107,6 @@ export function Table({
   offline: boolean;
 }) {
   const [explainSunny, setExplainSunny] = useState(false);
-  const [peeling, setPeeling] = useState(false);
-  const [announcing, setAnnouncing] = useState(false);
   /** Whose reach you are part-way through accusing, if any. */
   const [accusing, setAccusing] = useState<string | null>(null);
   const [ackedCall, setAckedCall] = useState<number | null>(null);
@@ -140,19 +140,19 @@ export function Table({
   // the ruling was, and the explanation waits until that has been and gone. It
   // is taught by being used, so only first-timers ever see the third part.
   //
-  // The log is newest first, so this is the latest call, not the first one.
-  const lastCall = log.find((entry) => entry.event.type === "sunnyCalled");
-  const lastCallId = lastCall?.id;
-  const call = lastCall?.event.type === "sunnyCalled" ? lastCall.event : null;
-  useEffect(() => {
-    if (lastCallId === undefined) return;
-    setPeeling(true);
-    const timer = setTimeout(() => {
-      setPeeling(false);
-      setAnnouncing(true);
-    }, PEEL_MS);
-    return () => clearTimeout(timer);
-  }, [lastCallId]);
+  // The first two are the same beat wherever a call is watched, so the timing
+  // lives in `useJudgedCall` and the table screen (#14) gets it too.
+  const { call, id: lastCallId, peeling, announcing, endAnnouncement } = useJudgedCall(log);
+
+  /**
+   * A phone at a table where nobody is looking at their phone (#81).
+   *
+   * The gap between your turns at a table of six is minutes, and a challenge
+   * window is over as soon as the next player moves — not something you catch
+   * through a lock screen. Never in an online room: somebody playing on their
+   * laptop at home has an OS that knows what it is doing.
+   */
+  useWakeLock(room.irl && seated && !finished);
 
   // The seat a landed call is about gets a dialog instead of the banner. A
   // timed notice at the top of the screen is the right weight for news about
@@ -174,15 +174,15 @@ export function Table({
   }, [seated]);
 
   const announcementOver = useCallback(() => {
-    setAnnouncing(false);
+    endAnnouncement();
     explainIfNew();
-  }, [explainIfNew]);
+  }, [endAnnouncement, explainIfNew]);
 
   const acknowledgeCaught = useCallback(() => {
     setAckedCall(lastCallId ?? null);
-    setAnnouncing(false);
+    endAnnouncement();
     explainIfNew();
-  }, [lastCallId, explainIfNew]);
+  }, [lastCallId, endAnnouncement, explainIfNew]);
 
   /**
    * Tapping the sun no longer calls anything — it opens the picker. An

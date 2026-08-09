@@ -230,6 +230,38 @@ Things that will read as oversights in that view and are not:
   under 500px — never on a user agent — so a portrait iPad is never blocked, and
   nothing pauses behind it.
 
+### The shared table screen
+
+An optional extra device at `#/r/ABCD/table`, showing the middle of the table.
+**Nothing depends on it existing** — it is why the phone view carries its own
+peek strip.
+
+- **It shows no hand, at any size, ever.** A screen in the middle of a room is
+  visible to everyone including whoever is walking past. Seats get a name and a
+  count.
+- **It cannot act**, and that is enforced at the server rather than here: it
+  joins as a watcher (#16), and every seated message is refused.
+- **It is drawn without `TableMotion`.** Cards flying between hands nobody can
+  see would describe movement this screen doesn't show, and the flight layer
+  portals to the body where the board's scaling can't reach it. The peel is CSS
+  on the pile and runs regardless.
+- **One design, scaled** (`fitScale.ts`), rather than each piece in viewport
+  units. Sizing every piece independently gets the type right and the
+  *relationships* wrong — a board recomposing itself at every aspect ratio is
+  exactly what a screen propped at a table shows up.
+
+### Wake locks
+
+Held while a table screen is showing a room, and while a phone is in an **IRL**
+room with a game underway. Never in an online room: someone playing on their
+laptop has an OS that knows what it is doing.
+
+The lock is dropped when a tab is hidden and **is not given back**, so
+`useWakeLock` re-requests it on `visibilitychange` — without that it survives
+exactly one lock screen and then quietly stops. Failure is silent: battery
+saver, an old browser and an insecure origin all just mean no lock, and a wake
+lock is a nicety nobody asked for.
+
 ## Architecture
 
 npm workspaces monorepo, one Docker image, one process.

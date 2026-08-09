@@ -266,7 +266,14 @@ export function SunnyAnnounce({
   return (
     <div
       role="status"
-      className="pointer-events-none fixed inset-x-0 top-0 z-30 flex justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))]"
+      // The one announcement nobody at this table may miss, so it clears the
+      // island at both ends as well as the top — a ruling clipped in landscape
+      // is the worst thing here to lose a word off.
+      className={[
+        "pointer-events-none fixed inset-x-0 top-0 z-30 flex justify-center p-4",
+        "pt-[max(1rem,env(safe-area-inset-top))]",
+        "pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]",
+      ].join(" ")}
     >
       <div className="max-w-md rounded-2xl bg-felt-900 px-5 py-3 text-center shadow-xl ring-1 ring-amber-300/40">
         <p className="text-base font-semibold text-amber-300">

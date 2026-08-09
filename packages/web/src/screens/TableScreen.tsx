@@ -86,8 +86,23 @@ export function TableScreen({
     return () => watch.disconnect();
   }, []);
 
+  // The inset goes on the frame, so `fitScale` fits the design into the *safe*
+  // box without learning that hardware exists: the observer reads
+  // `contentRect`, which padding is already out of.
+  //
+  // It matters more here than anywhere else since #120 put the seat names on
+  // `inset-0` of the design box — deliberately at the very edges, which is
+  // exactly where a notch or a rounded corner takes its cut. A propped tablet
+  // would lose a name rather than a margin.
   return (
-    <div ref={frame} className="flex h-dvh w-full items-center justify-center overflow-hidden">
+    <div
+      ref={frame}
+      className={[
+        "flex h-dvh w-full items-center justify-center overflow-hidden",
+        "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+        "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
+      ].join(" ")}
+    >
       <div
         style={{
           width: TABLE_DESIGN.width,

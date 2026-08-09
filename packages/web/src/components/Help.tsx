@@ -18,8 +18,12 @@ export function HelpLink({ onAsk }: { onAsk: () => void }) {
     <button
       type="button"
       onClick={onAsk}
+      // `shrink-0` rather than `self-start`: both rows it sits in centre their
+      // items, and one of them is the peek strip, where an offer that gave up
+      // its own width to a long prompt would be a tap target squeezed to a
+      // sliver of itself.
       className={[
-        "self-start rounded-lg px-2 py-1 text-xs text-white/35",
+        "shrink-0 rounded-lg px-2 py-1 text-xs text-white/35",
         "transition-colors hover:bg-white/5 hover:text-white/70",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
       ].join(" ")}

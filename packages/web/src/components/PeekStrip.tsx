@@ -3,26 +3,40 @@ import type { GameView, RoomView } from "@goleta/engine";
 import type { NameOf } from "../lib/format.ts";
 import { useFullscreen } from "../lib/fullscreen.ts";
 import { calledSuit } from "../lib/pile.ts";
+import type { HandSort } from "../lib/sort.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SUIT_GLYPH, SUIT_LABEL, isRed } from "./Card.tsx";
-import { HelpAsk } from "./Help.tsx";
+import { HandSortButton } from "./Hand.tsx";
+import { HelpAsk, HelpLink } from "./Help.tsx";
 import { SunnySign } from "./Sunny.tsx";
 
 /**
- * The middle of the table, as much of it as a phone in landscape can spare.
+ * The middle of the table, as much of it as a phone in landscape can spare —
+ * and, since #131, the whole of this view's furniture as well.
  *
- * **This carries the table centre and nothing more:** the room code, the draw
- * pile and its count, the card in play with the suit named over it when an 8 is
- * live, whose turn it is, the sun when a call is on offer, and somebody asking
- * for help. That is the whole list, and the omission that matters is the hands —
- * nobody else's cards appear here at any size.
+ * **What it carries of the table is the centre and nothing more:** the room
+ * code, the draw pile and its count, the card in play with the suit named over
+ * it when an 8 is live, what the table is waiting for, the sun when a call is on
+ * offer, and somebody asking for help. That is the whole list, and the omission
+ * that matters is the hands — nobody else's cards appear here at any size.
  *
- * One thing on it is not a table fact: the offer of the rest of the screen. It
- * is here because this is the only surface the landscape view has, and the offer
- * has to be reachable from the orientation it is about — `RotatePanel` is shown
- * only to a phone held upright, and a phone already sideways when the cards come
- * out is deliberately never prompted at all (#125).
+ * The rest is not table facts, and it is here because the alternative was a row
+ * of it under the cards. Your hand is the point of this screen, `handSize` reads
+ * the room the row is left, and a line of small print at the foot was a card
+ * size the cards never got: the offer of the rest of the screen, the sort
+ * control, the offer of a hand when you have sat on a turn, and the draws left
+ * on a missed call. None of them is worth a rung.
+ *
+ * The offer of the screen has a second reason to be here: it has to be reachable
+ * from the orientation it is about — `RotatePanel` is shown only to a phone held
+ * upright, and a phone already sideways when the cards come out is deliberately
+ * never prompted at all (#125).
+ *
+ * What the table is waiting for is said in full rather than as whose turn it is:
+ * the prompt is a superset — it numbers the steps of a landed call and says who
+ * is naming a suit — so the strip says the more useful of the two and the footer
+ * that used to say it is gone.
  *
  * The ask is on the list because taking help is meant to be public, and at an
  * IRL table every phone is in this view: the upright table draws the shout over
@@ -51,6 +65,13 @@ export function PeekStrip({
   onCallSunny,
   offline,
   helpFrom,
+  prompt,
+  mine,
+  sortable,
+  handSort,
+  onCycleSort,
+  stalled,
+  onAskForHelp,
 }: {
   room: RoomView;
   game: GameView;
@@ -61,6 +82,17 @@ export function PeekStrip({
   offline: boolean;
   /** Somebody else asking for a hand, by name. Your own goes over your cards. */
   helpFrom: string | null;
+  /** What the table is waiting for, in the words the full table uses. */
+  prompt: string;
+  /** Whether it is waiting for you — the prompt is drawn up when it is. */
+  mine: boolean;
+  /** Nothing to arrange with one card left, so nothing is offered. */
+  sortable: boolean;
+  handSort: HandSort;
+  onCycleSort: () => void;
+  /** A few seconds into a turn you haven't moved on. */
+  stalled: boolean;
+  onAskForHelp: () => void;
 }) {
   const { anchor, pileFace } = useMotion();
   const fullscreen = useFullscreen();
@@ -71,53 +103,78 @@ export function PeekStrip({
   const called = calledSuit(game, face);
   const target = game.sunnyCallable ? game.sunnyTargetId : null;
 
-  const waiting = game.waitingOn;
-  const turn =
-    waiting === null
-      ? "—"
-      : waiting === game.you
-        ? "your turn"
-        : `${nameOf(waiting)} to play`;
-
   // The side insets are the landscape ones, and they are why this strip has
-  // ends worth protecting: the room code sits at the left end and the turn
-  // prompt and the sun are pushed to the right by `ml-auto`, so on a phone with
-  // an island one or the other is behind hardware, and which one depends on
-  // which way the phone was turned. The border still runs the full width — the
-  // felt and its edge bleed, the content insets.
+  // ends worth protecting: the room code sits at the left end and the prompt
+  // and the sun are pushed to the right by `ml-auto`, so on a phone with an
+  // island one or the other is behind hardware, and which one depends on which
+  // way the phone was turned. The border still runs the full width — the felt
+  // and its edge bleed, the content insets.
   return (
     <header
       className={[
+        // One line, and the give is inside the small print at the left rather
+        // than here. A row that wraps has to wrap *something*, and what it picks
+        // is whatever no longer fits — the draw pile, which is the one thing on
+        // this strip that has to be reachable, and which would take a card's
+        // height off the hand on the way down. Wrapping the cluster instead
+        // costs nothing at all: two lines of it are shorter than the pile card
+        // beside them.
         "flex shrink-0 items-center gap-3 border-b border-white/10 py-1",
         "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
       ].join(" ")}
     >
-      <span className="font-mono text-xs tracking-[0.2em] text-white/50">{room.code}</span>
-
       {/*
-        The left end, deliberately: the right is the draw reach (#117) and a
-        control next to it is a control under a thumb aimed at something else.
+        Your own end of the strip, and it is this end deliberately: the right is
+        the draw reach (#117), and a control beside it is a control under a thumb
+        aimed at something else. The sort and the offer of help are here because
+        the alternative was a row of them under the cards, which cost the hand a
+        card size (#131).
 
-        It is here rather than on `RotatePanel` because the panel is only ever
-        shown to a phone held *upright*, and a phone already sideways when the
-        cards come out is never prompted — so the one offer of screen space in
-        the app was unreachable from the orientation it was about. Absent, not
-        disabled, where the API doesn't exist, and it takes itself away once
-        fullscreen is held and comes back if the browser drops it.
+        All of it is small print, so it wraps within itself before the strip
+        does. Two lines of it are still shorter than the pile card beside them,
+        which means the crowded hand — a missed call, an offer of help, a shout
+        and a dead socket at once — costs the cards nothing at all.
+
+        The offer of the screen is here rather than on `RotatePanel` because the
+        panel is only ever shown to a phone held *upright*, and a phone already
+        sideways when the cards come out is never prompted — so the one offer of
+        screen space in the app was unreachable from the orientation it was
+        about. Absent, not disabled, where the API doesn't exist, and it takes
+        itself away once fullscreen is held and comes back if the browser drops
+        it.
       */}
-      {fullscreen.offer ? (
-        <button
-          type="button"
-          onClick={fullscreen.request}
-          className={[
-            "flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-white/40",
-            "transition-colors hover:text-white/70",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-          ].join(" ")}
-        >
-          <span aria-hidden>⤢</span> full screen
-        </button>
-      ) : null}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
+        <span className="font-mono text-xs tracking-[0.2em] text-white/50">{room.code}</span>
+
+        {fullscreen.offer ? (
+          <button
+            type="button"
+            onClick={fullscreen.request}
+            className={[
+              "flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-white/40",
+              "transition-colors hover:text-white/70",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+            ].join(" ")}
+          >
+            <span aria-hidden>⤢</span> full screen
+          </button>
+        ) : null}
+
+        {sortable ? (
+          <HandSortButton sort={handSort} onCycle={onCycleSort} className="shrink-0" />
+        ) : null}
+
+        {stalled ? <HelpLink onAsk={onAskForHelp} /> : null}
+
+        {/* Yours alone: the server sends this to nobody else, and a missed call
+            is not something the table needs announcing. */}
+        {game.sunnyLockedDraws > 0 ? (
+          <span className="shrink-0 text-xs text-white/35" aria-live="polite">
+            <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
+            {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
+          </span>
+        ) : null}
+      </div>
 
       {/* The card in play, at the same size, so the two piles read as the pair
           they are on the full table. */}
@@ -151,10 +208,14 @@ export function PeekStrip({
       {helpFrom ? <HelpAsk name={helpFrom} className="ml-auto text-xs" /> : null}
 
       <span
-        className={[helpFrom ? "" : "ml-auto", "truncate text-xs text-white/60"].join(" ")}
+        className={[
+          helpFrom ? "" : "ml-auto",
+          "min-w-0 truncate text-xs",
+          mine ? "font-semibold text-amber-300" : "text-white/60",
+        ].join(" ")}
         aria-live="polite"
       >
-        {turn}
+        {prompt}
       </span>
 
       {/* Not a game fact, and the one thing here that isn't: a player blocked on

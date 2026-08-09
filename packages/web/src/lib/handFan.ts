@@ -54,7 +54,7 @@ export const PICKER_TIGHTEST = 28;
  * is aimed at a whole card lifted clear of its neighbours. The floor left is
  * the reading one `fan.ts` uses for the seat strip, and this sits above it.
  *
- * It binds far later than it looks. A landscape phone holds sixteen `xl` cards
+ * It binds far later than it looks. A landscape phone holds fifteen `2xl` cards
  * at `TIGHTEST` and the simulation's worst hand across three hundred games is
  * twelve, so the squeeze is for small phones and freak endgames, not for the
  * ordinary turn.
@@ -77,11 +77,16 @@ export const handWidth = (cards: number, step: number, size: CardSize): number =
  * looked, and a hand of three would sit there like a billboard. The width is
  * the fan's problem, and the fan solves it by closing up.
  *
- * `xl` needs a row with room for the card, the lift a selected card takes, and
- * the gap under it. Anything shorter falls back to `lg`, which is what the full
- * table draws the pile at, and shorter still to `md`.
+ * Every rung needs a row with room for the card, the lift a selected card
+ * takes, and the gap under it — the card's own height plus the row's 32px of
+ * padding, plus a little. Anything shorter falls back a rung.
  *
- * That last rung is the one a picker needs. `lg` was the floor while nothing
+ * `2xl` is the top of it and the ordinary case (#131). `xl` was the ceiling
+ * while a row of furniture sat under the hand; without it a landscape phone
+ * leaves the row about 300px, which is 60 more than this card needs, so the
+ * step is taken on every phone this view is for and given back on a 320px one.
+ *
+ * The bottom rung is the one a picker needs. `lg` was the floor while nothing
  * ever docked over the hand; with a picker up, the row is left less height than
  * an `lg` card and its padding, and the row scrolls its own overflow rather than
  * admitting it — cards clipped top and bottom at the exact moment the screen is
@@ -89,7 +94,7 @@ export const handWidth = (cards: number, step: number, size: CardSize): number =
  * short row is not a reason to render a broken one.
  */
 export const handSize = (rowHeight: number): CardSize =>
-  rowHeight >= 216 ? "xl" : rowHeight >= 168 ? "lg" : "md";
+  rowHeight >= 280 ? "2xl" : rowHeight >= 216 ? "xl" : rowHeight >= 168 ? "lg" : "md";
 
 /**
  * Left edge to left edge: how much of a card its neighbour leaves showing.

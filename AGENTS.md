@@ -326,15 +326,37 @@ An optional extra device at `#/r/ABCD/table`, showing the middle of the table.
 **Nothing depends on it existing** — it is why the phone view carries its own
 peek strip.
 
-- **Its default view is the shared centre.** Seats get names at the screen
-  edges, the piles get the room, and a player asking for help is shown against
-  their name. It can toggle to a watcher-like hand strip for bot-heavy rooms,
-  but the centre piles stay large there too.
+- **Its default view is the shared centre**, and it shows no hand there. Seats
+  get a name at the edge they are sitting on, a count, and — for the couple of
+  seconds it lasts — that they have asked for help.
+
+  The default is the whole of the old rule, which read *no hand, at any size,
+  ever*, on the reasoning that a screen in the middle of a room is visible to
+  everyone including whoever is walking past. #120 kept the reasoning and
+  narrowed the rule to a default: the toggle in the corner shows the same hand
+  strip a watcher sees, and it is a deliberate act by somebody in the room who
+  can see who else is in it. It is never what the screen comes up in, it is not
+  remembered, and the centre piles stay large in both views. Do not make it the
+  default, and do not persist it.
 - **It has exactly one auxiliary action.** It still joins as a watcher (#16),
   with a `table` bit on the watch message. In an IRL room, while the game is
   waiting on an ordinary action, tapping its draw pile draws for the current
-  player. Every other seated message is refused; it cannot play, name a suit or
-  call Sunny.
+  player. It cannot play, name a suit, call Sunny or surrender.
+
+  **The bit is the client's own word for what it is**, so it narrows rather than
+  grants — any browser can send it, and the honest reading is that in an IRL
+  room any watcher may draw for the seat on the clock. That is why `irl` is the
+  gate that matters and why it is checked on the server: an online room is
+  strangers, and none of them get to move a stranger's hand. In a room where the
+  flag means what it says, everybody can already reach the propped-up screen
+  with their actual hand. There is no identity to check here and there will not
+  be one — see the note on logins under **Testing**.
+
+  **A bot's turn is refused too.** The pile is drawn tappable to the whole room
+  and a bot's turn goes past under a finger already on its way down, so without
+  that check a tap lands on the bot — and a bot made to draw while holding a
+  play has been handed a Sunny violation it never chose. Bots are decided and
+  paced on the server for exactly that reason; nothing off a screen moves one.
 - **It is drawn without `TableMotion`.** The flight layer portals to the body
   where the board's scaling can't reach it. Draws get a local flight toward the
   player's edge; the peel is CSS on the pile and runs regardless.

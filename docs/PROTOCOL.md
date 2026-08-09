@@ -37,6 +37,14 @@ and holds no cards. Ordinary watchers can't act, and can't call the Sunny Rule.
 A shared table screen sends the same message with `table: true`; in an IRL room
 that one bit permits only tapping the draw pile for the current player.
 
+That bit is **self-declared, and worth reading as such.** Any browser can send
+it, so it narrows what one screen offers rather than granting anything a client
+couldn't already ask for — which makes `irl` the real gate. An online room is
+strangers and refuses the draw outright; an IRL room is people who can all reach
+the propped-up screen anyway. The server also refuses it when the seat on the
+clock is a bot, because a bot made to draw while holding a play has been handed
+a Sunny violation it never chose.
+
 **A watcher has no identity and writes nothing.** There is no `playerId`, no
 token, and nothing in `localStorage` — so there is also nothing to reclaim. A
 reload just watches again, and so does a reconnection after a dropped socket or

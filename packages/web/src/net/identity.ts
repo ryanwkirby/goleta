@@ -152,36 +152,13 @@ export const saveHandSort = (sort: HandSort): void => {
   }
 };
 
-const VIEW_KEY = "goleta:table-view";
-
-/**
- * Which way you last looked at an IRL table: your hand big, or the whole table.
- *
- * Per device rather than per room, because it is about the phone in your hand
- * and not about who you are playing with. The hand view is the default the
- * first time — that is what IRL mode is for — and the toggle is there the whole
- * time a game is running for anyone who wants the seats back.
- *
- * Only ever consulted on a phone in an IRL room in landscape. Everywhere else
- * there is only one layout and this is so much dead storage.
+/*
+ * There is no `goleta:table-view` any more. Which way you are looking at an IRL
+ * table was a stored preference for as long as the two views were swapped by
+ * tapping words in a corner; the phone holds it now — sideways is your hand,
+ * upright is the whole table — and a preference the device is already
+ * expressing is not one worth writing down.
  */
-export type TableView = "hand" | "full";
-
-export const loadTableView = (): TableView => {
-  try {
-    return localStorage.getItem(VIEW_KEY) === "full" ? "full" : "hand";
-  } catch {
-    return "hand";
-  }
-};
-
-export const saveTableView = (view: TableView): void => {
-  try {
-    localStorage.setItem(VIEW_KEY, view);
-  } catch {
-    /* nothing to be done */
-  }
-};
 
 const SUNNY_KEY = "goleta:sunny-seen";
 

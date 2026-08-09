@@ -1,8 +1,17 @@
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 
 import type { Card, SunnyEvidence, SunnyReach } from "@goleta/engine";
 
-import { isRed, PlayingCard, SUIT_GLYPH, SUIT_LABEL, type CardSize } from "./Card.tsx";
+import { handStep, PICKER_TIGHTEST } from "../lib/handFan.ts";
+import { useBox } from "../lib/measure.ts";
+import {
+  CARD_WIDTH_PX,
+  isRed,
+  PlayingCard,
+  SUIT_GLYPH,
+  SUIT_LABEL,
+  type CardSize,
+} from "./Card.tsx";
 import { Button } from "./ui.tsx";
 
 /** A plain outline. It is furniture until it has something to say. */
@@ -468,14 +477,29 @@ export function SunnyAccusePicker({
   /**
    * Landscape, where the whole viewport is about 350px tall (#78).
    *
-   * The cards drop a size and the second line of explanation goes, because a
-   * picker that grew past the hand it is docked over would cover the cards it
-   * is asking you to compare against — which is the one thing it must never do.
+   * The cards drop a size, the second line of explanation goes, and the hand
+   * lays out in **one row, always** — whole cards with air between them while
+   * they fit, closing up onto each other once they don't, the same trade
+   * `fan.ts` and `handFan.ts` make everywhere else. A picker whose height came
+   * in card-row steps had to be capped at a fraction of the column, and then
+   * both halves of that column were short: the picker scrolled inside its cap
+   * and the hand underneath, which cannot be drawn smaller than a card, scrolled
+   * its own overflow with cards clipped top and bottom. Two nested scrolls, at
+   * the one moment nothing may be covered or cut off.
+   *
    * Nothing about *which* cards are offered changes: it is still the whole
-   * pre-draw hand, still at equal weight, still unsorted and undimmed.
+   * pre-draw hand, still at equal weight, still unsorted and undimmed. The
+   * overlap is a layout and not a hint — every card in the row leaves the same
+   * sliver, so it says nothing about which of them was legal.
    */
   compact?: boolean;
 }) {
+  const row = useRef<HTMLDivElement>(null);
+  const { width } = useBox(row);
+  // Only the compact row fans. The full table's picker has the width to wrap
+  // and the height to wrap into.
+  const step = handStep(width, reach.hand.length, "sm", PICKER_TIGHTEST);
+
   return (
     <section
       aria-label={`Name the card ${targetName} should have played`}
@@ -497,7 +521,22 @@ export function SunnyAccusePicker({
           ? "Their hand as it was when they reached."
           : "Their hand as it was when they reached. Get it wrong and you can't call again for three draws."}
       </p>
-      <div className={["flex flex-wrap", compact ? "mt-1.5 gap-1.5" : "mt-2 gap-2"].join(" ")}>
+      {/* One row when it is docked over a hand, wrapped when it isn't. The row
+          keeps no padding of its own: its width *is* the width the fan was
+          fitted to, and an inset here and an inset in the arithmetic are two
+          places to disagree. */}
+      <div
+        ref={row}
+        style={
+          compact
+            ? ({ "--fan": `${step - CARD_WIDTH_PX["sm"]}px` } as CSSProperties)
+            : undefined
+        }
+        className={[
+          "flex",
+          compact ? "mt-1.5 overflow-x-auto [&>*+*]:ml-[var(--fan)]" : "mt-2 flex-wrap gap-2",
+        ].join(" ")}
+      >
         {reach.hand.map((card) => (
           <PlayingCard
             key={card.id}

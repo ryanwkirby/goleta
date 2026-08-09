@@ -14,8 +14,15 @@ import { joinLink } from "../net/route.ts";
  * *and* the URL, and this is a faster path to exactly the same place. Anyone
  * seated can show it, host or not: whoever is dealing usually will, but
  * restricting it buys nothing and costs the one person whose phone is nearest.
+ *
+ * **It is only up in an IRL room**, because holding a phone up across a table is
+ * the whole of what it is for. In a room whose players are somewhere else it is
+ * a picture of a link they cannot point a camera at, taking the top third of the
+ * lobby to say so. The code and the copy button are what that room uses, and
+ * they keep their place either way — the block above the seats must not jump
+ * when the host changes their mind about the flag.
  */
-function RoomCode({ code }: { code: string }) {
+function RoomCode({ code, showQr }: { code: string; showQr: boolean }) {
   const [copied, setCopied] = useState(false);
   const link = joinLink(code);
 
@@ -39,14 +46,18 @@ function RoomCode({ code }: { code: string }) {
       {/* Sized to be scannable from the other side of a table without taking
           the lobby over: the seat list is what people are actually watching
           once they're in. */}
-      <div className="mt-3 flex justify-center">
-        <QrCode
-          value={link}
-          label={`Scan to join room ${code}`}
-          className="w-44 max-w-[55%] p-2.5"
-        />
-      </div>
-      <p className="mt-2 text-xs text-white/40">Point a camera at it, or type the code.</p>
+      {showQr ? (
+        <>
+          <div className="mt-3 flex justify-center">
+            <QrCode
+              value={link}
+              label={`Scan to join room ${code}`}
+              className="w-44 max-w-[55%] p-2.5"
+            />
+          </div>
+          <p className="mt-2 text-xs text-white/40">Point a camera at it, or type the code.</p>
+        </>
+      ) : null}
 
       <Button variant="ghost" className="mt-1" onClick={() => void copy()}>
         {copied ? "Link copied" : "Copy invite link"}
@@ -175,12 +186,15 @@ function HouseRulesPicker({
  * The state lives here, so every arrival at a lobby starts collapsed. That is
  * the intent rather than a side effect: a host who opened it last game was
  * changing something last game.
+ *
+ * It sits alone on its panel now that the IRL toggle leads the lobby, so it has
+ * nothing above it to be divided from and keeps no rule of its own.
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mt-3 border-t border-white/10 pt-3">
+    <div>
       <button
         type="button"
         aria-expanded={open}
@@ -188,7 +202,7 @@ function TableSettings({ summary, children }: { summary: string; children: React
         className="flex w-full items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-white">Table settings</span>
+          <span className="block text-sm font-semibold text-white">Game settings (expert)</span>
           <span className="block text-xs text-white/40">{summary}</span>
         </span>
         <span
@@ -218,9 +232,12 @@ function TableSettings({ summary, children }: { summary: string; children: React
  * a game is running. A table that only works out halfway through the first hand
  * that they are all sat together shouldn't have to finish the game first.
  *
- * It is also the one host control left outside the settings drawer. It isn't a
- * rule — it changes what every person in the room does with their phone, and a
- * table sitting down together shouldn't have to go looking for it.
+ * It is also the one host control left outside the settings drawer, and it comes
+ * before the seats rather than after them. It isn't a rule — it changes what
+ * every person in the room does with their phone — and everything below it hangs
+ * off the answer: whether the seats are numbered and orderable, whether the seat
+ * order is checked before the deal, whether each phone shows a hand or a table,
+ * and whether the QR is worth putting up at all.
  */
 function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -358,12 +375,16 @@ export function Lobby({
   const orderable = isHost && room.irl && room.seats.length > 1;
 
   /**
-   * "Sitting in this order?", asked once, on the first deal into an IRL room.
+   * "Does the seat order look correct?", asked once, on the first deal into an
+   * IRL room.
    *
    * A confirmation rather than a block, and a single line rather than an
    * explanation: getting it wrong is recoverable and getting it right is a
    * glance. Cleared by the deal it guards, so a table that has said yes is
    * never asked twice.
+   *
+   * Both answers say which one they are — "No, I'll fix it" and "Yes, let's
+   * play". A pair of bare verbs made the reader work out which button meant no.
    */
   const [checkingOrder, setCheckingOrder] = useState(false);
   const [orderChecked, setOrderChecked] = useState(false);
@@ -386,7 +407,7 @@ export function Lobby({
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
-      <RoomCode code={room.code} />
+      <RoomCode code={room.code} showQr={room.irl} />
 
       {winner ? (
         <Panel className="text-center">
@@ -394,6 +415,14 @@ export function Lobby({
           <p className="mt-1 text-lg font-semibold text-amber-300">
             {winner.name} kept the most cards
           </p>
+        </Panel>
+      ) : null}
+
+      {/* Ahead of the names, because the answer decides how the rest of this
+          screen — and every phone at the table — behaves. */}
+      {isHost ? (
+        <Panel>
+          <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
         </Panel>
       ) : null}
 
@@ -487,13 +516,15 @@ export function Lobby({
               the button a table presses once and the one it presses never. */}
           {confirming ? (
             <Panel>
-              <p className="text-sm font-semibold text-white">Sitting in this order?</p>
+              <p className="text-sm font-semibold text-white">
+                Just checking: Does the seat order look correct?
+              </p>
               <div className="mt-3 flex gap-2">
                 <Button className="flex-1" onClick={() => setCheckingOrder(false)}>
-                  Fix the order
+                  No, I'll fix it
                 </Button>
                 <Button variant="primary" className="flex-1" onClick={dealNow}>
-                  {room.gamesPlayed > 0 ? "Next game" : "Deal"}
+                  Yes, let's play
                 </Button>
               </div>
             </Panel>
@@ -505,12 +536,11 @@ export function Lobby({
               onClick={deal}
               disabled={!enough}
             >
-              {room.gamesPlayed > 0 ? "Next game" : "Deal"}
+              Continue
             </Button>
           )}
 
           <Panel>
-            <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
             <TableSettings summary={describeTable(room, anyBots)}>
               <HouseRulesPicker
                 rules={room.houseRules}

@@ -32,6 +32,18 @@ const GAP = 6;
  */
 export const TIGHTEST = 44;
 
+/**
+ * The same floor for the accusation picker, which fans somebody else's hand at
+ * `sm` so it can promise one row whatever they are holding.
+ *
+ * Lower, because the card is lower: a `sm` card is 40px wide to begin with, so
+ * 44 would be no overlap at all and the picker would wrap or scroll instead —
+ * which is the thing it exists not to do. It is still a tap floor rather than
+ * `fan.ts`'s reading floor of 22, because unlike the seat strip every card in
+ * here is a card you accuse somebody with.
+ */
+export const PICKER_TIGHTEST = 28;
+
 /** No overlap at all: a whole card and its gap. Nothing is ever looser. */
 export const loosest = (size: CardSize): number => CARD_WIDTH_PX[size] + GAP;
 
@@ -50,10 +62,17 @@ export const handWidth = (cards: number, step: number, size: CardSize): number =
  *
  * `xl` needs a row with room for the card, the lift a selected card takes, and
  * the gap under it. Anything shorter falls back to `lg`, which is what the full
- * table draws the pile at — no landscape phone should ever be below it, but a
- * short window is not a reason to render a broken row.
+ * table draws the pile at, and shorter still to `md`.
+ *
+ * That last rung is the one a picker needs. `lg` was the floor while nothing
+ * ever docked over the hand; with a picker up, the row is left less height than
+ * an `lg` card and its padding, and the row scrolls its own overflow rather than
+ * admitting it — cards clipped top and bottom at the exact moment the screen is
+ * asking you to read a hand. Stepping down again is the whole of the fix: a
+ * short row is not a reason to render a broken one.
  */
-export const handSize = (rowHeight: number): CardSize => (rowHeight >= 216 ? "xl" : "lg");
+export const handSize = (rowHeight: number): CardSize =>
+  rowHeight >= 216 ? "xl" : rowHeight >= 168 ? "lg" : "md";
 
 /**
  * Left edge to left edge: how much of a card its neighbour leaves showing.
@@ -64,11 +83,17 @@ export const handSize = (rowHeight: number): CardSize => (rowHeight >= 216 ? "xl
  * cost rather than a tighter sliver — the same call `fan.ts` makes, for the
  * same reason.
  */
-export const handStep = (available: number, cards: number, size: CardSize): number => {
+export const handStep = (
+  available: number,
+  cards: number,
+  size: CardSize,
+  /** Where tightening stops. The picker fans smaller cards, so it sets its own. */
+  tightest: number = TIGHTEST,
+): number => {
   const loose = loosest(size);
   if (cards <= 1 || available <= 0) return loose;
-  for (let step = loose; step > TIGHTEST; step -= 1) {
+  for (let step = loose; step > tightest; step -= 1) {
     if (handWidth(cards, step, size) <= available) return step;
   }
-  return TIGHTEST;
+  return tightest;
 };

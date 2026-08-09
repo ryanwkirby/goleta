@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { CARD_WIDTH_PX } from "../src/components/Card.tsx";
-import { TIGHTEST, handSize, handStep, handWidth, loosest } from "../src/lib/handFan.ts";
+import {
+  PICKER_TIGHTEST,
+  TIGHTEST,
+  handSize,
+  handStep,
+  handWidth,
+  loosest,
+} from "../src/lib/handFan.ts";
 
 /** A landscape phone, once the padding either side has taken its share. */
 const PHONE = 828;
@@ -21,7 +28,30 @@ describe("how big the cards go", () => {
 
   it("falls back rather than rendering a row taller than its own box", () => {
     expect(handSize(180)).toBe("lg");
-    expect(handSize(0)).toBe("lg");
+    expect(handSize(0)).toBe("md");
+  });
+
+  it("steps down again for a row a picker is docked over", () => {
+    // A landscape phone with the accusation picker up: the hand keeps what is
+    // left, and what is left is under an `lg` card and the row's own padding.
+    // Scrolling the hand instead is the thing #96 removed.
+    expect(handSize(150)).toBe("md");
+    expect(CARD_WIDTH_PX.md).toBeLessThan(CARD_WIDTH_PX.lg);
+  });
+
+  it("keeps every rung tall enough for the card it names, plus the lift", () => {
+    // 32px of padding on the row, and 14px of it is the lift a selected card
+    // takes; a rung that didn't clear its own card is a clipped row.
+    const CARD_HEIGHT = { md: 96, lg: 128, xl: 176 };
+    const PADDING = 32;
+    for (const [height, size] of [
+      [216, "xl"],
+      [168, "lg"],
+      [136, "md"],
+    ] as const) {
+      expect(handSize(height)).toBe(size);
+      expect(height).toBeGreaterThanOrEqual(CARD_HEIGHT[size] + PADDING);
+    }
   });
 
   it("answers from the height alone, so a hand's size never says how big it is", () => {
@@ -88,5 +118,52 @@ describe("fanning your own hand in landscape", () => {
   it("agrees with the card widths it is drawn against", () => {
     expect(loosest("xl")).toBe(CARD_WIDTH_PX.xl + 6);
     expect(handWidth(1, 999, "xl")).toBe(CARD_WIDTH_PX.xl);
+  });
+});
+
+/**
+ * The accusation picker fans somebody else's hand at `sm`, and promises one row
+ * whatever they are holding — a picker whose height came in card-row steps is
+ * what left the landscape column short at both ends (#96).
+ */
+const step = (cards: number, available = PHONE): number =>
+  handStep(available, cards, "sm", PICKER_TIGHTEST);
+
+describe("fanning the hand a Sunny call is named from", () => {
+  it("leaves a hand that already fits spread out", () => {
+    for (const cards of [1, 5, 12, 18]) {
+      if (handWidth(cards, loosest("sm"), "sm") > PHONE) continue;
+      expect(step(cards)).toBe(loosest("sm"));
+    }
+  });
+
+  it("closes up rather than wrapping, for any hand a game can reach", () => {
+    // 52 cards is every card in the deck in one hand: impossible in play, and
+    // the row still answers with a single sliver rather than a second row.
+    for (const cards of [20, 26, 40, 52]) {
+      expect(step(cards)).toBeLessThan(loosest("sm"));
+      expect(step(cards)).toBeGreaterThanOrEqual(PICKER_TIGHTEST);
+    }
+  });
+
+  it("fits every hand it tightens for", () => {
+    for (let cards = 1; handWidth(cards, PICKER_TIGHTEST, "sm") <= PHONE; cards += 1) {
+      expect(handWidth(cards, step(cards), "sm")).toBeLessThanOrEqual(PHONE);
+    }
+  });
+
+  it("has a floor low enough to overlap at all, and high enough to tap", () => {
+    // `TIGHTEST` is wider than a `sm` card, so the hand's own floor would mean
+    // no overlap and a wrapped picker — the thing being fixed.
+    expect(PICKER_TIGHTEST).toBeLessThan(CARD_WIDTH_PX.sm);
+    expect(TIGHTEST).toBeGreaterThan(CARD_WIDTH_PX.sm);
+    // Still a tap target rather than `fan.ts`'s reading sliver: every card in
+    // the picker is a card you accuse somebody with.
+    expect(PICKER_TIGHTEST).toBeGreaterThan(22);
+  });
+
+  it("holds a real offender's hand in one row on a landscape phone", () => {
+    // Twenty is a late game where drawing has gone well for them.
+    expect(handWidth(20, step(20), "sm")).toBeLessThanOrEqual(PHONE);
   });
 });

@@ -71,8 +71,8 @@ export function RotatePanel({ offline }: { offline: boolean }) {
       <div>
         <h2 className="text-xl font-semibold text-amber-300">Turn your phone sideways</h2>
         <p className="mt-2 text-balance text-sm leading-relaxed text-white/70">
-          Everyone's in the same room, so this phone is just your hand. It needs the long way
-          round.
+          Because everyone's in the same room, turn your phone sideways and lay it flat on the
+          table. You should be able to see everyone else's phone screen.
         </p>
       </div>
 

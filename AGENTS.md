@@ -202,11 +202,11 @@ order is real in every room; it is only a table sitting in one that has a
 physical order for it to disagree with, and a game that deals across the table
 and back gets noticed three turns in, when it's too late to fix. So the lobby
 numbers the seats and gives the host up and down arrows, and the first deal into
-an IRL room asks *"Sitting in this order?"* once. `moveSeat` on the wire is
-deliberately **not** gated on `irl`: which rooms are worth offering arrows in is
-a presentation call, and refusing the message would throw an error at a host who
-flipped an unrelated setting mid-shuffle. Moving off either end does nothing
-rather than refusing, for the same reason.
+an IRL room asks *"Does the seat order look correct?"* once. `moveSeat` on the
+wire is deliberately **not** gated on `irl`: which rooms are worth offering
+arrows in is a presentation call, and refusing the message would throw an error
+at a host who flipped an unrelated setting mid-shuffle. Moving off either end
+does nothing rather than refusing, for the same reason.
 
 A table has **two views, one brain**. `Table.tsx` holds all the state — the
 Sunny state machine, the stall timer, the assist, the sort — and picks a layout
@@ -214,13 +214,25 @@ at the bottom. `HandView` is the landscape one: your hand at `xl`, and a peek
 strip carrying the table centre. Anything that needs table state belongs on
 `Table`; the layouts are given what to draw.
 
+**Which way up the phone is picks between them, and nothing else does.**
+Sideways is your hand, upright is the whole table. There is no stored
+preference and no control to tap — the pair of `⇄` links that used to swap them
+are gone, along with `goleta:table-view`, because a preference the device is
+already expressing in the open, where the table can see it, does not want
+writing down as well. The rotate prompt is what teaches it, and it is asked once
+per **deal**: `Table` remembers which `room.gamesPlayed` this phone has been
+seen in landscape for, so a phone already sideways when the cards come out is
+never prompted, and the next deal asks again. Do not make the prompt a
+once-ever flag — sitting down to a new hand is when a phone gets picked up, put
+down or handed over.
+
 Things that will read as oversights in that view and are not:
 
 - **The peek strip shows no hands, at any size.** It carries the room code, the
   piles, the card in play, whose turn and the sun, and that is the whole list.
   It can be that thin because `sunnyReach` already feeds the picker the evidence
   a call is made from; seeing every hand is what *noticing* a reach is easier
-  with, and the toggle to the full table is the answer to that. A sliver too
+  with, and turning the phone upright is the answer to that. A sliver too
   small to read a rank off is worse than nothing (`fan.ts` has a floor for
   exactly this).
 - **The draw pile in the strip stays tappable when you hold a play**, with no
@@ -235,11 +247,23 @@ Things that will read as oversights in that view and are not:
   column, and the hand steps down a card size to make it. Laying them over the
   hand was the obvious thing and it covers the cards the picker is asking you to
   compare against — the same trade the full table already refused.
+- **The accusation picker is one row of cards, whatever the offender holds**,
+  fanned by the same arithmetic as everything else here and floored at
+  `PICKER_TIGHTEST`. That is what makes docking work: a picker whose height came
+  in card-row steps had to be capped at a fraction of the column, and then the
+  picker scrolled inside its cap *and* the hand under it scrolled its own
+  overflow, because `handSize` had no rung below `lg` to step down to. It has
+  one now. Nothing in the column scrolls while a call is being composed — do not
+  reintroduce a cap, a wrap or a scroll to fit a bigger hand in. The overlap is
+  a layout, not a hint: every card leaves the same sliver, so it still says
+  nothing about which of them was legal (#96).
 - **The rotate prompt is the mechanism, not a fallback.** `screen.orientation
   .lock()` needs fullscreen and iOS Safari has no implementation, so no page can
   turn somebody's phone. The panel is gated on a coarse pointer and a short side
   under 500px — never on a user agent — so a portrait iPad is never blocked, and
-  nothing pauses behind it.
+  nothing pauses behind it. It blocks the *first* upright look at each deal and
+  nothing after it: once this phone has been turned, upright is a view rather
+  than a mistake.
 
 ### The shared table screen
 

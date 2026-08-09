@@ -182,7 +182,13 @@ export function Hand({
       // `overflow-x-auto` only overrides it once there is genuinely too much.
       style={step === null ? undefined : ({ "--fan": `${step - CARD_WIDTH_PX[size]}px` } as CSSProperties)}
       className={[
-        "flex items-end overflow-x-auto pb-2 pt-6",
+        // Same air above the cards as below them. The top has to clear the 14px
+        // a selected card lifts — this row sets `overflow-x`, which makes the
+        // vertical axis scroll with it, so anything rising past the padding gets
+        // clipped — and the bottom never needed to, so it never got it. Nobody
+        // read the pair together until the turn ring was drawn around them and
+        // the hand sat visibly low in its own frame.
+        "flex items-end overflow-x-auto py-4",
         // With a step, the row's width *is* the width the fan was fitted to, so
         // it keeps no padding of its own — an inset here and an inset in the
         // arithmetic are two places to disagree, and they did.

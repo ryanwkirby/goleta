@@ -88,7 +88,7 @@ export function App() {
         <div className="flex flex-1 items-start justify-center p-5 sm:items-center">
           <Rules
             onDone={dismissRules}
-            ctaLabel={room.status === "lobby" ? "To the table" : "Play"}
+            ctaLabel={room.status === "lobby" ? "Continue" : "Play"}
             onChooseHints={firstRead ? chooseHints : undefined}
           />
         </div>

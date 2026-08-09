@@ -27,13 +27,10 @@ import {
   gamesFinished,
   hasSeenSunny,
   loadHandSort,
-  loadTableView,
   markSunnySeen,
   recordGameFinished,
   saveHandSort,
-  saveTableView,
   wantsFirstGameHints,
-  type TableView,
 } from "../net/identity.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
 import { HandView } from "./HandView.tsx";
@@ -116,8 +113,16 @@ export function Table({
   const [stalled, setStalled] = useState(false);
   const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
   const [wantedHints] = useState(wantsFirstGameHints);
-  /** Which way you last looked at an IRL table. Per device, not per room. */
-  const [view, setView] = useState<TableView>(loadTableView);
+  /**
+   * Which deal this phone has already been turned sideways for, if any.
+   *
+   * The deal rather than a bare flag: a boolean reset by an effect on the game
+   * changing would put the rotate panel back up for a frame at the top of every
+   * hand. `gamesPlayed` is constant through a deal, moves at the next one, and
+   * survives a reconnect — which the event log, which starts empty on every page
+   * load, does not.
+   */
+  const [rotatedFor, setRotatedFor] = useState<number | null>(null);
   const phone = useIsPhone();
   const portrait = useIsPortrait();
   const nameOf = namerFor(room);
@@ -322,23 +327,29 @@ export function Table({
    * comes back when it is done.
    */
   const judging = peeling || announcing || caughtHold;
-  const compact = irlPhone && !portrait && view === "hand" && !judging;
+  const compact = irlPhone && !portrait && !judging;
 
-  const showFullTable = (): void => {
-    setView("full");
-    saveTableView("full");
-  };
-
-  const showHandView = (): void => {
-    setView("hand");
-    saveTableView("hand");
-  };
+  /**
+   * Which way up the phone is *is* the toggle, once it has been turned once.
+   *
+   * A phone in landscape has already obeyed a prompt it may never have been
+   * shown, so it counts from the moment it is seen that way — and it counts
+   * against this deal, so the next one asks again. Sitting down to a new hand is
+   * when a phone gets picked up, put down or handed over.
+   */
+  useEffect(() => {
+    if (irlPhone && !portrait) setRotatedFor(room.gamesPlayed);
+  }, [irlPhone, portrait, room.gamesPlayed]);
 
   // A landscape layout on a phone held upright shows half of itself, and no web
   // page can turn somebody's phone for them — so the prompt *is* the mechanism
-  // (#79). Nothing pauses behind it: the game is on the server, and a player
-  // holding their phone the wrong way is late, not somebody the table waits on.
-  if (irlPhone && portrait && view === "hand") return <RotatePanel offline={offline} />;
+  // (#79). It is asked once a deal: after that, upright means the whole table,
+  // which is a view rather than a mistake. Nothing pauses behind it either way —
+  // the game is on the server, and a player holding their phone the wrong way is
+  // late, not somebody the table waits on.
+  if (irlPhone && portrait && rotatedFor !== room.gamesPlayed) {
+    return <RotatePanel offline={offline} />;
+  }
 
   if (compact) {
     return (
@@ -367,7 +378,6 @@ export function Table({
           onStartAccusing={startAccusing}
           onStopAccusing={stopAccusing}
           onAccuse={accuse}
-          onShowFullTable={showFullTable}
         />
         {explainSunny ? (
           <SunnyExplainer
@@ -408,23 +418,14 @@ export function Table({
               same room: {room.irl ? "on" : "off"}
             </Button>
           ) : null}
-          {/* The way back, and only where there is somewhere to go back to: a
-              phone at an IRL table that has chosen the whole table over its own
-              hand. It sits with the toggle the hand view puts in the same
-              corner, so swapping either way is the same tap in the same place. */}
-          {irlPhone && view === "full" ? (
-            <Button
-              variant="ghost"
-              className={[room.hostId === game.you ? "" : "ml-auto", "px-2 py-1 text-xs"].join(" ")}
-              onClick={showHandView}
-            >
-              <span aria-hidden>⇄</span> my hand
-            </Button>
-          ) : null}
+          {/* No way back to the hand here, and none needed: at an IRL table the
+              phone is the toggle. Turning it sideways is the hand view and
+              turning it upright is this one — a gesture the table can see you
+              make, which two words in a corner never were. */}
           <Button
             variant="ghost"
             className={[
-              room.hostId === game.you || (irlPhone && view === "full") ? "" : "ml-auto",
+              room.hostId === game.you ? "" : "ml-auto",
               "px-2 py-1 text-xs",
             ].join(" ")}
             onClick={onShowRules}

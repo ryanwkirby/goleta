@@ -17,13 +17,13 @@ import {
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
-import { namerFor } from "../lib/format.ts";
+import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { PEEK_TABLE } from "../motion/plan.ts";
-import { TableMotion } from "../motion/TableMotion.tsx";
+import { TableMotion, useMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
   hasSeenSunny,
@@ -50,47 +50,50 @@ const ANNOUNCE_MS = 3200;
 const STALL_MS = 7000;
 
 /**
- * What the table is waiting for, said plainly.
+ * The line that says what the table is waiting for, and the picker it asks for.
  *
- * The two steps of a landed Sunny call number themselves. Read on its own,
- * "now the punishment card" tells you nothing about what happened or how much
- * of it is left, which is exactly how a player ends up wondering what hit them
- * (#66). Step three isn't a prompt — nobody is asked for it — but it is counted
- * so the numbering matches what the dialog promised.
+ * Both are components rather than inline JSX because both have to read the
+ * motion layer — the suit ask waits for the deal to finish (#75) — and `Table`
+ * renders `TableMotion` rather than sitting underneath it. `HandView` is already
+ * a child of the provider and reads the same two things for itself.
  */
-const prompt = (game: GameView, nameOf: (id: string) => string, assist: boolean): string => {
+function TurnPrompt({
+  game,
+  nameOf,
+  assist,
+}: {
+  game: GameView;
+  nameOf: NameOf;
+  assist: boolean;
+}) {
+  const { dealing } = useMotion();
   const mine = game.waitingOn === game.you;
-  switch (game.phase.kind) {
-    case "over":
-      return game.winnerId
-        ? `${nameOf(game.winnerId)} wins, still holding cards.`
-        : "Deadlock — nobody could move.";
-    case "surrender": {
-      const yours = game.phase.playerId === game.you;
-      const who = yours ? "You" : nameOf(game.phase.playerId);
-      return yours
-        ? "☀️ Step 2 of 3 — the punishment card. Any card in your hand; it doesn't have to match."
-        : `${who} owes a punishment card — step 2 of 3.`;
-    }
-    case "suit":
-      // The namer, not the player to move — under Power of Eights the suit is
-      // owed by the next seat, and under Dealer's Choice by the dealer before
-      // anyone has played at all.
-      return mine ? "Name a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
-    case "sunnyPlay":
-      return mine
-        ? "☀️ Step 1 of 3 — make the play you skipped. Tap it twice."
-        : `${nameOf(game.turnPlayerId)} has to make the play they skipped — step 1 of 3.`;
-    case "action":
-      if (!mine) return `${nameOf(game.turnPlayerId)} to play.`;
-      // Both of these give the answer away — being told you *must* play is
-      // being told a card matches — so neither is said unless help is on.
-      if (!assist) return "Your turn.";
-      return game.youMustPlay
-        ? "Your turn — you have a card that matches, so you have to play it."
-        : "Nothing matches. Draw a card.";
-  }
-};
+  return (
+    <p
+      className={[
+        "text-center text-sm",
+        mine && game.status !== "over" ? "font-semibold text-amber-300" : "text-white/60",
+      ].join(" ")}
+      aria-live="polite"
+    >
+      {turnPrompt(game, nameOf, assist, dealing)}
+    </p>
+  );
+}
+
+/**
+ * The suit picker, held back until the cards are down.
+ *
+ * Under Dealer's Choice the game opens in `phase: "suit"`, so without this the
+ * picker was up before the deal had finished — asking for a suit for an 8 that
+ * had not landed yet (#75). Reduced motion plans no flights, so `dealing` is
+ * never true there and the picker appears at once, with nothing waited for.
+ */
+function DockedSuitPicker({ onPick }: { onPick: (suit: Suit) => void }) {
+  const { dealing } = useMotion();
+  if (dealing) return null;
+  return <SuitPicker onPick={onPick} />;
+}
 
 export function Table({
   room,
@@ -389,7 +392,6 @@ export function Table({
           refusal={refusal}
           canDraw={mine && game.phase.kind === "action" && !finished}
           onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
-          prompt={prompt(game, nameOf, assist)}
           mine={mine}
           handSort={handSort}
           onCycleSort={cycleSort}
@@ -500,15 +502,7 @@ export function Table({
             }
           />
 
-          <p
-            className={[
-              "text-center text-sm",
-              mine && !finished ? "font-semibold text-amber-300" : "text-white/60",
-            ].join(" ")}
-            aria-live="polite"
-          >
-            {prompt(game, nameOf, assist)}
-          </p>
+          <TurnPrompt game={game} nameOf={nameOf} assist={assist} />
         </div>
 
         {finished ? (
@@ -552,7 +546,7 @@ export function Table({
         ) : null}
 
         {game.phase.kind === "suit" && mine ? (
-          <SuitPicker
+          <DockedSuitPicker
             onPick={(suit: Suit) =>
               send({ t: "intent", intent: { type: "chooseSuit", playerId: me, suit } })
             }

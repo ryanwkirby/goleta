@@ -201,6 +201,24 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   was silent on exactly that play (#114). Set only in `chooseSuit`, cleared
   wherever the card in play changes, and read only by `lib/pile.ts`. Don't move
   it into `activeSuit`, and don't tidy it away for having no rule behind it.
+- **The suit picker waits for the deal, and nothing else waits for anything.**
+  `MotionApi.dealing` is the only "this layer is busy" the motion code exposes,
+  and it is deliberately about the deal rather than about movement in general.
+  Exactly one prompt can arrive before the thing it is asking about: under
+  **Dealer's Choice** the game opens in `phase: "suit"`, so the dealer was asked
+  to name a suit for an 8 that had not landed, on a pile that was not there yet
+  (#75). Every other prompt describes a state somebody can already act on, and a
+  card in the air is no reason to hold one back — do not grow this into a
+  general gate on `flights.length`, which would quietly delay every picker and
+  every prompt behind the nearest animation.
+
+  The engine is untouched by it: `startGame` opens in the suit phase the moment
+  the game starts, and that is correct. This is the screen catching up with the
+  state, never the state waiting for the screen. The line and the picker are
+  gated **together** — a prompt asking for a suit above a picker that isn't
+  there is worse than the thing it replaced — and it is counted off the deal's
+  own flights as they land rather than timed, so reduced motion, which plans no
+  flights at all, waits for nothing.
 - **A refused move is answered against the hand, and every other notice at the
   top of the screen.** That looks like an inconsistency and is the point. The
   top belongs to the Sunny announcement, which is the one thing at this table

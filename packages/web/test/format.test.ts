@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { Card, GameEvent } from "@goleta/engine";
+import type { Card, GameEvent, GameView } from "@goleta/engine";
 
-import { describeEvent, spellSuits } from "../src/lib/format.ts";
+import { describeEvent, spellSuits, turnPrompt } from "../src/lib/format.ts";
 
 /** `card("10D")` — the same shorthand the engine tests use. */
 const card = (spec: string): Card => ({
@@ -56,5 +56,52 @@ describe("saying the same line out loud", () => {
   it("leaves a line with no cards in it alone", () => {
     const line = say({ type: "gameOver", winnerId: "p1", reason: "lastStanding" });
     expect(spellSuits(line)).toBe(line);
+  });
+});
+
+/** Only the fields the prompt reads; the rest of the view is irrelevant. */
+const table = (overrides: Partial<GameView> = {}): GameView =>
+  ({
+    you: "p1",
+    waitingOn: "p1",
+    turnPlayerId: "p1",
+    phase: { kind: "action" },
+    youMustPlay: false,
+    status: "playing",
+    winnerId: null,
+    ...overrides,
+  }) as GameView;
+
+const asks = (game: GameView, dealing?: boolean): string =>
+  turnPrompt(game, nameOf, false, dealing);
+
+describe("what the table is waiting for", () => {
+  it("asks the namer for a suit, and tells everyone else who is naming it", () => {
+    const suit = { kind: "suit", playerId: "p1" } as const;
+    expect(asks(table({ phase: suit }))).toBe("Name a suit.");
+    expect(asks(table({ phase: suit, you: "p2" }))).toBe("Ana is naming a suit.");
+  });
+
+  // Under Dealer's Choice the game opens in `phase: "suit"`, so the ask can
+  // arrive while the cards are still going out. The picker is held back with it
+  // — the two have to appear together, or the line asks for something there is
+  // nothing on screen to answer with (#75).
+  it("says the table is dealing rather than asking for a suit mid-deal", () => {
+    const suit = { kind: "suit", playerId: "p1" } as const;
+    expect(asks(table({ phase: suit }), true)).toBe("Dealing…");
+    expect(asks(table({ phase: suit, you: "p2" }), true)).toBe("Dealing…");
+  });
+
+  it("holds nothing else back for the deal — every other prompt can be acted on", () => {
+    expect(asks(table(), true)).toBe("Your turn.");
+    expect(asks(table({ you: "p2" }), true)).toBe("Ana to play.");
+    expect(asks(table({ phase: { kind: "sunnyPlay" } }), true)).toContain("Step 1 of 3");
+  });
+
+  // Reduced motion plans no flights at all, so nothing is ever mid-deal there —
+  // and the default is what every caller outside the motion layer gets.
+  it("asks for the suit straight away when nothing is in the air", () => {
+    expect(asks(table({ phase: { kind: "suit", playerId: "p1" } }))).toBe("Name a suit.");
+    expect(asks(table({ phase: { kind: "suit", playerId: "p1" } }), false)).toBe("Name a suit.");
   });
 });

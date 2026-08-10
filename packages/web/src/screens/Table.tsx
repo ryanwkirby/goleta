@@ -18,6 +18,7 @@ import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { HostSettingsCog } from "../components/HostSettings.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
+import { RoomInvite } from "../components/RoomInvite.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
@@ -119,6 +120,8 @@ export function Table({
   offline: boolean;
 }) {
   const [explainSunny, setExplainSunny] = useState(false);
+  /** The invite is open over the table. Anybody's to open, host or not (#135). */
+  const [inviting, setInviting] = useState(false);
   /** Whose reach you are part-way through accusing, if any. */
   const [accusing, setAccusing] = useState<string | null>(null);
   const [ackedCall, setAckedCall] = useState<number | null>(null);
@@ -398,6 +401,7 @@ export function Table({
           onCycleSort={cycleSort}
           stalled={stalled}
           onAskForHelp={askForHelp}
+          onShowInvite={() => setInviting(true)}
           shouting={shoutingHere}
           helpFrom={helpFrom ? nameOf(helpFrom.playerId) : null}
           accusing={accusing}
@@ -413,6 +417,14 @@ export function Table({
               setExplainSunny(false);
             }}
           />
+        ) : null}
+
+        {/* Over the hand rather than docked into it, unlike the two pickers.
+            Nothing here is a decision made by reading your cards against the
+            board, so covering them costs nothing — and this is the view an IRL
+            table is actually in when somebody walks up (#135). */}
+        {inviting ? (
+          <RoomInvite code={room.code} underWay={!finished} onClose={() => setInviting(false)} />
         ) : null}
       </TableMotion>
     );
@@ -448,7 +460,26 @@ export function Table({
               onIrl={(on) => send({ t: "setIrl", on })}
             />
           ) : null}
-          <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
+          {/* The code was four characters saying what the room was called and
+              doing nothing, which is the whole of what a code is for when
+              there is no lobby left to go back to. Tapping it is the invite —
+              a person or a shared screen, same four characters, different link
+              (#135). Anybody may open it: handing somebody the way in is not a
+              host power, and nothing behind it changes the room. */}
+          <button
+            type="button"
+            aria-label={`Invite to room ${room.code}`}
+            aria-haspopup="dialog"
+            title="Show the invite"
+            onClick={() => setInviting(true)}
+            className={[
+              "-m-1 shrink-0 rounded-lg p-1 font-mono tracking-[0.2em] text-white/70",
+              "transition-colors hover:text-white",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+            ].join(" ")}
+          >
+            {room.code}
+          </button>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
           {/* No way back to the hand here, and none needed: at an IRL table the
               phone is the toggle. Turning it sideways is the hand view and
@@ -621,6 +652,10 @@ export function Table({
               setExplainSunny(false);
             }}
           />
+        ) : null}
+
+        {inviting ? (
+          <RoomInvite code={room.code} underWay={!finished} onClose={() => setInviting(false)} />
         ) : null}
 
         {graduating ? <Graduation onDone={() => setGraduating(false)} /> : null}

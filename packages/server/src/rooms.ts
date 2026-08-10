@@ -316,7 +316,21 @@ export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
 };
 
 /**
- * The table's house rules, chosen by the host between games.
+ * The table's house rules, set by the host — during a game as well as between
+ * them, because what they choose is what the *next* deal plays.
+ *
+ * This used to be frozen mid-game alongside `setBotSpeed`, and the two are not
+ * alike. Bot pace is read live, every time a bot is scheduled, so changing it
+ * moves a challenge window somebody is already watching. House rules are read
+ * exactly once, at `beginGame`, and the game keeps its own copy of them from
+ * that moment on — so a hand already dealt cannot be reached from here, and the
+ * freeze was buying nothing a host could see. A table that works out mid-hand
+ * that they want the Sunny Rule off should be able to say so and have the next
+ * deal honour it, which is what the settings cog behind the table is for (#134).
+ *
+ * The copy is what makes that true, so it is taken deliberately in `beginGame`
+ * rather than relied on here. This function replaces `room.options` wholesale
+ * and never mutates it in place; keep it that way.
  *
  * Every field is checked against its permitted values rather than trusted:
  * this arrives from a browser, and the engine's `GameOptions` also carries a
@@ -325,7 +339,6 @@ export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
  */
 export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRules): void => {
   requireHost(room, byPlayerId);
-  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
   if (rules.eights !== "playerNames" && rules.eights !== "nextPlayerNames") {
     fail("No such rule for eights");
   }
@@ -426,7 +439,12 @@ export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
   room.game = startGame(
     room.seats.map((seat) => seat.id),
     newSeed(),
-    room.options,
+    // The game's own copy, taken here and never shared. `startGame` keeps what
+    // it is handed on the state, and the host may change the table's rules
+    // while this game is running (#134) — the next deal is what those are for,
+    // and this hand must not feel them. Nothing downstream should have to know
+    // that `setHouseRules` happens to replace the object rather than edit it.
+    { ...room.options },
     dealerIndex,
   );
   touch(room);

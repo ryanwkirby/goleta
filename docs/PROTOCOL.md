@@ -198,8 +198,16 @@ there is no version of it for a window still open.
 
 `RoomView.houseRules` carries what the table is playing: `sunny` (a boolean),
 `eights` and `seedEight`. The host changes them with `{ t: "setHouseRules",
-rules }`, between games only — the server rejects it while a game is running,
-the same as bot speed.
+rules }`, **at any time, a game in progress included** — unlike bot speed, which
+is still refused while one is running.
+
+The difference is when each is read. Bot pace is read live, every time a bot is
+scheduled, so changing it mid-game moves a challenge window somebody is already
+watching. House rules are read exactly once, at the deal, and the game keeps its
+own copy from that moment — so what the host is editing is always the *next*
+game, and a hand already out cannot be reached from here. That is what the
+settings cog behind the table is for (#134); the panel says so in as many words,
+because a control whose effect is invisible until the next deal has to admit it.
 
 The message is deliberately not `GameOptions`. The engine's options also carry
 a deck count and a starting hand size, and those are never accepted from a
@@ -224,12 +232,13 @@ putting it on the rules path would hand the engine an input it must ignore and a
 `GameOptions` field that means nothing to a simulation. It belongs beside
 `botSpeed` — a property of the room.
 
-**It is also the one host setting not frozen mid-game.** Bot speed is frozen
-because changing the pace moves a challenge window somebody may already be
-watching; house rules are frozen because rules changing under a live hand is
-incoherent. Neither applies here. No timer reads it, no legality turns on it,
-and the server does no more than copy it to every client — so a table that gets
-three turns in and realises they are all sat together can flip it there and then.
+**Bot speed is the only host setting frozen mid-game**, because changing the
+pace moves a challenge window somebody may already be watching. Nothing like
+that applies to this one: no timer reads it, no legality turns on it, and the
+server does no more than copy it to every client — so a table that gets three
+turns in and realises they are all sat together can flip it there and then. It
+takes effect on the tap, which is the other half of what the cog's panel has to
+make clear: house rules beside it wait for the next deal, and this does not.
 
 It is room state, so it is in the snapshot and survives a redeploy.
 

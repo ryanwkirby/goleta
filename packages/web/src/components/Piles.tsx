@@ -61,7 +61,6 @@ export function Piles({
   // nothing here moves or unmounts, so every anchor stays exactly where it was.
   const aside = peel ? "opacity-25 transition-opacity duration-300" : "transition-opacity";
   const pileBox = size === "xl" ? "h-44 w-33 rounded-2xl" : "h-32 w-24 rounded-xl";
-  const suitBox = size === "xl" ? "h-44" : "h-32";
 
   return (
     <div className="flex items-center justify-center gap-6">

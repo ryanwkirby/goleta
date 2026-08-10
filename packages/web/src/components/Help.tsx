@@ -7,7 +7,7 @@
  * taking it is never quiet.
  */
 
-import { Button, Panel } from "./ui.tsx";
+import { Button } from "./ui.tsx";
 
 /**
  * Appears a few seconds into a turn you haven't moved on. Deliberately quiet:

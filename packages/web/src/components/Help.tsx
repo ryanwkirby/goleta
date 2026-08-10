@@ -90,17 +90,27 @@ export function HelpAsk({ name, className = "" }: { name?: string; className?: s
  */
 export function Graduation({ onDone }: { onDone: () => void }) {
   return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/60 p-4 sm:items-center">
-      <Panel className="w-full max-w-md bg-felt-900 ring-amber-300/30">
-        <h2 className="text-xl font-semibold text-amber-300">Nice one</h2>
-        <p className="mt-3 text-sm leading-relaxed text-white/80">
-          Now you've got the hang of the basics, we'll stop showing you which of your cards are
-          playable. Help's still there whenever you want it — just ask.
-        </p>
-        <Button variant="primary" full className="mt-5" onClick={onDone}>
-          Deal me in
-        </Button>
-      </Panel>
+    <div
+      className={[
+        "fixed inset-0 z-30 flex items-end justify-center bg-black/60 sm:items-center",
+        "pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]",
+        "pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]",
+      ].join(" ")}
+    >
+      <div className="flex w-full max-h-full max-w-md flex-col overflow-hidden rounded-2xl bg-felt-900 ring-1 ring-amber-300/30">
+        <div className="overflow-y-auto p-5 pb-4">
+          <h2 className="text-xl font-semibold text-amber-300">Nice one</h2>
+          <p className="mt-3 text-sm leading-relaxed text-white/80">
+            Now you've got the hang of the basics, we'll stop showing you which of your cards are
+            playable. Help's still there whenever you want it — just ask.
+          </p>
+        </div>
+        <div className="shrink-0 p-5 pt-0">
+          <Button variant="primary" full onClick={onDone}>
+            Deal me in
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

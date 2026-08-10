@@ -63,6 +63,24 @@ export interface RoomView {
    * never learns it exists.
    */
   irl: boolean;
+  /**
+   * How many shared table screens are connected to this room right now (#138).
+   *
+   * A count rather than a list, because there is nothing to list: a shared
+   * screen holds no seat, no name and no identity, and never will — it is a
+   * device somebody propped in the middle of a table. The lobby draws a row per
+   * screen off this number, so one arriving is a row appearing.
+   *
+   * **Connection state, not room state.** It is counted off the open sockets
+   * every time a view is built and never stored on the room, so it cannot go
+   * stale, cannot be persisted, and comes back as zero after a restart — which
+   * is the truth, since a restarted process has nobody connected to it.
+   *
+   * Nothing may start *depending* on this being non-zero: the phone view still
+   * carries its own peek strip, and a table with no shared screen plays exactly
+   * the game it played before.
+   */
+  tableScreens: number;
 }
 
 export type ClientMessage =

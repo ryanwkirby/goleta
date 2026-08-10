@@ -67,3 +67,43 @@ export const useFullscreen = (): { offer: boolean; request: () => void } => {
 
   return { offer: SUPPORTED && !active, request };
 };
+
+/**
+ * Whether the browser is keeping a strip of this screen for itself.
+ *
+ * Three ways it isn't: the page holds fullscreen, the page was launched from a
+ * home screen (`display-mode`), or iOS says the same thing in its own words.
+ * All three are capability questions and none of them is a user agent — the
+ * same rule the install pilot follows.
+ *
+ * The one thing that reads it is `TableRotateNudge` (#141): a phone standing in
+ * for a spare tablet loses far more of a landscape screen to the address bar
+ * than an upright one, and it is only worth asking anybody to turn a device
+ * over when there is a bar to get out of the way. Held fullscreen, or installed,
+ * both ways up give the same rectangle and the ask would be noise.
+ */
+const withoutChrome = (): boolean =>
+  document.fullscreenElement !== null ||
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.matchMedia("(display-mode: fullscreen)").matches ||
+  (navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+export const useBrowserChrome = (): boolean => {
+  const [chrome, setChrome] = useState(() => !withoutChrome());
+
+  useEffect(() => {
+    const sync = (): void => setChrome(!withoutChrome());
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("visibilitychange", sync);
+    // The bar sliding away is a resize and nothing else, and a phone being
+    // turned over is one too — both change the answer this is asked for.
+    window.addEventListener("resize", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("resize", sync);
+    };
+  }, []);
+
+  return chrome;
+};

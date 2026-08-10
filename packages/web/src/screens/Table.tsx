@@ -424,7 +424,12 @@ export function Table({
             board, so covering them costs nothing — and this is the view an IRL
             table is actually in when somebody walks up (#135). */}
         {inviting ? (
-          <RoomInvite code={room.code} underWay={!finished} onClose={() => setInviting(false)} />
+          <RoomInvite
+            code={room.code}
+            underWay={!finished}
+            screens={room.tableScreens}
+            onClose={() => setInviting(false)}
+          />
         ) : null}
       </TableMotion>
     );
@@ -655,7 +660,12 @@ export function Table({
         ) : null}
 
         {inviting ? (
-          <RoomInvite code={room.code} underWay={!finished} onClose={() => setInviting(false)} />
+          <RoomInvite
+            code={room.code}
+            underWay={!finished}
+            screens={room.tableScreens}
+            onClose={() => setInviting(false)}
+          />
         ) : null}
 
         {graduating ? <Graduation onDone={() => setGraduating(false)} /> : null}

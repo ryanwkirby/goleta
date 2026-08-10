@@ -8,10 +8,12 @@ import { QrCode } from "../components/QrCode.tsx";
 import { PlayingCard, SUIT_GLYPH } from "../components/Card.tsx";
 import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
+import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
 import { Button } from "../components/ui.tsx";
 import { namerFor } from "../lib/format.ts";
-import { fitScale, TABLE_DESIGN } from "../lib/fitScale.ts";
+import { fitScale, shouldTurn, turned, TABLE_DESIGN, type Box } from "../lib/fitScale.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
+import { BAND, edgeFor, edgeSeats, TURN_FOR } from "../lib/tableEdges.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { joinLink } from "../net/route.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
@@ -40,6 +42,14 @@ import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
  * scaled coordinate system, so the table motion layer would land cards at body
  * coordinates. Draws get a local flight toward the player's edge; the peel is
  * still CSS on the pile and runs regardless.
+ *
+ * **Every piece of it is placed against the design box rather than stacked in a
+ * column** (#141). The board used to be a `flex-col` whose children came to
+ * more than the height it had, and `justify-center` pushed the surplus out of
+ * both ends and straight through the names pinned to the edges — the counts
+ * landing on the bottom names, the prompt hanging off the bottom, worse with
+ * every seat. Bands are reserved for the names on all four sides and nothing is
+ * drawn into them, so no arrangement of seats can collide with anything.
  */
 export function TableScreen({
   room,
@@ -74,32 +84,43 @@ export function TableScreen({
    * runs at anything from a tablet at arm's length to a television across a
    * room, and every one of them should get the same picture rather than a
    * different composition.
+   *
+   * The box is kept rather than the scale, because two things are read off it:
+   * how much to scale by, and whether the board fits better turned a quarter
+   * (#141). A phone standing in for a spare tablet is the case that needs the
+   * second one, and it needs no code of its own — `shouldTurn` is arithmetic on
+   * the same rectangle.
    */
   const frame = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const [box, setBox] = useState<Box>({ width: 0, height: 0 });
   useLayoutEffect(() => {
     const element = frame.current;
     if (!element) return;
     const watch = new ResizeObserver(([entry]) => {
-      if (entry) setScale(fitScale(entry.contentRect));
+      if (entry) setBox({ width: entry.contentRect.width, height: entry.contentRect.height });
     });
     watch.observe(element);
     return () => watch.disconnect();
   }, []);
 
+  const quarter = shouldTurn(box);
+  const scale = fitScale(quarter ? turned(box) : box);
+
   // The inset goes on the frame, so `fitScale` fits the design into the *safe*
   // box without learning that hardware exists: the observer reads
-  // `contentRect`, which padding is already out of.
+  // `contentRect`, which padding is already out of. It stays right through the
+  // quarter turn for the same reason — the padding is on the physical edges,
+  // where the hardware is, and the design is fitted into whatever that leaves.
   //
   // It matters more here than anywhere else since #120 put the seat names on
-  // `inset-0` of the design box — deliberately at the very edges, which is
-  // exactly where a notch or a rounded corner takes its cut. A propped tablet
-  // would lose a name rather than a margin.
+  // the very edges of the design box, which is exactly where a notch or a
+  // rounded corner takes its cut. A propped tablet would lose a name rather
+  // than a margin.
   return (
     <div
       ref={frame}
       className={[
-        "flex h-dvh w-full items-center justify-center overflow-hidden",
+        "relative flex h-dvh w-full items-center justify-center overflow-hidden",
         "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
         "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
       ].join(" ")}
@@ -108,9 +129,12 @@ export function TableScreen({
         style={{
           width: TABLE_DESIGN.width,
           height: TABLE_DESIGN.height,
-          transform: `scale(${scale})`,
+          // Read right to left: sized first, then turned. A transform changes
+          // nothing about layout, so the box stays centred in the frame either
+          // way and the turn costs no arithmetic anywhere else on this screen.
+          transform: `${quarter ? "rotate(90deg) " : ""}scale(${scale})`,
         }}
-        className="relative flex shrink-0 flex-col items-center justify-center gap-6 p-10"
+        className="relative shrink-0"
       >
         {game ? (
           <Playing
@@ -135,13 +159,22 @@ export function TableScreen({
         )}
 
         {/* The one thing that isn't the game: a screen showing a table it has
-            lost touch with should say so rather than showing a still life. */}
+            lost touch with should say so rather than showing a still life. In
+            the top band's spare middle, which nothing else claims. */}
         {offline ? (
-          <p className="text-xl text-amber-300" role="status">
+          <p
+            className="absolute left-1/2 top-1.5 -translate-x-1/2 text-xl text-amber-300"
+            role="status"
+          >
             reconnecting…
           </p>
         ) : null}
       </div>
+
+      {/* Outside the design box on purpose: it is about the device, not the
+          board, so it must not be turned along with the picture it is asking
+          you to turn. */}
+      <TableRotateNudge />
     </div>
   );
 }
@@ -151,17 +184,35 @@ function Waiting({ room }: { room: RoomView }) {
   const link = joinLink(room.code);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
+    <>
       <EdgeNames room={room} />
-      <div className="flex flex-col items-center text-center">
-        <QrCode value={link} label={`Scan to join room ${room.code}`} className="w-[30rem] p-6" />
-        <p className="mt-5 font-mono text-7xl font-semibold tracking-[0.18em] text-amber-300">
-          {room.code}
-        </p>
-        <p className="mt-3 text-3xl text-white/50">{location.host}</p>
-        {room.seats.length < room.minPlayers ? (
-          <p className="mt-6 text-2xl text-amber-300">Needs {room.minPlayers} to deal.</p>
-        ) : null}
+
+      {/* Side by side rather than stacked. Stacked, the code at a size worth
+          crossing a room for plus the room code under it came to more than the
+          board is tall, and the bottom of it landed on the names. */}
+      <div
+        style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
+        className="absolute flex items-center justify-center gap-10"
+      >
+        <QrCode
+          value={link}
+          label={`Scan to join room ${room.code}`}
+          className="w-80 shrink-0 p-5"
+        />
+        <div className="min-w-0">
+          {/* What this device now is, said on the device itself. Whoever
+              scanned the code is across the table watching this screen light
+              up, and "shared screen" is the confirmation that the scan landed
+              on the right one of the two codes in the lobby (#138). */}
+          <p className="text-xl uppercase tracking-[0.3em] text-white/35">Shared screen</p>
+          <p className="mt-2 font-mono text-7xl font-semibold tracking-[0.18em] text-amber-300">
+            {room.code}
+          </p>
+          <p className="mt-3 text-3xl text-white/50">{location.host}</p>
+          {room.seats.length < room.minPlayers ? (
+            <p className="mt-5 text-2xl text-amber-300">Needs {room.minPlayers} to deal.</p>
+          ) : null}
+        </div>
       </div>
 
       {/* Waiting state only, never over a game: a propped screen is set up
@@ -169,7 +220,7 @@ function Waiting({ room }: { room: RoomView }) {
           it — and #119's invite flow is the moment it gets put there. A pilot;
           see `TableInstall`. */}
       <TableInstall />
-    </div>
+    </>
   );
 }
 
@@ -211,117 +262,102 @@ function Playing({
     !seatOnClock.bot;
   const latest = log[0]?.event ?? null;
 
+  const piles = (
+    <Piles
+      game={game}
+      canDraw={canDraw}
+      onDraw={onDraw}
+      irl={room.irl}
+      size="xl"
+      peel={
+        peeling && call
+          ? {
+              evidence: call.evidence,
+              named: call.card,
+              callerName: nameOf(call.callerId),
+              targetName: nameOf(call.targetId),
+            }
+          : null
+      }
+    />
+  );
+
   return (
     <>
-      <EdgeNames room={room} waitingOn={game.waitingOn} asking={asking} />
+      {/* The hand strip names everybody itself, so the edges would be saying it
+          twice — and the strip is wide enough to reach them. */}
+      {view === "center" ? (
+        <EdgeNames room={room} game={game} asking={asking} />
+      ) : null}
       <TableFlight event={latest} room={room} />
 
-      {/* Out of the flow and into a corner. The board is composed around the
-          piles, and a code sat above them is the first thing the peel — which
-          fans well outside the pile it hangs off — would land on top of. */}
-      <p className="absolute left-10 top-8 font-mono text-2xl uppercase tracking-[0.3em] text-white/25">
+      {/* Both in the top band's corners, which no name reaches: the ends of
+          each edge are left free (`tableEdges.ts`), and the board is composed
+          around the piles, so a code sat above them is the first thing the peel
+          — which fans well outside the pile it hangs off — would land on. */}
+      <p className="absolute left-4 top-2.5 font-mono text-lg uppercase tracking-[0.2em] text-white/25">
         {room.code}
       </p>
       <Button
         variant="ghost"
-        className="absolute right-10 top-7 px-3 py-2 text-base"
+        className="absolute right-3 top-1.5 px-2.5 py-1.5 text-sm"
         onClick={onToggleView}
+        aria-label={view === "center" ? "Show every hand" : "Show the middle of the table"}
       >
-        {view === "center" ? "show hands" : "show center"}
+        {view === "center" ? "hands" : "centre"}
       </Button>
 
       {view === "hands" ? (
-        <div className="w-full px-20">
-          <div className="mb-5 flex h-72 items-center justify-center">
-            <div className="scale-[1.55]">
-              <Piles
-                game={game}
-                canDraw={canDraw}
-                onDraw={onDraw}
-                irl={room.irl}
-                size="xl"
-                peel={
-                  peeling && call
-                    ? {
-                        evidence: call.evidence,
-                        named: call.card,
-                        callerName: nameOf(call.callerId),
-                        targetName: nameOf(call.targetId),
-                      }
-                    : null
-                }
-              />
-            </div>
+        <div
+          style={{ top: BAND.top, bottom: BAND.bottom, left: 20, right: 20 }}
+          className="absolute flex flex-col items-center gap-4"
+        >
+          <div className="flex h-60 shrink-0 items-center justify-center">
+            <div className="scale-[1.2]">{piles}</div>
           </div>
-          <Seats room={room} game={game} shouts={shouts} onCallSunny={() => undefined} />
+          <div className="min-h-0 w-full flex-1">
+            <Seats room={room} game={game} shouts={shouts} onCallSunny={() => undefined} />
+          </div>
         </div>
       ) : (
-        <>
-          {/* The piles, large, and the peel when a call is judged. This screen is
+        /*
+          The piles, large, and the peel when a call is judged. This screen is
           the best surface in the room for that moment: if a table has one, it
           is where everybody's eyes should already be.
 
-          Scaled inside a box that reserves the room it takes. A transform
-          reserves nothing on its own, so the scaled piles would be laid out at
-          their small size and simply overlap whatever the board put next to
-          them. */}
-          <div className="flex h-[30rem] shrink-0 items-center justify-center">
-            <div className="scale-[2.05]">
-              <Piles
-                game={game}
-                canDraw={canDraw}
-                onDraw={onDraw}
-                irl={room.irl}
-                size="xl"
-                peel={
-                  peeling && call
-                    ? {
-                        evidence: call.evidence,
-                        named: call.card,
-                        callerName: nameOf(call.callerId),
-                        targetName: nameOf(call.targetId),
-                      }
-                    : null
-                }
-              />
-            </div>
-          </div>
-
-          {/* Counts, not hands. Plus, for a
-          couple of seconds, whoever has just asked for a hand: the ask is
-          supposed to be heard by the room, and this screen is the room's. */}
-          <ul className="mt-2 flex flex-wrap items-baseline justify-center gap-x-8 gap-y-2 px-24">
-            {game.players.map((player) => {
-              const onClock = game.waitingOn === player.id;
-              return (
-                <li
-                  key={player.id}
-                  className={[
-                    "flex items-baseline gap-2 text-3xl",
-                    player.eliminated ? "opacity-40" : "",
-                    onClock ? "font-semibold text-amber-300" : "text-white/70",
-                  ].join(" ")}
-                >
-                  <span>{nameOf(player.id)}</span>
-                  <span
-                    className={[
-                      "font-mono tabular-nums",
-                      player.cardCount <= 2 && !player.eliminated && !onClock
-                        ? "text-rose-300"
-                        : "opacity-60",
-                    ].join(" ")}
-                  >
-                    {player.eliminated ? "out" : player.cardCount}
-                  </span>
-                  {asking.has(player.id) ? <HelpAsk className="text-2xl" /> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </>
+          Scaled inside a box that reserves the room it takes, because a
+          transform reserves nothing on its own and the piles would be laid out
+          at their small size and simply overlap whatever sat next to them. The
+          padding at the top is the peel's: its "was in play" tag hangs above
+          the card it marks, and at this scale that reaches into the band the
+          top name is in.
+        */
+        <div
+          style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
+          className="absolute flex items-center justify-center pt-8"
+        >
+          <div className="scale-[1.9]">{piles}</div>
+        </div>
       )}
 
-      <p className="min-h-12 text-center text-4xl font-semibold" role="status">
+      {/*
+        The prompt, in the bottom band, where the bottom names have been pushed
+        aside for it. It is not beside the piles because a column narrow enough
+        to leave them their width is too narrow to read a Sunny ruling in, and
+        it is not under them because that height is the board's width once the
+        whole thing is turned a quarter for a phone.
+
+        As wide as the names at either end will allow (`PROMPT` in the tests),
+        because the longest thing it ever says is a ruling naming two players,
+        and a seat name runs to sixteen characters. The band holds two lines of
+        this and the height is capped, so a third would be cut — and the ruling
+        is the one thing at this table nobody may miss.
+      */}
+      <p
+        style={{ maxHeight: BAND.bottom - 12 }}
+        className="absolute inset-x-0 bottom-1.5 mx-auto max-w-136 overflow-hidden text-balance text-center text-2xl font-semibold leading-tight"
+        role="status"
+      >
         {finished ? (
           <span className="text-amber-300">
             {game.winnerId
@@ -350,66 +386,83 @@ function Playing({
   );
 }
 
-type Edge = "top" | "right" | "bottom" | "left";
-
-const edgeFor = (index: number, count: number): Edge => {
-  const t = count <= 1 ? 0 : index / count;
-  if (t < 0.25) return "top";
-  if (t < 0.5) return "right";
-  if (t < 0.75) return "bottom";
-  return "left";
-};
-
-const edgeStyle = (index: number, count: number): { className: string; style: CSSProperties } => {
-  const edge = edgeFor(index, count);
-  const perEdge = Math.ceil(Math.max(count, 1) / 4);
-  const slot = index % perEdge;
-  const along = count <= 1 ? 50 : 15 + (slot * 70) / Math.max(perEdge - 1, 1);
-
-  if (edge === "top") {
-    return { className: "-translate-x-1/2", style: { left: `${along}%`, top: 18 } };
-  }
-  if (edge === "right") {
-    return { className: "-translate-y-1/2 rotate-90", style: { right: 18, top: `${along}%` } };
-  }
-  if (edge === "bottom") {
-    return {
-      className: "-translate-x-1/2 rotate-180",
-      style: { left: `${100 - along}%`, bottom: 18 },
-    };
-  }
-  return {
-    className: "-translate-y-1/2 -rotate-90",
-    style: { left: 18, top: `${100 - along}%` },
-  };
-};
-
+/**
+ * The names round the edge, each one turned to be read by whoever is sitting
+ * there — and each one carrying that seat's count, which is what took the
+ * separate list of counts off the board. Two lists of the same players, one of
+ * them stacked under the piles, was most of what used to overflow.
+ *
+ * Placed by their own centre point so the turn happens about the middle of the
+ * label: positioned by an edge and then rotated, a long name on the left swung
+ * a third of the way into the board. The wrapper is the anchor, the inner box
+ * does the turning, and the band each one sits in is reserved by `BAND`.
+ */
 function EdgeNames({
   room,
-  waitingOn = null,
+  game = null,
   asking = new Set<PlayerId>(),
 }: {
   room: RoomView;
-  waitingOn?: PlayerId | null;
+  game?: GameView | null;
   asking?: ReadonlySet<PlayerId>;
 }) {
+  const placed = edgeSeats(room.seats.length);
+
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
       {room.seats.map((seat, index) => {
-        const placed = edgeStyle(index, room.seats.length);
-        const active = waitingOn === seat.id;
+        const spot = placed[index];
+        if (!spot) return null;
+        const player = game?.players.find((candidate) => candidate.id === seat.id);
+        const onClock = game?.waitingOn === seat.id;
+        const along = `${spot.along}%`;
+        const across = { top: BAND.top / 2, bottom: 36, left: 28, right: 28 }[spot.edge];
+
+        const anchor: CSSProperties =
+          spot.edge === "top"
+            ? { left: along, top: across }
+            : spot.edge === "bottom"
+              ? { left: along, bottom: across }
+              : spot.edge === "left"
+                ? { left: across, top: along }
+                : { right: across, top: along };
+
         return (
-          <div
-            key={seat.id}
-            style={placed.style}
-            className={[
-              "absolute max-w-64 truncate rounded-full px-4 py-1.5 text-3xl font-semibold transition-colors",
-              active ? "bg-amber-300/15 text-amber-300" : "text-white/55",
-              placed.className,
-            ].join(" ")}
-          >
-            {seat.name}
-            {asking.has(seat.id) ? <HelpAsk className="ml-2 text-xl" /> : null}
+          /*
+            The anchor has no size of its own, and that is the load-bearing bit.
+            Sized by its label, a `right`/`bottom` anchor pins the far edge of
+            the *label* rather than the point, and the whole thing lands a label
+            short of where it was asked for — which put the right-hand names a
+            third of the way into the board and the bottom ones a line high.
+            Zero-sized, every edge means the same thing, and the label centres
+            itself on it.
+          */
+          <div key={seat.id} style={anchor} className="absolute h-0 w-0">
+            <div
+              style={{ transform: `translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)` }}
+              className={[
+                "absolute left-0 top-0 flex w-max max-w-48 items-baseline gap-2",
+                "whitespace-nowrap rounded-full px-3 py-1",
+                "text-3xl font-semibold transition-colors",
+                onClock ? "bg-amber-300/15 text-amber-300" : "text-white/55",
+                player?.eliminated ? "opacity-40" : "",
+              ].join(" ")}
+            >
+              <span className="min-w-0 truncate">{seat.name}</span>
+              {player ? (
+                <span
+                  className={[
+                    "shrink-0 font-mono tabular-nums",
+                    player.cardCount <= 2 && !player.eliminated && !onClock
+                      ? "text-rose-300"
+                      : "opacity-60",
+                  ].join(" ")}
+                >
+                  {player.eliminated ? "out" : player.cardCount}
+                </span>
+              ) : null}
+              {asking.has(seat.id) ? <HelpAsk className="shrink-0 text-xl" /> : null}
+            </div>
           </div>
         );
       })}

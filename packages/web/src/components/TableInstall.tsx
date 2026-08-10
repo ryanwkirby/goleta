@@ -140,7 +140,11 @@ export function TableInstall() {
     // of this screen. It says what it buys, because "install" on its own reads
     // like an account request in an app that has gone to some trouble not to
     // have accounts.
-    <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-2xl bg-black/30 px-5 py-3 text-xl text-white/50 ring-1 ring-white/10">
+    //
+    // Down in the bottom band with the seat names, which leave the middle of
+    // that edge free (`tableEdges.ts`) — and capped, because an uncapped pill
+    // grew across the board and sat on the QR it is meant to be quieter than.
+    <div className="absolute bottom-2 left-1/2 flex max-w-136 -translate-x-1/2 items-center gap-4 rounded-2xl bg-black/30 px-5 py-2.5 text-base text-white/50 ring-1 ring-white/10">
       <p className="text-balance">{offer.blurb}</p>
       {offer.action}
       <button

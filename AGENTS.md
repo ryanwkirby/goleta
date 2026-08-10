@@ -451,7 +451,17 @@ Things that will read as oversights in that view and are not:
 
 An optional extra device at `#/r/ABCD/table`, showing the middle of the table.
 **Nothing depends on it existing** — it is why the phone view carries its own
-peek strip.
+peek strip. A table may have **more than one**, and the lobby draws a row per
+screen that is actually connected (#138), off `RoomView.tableScreens`.
+
+That count is **connection state and never room state**: `socket.ts` counts the
+open sockets that called themselves a table each time a view is built, and
+`roomView` takes it as an argument. Nothing to clear on load, nothing to leak on
+a dropped connection, and no way for it to disagree with the sockets that are
+open. Do not move it onto `Room`, and do not persist it — a restored snapshot
+has nobody connected to it, the same reason `seat.connected` is cleared on load.
+The rows are also what closes the invite dialog: it dismisses on the count going
+*up* while it is open, so it answers the scan that just happened (#139).
 
 - **Its default view is the shared centre**, and it shows no hand there. Seats
   get a name at the edge they are sitting on, a count, and — for the couple of
@@ -491,6 +501,43 @@ peek strip.
   units. Sizing every piece independently gets the type right and the
   *relationships* wrong — a board recomposing itself at every aspect ratio is
   exactly what a screen propped at a table shows up.
+
+  **On an upright screen the same design is turned a quarter** rather than
+  laid out again (#141). `shouldTurn` asks it as arithmetic — does the turned
+  box fit more of the design than the box as given — so there is no user agent
+  anywhere in it and it still holds if `TABLE_DESIGN` ever changes shape. The
+  case it exists for is a phone standing in for a spare tablet: held sideways an
+  iPhone fits the board at ×0.57 and upright-and-turned at ×0.66, because
+  Safari's chrome takes a far bigger bite out of the short side. A shared screen
+  lies flat with people round it, so which way up the device is means nothing to
+  anybody reading it. `TableRotateNudge` asks for upright and can be waved past;
+  it is not `RotatePanel`, which guards a layout that cannot be drawn the other
+  way and has no way past — this one is a spectator device holding no cards.
+
+  Because the turn is one uniform transform, **anything that does not overlap in
+  the design does not overlap on screen**, at any size and either way up. That
+  is what makes the design box the only place the layout has to be right.
+- **Nothing is stacked in a column, and nothing may be** (#141). Every piece is
+  placed against the design box inside bands reserved for the seat names on all
+  four sides (`BAND` in `tableEdges.ts`). The board used to be a `flex-col`
+  whose children came to more than the height it had, and `justify-center`
+  pushed the surplus out of both ends and through the names pinned to the edges.
+  Adding anything back into a flow is how that returns.
+
+  Three placements in here look arbitrary and are load-bearing. **The counts are
+  on the names**, because two lists of the same players is what there was too
+  much of. **The prompt is in the bottom band**, sharing it with bottom names
+  pushed out to the corners — beside the piles is too narrow to read a Sunny
+  ruling in, and under them costs the piles the height that *is* the board's
+  width once it is turned. And **a name's anchor has no size of its own**: sized
+  by its label, a `right`/`bottom` anchor pins the far edge of the label rather
+  than the point, which put the right-hand names a third of the way into the
+  board.
+- **Every name is read from outside its own edge** — the person sitting there,
+  not the one opposite. All four were 180° out until #141, which is easy to miss
+  because the arrangement looks deliberate either way: the top name was drawn
+  upright, and the right-hand one read top-to-bottom, which is what somebody on
+  the *left* sees. `TURN_FOR` holds the four angles and a test holds the rule.
 - **It is the one surface that offers an install, and that is a pilot (#126).**
   The open question is whether an install prompt belongs in this app at all —
   the identity model is *no accounts, scan a code, play*, and "add this to your

@@ -44,3 +44,34 @@ export const fitScale = (box: Box, design: Box = TABLE_DESIGN): number => {
   if (design.width <= 0 || design.height <= 0) return 1;
   return Math.min(box.width / design.width, box.height / design.height);
 };
+
+/** The same box, turned a quarter. */
+export const turned = (box: Box): Box => ({ width: box.height, height: box.width });
+
+/**
+ * Whether to lay the board across the short way and turn it a quarter (#141).
+ *
+ * Asked as arithmetic and nothing else: turning the board is worth it exactly
+ * when the turned box fits more of it than the box as given. For a wide design
+ * that is the same as asking whether the screen is upright, but it is asked
+ * this way because it is the actual question, it holds if `TABLE_DESIGN` ever
+ * changes shape, and it needs no user agent, no orientation lock and no idea of
+ * what a phone is.
+ *
+ * The case it exists for is a phone standing in for a spare tablet. A shared
+ * screen is a device lying flat with people sitting round it, so which way up
+ * *it* is means nothing — but which way up it is held decides how much of the
+ * screen the browser keeps for itself, and on a phone that is the difference
+ * between a board you can read across a table and one you can't:
+ *
+ * | held      | viewport   | board |
+ * | --------- | ---------- | ----- |
+ * | landscape | ~734×320   | ×0.57 |
+ * | upright   | ~393×659   | ×0.39 |
+ * | upright, turned a quarter | | ×0.66 |
+ *
+ * Nothing here turns anybody's phone — see `RotatePanel` for why no page can.
+ * `TableRotateNudge` asks, and this decides what to do with the answer.
+ */
+export const shouldTurn = (box: Box, design: Box = TABLE_DESIGN): boolean =>
+  fitScale(turned(box), design) > fitScale(box, design);

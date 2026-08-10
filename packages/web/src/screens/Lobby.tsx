@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
+import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { QrCode } from "../components/QrCode.tsx";
 import {
   describeRules,
@@ -78,30 +79,40 @@ function JoinQr({ code }: { code: string }) {
           className="w-44 max-w-[55%] p-2.5"
         />
       </div>
-      <p className="mt-2 text-xs text-white/40">Point a camera at it, or type the code.</p>
+      <p className="mt-2 text-xs text-white/40">
+        Point a camera at it, type the code, or tap it to copy the link.
+      </p>
     </div>
   );
 }
 
+/**
+ * The code for the screen in the middle of the table.
+ *
+ * **It says out loud that this one is for a different device**, because the
+ * obvious move is the wrong one. Every other QR in this app is scanned with the
+ * phone in your hand; this one is scanned by a spare tablet, an old phone or a
+ * laptop that is about to be propped where the whole table can see it. Scanning
+ * it with your own phone lands you on a board with no cards and takes you off
+ * your seat, and a caption that only said "Add a shared screen" left that as
+ * something to find out. The dialog says what to point at it before the camera
+ * comes up.
+ *
+ * **And it takes itself away once one arrives** — `useDismissOnScreenJoin`,
+ * which the in-game invite uses too so the two behave the same.
+ */
 function SharedScreenInvite({
   code,
+  screens,
   onClose,
 }: {
   code: string;
+  /** How many shared screens are connected right now. */
+  screens: number;
   onClose: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
   const link = joinLink(code, "table");
-
-  const copy = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
-  };
+  useDismissOnScreenJoin(screens, true, onClose);
 
   return (
     <div
@@ -112,13 +123,20 @@ function SharedScreenInvite({
       onClick={onClose}
     >
       <Panel className="w-full max-w-sm text-center" onClick={(event) => event.stopPropagation()}>
-        <p className="text-sm font-semibold text-white">Add a shared screen</p>
+        <p className="text-sm font-semibold text-white">Scan this with a spare device</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-white/50">
+          A tablet, an old phone, a laptop — something nobody is playing on. It shows the middle of
+          the table, so stand it where everyone can see it.
+        </p>
+        <p className="mt-1 text-xs font-semibold text-amber-300/80">Not the phone in your hand.</p>
         <div className="mt-4 flex justify-center">
-          <QrCode value={link} label={`Scan for shared screen in room ${code}`} className="w-64 p-4" />
+          <QrCode
+            value={link}
+            label={`Scan with a spare device to add a shared screen to room ${code}`}
+            className="w-64 p-4"
+          />
         </div>
-        <Button variant="ghost" className="mt-3" onClick={() => void copy()}>
-          {copied ? "Link copied" : "Copy shared-screen link"}
-        </Button>
+        <p className="mt-2 text-xs text-white/40">Or tap the code to copy the link.</p>
         <Button variant="secondary" full className="mt-3" onClick={onClose}>
           Done
         </Button>
@@ -164,11 +182,16 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
  * reason: most tables can leave this shut, and none of them need to have played
  * before to open it.
  *
- * It is a **disclosure** triangle — `▸` shut, `▾` open — and not the `▾`/`▴` pair
+ * It is a **disclosure** triangle — `◂` shut, `▾` open — and not the `▾`/`▴` pair
  * it started as. That pair is a scroll gesture, "more below / less below", and it
  * said nothing about the one thing this row is for. Shut, this points at the
  * label it will open; open, it points down the panel it opened. Drawn as one
  * glyph rotated rather than two, so the turn is the animation.
+ *
+ * Shut it points **left**, because the triangle is at the right-hand end of the
+ * row and everything it is about is to its left: the label, the summary line,
+ * and the panel that unfolds under them. It used to point `▸`, at the edge of
+ * the card and nothing else (#137).
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -189,10 +212,10 @@ function TableSettings({ summary, children }: { summary: string; children: React
           aria-hidden
           className={[
             "shrink-0 text-3xl leading-none text-white/60 transition-transform",
-            open ? "rotate-90" : "",
+            open ? "-rotate-90" : "",
           ].join(" ")}
         >
-          ▸
+          ◂
         </span>
       </button>
       {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}
@@ -459,6 +482,30 @@ export function Lobby({
               </Button>
             </li>
           ) : null}
+          {/* A row per screen that is actually connected, above the button that
+              invites the next one — the same order the seats and "Add a bot"
+              are in. Rows rather than a tally because a screen arriving should
+              be something appearing in the room, and there is more than one on
+              offer: a long table may want one at each end (#138). */}
+          {room.irl
+            ? Array.from({ length: room.tableScreens }, (_, index) => (
+                <li
+                  key={`shared-screen-${index}`}
+                  className="flex min-h-16 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
+                >
+                  {numbered ? (
+                    // Sits in the seats' number column and stays empty: a shared
+                    // screen holds no seat, so it takes no place in the turn
+                    // order and must not look like it does.
+                    <span aria-hidden className="w-4 shrink-0" />
+                  ) : null}
+                  <span className="min-w-0 truncate font-medium text-white">Shared screen</span>
+                  <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-300">
+                    connected
+                  </span>
+                </li>
+              ))
+            : null}
           {room.irl ? (
             <li>
               <Button
@@ -467,7 +514,8 @@ export function Lobby({
                 className="justify-start rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-white/60 hover:border-white/25"
                 onClick={() => setSharingScreen(true)}
               >
-                <span aria-hidden>+</span> Add a shared screen
+                <span aria-hidden>+</span>{" "}
+                {room.tableScreens > 0 ? "Add another shared screen" : "Add a shared screen"}
               </Button>
             </li>
           ) : null}
@@ -475,7 +523,11 @@ export function Lobby({
       </Panel>
 
       {sharingScreen ? (
-        <SharedScreenInvite code={room.code} onClose={() => setSharingScreen(false)} />
+        <SharedScreenInvite
+          code={room.code}
+          screens={room.tableScreens}
+          onClose={() => setSharingScreen(false)}
+        />
       ) : null}
 
       {isHost ? (

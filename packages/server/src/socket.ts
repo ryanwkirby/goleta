@@ -148,13 +148,31 @@ export const attachSockets = (
     }
   };
 
+  /**
+   * How many shared screens are propped at this table (#138).
+   *
+   * Counted off the open sockets at the moment a view is built rather than kept
+   * on the room, so there is no field to clear on load, nothing to leak when a
+   * connection drops, and no way for the number to disagree with the sockets
+   * that are actually open. A room has a handful of clients; this is a loop over
+   * a handful of objects a few times a turn.
+   */
+  const tableScreensAt = (room: Room): number => {
+    let screens = 0;
+    for (const client of clients) {
+      if (client.code === room.code && client.table && !client.playerId) screens += 1;
+    }
+    return screens;
+  };
+
   /** Everyone in the room gets their own view of the same moment. */
   const broadcast = (room: Room, events: readonly GameEvent[] = []): void => {
+    const screens = tableScreensAt(room);
     for (const client of clients) {
       if (client.code !== room.code) continue;
       send(client, {
         t: "state",
-        room: roomView(room),
+        room: roomView(room, screens),
         game: gameViewFor(room, client.playerId),
         events: [...events],
       });
@@ -400,9 +418,18 @@ export const attachSockets = (
 
     socket.on("close", () => {
       clients.delete(client);
-      if (!client.code || !client.playerId) return;
+      if (!client.code) return;
       const room = store.get(client.code);
       if (!room) return;
+      if (!client.playerId) {
+        // A watcher holds no seat, so there is nothing to mark away — but a
+        // shared screen has a row in the lobby, and the room has to be told
+        // that row is gone. Deleted from `clients` above, so the count this
+        // sends is already the new one. An ordinary spectator changes nothing
+        // anybody can see and is not worth a broadcast to the whole table.
+        if (client.table) broadcast(room);
+        return;
+      }
       markDisconnected(room, client.playerId);
       broadcast(room);
       // They may have gone with the picker still open, so the table could be

@@ -645,7 +645,16 @@ export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null =
 // Views
 // ---------------------------------------------------------------------------
 
-export const roomView = (room: Room): RoomView => ({
+/**
+ * `tableScreens` is passed in rather than read off the room, because the room
+ * does not know: a shared screen is an open socket that said what it was, and
+ * connections belong to `socket.ts`. Counting it there also means there is no
+ * field to leave behind — nothing to clear on load, nothing to leak on a
+ * dropped connection, and nothing that can disagree with the sockets that are
+ * actually open. Defaults to none so the room tests can ask for a view without
+ * inventing a connection count.
+ */
+export const roomView = (room: Room, tableScreens = 0): RoomView => ({
   code: room.code,
   hostId: room.hostId,
   seats: room.seats.map((seat) => ({
@@ -663,6 +672,7 @@ export const roomView = (room: Room): RoomView => ({
   botSpeed: room.botSpeed,
   houseRules: houseRulesOf(room),
   irl: room.irl,
+  tableScreens,
 });
 
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>

@@ -36,6 +36,7 @@ export interface HandViewProps {
   onCycleSort: () => void;
   stalled: boolean;
   onAskForHelp: () => void;
+  onShowInvite: () => void;
   shouting: boolean;
   /**
    * Somebody else asking for a hand, by name — drawn in the strip, because this
@@ -99,6 +100,7 @@ export function HandView({
   onCycleSort,
   stalled,
   onAskForHelp,
+  onShowInvite,
   shouting,
   helpFrom,
   accusing,
@@ -159,6 +161,7 @@ export function HandView({
         onCycleSort={onCycleSort}
         stalled={stalled}
         onAskForHelp={onAskForHelp}
+        onShowInvite={onShowInvite}
       />
 
       <div className="flex min-h-0 flex-1 flex-col">

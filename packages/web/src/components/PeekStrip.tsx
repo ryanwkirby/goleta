@@ -72,6 +72,7 @@ export function PeekStrip({
   onCycleSort,
   stalled,
   onAskForHelp,
+  onShowInvite,
 }: {
   room: RoomView;
   game: GameView;
@@ -93,6 +94,8 @@ export function PeekStrip({
   /** A few seconds into a turn you haven't moved on. */
   stalled: boolean;
   onAskForHelp: () => void;
+  /** Tapping the room code: the invite, opened by whoever is holding the phone. */
+  onShowInvite: () => void;
 }) {
   const { anchor, pileFace } = useMotion();
   const fullscreen = useFullscreen();
@@ -144,7 +147,25 @@ export function PeekStrip({
         it.
       */}
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
-        <span className="font-mono text-xs tracking-[0.2em] text-white/50">{room.code}</span>
+        {/* Tappable here for the same reason as upright, and this is the one
+            that matters: an IRL table is every phone in this view, so the code
+            somebody actually holds out to a newcomer is this one (#135). It
+            adds nothing to the strip — same four characters, same place, same
+            width — so the list of what this row carries is unchanged. */}
+        <button
+          type="button"
+          aria-label={`Invite to room ${room.code}`}
+          aria-haspopup="dialog"
+          title="Show the invite"
+          onClick={onShowInvite}
+          className={[
+            "-m-0.5 shrink-0 rounded p-0.5 font-mono text-xs tracking-[0.2em] text-white/50",
+            "transition-colors hover:text-white/80",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+          ].join(" ")}
+        >
+          {room.code}
+        </button>
 
         {fullscreen.offer ? (
           <button

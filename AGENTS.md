@@ -362,6 +362,26 @@ Things that will read as oversights in that view and are not:
   *noticing* a reach is easier with, and turning the phone upright is the answer
   to that. A sliver too small to read a rank off is worse than nothing
   (`fan.ts` has a floor for exactly this).
+- **The room code is the invite, in both views, and tapping it is how (#135).**
+  It is the same four characters in the same place — a button rather than a
+  span, so nothing is added to the strip's list and nothing changes width. A
+  code is the address of the room, and the two things that can arrive at one are
+  a **person** and a **shared screen**: same code, different link, which is
+  exactly what a QR should be hiding. The player invite leads, because a screen
+  is set up once and a person turns up all evening.
+
+  **Anybody may open it, not just the host.** Handing somebody the way in is not
+  a host power at a real table, and nothing behind it changes the room — two
+  links and a code every player can already read off their own screen.
+
+  The panel shows the **code above the QR, at reading-out size**. A camera is
+  the fast path and not the only one, and "what's the code?" across a table is
+  how this actually goes. And the note about a hand being under way hangs off
+  the *player* invite only: a shared screen joins as a watcher, which is what it
+  is for, so a running game is no obstacle to it. That note is careful about
+  what it promises — a seat is refused for the length of a hand and the Join
+  screen offers a watch instead, but **a watcher is not dealt in when the next
+  game starts**, so nothing here may say they will be.
 - **The rest of this view's furniture is on the strip too, and there is no row
   under the cards.** The sort control, the offer of help when you have sat on a
   turn, and the draws left on a missed call used to sit in a footer, and the

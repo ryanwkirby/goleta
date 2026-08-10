@@ -98,7 +98,14 @@ export type ClientMessage =
    * are all sat together should be able to say so there and then.
    */
   | { t: "setIrl"; on: boolean }
-  /** Host only, between games: which rules this table plays by. */
+  /**
+   * Host only, at any time: which rules this table plays by.
+   *
+   * Not frozen mid-game, unlike `setBotSpeed` beside it. These are read once,
+   * at the deal, and the game keeps its own copy — so they describe the *next*
+   * game and can never reach a hand already dealt. Bot pace is read live and
+   * stays frozen for exactly that reason.
+   */
   | { t: "setHouseRules"; rules: HouseRules }
   /**
    * "I've opened the picker to name a card", and then "I'm done with it".

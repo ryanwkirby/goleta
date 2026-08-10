@@ -325,7 +325,7 @@ export const attachSockets = (
         setBotSpeed(room, playerId, message.speed);
         return broadcast(room);
       case "setIrl":
-        // No "wait for this game to finish" guard, unlike the two above: this
+        // No "wait for this game to finish" guard, unlike bot speed above: this
         // one reaches nothing that is running. See `setIrl`.
         setIrl(room, playerId, message.on);
         return broadcast(room);

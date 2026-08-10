@@ -1,8 +1,13 @@
 import { useState, type ReactNode } from "react";
 
-import type { BotSpeed, ClientMessage, HouseRules, RoomView } from "@goleta/engine";
+import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
 import { QrCode } from "../components/QrCode.tsx";
+import {
+  describeRules,
+  HouseRulesPicker,
+  IrlToggle,
+} from "../components/HostSettings.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { joinLink } from "../net/route.ts";
 
@@ -128,19 +133,6 @@ const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
 ];
 
 /**
- * What a table is playing, for everyone who isn't the host and can't see the
- * switches. Silent when the table plays the game as written.
- */
-const describeRules = (rules: HouseRules): string => {
-  const on: string[] = [];
-  if (!rules.sunny) on.push("no Sunny Rule");
-  if (rules.eights === "nextPlayerNames") on.push("the Power of Eights");
-  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice on Eight");
-  if (on.length === 0) return "Playing the standard rules.";
-  return `House rules: ${on.join(", ")}.`;
-};
-
-/**
  * The same sentence for the host, on the front of a drawer that is shut — plus
  * the bot pace, which is the other thing inside it that a table would notice.
  */
@@ -149,96 +141,6 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
   if (!anyBots) return rules;
   return `${rules} Bots at ${room.botSpeed === "human" ? "human-like" : "lightning"} speed.`;
 };
-
-/**
- * The house rules, as a row of switches.
- *
- * Every one of these is a rule the game already had written down — two
- * alternates from the original rules, plus the Sunny Rule, which not every
- * table wants to play with. Defaults are the game as written, so a host who
- * never opens this gets exactly what they got before.
- *
- * **A row's description doesn't change when the row is switched.** It used to
- * rewrite itself between "what this rule does" and "Off. what happens instead",
- * which meant the sentence a host was reading to decide moved the moment they
- * decided, and flipping a switch twice to reread it landed somewhere different
- * each time. One fixed line saying what the rule does; the switch says whether
- * the table is playing it. Nothing here implies a table that drops one is
- * playing a lesser game.
- *
- * Two things the wording is careful about. **The Sunny line offers the draw
- * before it names the cost** — "you can draw any time, but others can call you
- * out" — because stating the violation as a condition reads as though the app is
- * about to stop you, and it never will: the draw pile stays tappable with no
- * warning, which is the whole rule (see AGENTS.md). And **Dealer's Choice on
- * Eight carries its condition in its name**, since the rule does nothing at all
- * unless the card turned up to start happens to be an 8 — about one game in
- * thirteen. `docs/RULES.md` still calls it Dealer's Choice, which is its name in
- * the original written rules.
- */
-function HouseRulesPicker({
-  rules,
-  onChange,
-}: {
-  rules: HouseRules;
-  onChange: (rules: HouseRules) => void;
-}) {
-  const rows: { key: string; label: string; blurb: string; on: boolean; toggle: HouseRules }[] = [
-    {
-      key: "sunny",
-      label: "The Sunny Rule",
-      blurb: "You can draw any time, but others can call you out.",
-      on: rules.sunny,
-      toggle: { ...rules, sunny: !rules.sunny },
-    },
-    {
-      key: "eights",
-      label: "The Power of Eights",
-      blurb: "The next player names the suit, not whoever played the 8.",
-      on: rules.eights === "nextPlayerNames",
-      toggle: {
-        ...rules,
-        eights: rules.eights === "nextPlayerNames" ? "playerNames" : "nextPlayerNames",
-      },
-    },
-    {
-      key: "seedEight",
-      label: "Dealer's Choice on Eight",
-      blurb: "If the first card of the game is an 8, the dealer gets to choose the suit.",
-      on: rules.seedEight === "dealerNames",
-      toggle: {
-        ...rules,
-        seedEight: rules.seedEight === "dealerNames" ? "natural" : "dealerNames",
-      },
-    },
-  ];
-
-  return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">House rules</p>
-      <ul className="mt-2 flex flex-col gap-2">
-        {rows.map((row) => (
-          <li key={row.key} className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white">{row.label}</p>
-              <p className="text-xs text-white/40">{row.blurb}</p>
-            </div>
-            <Button
-              variant={row.on ? "primary" : "secondary"}
-              className="min-w-16 px-3 py-1.5 text-xs"
-              role="switch"
-              aria-checked={row.on}
-              aria-label={row.label}
-              onClick={() => onChange(row.toggle)}
-            >
-              {row.on ? "On" : "Off"}
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 /**
  * The settings drawer, shut on arrival.
@@ -294,75 +196,6 @@ function TableSettings({ summary, children }: { summary: string; children: React
         </span>
       </button>
       {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}
-    </div>
-  );
-}
-
-/**
- * The two answers, named. `irl` is the flag each one sets.
- *
- * In person leads, because it is the answer that changes the most: it numbers
- * the seats, offers the order arrows, puts the QR up, and sends every phone into
- * the landscape hand view. Remote play is still what a new room *is* — see
- * `createRoom` — and the order of the buttons has nothing to do with which one
- * is selected.
- */
-const PLACES: { key: string; label: string; irl: boolean }[] = [
-  { key: "irl", label: "In person", irl: true },
-  { key: "remote", label: "Remote play", irl: false },
-];
-
-/**
- * Where everybody is.
- *
- * Not a house rule and not next to them: it changes nothing about the game,
- * only about how each phone draws it. The copy says what it is for rather than
- * naming a layout — nobody sitting down to play has an opinion about landscape
- * hand views, and everybody has one about whether their friends are in the room.
- *
- * **Both answers are named**, as two halves of a switch rather than an On/Off
- * beside a sentence. The old shape stated one of them — "We're all in the same
- * room" — and left the host to infer that Off meant the rest of the world; a
- * question with two real answers should say both out loud, the same way the
- * seat-order check does.
- *
- * **And nothing explains them.** There was a line under the pair describing what
- * in-person mode does to a phone — a QR, a hand, landscape — which is two
- * mechanisms answering a question already asked in four words. Naming both
- * answers is what made it redundant: a host picking between "in person" and
- * "remote play" is not deciding about a layout, and the QR appearing directly
- * under the tap says the rest better than a sentence above it could.
- *
- * The one host control with no "between games only" on it, so it stays put once
- * a game is running. A table that only works out halfway through the first hand
- * that they are all sat together shouldn't have to finish the game first.
- *
- * It is also the one host control left outside the settings drawer, and it comes
- * before the seats rather than after them. It isn't a rule — it changes what
- * every person in the room does with their phone — and everything below it hangs
- * off the answer: whether the seats are numbered and orderable, whether the seat
- * order is checked before the deal, whether each phone shows a hand or a table,
- * and whether the QR is worth putting up at all.
- */
-function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
-        Where is everyone?
-      </p>
-      <div className="mt-2 flex gap-2">
-        {PLACES.map((place) => (
-          <Button
-            key={place.key}
-            variant={place.irl === on ? "primary" : "secondary"}
-            className="flex-1"
-            aria-pressed={place.irl === on}
-            onClick={() => onChange(place.irl)}
-          >
-            {place.label}
-          </Button>
-        ))}
-      </div>
     </div>
   );
 }

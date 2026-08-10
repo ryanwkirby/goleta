@@ -22,9 +22,17 @@ import {
   nextBotMove,
   roomView,
   setBotSpeed,
+  setHouseRules,
   setIrl,
   type Room,
 } from "../src/rooms.ts";
+
+/**
+ * The options the game was actually dealt under. Read through a call rather
+ * than off `room.game` directly: the tests below clear the game and deal again,
+ * and TypeScript narrows the field to `null` across a mutation it can't see.
+ */
+const dealtOptions = (room: Room) => room.game?.options;
 
 /** A room with the host in seat one and bots filling it out to `size`. */
 const seatedRoom = (size = MIN_TABLE_PLAYERS): Room => {
@@ -242,6 +250,81 @@ describe("bot speed", () => {
     beginGame(room, room.hostId);
     expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/Wait for this game/);
     expect(room.botSpeed).toBe("human");
+  });
+});
+
+describe("house rules", () => {
+  it("is the host's to set", () => {
+    const room = seatedRoom();
+    const guest = room.seats[1]?.id ?? "";
+    const rules = { ...roomView(room).houseRules, sunny: false };
+
+    expect(() => setHouseRules(room, guest, rules)).toThrow(/Only the host/);
+    expect(roomView(room).houseRules.sunny).toBe(true);
+  });
+
+  // Unlike bot speed, which is read live every time a bot is scheduled. These
+  // are read once, at the deal, so what they describe is the next game (#134).
+  it("can be changed with a game already running", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+
+    setHouseRules(room, room.hostId, {
+      eights: "nextPlayerNames",
+      seedEight: "dealerNames",
+      sunny: false,
+    });
+
+    expect(roomView(room).houseRules).toEqual({
+      eights: "nextPlayerNames",
+      seedEight: "dealerNames",
+      sunny: false,
+    });
+  });
+
+  it("leaves the hand already dealt playing the rules it was dealt under", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    const dealtUnder = structuredClone(dealtOptions(room));
+
+    setHouseRules(room, room.hostId, {
+      eights: "nextPlayerNames",
+      seedEight: "dealerNames",
+      sunny: false,
+    });
+
+    // The game holds its own copy, taken at `beginGame`. Nothing the host does
+    // to the table's rules may reach a hand that is already out.
+    expect(dealtOptions(room)).toEqual(dealtUnder);
+  });
+
+  it("hands them to the next deal", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    setHouseRules(room, room.hostId, {
+      eights: "nextPlayerNames",
+      seedEight: "dealerNames",
+      sunny: false,
+    });
+
+    room.game = null;
+    beginGame(room, room.hostId);
+
+    expect(dealtOptions(room)?.eights).toBe("nextPlayerNames");
+    expect(dealtOptions(room)?.seedEight).toBe("dealerNames");
+    expect(dealtOptions(room)?.sunny).toBeNull();
+  });
+
+  it("still refuses a value that is not a rule", () => {
+    const room = seatedRoom();
+    const rules = roomView(room).houseRules;
+
+    expect(() => setHouseRules(room, room.hostId, { ...rules, eights: "whatever" as never })).toThrow(
+      /No such rule/,
+    );
+    expect(() => setHouseRules(room, room.hostId, { ...rules, sunny: "yes" as never })).toThrow(
+      /on or off/,
+    );
   });
 });
 

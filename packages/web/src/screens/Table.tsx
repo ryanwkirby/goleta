@@ -16,6 +16,7 @@ import {
 } from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
+import { HostSettingsCog } from "../components/HostSettings.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
@@ -432,44 +433,28 @@ export function Table({
         ].join(" ")}
       >
         <header className="flex items-center gap-2 text-xs text-white/50">
+          {/* Leading the row, before the code, because it is the host's way
+              back to everything the lobby held and the rest of this line is
+              facts about the room rather than things to press. What used to sit
+              at the far end was a lone `in person: on` button — the only host
+              control that survived the lobby, reading like a status somebody
+              had left switched on. It lives behind the cog now, with the rules
+              for the next deal beside it (#134). */}
+          {room.hostId === game.you ? (
+            <HostSettingsCog
+              rules={room.houseRules}
+              irl={room.irl}
+              onRules={(rules) => send({ t: "setHouseRules", rules })}
+              onIrl={(on) => send({ t: "setIrl", on })}
+            />
+          ) : null}
           <span className="font-mono tracking-[0.2em] text-white/70">{room.code}</span>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
-          {/* The host's reach for the room flag once the lobby is behind them.
-              It is allowed to move mid-game precisely so a table that works out
-              halfway through a hand that they are all sat together can say so,
-              and a control only in the lobby would make that unreachable.
-
-              Named the same as the lobby switch — one setting, one word for it,
-              wherever the host happens to be standing when they change it. */}
-          {room.hostId === game.you ? (
-            <Button
-              variant="ghost"
-              className="ml-auto px-2 py-1 text-xs"
-              role="switch"
-              aria-checked={room.irl}
-              aria-label="Playing in person"
-              title={
-                room.irl
-                  ? "Everyone's in the same room. Tap for remote play."
-                  : "Tap if you're all sitting in the same room."
-              }
-              onClick={() => send({ t: "setIrl", on: !room.irl })}
-            >
-              in person: {room.irl ? "on" : "off"}
-            </Button>
-          ) : null}
           {/* No way back to the hand here, and none needed: at an IRL table the
               phone is the toggle. Turning it sideways is the hand view and
               turning it upright is this one — a gesture the table can see you
               make, which two words in a corner never were. */}
-          <Button
-            variant="ghost"
-            className={[
-              room.hostId === game.you ? "" : "ml-auto",
-              "px-2 py-1 text-xs",
-            ].join(" ")}
-            onClick={onShowRules}
-          >
+          <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
             rules
           </Button>
           <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onLeave}>

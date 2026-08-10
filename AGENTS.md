@@ -264,8 +264,22 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
 A table can vary three things, all of them rules the game already had written
 down: the two alternates from the original rules (**Power of Eights**,
 **Dealer's Choice**) and whether the **Sunny Rule** is played at all. They live
-on `GameOptions`, are chosen by the host in the lobby, and apply at the next
-deal.
+on `GameOptions`, are the host's to choose, and apply at the next deal.
+
+**The host can change them mid-game, and that is not a loophole.** They are read
+exactly once, at `beginGame`, which hands the game its own copy — so what the
+host is editing is always the *next* deal and can never reach a hand already
+out. The lobby has them and so does the settings cog behind the table (#134),
+and the panel says which of its two halves takes effect when. Two things keep
+that true and both are load-bearing: `setHouseRules` replaces `room.options`
+wholesale rather than editing it in place, and `beginGame` spreads it into a
+fresh object on the way to `startGame`. Don't make either of them share.
+
+**Bot speed is the one that stays frozen**, and it sits beside them in the lobby
+looking identical. It is read *live*, every time a bot is scheduled, so moving
+it mid-game moves a challenge window somebody is already watching. That is why
+it is not in the cog, and why `setBotSpeed` keeps its "wait for this game to
+finish" while `setHouseRules` no longer has one.
 
 Two constraints on anything added here:
 

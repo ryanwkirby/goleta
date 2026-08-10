@@ -102,9 +102,6 @@ export function Piles({
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
-        {/* The peel is drawn out of this box, so it hangs off the pile without
-            being part of the row: the pile keeps its place, its size and the
-            `PILE` anchor that in-flight cards are aiming at. */}
         <div className="relative">
           {face ? (
             <PlayingCard card={face} size={size} anchor={anchor(PILE)} mirrored={irl} />
@@ -116,26 +113,14 @@ export function Piles({
             />
           )}
           {peel ? <SunnyPeel {...peel} irl={irl} /> : null}
+          {called && !peel ? (
+            <div className="absolute -bottom-3 -right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-felt-900 shadow-xl ring-2 ring-white/10">
+              <SuitBadge suit={called} className="text-2xl" />
+            </div>
+          ) : null}
         </div>
-        {/* `showing` earns its place — paired with `called` under the badge it
-            is what explains that the card you can see is not what the table is
-            answering. It stays right when a namer picks the 8's own suit: the
-            pair then says the suit was chosen and chosen to match, which is a
-            play, and two labelled columns say it without a word of special
-            casing. The count of cards already played explained nothing. It says
-            nothing worth having under a peel, though: the card it is about is the one
-            the evidence is covering up, and the peel labels its own cards. */}
         <Caption>{called && !peel ? "showing" : undefined}</Caption>
       </div>
-
-      {called ? (
-        <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
-          <div className={["flex items-center", suitBox].join(" ")}>
-            <SuitBadge suit={called} className="text-base" />
-          </div>
-          <Caption>called</Caption>
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   IrlToggle,
 } from "../components/HostSettings.tsx";
 import { Button, Panel } from "../components/ui.tsx";
+import { loadName } from "../net/identity.ts";
 import { joinLink } from "../net/route.ts";
 
 /**
@@ -589,6 +590,23 @@ export function Lobby({
             <span className="mt-1 block text-xs text-white/40">
               Bots play at {room.botSpeed === "human" ? "human-like" : "lightning"} speed.
             </span>
+          ) : null}
+          {playerId === null ? (
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <Button
+                variant="primary"
+                onClick={() =>
+                  send({
+                    t: "join",
+                    code: room.code,
+                    name: loadName() || "Watcher",
+                  })
+                }
+                disabled={room.seats.length >= room.maxPlayers}
+              >
+                {room.seats.length >= room.maxPlayers ? "Table is full" : "Join table"}
+              </Button>
+            </div>
           ) : null}
         </Panel>
       )}

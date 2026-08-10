@@ -84,13 +84,9 @@ export const useGoleta = (): Goleta => {
   const [log, setLog] = useState<LoggedEvent[]>([]);
   const [shouts, setShouts] = useState<Shout[]>([]);
   const [error, setError] = useState<GoletaError | null>(null);
-  /**
-   * Read once, at the top of the session. The URL is how a screen says what it
-   * is for, and nothing after this may change its mind — `welcome` rewrites the
-   * hash, and a watcher whose mode got rewritten there would quietly sit down
-   * at the table on the next reload.
-   */
-  const [route] = useState(() => routeFromHash());
+  const [route, setRoute] = useState(() => routeFromHash());
+  const routeRef = useRef(route);
+  routeRef.current = route;
   const watching = route.mode !== "play";
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -126,14 +122,15 @@ export const useGoleta = (): Goleta => {
         // on every connection rather than only the first: watching is stateless,
         // so there is nothing to reclaim and nothing to check — a dropped socket
         // or a redeploy just watches again.
-        const code = codeRef.current ?? route.code;
-        const identity = code && !watching ? loadIdentity(code) : null;
-        if (code && watching) {
+        const code = codeRef.current ?? routeRef.current.code;
+        const isWatching = routeRef.current.mode !== "play";
+        const identity = code && !isWatching ? loadIdentity(code) : null;
+        if (code && isWatching) {
           socket.send(
             JSON.stringify({
               t: "watch",
               code,
-              ...(route.mode === "table" ? { table: true } : {}),
+              ...(routeRef.current.mode === "table" ? { table: true } : {}),
             } satisfies ClientMessage),
           );
         } else if (code && identity) {
@@ -154,7 +151,13 @@ export const useGoleta = (): Goleta => {
         switch (message.t) {
           case "welcome": {
             codeRef.current = message.code;
-            setHashCode(message.code, route.mode);
+            if (routeRef.current.mode !== "play" && message.playerId) {
+              const newRoute = { code: message.code, mode: "play" as ViewMode };
+              setRoute(newRoute);
+              setHashCode(message.code, "play");
+            } else {
+              setHashCode(message.code, routeRef.current.mode);
+            }
             setPlayerId(message.playerId);
             if (message.playerId && message.token) {
               saveIdentity(message.code, { playerId: message.playerId, token: message.token });
@@ -223,7 +226,7 @@ export const useGoleta = (): Goleta => {
       socketRef.current = null;
       closedRef.current = false;
     };
-  }, [route, watching]);
+  }, []);
 
   const leave = useCallback(() => {
     const code = codeRef.current;

@@ -30,6 +30,7 @@ import {
   gamesFinished,
   hasSeenSunny,
   loadHandSort,
+  loadName,
   markSunnySeen,
   recordGameFinished,
   saveHandSort,
@@ -540,9 +541,28 @@ export function Table({
                 Deal again
               </Button>
             ) : (
-              <p className="mt-2 text-sm text-white/50">
-                Waiting for {nameOf(room.hostId)} to deal again.
-              </p>
+              <>
+                <p className="mt-2 text-sm text-white/50">
+                  Waiting for {nameOf(room.hostId)} to deal again.
+                </p>
+                {!seated ? (
+                  <div className="mt-4 border-t border-white/10 pt-4">
+                    <Button
+                      variant="primary"
+                      onClick={() =>
+                        send({
+                          t: "join",
+                          code: room.code,
+                          name: loadName() || "Watcher",
+                        })
+                      }
+                      disabled={room.seats.length >= room.maxPlayers}
+                    >
+                      {room.seats.length >= room.maxPlayers ? "Table is full" : "Join next game"}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             )}
           </Panel>
         ) : null}

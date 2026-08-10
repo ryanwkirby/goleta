@@ -66,6 +66,20 @@ interface MotionApi {
    * landed; the previous one, or nothing at all, while a card is inbound.
    */
   pileFace: (actual: Card) => Card | null;
+  /**
+   * True while the cards are still going out.
+   *
+   * The one piece of "this layer is busy" anything else may read, and it is
+   * about the deal rather than motion in general on purpose. Exactly one prompt
+   * has to wait on it: under Dealer's Choice the game opens in `phase: "suit"`,
+   * so the dealer was asked to name a suit for an 8 that had not landed on a
+   * pile that was not there yet (#75). Every other prompt describes a state
+   * somebody can act on, and a card in the air is no reason to hold one back.
+   *
+   * False under reduced motion — nothing is planned, so there is nothing to wait
+   * for and no artificial wait to invent.
+   */
+  dealing: boolean;
   /** Motion is off. Anything that moves should skip straight to the result. */
   reduced: boolean;
 }
@@ -76,6 +90,7 @@ const MotionContext = createContext<MotionApi>({
   anchor: () => noopRef,
   isArriving: () => false,
   pileFace: (actual) => actual,
+  dealing: false,
   reduced: true,
 });
 
@@ -102,6 +117,7 @@ export function TableMotion({
   const [flights, setFlights] = useState<LiveFlight[]>([]);
   const [arriving, setArriving] = useState<ReadonlySet<string>>(() => new Set());
   const [pile, setPile] = useState<PileFace>({ kind: "actual" });
+  const [dealing, setDealing] = useState(false);
 
   const elements = useRef(new Map<AnchorKey, HTMLElement>());
   const anchorRefs = useRef(new Map<AnchorKey, RefCallback<HTMLElement>>());
@@ -112,6 +128,15 @@ export function TableMotion({
   const seen = useRef(0);
   const inbound = useRef(0);
   const sequence = useRef(0);
+  /**
+   * The deal's own flights, so the table knows when the cards are down.
+   *
+   * Counted off as each one lands rather than timed: the flights already
+   * announce their own arrival, backstop included, and a second clock set to the
+   * same numbers would be a guess at what this one already knows. The last card
+   * to land is the upcard, which is what the prompt is waiting for anyway.
+   */
+  const dealt = useRef(new Set<string>());
 
   const anchor = useCallback((key: AnchorKey): RefCallback<HTMLElement> => {
     const cached = anchorRefs.current.get(key);
@@ -137,6 +162,8 @@ export function TableMotion({
   /** A flight has come to rest: reveal what it was carrying. */
   const land = useCallback((flight: LiveFlight) => {
     setFlights((current) => current.filter((other) => other.id !== flight.id));
+
+    if (dealt.current.delete(flight.id) && dealt.current.size === 0) setDealing(false);
 
     const uncovered = flight.hides;
     if (uncovered !== null) {
@@ -170,7 +197,7 @@ export function TableMotion({
     const recent = fresh.filter((entry) => now - entry.at < STALE_MS);
     if (recent.length === 0) return;
 
-    const { flights: plans, emptiesPile } = planFlights(
+    const { flights: plans, emptiesPile, deals } = planFlights(
       recent.toReversed().map((entry) => entry.event),
       game,
       () => `f${(sequence.current += 1)}`,
@@ -199,6 +226,15 @@ export function TableMotion({
       setPile(emptiesPile || !held ? { kind: "empty" } : { kind: "card", card: held });
     }
 
+    // Set here rather than the moment the batch is planned, so a deal whose
+    // anchors all resolved to nothing — no seats on screen, a hand not yet
+    // rendered — never says it is dealing. There would be nothing to watch and
+    // nothing to end it.
+    if (deals) {
+      for (const flight of live) dealt.current.add(flight.id);
+      setDealing(true);
+    }
+
     setFlights((current) => [...current, ...live]);
   }, [log, game, reduced, geometry, land, scale]);
 
@@ -220,9 +256,10 @@ export function TableMotion({
         if (pile.kind === "empty") return null;
         return pile.kind === "card" ? pile.card : actual;
       },
+      dealing,
       reduced,
     }),
-    [anchor, arriving, pile, reduced],
+    [anchor, arriving, pile, dealing, reduced],
   );
 
   return (

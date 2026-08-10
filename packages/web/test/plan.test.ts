@@ -115,6 +115,17 @@ describe("a draw", () => {
 });
 
 describe("a deal", () => {
+  it("says it is a deal, so a prompt that has to wait for one can (#75)", () => {
+    expect(plan([{ type: "gameStarted", upcard: card("up") }]).deals).toBe(true);
+  });
+
+  it("is the only batch that says so", () => {
+    expect(plan([{ type: "played", playerId: "me", card: card("m2") }]).deals).toBe(false);
+    expect(plan([{ type: "drew", playerId: "them", card: card("t4") }]).deals).toBe(false);
+    expect(plan([called()]).deals).toBe(false);
+    expect(plan([]).deals).toBe(false);
+  });
+
   it("fans every dealt card out of the deck, then the upcard", () => {
     const { flights, emptiesPile } = plan([{ type: "gameStarted", upcard: card("up") }]);
 

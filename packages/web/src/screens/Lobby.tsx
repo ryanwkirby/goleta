@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
@@ -85,25 +85,46 @@ function JoinQr({ code }: { code: string }) {
   );
 }
 
+/**
+ * The code for the screen in the middle of the table.
+ *
+ * **It says out loud that this one is for a different device**, because the
+ * obvious move is the wrong one. Every other QR in this app is scanned with the
+ * phone in your hand; this one is scanned by a spare tablet, an old phone or a
+ * laptop that is about to be propped where the whole table can see it. Scanning
+ * it with your own phone lands you on a board with no cards and takes you off
+ * your seat, and a caption that only said "Add a shared screen" left that as
+ * something to find out. The dialog says what to point at it before the camera
+ * comes up.
+ *
+ * **And it takes itself away once one arrives.** The host scans it, the screen
+ * lights up across the table, and the dialog nobody is looking at any more used
+ * to sit over the lobby waiting for a tap. It closes on the count going *up*
+ * (#138), so it is answering the scan that just happened rather than a screen
+ * that was already there when it opened — and a screen dropping off mid-dialog
+ * lowers the mark rather than arming it, so reconnecting still counts as
+ * arriving.
+ */
 function SharedScreenInvite({
   code,
+  screens,
   onClose,
 }: {
   code: string;
+  /** How many shared screens are connected right now. */
+  screens: number;
   onClose: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
   const link = joinLink(code, "table");
+  const mark = useRef(screens);
 
-  const copy = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
+  useEffect(() => {
+    if (screens > mark.current) {
+      onClose();
+      return;
     }
-  };
+    if (screens < mark.current) mark.current = screens;
+  }, [screens, onClose]);
 
   return (
     <div
@@ -114,13 +135,20 @@ function SharedScreenInvite({
       onClick={onClose}
     >
       <Panel className="w-full max-w-sm text-center" onClick={(event) => event.stopPropagation()}>
-        <p className="text-sm font-semibold text-white">Add a shared screen</p>
+        <p className="text-sm font-semibold text-white">Scan this with a spare device</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-white/50">
+          A tablet, an old phone, a laptop — something nobody is playing on. It shows the middle of
+          the table, so stand it where everyone can see it.
+        </p>
+        <p className="mt-1 text-xs font-semibold text-amber-300/80">Not the phone in your hand.</p>
         <div className="mt-4 flex justify-center">
-          <QrCode value={link} label={`Scan for shared screen in room ${code}`} className="w-64 p-4" />
+          <QrCode
+            value={link}
+            label={`Scan with a spare device to add a shared screen to room ${code}`}
+            className="w-64 p-4"
+          />
         </div>
-        <Button variant="ghost" className="mt-3" onClick={() => void copy()}>
-          {copied ? "Link copied" : "Copy shared-screen link"}
-        </Button>
+        <p className="mt-2 text-xs text-white/40">Or tap the code to copy the link.</p>
         <Button variant="secondary" full className="mt-3" onClick={onClose}>
           Done
         </Button>
@@ -507,7 +535,11 @@ export function Lobby({
       </Panel>
 
       {sharingScreen ? (
-        <SharedScreenInvite code={room.code} onClose={() => setSharingScreen(false)} />
+        <SharedScreenInvite
+          code={room.code}
+          screens={room.tableScreens}
+          onClose={() => setSharingScreen(false)}
+        />
       ) : null}
 
       {isHost ? (

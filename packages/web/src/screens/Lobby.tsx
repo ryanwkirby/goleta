@@ -466,6 +466,30 @@ export function Lobby({
               </Button>
             </li>
           ) : null}
+          {/* A row per screen that is actually connected, above the button that
+              invites the next one — the same order the seats and "Add a bot"
+              are in. Rows rather than a tally because a screen arriving should
+              be something appearing in the room, and there is more than one on
+              offer: a long table may want one at each end (#138). */}
+          {room.irl
+            ? Array.from({ length: room.tableScreens }, (_, index) => (
+                <li
+                  key={`shared-screen-${index}`}
+                  className="flex min-h-16 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
+                >
+                  {numbered ? (
+                    // Sits in the seats' number column and stays empty: a shared
+                    // screen holds no seat, so it takes no place in the turn
+                    // order and must not look like it does.
+                    <span aria-hidden className="w-4 shrink-0" />
+                  ) : null}
+                  <span className="min-w-0 truncate font-medium text-white">Shared screen</span>
+                  <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-300">
+                    connected
+                  </span>
+                </li>
+              ))
+            : null}
           {room.irl ? (
             <li>
               <Button
@@ -474,7 +498,8 @@ export function Lobby({
                 className="justify-start rounded-xl border border-dashed border-white/15 px-3 py-2.5 text-white/60 hover:border-white/25"
                 onClick={() => setSharingScreen(true)}
               >
-                <span aria-hidden>+</span> Add a shared screen
+                <span aria-hidden>+</span>{" "}
+                {room.tableScreens > 0 ? "Add another shared screen" : "Add a shared screen"}
               </Button>
             </li>
           ) : null}

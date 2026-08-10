@@ -559,6 +559,67 @@ describe("what the wire carries", () => {
     expect(screen.errors.at(-1)).toMatch(/watching this table/);
   }, 20_000);
 
+  it("counts shared screens as they arrive and leave, and only shared screens", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    const code = host.code as string;
+    expect(host.room?.tableScreens).toBe(0);
+
+    // A shared screen names itself one, so the lobby has a row to draw (#138).
+    const first = await openClient(server.port);
+    first.send({ t: "watch", code, table: true });
+    await host.until((c) => c.room?.tableScreens === 1);
+
+    // A table may have more than one — a screen at each end of a long table is
+    // the case this exists for, and nothing anywhere assumed a single one.
+    const second = await openClient(server.port);
+    second.send({ t: "watch", code, table: true });
+    await host.until((c) => c.room?.tableScreens === 2);
+
+    // An ordinary spectator is not a shared screen and never counts towards one.
+    const spectator = await openClient(server.port);
+    spectator.send({ t: "watch", code });
+    await spectator.until((c) => c.room !== null);
+    expect(host.room?.tableScreens).toBe(2);
+
+    // And a screen going away takes its row with it.
+    second.close();
+    await host.until((c) => c.room?.tableScreens === 1);
+    first.close();
+    await host.until((c) => c.room?.tableScreens === 0);
+  }, 20_000);
+
+  it("counts shared screens off live connections, never off the snapshot", async () => {
+    const dataDir = tempDir();
+    const server = await startServer(dataDir);
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    const code = host.code as string;
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code, table: true });
+    await host.until((c) => c.room?.tableScreens === 1);
+    server.flush();
+
+    // A restarted process has nobody connected to it, so a room restored from
+    // disk comes back with no screens — the same reasoning that clears
+    // `seat.connected` on load. A count kept on the room would come back
+    // claiming a screen that is not there.
+    const restarted = await startServer(dataDir);
+    const rejoined = await openClient(restarted.port);
+    rejoined.send({
+      t: "rejoin",
+      code,
+      playerId: host.playerId as string,
+      token: host.token as string,
+    });
+    await rejoined.until((c) => c.room !== null);
+    expect(rejoined.room?.tableScreens).toBe(0);
+  }, 20_000);
+
   it("lets an IRL shared table screen draw for the current player", async () => {
     const server = await startServer(tempDir());
     const host = await openClient(server.port);

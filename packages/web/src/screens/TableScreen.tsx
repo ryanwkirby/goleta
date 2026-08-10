@@ -154,6 +154,11 @@ function Waiting({ room }: { room: RoomView }) {
     <div className="absolute inset-0 flex items-center justify-center">
       <EdgeNames room={room} />
       <div className="flex flex-col items-center text-center">
+        {/* What this device now is, said on the device itself. Whoever scanned
+            the code is across the table watching this screen light up, and
+            "shared screen" is the confirmation that the scan landed on the
+            right one of the two codes in the lobby (#138). */}
+        <p className="mb-4 text-2xl uppercase tracking-[0.3em] text-white/35">Shared screen</p>
         <QrCode value={link} label={`Scan to join room ${room.code}`} className="w-[30rem] p-6" />
         <p className="mt-5 font-mono text-7xl font-semibold tracking-[0.18em] text-amber-300">
           {room.code}

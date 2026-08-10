@@ -47,7 +47,7 @@ export const TURN_FOR: Record<Edge, number> = { bottom: 0, left: 90, top: 180, r
  * toggle in the other, both of them clear of the piles and clear of the peel,
  * which fans well outside the pile it hangs off.
  */
-export const BAND = { top: 48, bottom: 72, side: 56, corner: 120 };
+export const BAND = { top: 48, bottom: 48, side: 56, corner: 120 };
 
 /** How long a name is allowed to get before it truncates (`max-w-48`). */
 export const LABEL = 192;
@@ -69,15 +69,8 @@ export interface EdgeSeat {
  * quarter (see `fitScale.ts`). Better an off-centre name at one edge than two
  * smaller decks at all four.
  */
+const TOP_ENDS = { lone: 22, pair: [22, 78] };
 const BOTTOM_ENDS = { lone: 12, pair: [12, 88] };
-/**
- * A pair has to clear both ends of its edge: on the sides that means the top
- * and bottom bands, and along the top it means the room code in one corner and
- * the view toggle in the other. A name is up to `LABEL` long and sits centred
- * on its mark, so the mark has to be half a label clear of whatever is at the
- * end — which on the short sides, where the bands are, leaves less room than it
- * looks. The tests hold both.
- */
 const CENTRED = { lone: 50, pair: [30, 70] };
 
 /**
@@ -97,7 +90,7 @@ export const edgeSeats = (count: number): EdgeSeat[] => {
       return all;
     }, []);
     const slot = onEdge.indexOf(index);
-    const spread = edge === "bottom" ? BOTTOM_ENDS : CENTRED;
+    const spread = edge === "top" ? TOP_ENDS : edge === "bottom" ? BOTTOM_ENDS : CENTRED;
     placed.push({
       edge,
       along: onEdge.length <= 1 ? spread.lone : (spread.pair[slot] ?? spread.lone),

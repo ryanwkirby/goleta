@@ -156,7 +156,7 @@ export function RoomInvite({
             is that the code keeps working. */}
         {underWay && kind === "player" ? (
           <p className="mt-1 text-xs text-amber-300/70">
-            This hand is under way, so they can watch it — the code takes a seat once it ends.
+            This hand is under way, so they can watch it — they'll be asked to join when it ends.
           </p>
         ) : null}
 

@@ -320,68 +320,45 @@ function Playing({
           </div>
         </div>
       ) : (
-        /*
-          The piles, large, and the peel when a call is judged. This screen is
-          the best surface in the room for that moment: if a table has one, it
-          is where everybody's eyes should already be.
-
-          Scaled inside a box that reserves the room it takes, because a
-          transform reserves nothing on its own and the piles would be laid out
-          at their small size and simply overlap whatever sat next to them. The
-          padding at the top is the peel's: its "was in play" tag hangs above
-          the card it marks, and at this scale that reaches into the band the
-          top name is in.
-        */
         <div
-          style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
-          className="absolute flex items-center justify-center pt-8"
+          style={{ top: 0, bottom: 0, left: BAND.side, right: BAND.side }}
+          className="absolute flex items-center justify-center"
         >
-          <div className="scale-[1.9]">{piles}</div>
+          <div className="scale-[2.5]">{piles}</div>
         </div>
       )}
 
-      {/*
-        The prompt, in the bottom band, where the bottom names have been pushed
-        aside for it. It is not beside the piles because a column narrow enough
-        to leave them their width is too narrow to read a Sunny ruling in, and
-        it is not under them because that height is the board's width once the
-        whole thing is turned a quarter for a phone.
-
-        As wide as the names at either end will allow (`PROMPT` in the tests),
-        because the longest thing it ever says is a ruling naming two players,
-        and a seat name runs to sixteen characters. The band holds two lines of
-        this and the height is capped, so a third would be cut — and the ruling
-        is the one thing at this table nobody may miss.
-      */}
-      <p
-        style={{ maxHeight: BAND.bottom - 12 }}
-        className="absolute inset-x-0 bottom-1.5 mx-auto max-w-136 overflow-hidden text-balance text-center text-2xl font-semibold leading-tight"
-        role="status"
-      >
-        {finished ? (
-          <span className="text-amber-300">
-            {game.winnerId
-              ? `${nameOf(game.winnerId)} wins, still holding cards.`
-              : "A dead end. Nobody could move."}
-          </span>
-        ) : call && !peeling ? (
-          // The ruling, once the evidence has been and gone. The whole table
-          // watched the peel; this is what it came to.
-          <span className="text-amber-300">
-            <span aria-hidden>☀️</span> {nameOf(call.callerId)} called it on{" "}
-            {nameOf(call.targetId)} — said the {call.card.rank}
-            {SUIT_GLYPH[call.card.suit]}.{" "}
-            <span className="text-white/70">{call.correct ? "Right." : "Wrong."}</span>
-          </span>
-        ) : game.waitingOn ? (
-          <span className="text-white/60">
-            <span aria-hidden className="text-amber-300">
-              ▸{" "}
+      {/* The prompt, now a floating pill over the bottom of the table so it costs the board no height */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex max-w-136 justify-center">
+        <p
+          className="rounded-2xl bg-felt-950/80 px-6 py-3 text-balance text-center text-2xl font-semibold leading-tight shadow-2xl backdrop-blur-sm"
+          role="status"
+        >
+          {finished ? (
+            <span className="text-amber-300">
+              {game.winnerId
+                ? `${nameOf(game.winnerId)} wins, still holding cards.`
+                : "A dead end. Nobody could move."}
             </span>
-            {nameOf(game.waitingOn)} to play
-          </span>
-        ) : null}
-      </p>
+          ) : call && !peeling ? (
+            // The ruling, once the evidence has been and gone. The whole table
+            // watched the peel; this is what it came to.
+            <span className="text-amber-300">
+              <span aria-hidden>☀️</span> {nameOf(call.callerId)} called it on{" "}
+              {nameOf(call.targetId)} — said the {call.card.rank}
+              {SUIT_GLYPH[call.card.suit]}.{" "}
+              <span className="text-white/70">{call.correct ? "Right." : "Wrong."}</span>
+            </span>
+          ) : game.waitingOn ? (
+            <span className="text-white/60">
+              <span aria-hidden className="text-amber-300">
+                ▸{" "}
+              </span>
+              {nameOf(game.waitingOn)} to play
+            </span>
+          ) : null}
+        </p>
+      </div>
     </>
   );
 }

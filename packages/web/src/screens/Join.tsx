@@ -55,6 +55,7 @@ export function Join({
    * what it came to do, and `useGoleta` reads it once on the way up.
    */
   const watchInstead = (): void => {
+    saveName(trimmedName);
     location.hash = hashFor(trimmedCode, "watch");
     location.reload();
   };

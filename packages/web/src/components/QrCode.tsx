@@ -63,8 +63,12 @@ export function QrCode({
       // The card's own classes, moved off the symbol so the padding belongs to
       // the thing being tapped: a quiet zone that isn't part of the target is a
       // ring of misses around the middle of the code.
+      //
+      // The width comes from the caller and only from the caller. A `w-full` in
+      // here reads as "fill the card" and means "fill the parent", which is the
+      // same thing in a column and is 888px of QR in a row.
       className={[
-        "relative block h-auto w-full rounded-xl bg-white",
+        "relative block h-auto rounded-xl bg-white",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
         className,
       ].join(" ")}

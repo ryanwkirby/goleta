@@ -604,7 +604,7 @@ export function SuitPicker({
         <h2 className="text-sm font-semibold text-amber-300">Name a suit</h2>
         {compact ? null : (
           <p className="truncate text-xs text-white/50">
-            Take your time — every hand is still up there.
+            Take your time — look at the next players' cards.
           </p>
         )}
       </div>

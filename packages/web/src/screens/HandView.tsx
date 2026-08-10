@@ -7,9 +7,10 @@ import { HelpShout } from "../components/Help.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
-import type { NameOf } from "../lib/format.ts";
+import { turnPrompt, type NameOf } from "../lib/format.ts";
 import { handSize, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
+import { useMotion } from "../motion/TableMotion.tsx";
 import type { HandMode } from "../components/Hand.tsx";
 import type { HandSort } from "../lib/sort.ts";
 import type { GoletaError } from "../net/useGoleta.ts";
@@ -30,12 +31,6 @@ export interface HandViewProps {
   refusal: GoletaError | null;
   canDraw: boolean;
   onDraw: () => void;
-  /**
-   * Furniture rather than cards, so all of it goes straight through to the
-   * strip. This screen is your hand and a line across the top of it, and
-   * nothing here is drawn underneath any more (#131).
-   */
-  prompt: string;
   mine: boolean;
   handSort: HandSort;
   onCycleSort: () => void;
@@ -99,7 +94,6 @@ export function HandView({
   refusal,
   canDraw,
   onDraw,
-  prompt,
   mine,
   handSort,
   onCycleSort,
@@ -122,6 +116,18 @@ export function HandView({
    */
   const row = useRef<HTMLDivElement>(null);
   const box = useBox(row);
+
+  /**
+   * The strip's line, and whether the picker is allowed up yet.
+   *
+   * Worked out here rather than handed down, because both answers need
+   * `dealing` and `Table` renders the motion provider rather than sitting under
+   * it. Under Dealer's Choice the game opens in `phase: "suit"`, so without this
+   * the strip asked for a suit — and the picker took its room out of the column,
+   * shrinking the hand — while the cards were still going out (#75).
+   */
+  const { dealing } = useMotion();
+  const prompt = turnPrompt(game, nameOf, assist, dealing);
 
   // Measured against the row's *content* box, and the row is the only thing
   // with padding — the hand inside it has none when it is fanning. So this is
@@ -185,7 +191,7 @@ export function HandView({
           </div>
         ) : null}
 
-        {game.phase.kind === "suit" && mine ? (
+        {game.phase.kind === "suit" && mine && !dealing ? (
           <div className="shrink-0 px-2 pt-1">
             <SuitPicker
               compact

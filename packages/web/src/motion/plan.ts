@@ -66,6 +66,17 @@ export interface Planned {
   flights: FlightPlan[];
   /** The pile is empty until the upcard lands, so it must stop drawing a card. */
   emptiesPile: boolean;
+  /**
+   * These flights are a deal going out, so the table is still setting itself up
+   * rather than waiting on anybody.
+   *
+   * Reported because one prompt has to wait for it: under Dealer's Choice the
+   * game opens in `phase: "suit"` and the dealer was asked to name one while the
+   * cards were still in the air (#75). It is a fact about the batch, not about
+   * the individual flights — a `gameStarted` batch is the deal and nothing else,
+   * since every other event at that moment plans no flights at all.
+   */
+  deals: boolean;
 }
 
 /**
@@ -123,6 +134,7 @@ export const planFlights = (
 ): Planned => {
   const flights: FlightPlan[] = [];
   let emptiesPile = false;
+  let deals = false;
   // Events in a batch happened in order and should read that way, so each one
   // starts a beat after the last rather than all at once.
   let cursor = 0;
@@ -135,6 +147,7 @@ export const planFlights = (
     switch (event.type) {
       case "gameStarted": {
         emptiesPile = true;
+        deals = true;
         cursor = dealFlights(event.upcard, game, nextId, cursor, flights, scale);
         break;
       }
@@ -272,7 +285,7 @@ export const planFlights = (
     }
   }
 
-  return { flights: compress(flights), emptiesPile };
+  return { flights: compress(flights), emptiesPile, deals };
 };
 
 /**

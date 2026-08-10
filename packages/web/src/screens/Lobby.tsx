@@ -78,7 +78,9 @@ function JoinQr({ code }: { code: string }) {
           className="w-44 max-w-[55%] p-2.5"
         />
       </div>
-      <p className="mt-2 text-xs text-white/40">Point a camera at it, or type the code.</p>
+      <p className="mt-2 text-xs text-white/40">
+        Point a camera at it, type the code, or tap it to copy the link.
+      </p>
     </div>
   );
 }

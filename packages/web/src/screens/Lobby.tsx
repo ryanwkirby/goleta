@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
+import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { QrCode } from "../components/QrCode.tsx";
 import {
   describeRules,
@@ -97,13 +98,8 @@ function JoinQr({ code }: { code: string }) {
  * something to find out. The dialog says what to point at it before the camera
  * comes up.
  *
- * **And it takes itself away once one arrives.** The host scans it, the screen
- * lights up across the table, and the dialog nobody is looking at any more used
- * to sit over the lobby waiting for a tap. It closes on the count going *up*
- * (#138), so it is answering the scan that just happened rather than a screen
- * that was already there when it opened — and a screen dropping off mid-dialog
- * lowers the mark rather than arming it, so reconnecting still counts as
- * arriving.
+ * **And it takes itself away once one arrives** — `useDismissOnScreenJoin`,
+ * which the in-game invite uses too so the two behave the same.
  */
 function SharedScreenInvite({
   code,
@@ -116,15 +112,7 @@ function SharedScreenInvite({
   onClose: () => void;
 }) {
   const link = joinLink(code, "table");
-  const mark = useRef(screens);
-
-  useEffect(() => {
-    if (screens > mark.current) {
-      onClose();
-      return;
-    }
-    if (screens < mark.current) mark.current = screens;
-  }, [screens, onClose]);
+  useDismissOnScreenJoin(screens, true, onClose);
 
   return (
     <div

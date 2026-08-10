@@ -33,6 +33,7 @@ import { useState } from "react";
 
 import { QrCode } from "./QrCode.tsx";
 import { Button, Panel } from "./ui.tsx";
+import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { joinLink } from "../net/route.ts";
 
 type Invite = "player" | "screen";
@@ -67,10 +68,13 @@ export function RoomInvite({
    * know that before they scan it rather than after.
    */
   underWay,
+  screens,
   onClose,
 }: {
   code: string;
   underWay: boolean;
+  /** How many shared screens are connected right now. */
+  screens: number;
   onClose: () => void;
 }) {
   const [kind, setKind] = useState<Invite>("player");
@@ -78,6 +82,11 @@ export function RoomInvite({
 
   const invite = INVITES.find((option) => option.key === kind) ?? INVITES[0]!;
   const link = joinLink(code, kind === "screen" ? "table" : "play");
+
+  // Same rule as the lobby's dialog: the shared-screen code takes itself away
+  // once a shared screen arrives — but only while it is the code on screen. A
+  // screen joining is no reason to shut a panel being held out to a newcomer.
+  useDismissOnScreenJoin(screens, kind === "screen", onClose);
 
   const copy = async (): Promise<void> => {
     try {

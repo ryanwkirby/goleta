@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
 import { fanTable, inRows } from "../lib/fan.ts";
-import { inTurnOrder } from "../lib/seating.ts";
+import { inTurnOrder, nextStillIn } from "../lib/seating.ts";
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import type { Shout } from "../net/useGoleta.ts";
@@ -169,9 +169,19 @@ export function Seats({
    * somebody who has been caught and owes a punishment card: that is exactly
    * the moment you want to be looking at them.
    *
-   * On your own turn there is nobody in the strip to follow, so it goes hard
-   * left — which, rotated, is the player about to follow you, and exactly who
-   * you're weighing up while you decide.
+   * On your own turn there is nobody in the strip to follow, so it anchors on
+   * the player about to follow you — rotated to the left-hand end, and exactly
+   * who you're weighing up while you decide. On the *first seat still holding
+   * cards*, not simply the first seat: the rotation is by seat and not by who
+   * is still alive (`lib/seating.ts`), so an out player can sit at that end,
+   * and going hard left then spent the strip on somebody with no hand to read
+   * and pushed the one you were actually deciding against off the far edge
+   * (#132). They keep their place — they are still at the table — the strip
+   * just stops anchoring on them.
+   *
+   * That seat is only brought into view, never centred: it is already at the
+   * left-hand end, and centring it would scroll the table further than the
+   * question needs. When nobody is out this lands on `0` exactly as before.
    *
    * Otherwise the seat is centred, but never at the price of hanging one of its
    * ends off an edge: the first seat settles at `0` and the last at the end of
@@ -200,21 +210,27 @@ export function Seats({
    */
   const waitingOn = game.waitingOn;
   const you = game.you;
+  const nextUp = nextStillIn(others)?.id ?? null;
   const settled = `${available}:${fan.sliver}:${held.join(",")}`;
   useEffect(() => {
     const list = strip.current;
     if (!list || waitingOn === null) return;
 
+    const yours = waitingOn === you;
+    const anchor = yours ? nextUp : waitingOn;
+
     const end = Math.max(0, list.scrollWidth - list.clientWidth);
     let left = 0;
 
-    if (waitingOn !== you) {
-      const seat = list.querySelector<HTMLElement>(`[data-seat="${waitingOn}"]`);
+    if (anchor !== null) {
+      const seat = list.querySelector<HTMLElement>(`[data-seat="${anchor}"]`);
       if (!seat) return;
       const centred = seat.offsetLeft - (list.clientWidth - seat.offsetWidth) / 2;
       const showingItsStart = seat.offsetLeft;
       const showingItsEnd = seat.offsetLeft + seat.offsetWidth - list.clientWidth;
-      const wanted = Math.min(Math.max(centred, showingItsEnd), showingItsStart);
+      const wanted = yours
+        ? Math.min(Math.max(showingItsEnd, 0), showingItsStart)
+        : Math.min(Math.max(centred, showingItsEnd), showingItsStart);
       left = Math.min(Math.max(wanted, 0), end);
     }
 
@@ -224,7 +240,7 @@ export function Seats({
     // showing the wrong seat. Nobody is watching it glide, so don't ask it to.
     const gliding = !reduced && document.visibilityState === "visible";
     list.scrollTo({ left, behavior: gliding ? "smooth" : "auto" });
-  }, [waitingOn, you, reduced, settled]);
+  }, [waitingOn, you, nextUp, reduced, settled]);
 
   return (
     <ul

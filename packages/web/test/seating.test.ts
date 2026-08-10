@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GameView, PlayerView } from "@goleta/engine";
 
-import { inTurnOrder } from "../src/lib/seating.ts";
+import { inTurnOrder, nextStillIn } from "../src/lib/seating.ts";
 
 const seat = (id: string, eliminated = false): PlayerView => ({
   id,
@@ -50,5 +50,29 @@ describe("the order of the seat strip", () => {
     const game = table(SEATS, "a");
     const out = { ...game, players: game.players.map((p) => (p.id === "b" ? seat("b", true) : p)) };
     expect(strip(out)).toEqual(["b", "c", "d"]);
+  });
+});
+
+const id = (player: PlayerView | null) => player?.id ?? null;
+
+describe("who the strip anchors on during your own turn", () => {
+  it("is the player who plays after you, when they are still in", () => {
+    expect(id(nextStillIn([seat("b"), seat("c"), seat("d")]))).toBe("b");
+  });
+
+  it("skips past the ones who are out, however many there are", () => {
+    expect(id(nextStillIn([seat("b", true), seat("c"), seat("d")]))).toBe("c");
+    expect(id(nextStillIn([seat("b", true), seat("c", true), seat("d")]))).toBe("d");
+  });
+
+  it("passes over an out seat without reordering the strip around it", () => {
+    const order = [seat("b", true), seat("c"), seat("d")];
+    nextStillIn(order);
+    expect(order.map((player) => player.id)).toEqual(["b", "c", "d"]);
+  });
+
+  it("is nobody once everyone else is out", () => {
+    expect(nextStillIn([seat("b", true), seat("c", true)])).toBeNull();
+    expect(nextStillIn([])).toBeNull();
   });
 });

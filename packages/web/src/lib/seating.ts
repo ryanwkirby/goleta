@@ -29,3 +29,20 @@ export const inTurnOrder = (game: GameView): PlayerView[] => {
   if (seat < 0) return game.players;
   return [...game.players.slice(seat + 1), ...game.players.slice(0, seat)];
 };
+
+/**
+ * The first seat in that strip still holding cards — who the seat strip anchors
+ * on while the table is waiting on you.
+ *
+ * That is the one place the "by seat, not by who is left" rule above needs a
+ * companion rather than an exception. The strip keeps an out player at the
+ * left-hand end, which is the honest picture; anchoring the *scroll* there
+ * spent the width on somebody with no hand to read and pushed the player you
+ * are actually deciding against off the far edge (#132). The order doesn't
+ * move, only what the strip scrolls to show.
+ *
+ * Null when everybody else is out, which is the last turn of the game: there is
+ * nothing left to look at and the strip stays where it is.
+ */
+export const nextStillIn = (strip: PlayerView[]): PlayerView | null =>
+  strip.find((player) => !player.eliminated) ?? null;

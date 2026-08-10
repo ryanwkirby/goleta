@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { TABLE_DESIGN } from "../src/lib/fitScale.ts";
 import { BAND, edgeFor, edgeSeats, LABEL, TURN_FOR, type Edge } from "../src/lib/tableEdges.ts";
 
-/** The one measurement `TableScreen` owns: `max-w-104` on the prompt, centred. */
-const PROMPT = 416;
+/** The one measurement `TableScreen` owns: `max-w-136` on the prompt, centred. */
+const PROMPT = 544;
 
 const MIN_SEATS = 4;
 const MAX_SEATS = 8;

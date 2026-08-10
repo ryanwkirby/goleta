@@ -346,10 +346,16 @@ function Playing({
         to leave them their width is too narrow to read a Sunny ruling in, and
         it is not under them because that height is the board's width once the
         whole thing is turned a quarter for a phone.
+
+        As wide as the names at either end will allow (`PROMPT` in the tests),
+        because the longest thing it ever says is a ruling naming two players,
+        and a seat name runs to sixteen characters. The band holds two lines of
+        this and the height is capped, so a third would be cut — and the ruling
+        is the one thing at this table nobody may miss.
       */}
       <p
         style={{ maxHeight: BAND.bottom - 12 }}
-        className="absolute inset-x-0 bottom-1.5 mx-auto max-w-104 overflow-hidden text-balance text-center text-2xl font-semibold leading-tight"
+        className="absolute inset-x-0 bottom-1.5 mx-auto max-w-136 overflow-hidden text-balance text-center text-2xl font-semibold leading-tight"
         role="status"
       >
         {finished ? (

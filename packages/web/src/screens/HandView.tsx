@@ -2,8 +2,8 @@ import { useRef } from "react";
 
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
-import { Hand } from "../components/Hand.tsx";
-import { HelpShout } from "../components/Help.tsx";
+import { Hand, HandSortButton } from "../components/Hand.tsx";
+import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
@@ -140,7 +140,7 @@ export function HandView({
   const me = game.you ?? "";
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="relative flex h-dvh flex-col overflow-hidden">
       {/* Everything that isn't your cards, in one line across the top. The row
           of furniture that used to sit under them is gone: it cost the hand a
           card size, and none of what was on it — the prompt the strip was
@@ -157,11 +157,6 @@ export function HandView({
         helpFrom={helpFrom}
         prompt={prompt}
         mine={mine}
-        sortable={cards.length > 1}
-        handSort={handSort}
-        onCycleSort={onCycleSort}
-        stalled={stalled}
-        onAskForHelp={onAskForHelp}
         onShowInvite={onShowInvite}
       />
 
@@ -271,6 +266,47 @@ export function HandView({
           </div>
         </div>
       </div>
+
+      {/*
+        The felt's own printing, in the two bottom corners.
+
+        Both of these are about your own hand, and your own hand is at the
+        bottom of this screen — they were at the top only because there was
+        nowhere else to put them. #131 is why: a row *under* the cards costs
+        the hand a card size, because `handHeight` reads the height the row is
+        left, and neither of these is worth one.
+
+        So they are neither on the strip nor in the column. They are laid over
+        the felt, outside the box `useBox` measures, which is what keeps that
+        rule intact while still putting them where a thumb is (#167). The cards
+        run to within twenty pixels of the bottom since #166, so with a wide fan
+        these sit over its outermost card — the accepted cost, and the reason
+        they are small, quiet, and above the cards rather than under them:
+        printing you cannot press is not a control.
+      */}
+      {stalled ? (
+        <div
+          className={[
+            "absolute bottom-0 left-0 z-20",
+            "pb-[max(0.25rem,env(safe-area-inset-bottom))]",
+            "pl-[max(0.5rem,env(safe-area-inset-left))]",
+          ].join(" ")}
+        >
+          <HelpLink onAsk={onAskForHelp} />
+        </div>
+      ) : null}
+
+      {cards.length > 1 ? (
+        <div
+          className={[
+            "absolute bottom-0 right-0 z-20",
+            "pb-[max(0.25rem,env(safe-area-inset-bottom))]",
+            "pr-[max(0.5rem,env(safe-area-inset-right))]",
+          ].join(" ")}
+        >
+          <HandSortButton sort={handSort} onCycle={onCycleSort} />
+        </div>
+      ) : null}
     </div>
   );
 }

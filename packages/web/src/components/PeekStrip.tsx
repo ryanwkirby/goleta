@@ -3,12 +3,10 @@ import type { GameView, RoomView } from "@goleta/engine";
 import type { NameOf } from "../lib/format.ts";
 import { useFullscreen } from "../lib/fullscreen.ts";
 import { pileSuit } from "../lib/pile.ts";
-import type { HandSort } from "../lib/sort.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
-import { HandSortButton } from "./Hand.tsx";
-import { HelpAsk, HelpLink } from "./Help.tsx";
+import { HelpAsk } from "./Help.tsx";
 import { QrGlyph } from "./QrCode.tsx";
 import { SunnySign } from "./Sunny.tsx";
 
@@ -69,11 +67,6 @@ export function PeekStrip({
   helpFrom,
   prompt,
   mine,
-  sortable,
-  handSort,
-  onCycleSort,
-  stalled,
-  onAskForHelp,
   onShowInvite,
 }: {
   room: RoomView;
@@ -89,13 +82,6 @@ export function PeekStrip({
   prompt: string;
   /** Whether it is waiting for you — the prompt is drawn up when it is. */
   mine: boolean;
-  /** Nothing to arrange with one card left, so nothing is offered. */
-  sortable: boolean;
-  handSort: HandSort;
-  onCycleSort: () => void;
-  /** A few seconds into a turn you haven't moved on. */
-  stalled: boolean;
-  onAskForHelp: () => void;
   /** Tapping the room code: the invite, opened by whoever is holding the phone. */
   onShowInvite: () => void;
 }) {
@@ -183,12 +169,6 @@ export function PeekStrip({
             <span aria-hidden>⤢</span> full screen
           </button>
         ) : null}
-
-        {sortable ? (
-          <HandSortButton sort={handSort} onCycle={onCycleSort} className="shrink-0" />
-        ) : null}
-
-        {stalled ? <HelpLink onAsk={onAskForHelp} /> : null}
 
         {/* Yours alone: the server sends this to nobody else, and a missed call
             is not something the table needs announcing. */}

@@ -42,10 +42,24 @@ protocol, and a mixed `http` page would try `ws:` and be blocked.
 **Merging to `main` deploys.** The `Deploy` workflow runs on a repo-scoped
 self-hosted runner on the Mac mini, force-checks-out `main` in
 `/Users/ryan/git/goleta`, rebuilds, prunes dangling images and then polls
-`http://localhost:8063/` for up to a minute. Watch the run rather than
+`http://127.0.0.1:8063/` for up to a minute. Watch the run rather than
 rebuilding by hand — a manual build racing the runner is two deploys landing on
 one live table. `concurrency` queues overlapping runs instead of cancelling
 them, for the same reason.
+
+**And leave the working tree alone while a run is in flight**, not just the
+build. The deploy force-checks-out `main` in this very tree, so a `git pull` of
+your own landing at the same moment rewrites the build context underneath
+buildkit, which comes back as `load build context: rpc error … EOF` and reads
+like a broken daemon. Merge, then wait for the run before touching the tree.
+
+**The health check asks `127.0.0.1` on purpose.** `localhost` resolves to `::1`
+first; the container publishes on both stacks, but OrbStack's IPv6 forward is
+not ready the instant a freshly recreated container starts, and an unready
+forward hangs rather than refusing — so curl has no error to fall through to
+IPv4 on. With no `--max-time` that made one attempt 28 seconds instead of one
+attempt, and a deploy that had actually landed went red fourteen minutes later
+(#154). If you ever change what this polls, keep it on v4 and keep it capped.
 
 It is triggered by `push` to `main` and by manual dispatch, and deliberately
 never by `pull_request`: the runner is the machine holding the rooms, and

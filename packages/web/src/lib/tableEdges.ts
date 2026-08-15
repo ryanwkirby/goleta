@@ -13,6 +13,8 @@
  * does with eight seats is a test rather than eight people and a tablet.
  */
 
+import type { Box, Point } from "./fitScale.ts";
+
 export type Edge = "top" | "right" | "bottom" | "left";
 
 /**
@@ -80,6 +82,47 @@ const CENTRED = { lone: 50, pair: [30, 70] };
  * one edge are spread across it and a lone seat is placed on its own terms. The
  * table seats eight at most, so an edge holds one name or two.
  */
+/**
+ * How far in from its own edge a name sits — the line its label centres on.
+ *
+ * The top one is the middle of its band. The other three are hand-set: the
+ * bottom shares its band with the prompt and sits a little further in, and the
+ * sides are turned a quarter, so what looks like a generous inset is most of a
+ * label's height lying along the edge.
+ *
+ * Exported because the flight aims at these spots too. It used to be inline in
+ * `EdgeNames` and the flight had its own four fixed vectors from the middle of
+ * the board, which is how a card came to be thrown at the midpoint between two
+ * people whenever an edge held two of them (#164).
+ */
+export const ACROSS: Record<Edge, number> = {
+  top: BAND.top / 2,
+  bottom: 36,
+  left: 28,
+  right: 28,
+};
+
+/**
+ * Where a seat's name lands in the design box.
+ *
+ * One answer, read by the thing that draws the names and by the thing that
+ * throws cards at them, so a card provably arrives where the name is rather
+ * than somewhere near the right edge.
+ */
+export const seatPoint = (spot: EdgeSeat, design: Box): Point => {
+  const across = ACROSS[spot.edge];
+  switch (spot.edge) {
+    case "top":
+      return { x: (spot.along / 100) * design.width, y: across };
+    case "bottom":
+      return { x: (spot.along / 100) * design.width, y: design.height - across };
+    case "left":
+      return { x: across, y: (spot.along / 100) * design.height };
+    case "right":
+      return { x: design.width - across, y: (spot.along / 100) * design.height };
+  }
+};
+
 export const edgeSeats = (count: number): EdgeSeat[] => {
   const edges = Array.from({ length: Math.max(count, 0) }, (_, index) => edgeFor(index, count));
 

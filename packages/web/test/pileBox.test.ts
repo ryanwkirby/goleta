@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { CardSize } from "../src/components/Card.tsx";
 import { TABLE_DESIGN, fitScale } from "../src/lib/fitScale.ts";
-import { pileBox } from "../src/lib/pileBox.ts";
-import { BAND } from "../src/lib/tableEdges.ts";
+import { deckPoint, pileBox } from "../src/lib/pileBox.ts";
+import { BAND, edgeSeats, seatPoint } from "../src/lib/tableEdges.ts";
 
 /**
  * The two boxes `TableScreen` gives the piles, kept in step with the constants
@@ -16,6 +16,12 @@ const CENTRE = {
   height: TABLE_DESIGN.height - BAND.top - BAND.bottom - GUTTER * 2,
 };
 const HANDS = { width: TABLE_DESIGN.width - 40, height: 240 };
+
+/** The point the centre view centres its piles on — symmetric, so the middle. */
+const CENTRE_AT = {
+  x: TABLE_DESIGN.width / 2,
+  y: (BAND.top + (TABLE_DESIGN.height - BAND.bottom)) / 2,
+};
 
 const EVERY_SIZE: CardSize[] = ["sm", "md", "lg", "xl", "2xl"];
 
@@ -71,6 +77,57 @@ describe("fitting the centre piles into the room the board has", () => {
         Math.abs(width - room.width) < 0.001 || Math.abs(height - room.height) < 0.001;
       expect(snug).toBe(true);
     }
+  });
+
+  it("throws a drawn card from the deck towards the seat that drew it", () => {
+    // Both the vector's ends used to be wrong. It started at the middle of the
+    // design box, which is not where the deck is, and it finished on one of
+    // four fixed offsets — so on any table of five or more, where an edge holds
+    // two seats, the card was thrown at the midpoint between two people and
+    // towards neither of them (#164).
+    const from = deckPoint(CENTRE, CENTRE_AT, "xl");
+
+    for (const count of [4, 5, 6, 7, 8]) {
+      for (const spot of edgeSeats(count)) {
+        const to = seatPoint(spot, TABLE_DESIGN);
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+
+        // Whichever edge they are on, that is the way the card goes.
+        if (spot.edge === "top") expect(dy).toBeLessThan(0);
+        if (spot.edge === "bottom") expect(dy).toBeGreaterThan(0);
+        if (spot.edge === "left") expect(dx).toBeLessThan(0);
+        if (spot.edge === "right") expect(dx).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("sends two seats sharing an edge to different places", () => {
+    const from = deckPoint(CENTRE, CENTRE_AT, "xl");
+    const seen = new Map<string, string[]>();
+
+    for (const spot of edgeSeats(8)) {
+      const to = seatPoint(spot, TABLE_DESIGN);
+      const vector = `${(to.x - from.x).toFixed(1)},${(to.y - from.y).toFixed(1)}`;
+      seen.set(spot.edge, [...(seen.get(spot.edge) ?? []), vector]);
+    }
+
+    // Eight seats is two per edge, and no edge may throw both of its cards
+    // along the same line.
+    for (const [, vectors] of seen) {
+      expect(vectors).toHaveLength(2);
+      expect(new Set(vectors).size).toBe(2);
+    }
+  });
+
+  it("puts the deck to the left of the pile box's centre, and a little above it", () => {
+    // The two cards and their gap are centred in the box and the deck is the
+    // left of the pair; the caption hangs under both, so the cards' middle sits
+    // above the box's. Neither is a guess — get either wrong and the card in
+    // the air leaves from somewhere the deck is not.
+    const at = deckPoint(CENTRE, CENTRE_AT, "xl");
+    expect(at.x).toBeLessThan(CENTRE_AT.x);
+    expect(at.y).toBeLessThan(CENTRE_AT.y);
   });
 
   it("allows for the suit circle on both sides, so centring cannot hand it back", () => {

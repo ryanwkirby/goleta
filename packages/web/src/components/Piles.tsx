@@ -46,6 +46,7 @@ export function Piles({
   peel = null,
   irl = false,
   size = "lg",
+  turn = 0,
 }: {
   game: GameView;
   canDraw: boolean;
@@ -53,6 +54,16 @@ export function Piles({
   peel?: Peel | null;
   irl?: boolean;
   size?: Extract<CardSize, "lg" | "xl">;
+  /**
+   * How far to turn the two bits of *writing* on these piles, in degrees, so
+   * they read from wherever the shared table screen is currently facing (#160).
+   * Zero everywhere else, which is every phone: a hand is held, so there is
+   * nobody on the other side of it.
+   *
+   * The cards themselves never turn. `mirrored` is what makes those readable
+   * from both ends, and turning a card would be turning the board.
+   */
+  turn?: number;
 }) {
   const { anchor, pileFace } = useMotion();
   // The state's top card is the one that has *finished* arriving. While a card
@@ -102,7 +113,10 @@ export function Piles({
           {/* Sat on the lattice rather than on a flat colour now, so it brings
               its own dark to stand on. */}
           <span aria-hidden className="absolute inset-x-0 bottom-2 flex justify-center">
-            <span className="rounded-full bg-black/55 px-2 py-1 font-mono text-xs leading-none text-white/85">
+            <span
+              style={{ transform: `rotate(${turn}deg)` }}
+              className="rounded-full bg-black/55 px-2 py-1 font-mono text-xs leading-none text-white/85"
+            >
               {cardsLeft} {cardsLeft === 1 ? "card" : "cards"}
             </span>
           </span>
@@ -132,7 +146,11 @@ export function Piles({
               at the line of small print under them. */}
           {suit && !peel ? (
             <div className="absolute -bottom-3 -right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-felt-900 shadow-xl ring-2 ring-white/10">
-              <SuitMark mark={suit} className="text-2xl" />
+              <SuitMark
+                mark={suit}
+                className="text-2xl"
+                style={{ transform: `rotate(${turn}deg)` }}
+              />
             </div>
           ) : null}
         </div>

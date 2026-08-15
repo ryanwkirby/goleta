@@ -1,4 +1,4 @@
-import type { RefCallback } from "react";
+import type { CSSProperties, RefCallback } from "react";
 
 import type { Card as CardModel, Suit } from "@goleta/engine";
 
@@ -196,9 +196,19 @@ export function CardBack({
  * always drawn the glyph alone. This is the same treatment in both places now,
  * with the name kept for whoever is listening rather than looking.
  */
-export function SuitMark({ mark, className = "" }: { mark: PileSuit; className?: string }) {
+export function SuitMark({
+  mark,
+  className = "",
+  style,
+}: {
+  mark: PileSuit;
+  className?: string;
+  /** The shared screen turns this to face whoever is playing (#160). */
+  style?: CSSProperties;
+}) {
   return (
     <span
+      style={style}
       className={[
         "font-semibold",
         mark.kind === "owed"

@@ -66,7 +66,8 @@ export function Join({
       <header className="text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
         <p className="mt-2 text-balance text-white/60">
-          Crazy Eights, reversed. Hold on to your cards — the last player with any wins.
+          It's Crazy Eights, reversed. Hold on to your cards — when you're out of cards, you're out
+          of the game. Last man standing wins.
         </p>
       </header>
 
@@ -128,9 +129,11 @@ export function Join({
         ) : null}
       </Panel>
 
-      <p className="text-center text-xs text-white/40">
-        No account, no install. 4 to 8 players — share the room code and go.
-      </p>
+      {/*
+        No offer to share a code here: there isn't one on this screen to share.
+        A code exists once a room does, and handing it on is the lobby's job.
+      */}
+      <p className="text-center text-xs text-white/40">No account, no install. 4 to 8 players.</p>
     </div>
   );
 }

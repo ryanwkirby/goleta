@@ -405,12 +405,33 @@ export function Table({
 
   if (handOver) {
     return (
-      <HandOver
-        room={room}
-        game={game}
-        nameOf={nameOf}
-        onDealAgain={() => send({ t: "start" })}
-      />
+      <>
+        <HandOver
+          room={room}
+          game={game}
+          nameOf={nameOf}
+          seated={seated}
+          onDealAgain={() => send({ t: "start" })}
+          onJoinNext={() =>
+            send({ t: "join", code: room.code, name: loadName() || "Watcher" })
+          }
+          onLeave={onLeave}
+        />
+
+        {/* Both of these are armed by the event that just ended the game, so
+            they have to be reachable from the screen that event lands on. The
+            graduation especially: it is shown once, after your first finished
+            game, and in landscape it had nowhere at all to appear. */}
+        {explainSunny ? (
+          <SunnyExplainer
+            onDone={() => {
+              markSunnySeen();
+              setExplainSunny(false);
+            }}
+          />
+        ) : null}
+        {graduating ? <Graduation onDone={() => setGraduating(false)} /> : null}
+      </>
     );
   }
 

@@ -17,6 +17,7 @@ import {
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { HostSettingsCog } from "../components/HostSettings.tsx";
+import { QrGlyph } from "../components/QrCode.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
@@ -523,22 +524,27 @@ export function Table({
           {/* The code was four characters saying what the room was called and
               doing nothing, which is the whole of what a code is for when
               there is no lobby left to go back to. Tapping it is the invite —
-              a person or a shared screen, same four characters, different link
-              (#135). Anybody may open it: handing somebody the way in is not a
-              host power, and nothing behind it changes the room. */}
+              a person or a shared screen, same room, different link (#135).
+              Anybody may open it: handing somebody the way in is not a host
+              power, and nothing behind it changes the room.
+
+              It is a glyph rather than the four characters since #162. The
+              panel leads with the code at reading-out size, so during a hand
+              the characters were furniture: this says *there is a way in here*
+              and the way in says the rest. */}
           <button
             type="button"
             aria-label={`Invite to room ${room.code}`}
             aria-haspopup="dialog"
-            title="Show the invite"
+            title={`Invite to room ${room.code}`}
             onClick={() => setInviting(true)}
             className={[
-              "-m-1 shrink-0 rounded-lg p-1 font-mono tracking-[0.2em] text-white/70",
+              "-m-1 flex shrink-0 items-center rounded-lg p-1 text-base text-white/70",
               "transition-colors hover:text-white",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
             ].join(" ")}
           >
-            {room.code}
+            <QrGlyph />
           </button>
           {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
           {/* No way back to the hand here, and none needed: at an IRL table the

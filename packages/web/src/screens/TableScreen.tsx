@@ -11,10 +11,17 @@ import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
 import { Button } from "../components/ui.tsx";
 import { namerFor } from "../lib/format.ts";
-import { fitScale, shouldTurn, turned, TABLE_DESIGN, type Box } from "../lib/fitScale.ts";
+import {
+  fitScale,
+  shouldTurn,
+  turned,
+  TABLE_DESIGN,
+  type Box,
+  type Point,
+} from "../lib/fitScale.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
-import { pileBox } from "../lib/pileBox.ts";
-import { BAND, edgeFor, edgeSeats, TURN_FOR } from "../lib/tableEdges.ts";
+import { deckPoint, pileBox } from "../lib/pileBox.ts";
+import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { joinLink } from "../net/route.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
@@ -214,6 +221,24 @@ const CENTRE_PILE_ROOM = {
 const HANDS_PILE_ROOM = { width: TABLE_DESIGN.width - 40, height: 240 };
 
 /**
+ * The point each view centres its piles on, which is the other half of knowing
+ * where the deck is.
+ *
+ * Both are derived rather than written down. The centre view's container is
+ * symmetric — the same band top and bottom, the same inset either side — so it
+ * is the middle of the room between the bands. The hands view keeps its slot
+ * directly under the top band, with the seat strip below.
+ */
+const CENTRE_PILES_AT = {
+  x: TABLE_DESIGN.width / 2,
+  y: (BAND.top + (TABLE_DESIGN.height - BAND.bottom)) / 2,
+};
+const HANDS_PILES_AT = {
+  x: TABLE_DESIGN.width / 2,
+  y: BAND.top + HANDS_PILE_ROOM.height / 2,
+};
+
+/**
  * The piles at whatever size the room they were given will take.
  *
  * The scale used to be `scale-[2.5]`, and a paint transform is invisible to the
@@ -342,6 +367,11 @@ function Playing({
     !seatOnClock.bot;
   const latest = log[0]?.event ?? null;
 
+  // Which view is up decides where the deck is, and a card in the air has to
+  // leave the deck that is actually on screen.
+  const pileRoom = view === "hands" ? HANDS_PILE_ROOM : CENTRE_PILE_ROOM;
+  const pilesAt = view === "hands" ? HANDS_PILES_AT : CENTRE_PILES_AT;
+
   const piles = (
     <Piles
       game={game}
@@ -369,7 +399,12 @@ function Playing({
       {view === "center" ? (
         <EdgeNames room={room} game={game} asking={asking} />
       ) : null}
-      <TableFlight event={latest} room={room} />
+      <TableFlight
+        event={latest}
+        room={room}
+        from={deckPoint(pileRoom, pilesAt, "xl")}
+        scale={fitScale(pileRoom, pileBox("xl"))}
+      />
 
       {/* Both in the top band's corners, which no name reaches: the ends of
           each edge are left free (`tableEdges.ts`), and the board is composed
@@ -393,7 +428,7 @@ function Playing({
           className="absolute flex flex-col items-center gap-4"
         >
           <div className="flex h-60 shrink-0 items-center justify-center">
-            <ScaledPiles room={HANDS_PILE_ROOM} outer={boardScale}>
+            <ScaledPiles room={pileRoom} outer={boardScale}>
               {piles}
             </ScaledPiles>
           </div>
@@ -406,7 +441,7 @@ function Playing({
           style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
           className="absolute flex items-center justify-center"
         >
-          <ScaledPiles room={CENTRE_PILE_ROOM} outer={boardScale}>
+          <ScaledPiles room={pileRoom} outer={boardScale}>
             {piles}
           </ScaledPiles>
         </div>
@@ -476,17 +511,13 @@ function EdgeNames({
         if (!spot) return null;
         const player = game?.players.find((candidate) => candidate.id === seat.id);
         const onClock = game?.waitingOn === seat.id;
-        const along = `${spot.along}%`;
-        const across = { top: BAND.top / 2, bottom: 36, left: 28, right: 28 }[spot.edge];
-
-        const anchor: CSSProperties =
-          spot.edge === "top"
-            ? { left: along, top: across }
-            : spot.edge === "bottom"
-              ? { left: along, bottom: across }
-              : spot.edge === "left"
-                ? { left: across, top: along }
-                : { right: across, top: along };
+        // The same point a card drawn by this seat is thrown at (#164), which
+        // is the reason it is worked out in `tableEdges.ts` rather than here:
+        // two things aiming at a seat should not each have their own idea of
+        // where it is. Placed as plain `left`/`top` now that it is a point
+        // rather than an inset — the label still centres itself on it below.
+        const at = seatPoint(spot, TABLE_DESIGN);
+        const anchor: CSSProperties = { left: at.x, top: at.y };
 
         return (
           /*
@@ -531,33 +562,65 @@ function EdgeNames({
   );
 }
 
-const flightDelta = (room: RoomView, playerId: PlayerId): { dx: number; dy: number } => {
+/**
+ * A card leaving the deck for whoever drew it.
+ *
+ * It used to be one of four fixed vectors — `dy: -330` for anybody at the top,
+ * and so on — thrown from `left-1/2 top-1/2`, the middle of the design box. Two
+ * things were wrong with that and both show at a real table. The middle of the
+ * board is not where the deck is, so the card appeared out of empty felt beside
+ * it. And an edge holds two seats on any table of five or more, which meant the
+ * card was thrown at the midpoint between two people, towards neither (#164).
+ *
+ * Both ends are worked out from the same arithmetic that draws the board:
+ * `deckPoint` off the fitting that placed the piles, `seatPoint` off the
+ * placement that drew the names. So the card leaves the deck it came from and
+ * arrives at the name of the person who drew it, at every seat count.
+ *
+ * It is drawn at the size the deck is drawn at, for the same reason — a card
+ * that comes off a pile should be the size of the cards in it.
+ */
+function TableFlight({
+  event,
+  room,
+  from,
+  scale,
+}: {
+  event: GameEvent | null;
+  room: RoomView;
+  /** Where the deck is, in design pixels — it moves with the view. */
+  from: Point;
+  /** What the piles were fitted at, so a card in the air matches them. */
+  scale: number;
+}) {
+  if (!event || event.type !== "drew") return null;
+
+  const seats = room.seats.length;
   const index = Math.max(
     0,
-    room.seats.findIndex((seat) => seat.id === playerId),
+    room.seats.findIndex((seat) => seat.id === event.playerId),
   );
-  switch (edgeFor(index, room.seats.length)) {
-    case "top":
-      return { dx: 0, dy: -330 };
-    case "right":
-      return { dx: 580, dy: 0 };
-    case "bottom":
-      return { dx: 0, dy: 330 };
-    case "left":
-      return { dx: -580, dy: 0 };
-  }
-};
+  const spot = edgeSeats(seats)[index];
+  if (!spot) return null;
 
-function TableFlight({ event, room }: { event: GameEvent | null; room: RoomView }) {
-  if (!event || event.type !== "drew") return null;
-  const { dx, dy } = flightDelta(room, event.playerId);
+  const to = seatPoint(spot, TABLE_DESIGN);
+
   return (
     <div
       key={`${event.playerId}:${event.card.id}`}
-      style={{ "--dx": `${dx}px`, "--dy": `${dy}px` } as CSSProperties}
-      className="table-screen-flight pointer-events-none absolute left-1/2 top-1/2 z-30"
+      style={
+        {
+          left: from.x,
+          top: from.y,
+          "--dx": `${to.x - from.x}px`,
+          "--dy": `${to.y - from.y}px`,
+        } as CSSProperties
+      }
+      className="table-screen-flight pointer-events-none absolute z-30"
     >
-      <PlayingCard card={event.card} size="lg" mirrored={room.irl} />
+      <div style={{ transform: `scale(${scale})` }}>
+        <PlayingCard card={event.card} size="xl" mirrored={room.irl} />
+      </div>
     </div>
   );
 }

@@ -26,7 +26,7 @@
  */
 
 import { CARD_HEIGHT_PX, CARD_WIDTH_PX, type CardSize } from "../components/Card.tsx";
-import type { Box } from "./fitScale.ts";
+import { fitScale, type Box, type Point } from "./fitScale.ts";
 
 /** `gap-6` between the draw pile and the card in play. */
 const BETWEEN = 24;
@@ -54,3 +54,26 @@ export const pileBox = (size: CardSize): Box => ({
   width: CARD_WIDTH_PX[size] * 2 + BETWEEN + BADGE * 2,
   height: CARD_HEIGHT_PX[size] + CAPTION,
 });
+
+/**
+ * Where the middle of the draw pile ends up, given the room the piles were
+ * fitted into and the point that room is centred on.
+ *
+ * Both views centre the box, so the deck's place is the box's centre plus a
+ * fixed offset scaled by however much the fitting shrank things. The two cards
+ * and their gap are centred inside the box, and the deck is the left of the
+ * pair — so it sits half a card and half a gap to the left of centre, whatever
+ * the badge allowance is doing on the far side. Vertically the caption hangs
+ * under both cards, so the cards' middle is half a caption above the box's.
+ *
+ * A card being drawn should leave the deck it came off (#164). It used to
+ * appear out of empty felt in the middle of the board, which is nowhere in
+ * particular and, on this board, not even close to the deck.
+ */
+export const deckPoint = (room: Box, centre: Point, size: CardSize): Point => {
+  const scale = fitScale(room, pileBox(size));
+  return {
+    x: centre.x - ((CARD_WIDTH_PX[size] + BETWEEN) / 2) * scale,
+    y: centre.y - (CAPTION / 2) * scale,
+  };
+};

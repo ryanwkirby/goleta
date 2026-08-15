@@ -21,6 +21,12 @@ export interface Box {
   height: number;
 }
 
+/** A spot in the design box, in design pixels from its top-left corner. */
+export interface Point {
+  x: number;
+  y: number;
+}
+
 /**
  * The design the table screen is drawn at. Wide, because #14 assumes landscape
  * — a device propped facing a table is turned the long way, the same as a

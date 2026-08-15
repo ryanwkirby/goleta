@@ -6,7 +6,7 @@ import { pileSuit } from "../lib/pile.ts";
 import type { HandSort } from "../lib/sort.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
-import { CardBack, PlayingCard, SUIT_GLYPH, SUIT_LABEL, isRed } from "./Card.tsx";
+import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HandSortButton } from "./Hand.tsx";
 import { HelpAsk, HelpLink } from "./Help.tsx";
 import { SunnySign } from "./Sunny.tsx";
@@ -215,20 +215,8 @@ export function PeekStrip({
             in the same place, so an answer arriving changes the glyph rather
             than adding something to the strip (#150). */}
         {suit ? (
-          <span
-            className={[
-              "rounded-full bg-white/10 px-1.5 py-0.5 text-sm font-semibold",
-              suit.kind === "owed"
-                ? "text-white/45"
-                : isRed(suit.suit)
-                  ? "text-rose-300"
-                  : "text-slate-100",
-            ].join(" ")}
-            aria-label={
-              suit.kind === "owed" ? "a suit is being named" : `${SUIT_LABEL[suit.suit]} called`
-            }
-          >
-            <span aria-hidden>{suit.kind === "owed" ? "?" : SUIT_GLYPH[suit.suit]}</span>
+          <span className="rounded-full bg-white/10 px-1.5 py-0.5">
+            <SuitMark mark={suit} className="text-sm" />
           </span>
         ) : null}
       </div>

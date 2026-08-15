@@ -3,7 +3,7 @@ import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 import { pileSuit, type PileSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
-import { CardBack, PlayingCard, SuitBadge, type CardSize } from "./Card.tsx";
+import { CardBack, PlayingCard, SuitMark, type CardSize } from "./Card.tsx";
 import { SunnyPeel } from "./Sunny.tsx";
 
 /**
@@ -132,14 +132,7 @@ export function Piles({
               at the line of small print under them. */}
           {suit && !peel ? (
             <div className="absolute -bottom-3 -right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-felt-900 shadow-xl ring-2 ring-white/10">
-              {suit.kind === "named" ? (
-                <SuitBadge suit={suit.suit} className="text-2xl" />
-              ) : (
-                <span className="text-2xl font-semibold text-white/45">
-                  <span aria-hidden>?</span>
-                  <span className="sr-only">a suit is being named</span>
-                </span>
-              )}
+              <SuitMark mark={suit} className="text-2xl" />
             </div>
           ) : null}
         </div>

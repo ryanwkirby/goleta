@@ -430,11 +430,24 @@ Things that will read as oversights in that view and are not:
   what it promises — a seat is refused for the length of a hand and the Join
   screen offers a watch instead, but **a watcher is not dealt in when the next
   game starts**, so nothing here may say they will be.
-- **The rest of this view's furniture is on the strip too, and there is no row
-  under the cards.** The sort control, the offer of help when you have sat on a
-  turn, and the draws left on a missed call used to sit in a footer, and the
-  footer cost the hand a card size: `handHeight` reads the height the row is
-  left, so a line of small print is paid for in cards (#131). What the table is
+- **There is still no row under the cards, and the two controls that belong
+  down there are laid over the felt instead.** The sort control, the offer of
+  help when you have sat on a turn, and the draws left on a missed call used to
+  sit in a footer, and the footer cost the hand a card size: `handHeight` reads
+  the height the row is left, so a line of small print is paid for in cards
+  (#131). #131 answered that by moving all three onto the strip; #167 keeps the
+  rule and moves two of them back down, as absolute corners **outside the box
+  `useBox` measures** — the offer of help at the bottom left, the sort at the
+  bottom right, where a hand is and where they are about. Measured on a
+  landscape iPhone, the cards are the same 289px tall either way, which is the
+  whole point of them not being in the column.
+
+  They sit **over** the cards rather than under them. Since #166 the hand runs
+  to within twenty pixels of the bottom, so a wide fan reaches both corners, and
+  printing you cannot press is not a control. Small, quiet, and accepted.
+
+  The missed-call notice stays on the strip: it is yours alone and it is not
+  something to press. What the table is
   waiting for is said there in full rather than as whose turn it is, because the
   prompt is a superset of the line the strip already carried.
 

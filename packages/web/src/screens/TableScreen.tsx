@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import type { ClientMessage, GameEvent, GameView, PlayerId, RoomView } from "@goleta/engine";
 
@@ -13,6 +13,7 @@ import { Button } from "../components/ui.tsx";
 import { namerFor } from "../lib/format.ts";
 import { fitScale, shouldTurn, turned, TABLE_DESIGN, type Box } from "../lib/fitScale.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
+import { pileBox } from "../lib/pileBox.ts";
 import { BAND, edgeFor, edgeSeats, TURN_FOR } from "../lib/tableEdges.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { joinLink } from "../net/route.ts";
@@ -179,6 +180,59 @@ export function TableScreen({
   );
 }
 
+/**
+ * What the two views leave the piles, in design pixels.
+ *
+ * The centre view is everything inside the bands. The hands view is the `h-60`
+ * slot it keeps above the seat strip, across the width its own container has.
+ * Both are stated here rather than measured because the design box is a fixed
+ * rectangle — the whole point of `fitScale.ts` — so this is arithmetic a test
+ * can hold rather than a layout somebody has to look at.
+ */
+/**
+ * Air between the piles and the bands. A name fills very nearly the whole of
+ * its own band — `text-3xl` and its padding come to 46 of the 48 — so piles
+ * fitted to the band edge exactly are piles that touch the names, which reads
+ * as the collision this was fixing rather than the absence of one.
+ */
+const GUTTER = 10;
+
+const CENTRE_PILE_ROOM = {
+  width: TABLE_DESIGN.width - BAND.side * 2 - GUTTER * 2,
+  height: TABLE_DESIGN.height - BAND.top - BAND.bottom - GUTTER * 2,
+};
+const HANDS_PILE_ROOM = { width: TABLE_DESIGN.width - 40, height: 240 };
+
+/**
+ * The piles at whatever size the room they were given will take.
+ *
+ * The scale used to be `scale-[2.5]`, and a paint transform is invisible to the
+ * layout around it: the piles were laid out at their unscaled 198px, centred in
+ * the full height of the design, and then painted about their own middle — into
+ * the band the seat names live in, which is how a name came to be drawn on top
+ * of the draw pile (#159).
+ *
+ * Two halves fix it and both are needed. The scale is **asked for** rather than
+ * chosen, so it can never be more than the room allows; and the wrapper reserves
+ * the size that will actually be painted, so the box the layout sees and the
+ * ink on the screen are the same rectangle. `pileBox` is what makes the second
+ * one true — including the twelve pixels the suit circle hangs off the corner.
+ */
+function ScaledPiles({ room, children }: { room: Box; children: ReactNode }) {
+  const box = pileBox("xl");
+  const scale = fitScale(room, box);
+  return (
+    <div
+      style={{ width: box.width * scale, height: box.height * scale }}
+      className="flex shrink-0 items-center justify-center"
+    >
+      <div style={{ transform: `scale(${scale})` }} className="shrink-0">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Between games, and before the first one: the way in, at the size of a room. */
 function Waiting({ room }: { room: RoomView }) {
   const link = joinLink(room.code);
@@ -313,7 +367,7 @@ function Playing({
           className="absolute flex flex-col items-center gap-4"
         >
           <div className="flex h-60 shrink-0 items-center justify-center">
-            <div className="scale-[1.2]">{piles}</div>
+            <ScaledPiles room={HANDS_PILE_ROOM}>{piles}</ScaledPiles>
           </div>
           <div className="min-h-0 w-full flex-1">
             <Seats room={room} game={game} shouts={shouts} onCallSunny={() => undefined} />
@@ -321,10 +375,10 @@ function Playing({
         </div>
       ) : (
         <div
-          style={{ top: 0, bottom: 0, left: BAND.side, right: BAND.side }}
+          style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
           className="absolute flex items-center justify-center"
         >
-          <div className="scale-[2.5]">{piles}</div>
+          <ScaledPiles room={CENTRE_PILE_ROOM}>{piles}</ScaledPiles>
         </div>
       )}
 

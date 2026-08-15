@@ -38,11 +38,23 @@ jobs:
           docker compose up -d --build
           docker image prune -f
 
+      # `127.0.0.1` and not `localhost`, which resolves to `::1` first. The
+      # container publishes on both stacks, but OrbStack's IPv6 forward is not
+      # ready the instant a freshly recreated container starts, and an unready
+      # forward *hangs* rather than refusing — so there is no connection error
+      # to fall through to IPv4 on, and the stack that has been answering since
+      # the first second never gets asked. `--max-time` is the other half: with
+      # no cap, one attempt is 28 seconds of curl's own timeout rather than one
+      # attempt, and thirty of those failed a landed deploy fourteen minutes
+      # later (#154). The Dockerfile's own HEALTHCHECK has pinned v4 all along.
+      #
+      # Still `/` rather than `/healthz`: this is the check that the built web
+      # bundle is being served, not only that the process came up.
       - name: Wait for healthy
         run: |
           set -euo pipefail
           for i in $(seq 1 30); do
-            if curl -fsS http://localhost:8063/ >/dev/null 2>&1; then
+            if curl -fsS --max-time 5 http://127.0.0.1:8063/ >/dev/null 2>&1; then
               echo "Service healthy after ${i} attempt(s)."
               exit 0
             fi

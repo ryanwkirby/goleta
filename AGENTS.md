@@ -40,9 +40,19 @@ generation note identifying the agent.
 Merging to `main` deploys. A repo-scoped self-hosted runner on the Mac mini —
 the only machine with the `goleta` label — force-checks-out `main` in
 `/Users/ryan/git/goleta`, rebuilds with `docker compose up -d --build`, and then
-polls port 8063 until it answers. **Let the run finish and confirm its health
-check rather than rebuilding by hand**; a hand-run build racing the runner is
-two deploys landing on one live table.
+polls `127.0.0.1:8063` until it answers. **Let the run finish and confirm its
+health check rather than rebuilding by hand**; a hand-run build racing the
+runner is two deploys landing on one live table. **Nothing else may touch the
+working tree while a run is in flight either** — the deploy checks out `main` in
+this tree, so your own `git pull` at the same moment rewrites the build context
+under buildkit and comes back as an EOF that looks like a broken daemon.
+
+The health check asks `127.0.0.1` rather than `localhost`, which resolves to
+`::1` first, and it is capped with `--max-time`. Both halves are load-bearing:
+OrbStack's IPv6 forward is not ready the instant a container is recreated and it
+*hangs* rather than refusing, so curl never falls through to the stack that is
+answering — and uncapped, thirty attempts of that is fourteen minutes of failing
+to notice a deploy that landed in a second (#154). See `docs/DEPLOYMENT.md`.
 
 It runs on push to `main` and on manual dispatch, never on `pull_request`, so
 nothing off a branch executes on the machine that holds the rooms. Docs-only

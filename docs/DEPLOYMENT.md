@@ -48,10 +48,20 @@ one live table. `concurrency` queues overlapping runs instead of cancelling
 them, for the same reason.
 
 **And leave the working tree alone while a run is in flight**, not just the
-build. The deploy force-checks-out `main` in this very tree, so a `git pull` of
-your own landing at the same moment rewrites the build context underneath
-buildkit, which comes back as `load build context: rpc error … EOF` and reads
-like a broken daemon. Merge, then wait for the run before touching the tree.
+build. The deploy force-checks-out `main` in this very tree; your own `git
+checkout` or `git pull` landing in the middle of that is a race with no upside.
+Merge, then wait for the run before touching the tree.
+
+**`load build context: rpc error … EOF` is not that**, and is not a broken
+daemon either. It is a transient network stall pulling a base image: buildkit
+loses the registry connection and takes the whole session down with it, blaming
+whichever step was in flight. `radionova-datafetcher` run 31871584848 caught it
+with the numbers attached — a layer sat at `0B / 12.05MB` for 224 seconds, then
+`Get "https://registry-1.docker.io/…": EOF` — while the context on the same line
+reported `transferring context: 32.75kB done`. **Re-run the deploy** (`gh run
+rerun <id> --failed`); it is a stall, not a state. This was mis-attributed to
+concurrent git when #154 was written, on nothing more than the two having
+coincided once (#156).
 
 **The health check asks `127.0.0.1` on purpose.** `localhost` resolves to `::1`
 first; the container publishes on both stacks, but OrbStack's IPv6 forward is

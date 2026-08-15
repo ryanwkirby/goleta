@@ -4,7 +4,8 @@ import type { ClientMessage, GameEvent, GameView, PlayerId, RoomView } from "@go
 
 import { HelpAsk } from "../components/Help.tsx";
 import { Piles } from "../components/Piles.tsx";
-import { QrCode } from "../components/QrCode.tsx";
+import { QrCode, QrGlyph } from "../components/QrCode.tsx";
+import { RoomInvite } from "../components/RoomInvite.tsx";
 import { PlayingCard, SUIT_GLYPH } from "../components/Card.tsx";
 import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
@@ -82,6 +83,15 @@ export function TableScreen({
   const nameOf = namerFor(room);
   const { call, peeling } = useJudgedCall(log);
   const [view, setView] = useState<"center" | "hands">("center");
+  /**
+   * The invite, opened off the glyph in the top-left corner (#162).
+   *
+   * The one surface in the app where the code was not tappable, so a table
+   * wanting to add a player mid-hand had to go and find somebody's phone. It
+   * needs no socket — the panel is two links and the code, all of which
+   * `RoomView` already carries.
+   */
+  const [inviting, setInviting] = useState(false);
 
   // Nobody touches this screen, so nothing else will keep it awake. Held the
   // whole time it is showing a room, in the lobby and in a game alike (#81).
@@ -165,6 +175,7 @@ export function TableScreen({
             log={log}
             view={view}
             onToggleView={() => setView(view === "center" ? "hands" : "center")}
+            onShowInvite={() => setInviting(true)}
             onDraw={() =>
               send({
                 t: "intent",
@@ -191,8 +202,20 @@ export function TableScreen({
 
       {/* Outside the design box on purpose: it is about the device, not the
           board, so it must not be turned along with the picture it is asking
-          you to turn. */}
+          you to turn. The invite is out here for the same reason and a
+          stronger one — inside, it would be scaled by `fitScale` and stood on
+          its side by the quarter turn, and it is a panel somebody is holding a
+          camera up to. */}
       <TableRotateNudge />
+
+      {inviting ? (
+        <RoomInvite
+          code={room.code}
+          underWay={game !== null && game.status !== "over"}
+          screens={room.tableScreens}
+          onClose={() => setInviting(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -281,6 +304,71 @@ function ScaledPiles({ room, outer, children }: { room: Box; outer: number; chil
   );
 }
 
+/**
+ * The two views, drawn as the thing each one shows (#168).
+ *
+ * Both are cards, because that is what this screen is made of: the middle of
+ * the table is the two piles side by side, and every hand is a fan. Sized in
+ * `em` so the pair scale with whatever the button is set at, and stroked in
+ * `currentColor` so they take the button's own hover.
+ */
+function CentreIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="h-[1em] w-[1em]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <rect x="2.2" y="4.2" width="8.6" height="15.6" rx="2" />
+      <rect x="13.2" y="4.2" width="8.6" height="15.6" rx="2" />
+    </svg>
+  );
+}
+
+function HandsIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="h-[1em] w-[1em]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+    >
+      {/*
+        Filled and faded first, which was unreadable: three translucent shapes
+        overlapping at this size come out as one grey smudge, and the ghost
+        button is already drawing at 70%. Outlines keep each card a card, and
+        the near ones paint over the far ones — so the fan needs no opacity to
+        read as a fan.
+      */}
+      <rect
+        x="4.8"
+        y="6"
+        width="7"
+        height="12.5"
+        rx="1.5"
+        transform="rotate(-15 12 18.5)"
+        className="fill-felt-950"
+      />
+      <rect
+        x="12.2"
+        y="6"
+        width="7"
+        height="12.5"
+        rx="1.5"
+        transform="rotate(15 12 18.5)"
+        className="fill-felt-950"
+      />
+      <rect x="8.5" y="4.5" width="7" height="12.5" rx="1.5" className="fill-felt-950" />
+    </svg>
+  );
+}
+
 /** Between games, and before the first one: the way in, at the size of a room. */
 function Waiting({ room }: { room: RoomView }) {
   const link = joinLink(room.code);
@@ -338,6 +426,7 @@ function Playing({
   log,
   view,
   onToggleView,
+  onShowInvite,
   onDraw,
 }: {
   room: RoomView;
@@ -351,6 +440,7 @@ function Playing({
   log: LoggedEvent[];
   view: "center" | "hands";
   onToggleView: () => void;
+  onShowInvite: () => void;
   onDraw: () => void;
 }) {
   const finished = game.status === "over";
@@ -408,18 +498,39 @@ function Playing({
 
       {/* Both in the top band's corners, which no name reaches: the ends of
           each edge are left free (`tableEdges.ts`), and the board is composed
-          around the piles, so a code sat above them is the first thing the peel
-          — which fans well outside the pile it hangs off — would land on. */}
-      <p className="absolute left-4 top-2.5 font-mono text-lg uppercase tracking-[0.2em] text-white/25">
-        {room.code}
-      </p>
+          around the piles, so anything sat above them is the first thing the
+          peel — which fans well outside the pile it hangs off — would land on. */}
+
+      {/* This was four grey characters in a `<p>`, and the only surface in the
+          app where the code was not tappable: a table wanting to add a player
+          mid-hand had to go to somebody's phone. Now it is the same invite the
+          phones open, off the same glyph (#162). */}
+      <button
+        type="button"
+        aria-label={`Invite to room ${room.code}`}
+        aria-haspopup="dialog"
+        onClick={onShowInvite}
+        className={[
+          "absolute left-2 top-1 rounded-lg p-1.5 text-3xl text-white/30",
+          "transition-colors hover:text-white/70",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+        ].join(" ")}
+      >
+        <QrGlyph />
+      </button>
+
+      {/* Two icons rather than two words (#168). Everything else up here is a
+          glyph or a number, and a word in a corner of a board propped in the
+          middle of a table reads as a heading for the view you are in about as
+          readily as a way out of it. It shows where it goes, and the label says
+          so for anyone not reading pictures. */}
       <Button
         variant="ghost"
-        className="absolute right-3 top-1.5 px-2.5 py-1.5 text-sm"
+        className="absolute right-2 top-1 p-2 text-3xl"
         onClick={onToggleView}
         aria-label={view === "center" ? "Show every hand" : "Show the middle of the table"}
       >
-        {view === "center" ? "hands" : "centre"}
+        {view === "center" ? <HandsIcon /> : <CentreIcon />}
       </Button>
 
       {view === "hands" ? (

@@ -42,10 +42,15 @@ the only machine with the `goleta` label — force-checks-out `main` in
 `/Users/ryan/git/goleta`, rebuilds with `docker compose up -d --build`, and then
 polls `127.0.0.1:8063` until it answers. **Let the run finish and confirm its
 health check rather than rebuilding by hand**; a hand-run build racing the
-runner is two deploys landing on one live table. **Nothing else may touch the
+runner is two deploys landing on one live table. **Nothing else should touch the
 working tree while a run is in flight either** — the deploy checks out `main` in
-this tree, so your own `git pull` at the same moment rewrites the build context
-under buildkit and comes back as an EOF that looks like a broken daemon.
+this tree, and racing it has no upside.
+
+A build that dies with `load build context: rpc error … EOF` is neither of those
+and is not a broken daemon: it is a transient stall pulling a base image, which
+buildkit answers by dropping the session and blaming whichever step was in
+flight. Re-run the deploy. Do not go looking for who touched the tree — that was
+this error's first, wrong explanation (#156).
 
 The health check asks `127.0.0.1` rather than `localhost`, which resolves to
 `::1` first, and it is capped with `--max-time`. Both halves are load-bearing:

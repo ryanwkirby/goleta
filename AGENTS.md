@@ -621,6 +621,35 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   by its label, a `right`/`bottom` anchor pins the far edge of the label rather
   than the point, which put the right-hand names a third of the way into the
   board.
+- **Everything the board says in words faces whoever is playing** (#160), and
+  **two positions rather than four**. The names read from outside their own
+  edge and everything else was drawn upright, so a player at the top read their
+  own name the right way up and the sentence about their own turn upside down.
+  Four pieces turn together — the prompt, the deck count, the view toggle and
+  the suit at the pile — and the hands view flips its strip by the same rule
+  (#163).
+
+  A quarter turn is fine for a name and wrong for the prompt, which is the
+  piece that decided it: the prompt carries a Sunny ruling, it is 512 wide, and
+  it lives centred in the bottom band because beside the piles is too narrow to
+  read a ruling in. Stood on its end it needs 512 of the 560 the board has and
+  runs out of both bands. Flipping buys the whole of what was wrong — nobody
+  left reading upside down — and a player at the side reads at a slant either
+  way, which was never the complaint.
+
+  **Bots are walked past**, and so is anybody out: the board turns towards the
+  person who is actually up next, and a table of bots leaves it upright.
+  `facing.ts` has it, with a test.
+
+  Two things in there look like details and are not. **The turn does not
+  animate.** A 180° transition on a strip a thousand pixels wide sweeps through
+  ninety degrees as a spinning plank, and there is nothing quiet about it. And
+  **the hands view turns its strip, never the whole panel**: 180° swaps top for
+  bottom, so a turned panel puts the piles under the prompt pinned to the
+  bottom band — and the piles inside it would be turned by the panel *and* by
+  their own `turn`, which comes to no turn at all. The strip's own box is
+  `flex-1` as well, so the transform goes on a wrapper the size of the strip;
+  turning the box that holds it swings the strip to the bottom of the space.
 - **Every name is read from outside its own edge** — the person sitting there,
   not the one opposite. All four were 180° out until #141, which is easy to miss
   because the arrangement looks deliberate either way: the top name was drawn

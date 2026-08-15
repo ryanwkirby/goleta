@@ -11,6 +11,7 @@ import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
 import { Button } from "../components/ui.tsx";
+import { facingTurn } from "../lib/facing.ts";
 import { namerFor } from "../lib/format.ts";
 import {
   fitScale,
@@ -457,6 +458,20 @@ function Playing({
     !seatOnClock.bot;
   const latest = log[0]?.event ?? null;
 
+  /**
+   * Which way up this board says things (#160).
+   *
+   * The seat names have read from outside their own edge since #141 and
+   * everything said in *words* was still drawn upright, so a player at the top
+   * read their own name the right way up and the sentence about their own turn
+   * upside down. Four pieces turn together: the prompt, the deck count, the
+   * view toggle and the suit at the pile.
+   *
+   * Two positions rather than four — see `facing.ts` for why the prompt cannot
+   * be stood on its end, and #163 for the hands view taking the same answer.
+   */
+  const turn = facingTurn(room, game);
+
   // Which view is up decides where the deck is, and a card in the air has to
   // leave the deck that is actually on screen.
   const pileRoom = view === "hands" ? HANDS_PILE_ROOM : CENTRE_PILE_ROOM;
@@ -469,6 +484,7 @@ function Playing({
       onDraw={onDraw}
       irl={room.irl}
       size="xl"
+      turn={turn}
       peel={
         peeling && call
           ? {
@@ -527,6 +543,7 @@ function Playing({
       <Button
         variant="ghost"
         className="absolute right-2 top-1 p-2 text-3xl"
+        style={{ transform: `rotate(${turn}deg)` }}
         onClick={onToggleView}
         aria-label={view === "center" ? "Show every hand" : "Show the middle of the table"}
       >
@@ -543,8 +560,32 @@ function Playing({
               {piles}
             </ScaledPiles>
           </div>
+          {/*
+            The strip flips, and only the strip (#163).
+
+            Turning the whole panel was the first thing tried and it is wrong
+            twice: 180° swaps top for bottom, so the piles land at the foot of
+            the board and under the prompt pinned there — and the piles inside
+            it would be turned by the panel *and* by their own `turn`, which
+            comes to no turn at all. The strip is the part that has to be
+            readable from the other side of the table; the piles have `turn`
+            for their two bits of writing, and a card is already double-headed.
+
+            One transform on the container, so `Seats` — the phone's own
+            component — never learns this happened, and its scrolling and fan
+            arithmetic are untouched.
+          */}
           <div className="min-h-0 w-full flex-1">
-            <Seats room={room} game={game} shouts={shouts} onCallSunny={() => undefined} />
+            {/*
+              The turn goes on a box the size of the strip, not on the box that
+              *holds* it. `flex-1` fills the height that is left and the strip
+              sits at the top of it, so turning that box about its centre swings
+              the strip to the bottom — into the prompt pinned there. Turned
+              about its own middle, it stays where it was drawn.
+            */}
+            <div style={{ transform: `rotate(${turn}deg)` }}>
+              <Seats room={room} game={game} shouts={shouts} onCallSunny={() => undefined} />
+            </div>
           </div>
         </div>
       ) : (
@@ -558,9 +599,13 @@ function Playing({
         </div>
       )}
 
-      {/* The prompt, now a floating pill over the bottom of the table so it costs the board no height */}
+      {/* The prompt, a floating pill over the bottom of the table so it costs
+          the board no height — and the piece that decided this turns rather
+          than spins. It stays in its band and reads from whichever end of the
+          table is playing (#160). */}
       <div className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex max-w-128 justify-center">
         <p
+          style={{ transform: `rotate(${turn}deg)` }}
           className="rounded-2xl bg-felt-950/80 px-6 py-3 text-balance text-center text-2xl font-semibold leading-tight shadow-2xl backdrop-blur-sm"
           role="status"
         >

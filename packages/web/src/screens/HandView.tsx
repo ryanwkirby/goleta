@@ -8,9 +8,10 @@ import { MoveRefusal } from "../components/Refusal.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
 import { turnPrompt, type NameOf } from "../lib/format.ts";
-import { handSize, handStep } from "../lib/handFan.ts";
+import { handHeight, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
+import { cardWidthAt } from "../components/Card.tsx";
 import type { HandMode } from "../components/Hand.tsx";
 import type { HandSort } from "../lib/sort.ts";
 import type { GoletaError } from "../net/useGoleta.ts";
@@ -134,8 +135,8 @@ export function HandView({
   // Measured against the row's *content* box, and the row is the only thing
   // with padding — the hand inside it has none when it is fanning. So this is
   // the width the cards actually get, with nothing subtracted by hand.
-  const size = handSize(box.height);
-  const step = handStep(box.width, cards.length, size, undefined, true);
+  const height = handHeight(box.height);
+  const step = handStep(box.width, cards.length, cardWidthAt(height), undefined, true);
   const me = game.you ?? "";
 
   return (
@@ -234,7 +235,12 @@ export function HandView({
         <div
           ref={row}
           className={[
-            "relative flex min-h-0 flex-1 flex-col justify-center",
+            // `justify-end`, not `justify-center`. Whatever the row has left
+            // over belongs above the cards, not split into a band of bare felt
+            // under them — this view exists because your own cards were the
+            // thing you decide from, and they should sit at the near edge of
+            // the phone where a thumb already is (#166).
+            "relative flex min-h-0 flex-1 flex-col justify-end",
             "pb-[max(0.25rem,env(safe-area-inset-bottom))]",
             "pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]",
           ].join(" ")}
@@ -257,7 +263,7 @@ export function HandView({
               mode={mode}
               assist={assist}
               onChoose={onChooseCard}
-              size={size}
+              height={height}
               step={step}
               irl
               fit

@@ -14,7 +14,7 @@ import { TIGHTEST } from "../lib/handFan.ts";
 import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
 import { cardAnchor, HAND } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
-import { CARD_WIDTH_PX, PlayingCard, type CardSize } from "./Card.tsx";
+import { CARD_WIDTH_PX, PlayingCard, cardWidthAt, type CardSize } from "./Card.tsx";
 
 /**
  * `forced` is the play you owe after a Sunny call has landed on you. It plays a
@@ -70,6 +70,7 @@ export function Hand({
   assist,
   onChoose,
   size = "md",
+  height,
   step = null,
   irl = false,
   fit = false,
@@ -87,6 +88,11 @@ export function Hand({
   onChoose: (cardId: string) => void;
   size?: CardSize;
   /**
+   * Drawn at this height instead of at `size`, so the landscape hand can fill
+   * the row it was given rather than fall back to the nearest rung (#166).
+   */
+  height?: number;
+  /**
    * Left edge to left edge, in pixels, when the hand has to close up to fit —
    * see `handFan.ts`. Null spaces the cards out with a plain gap, which is
    * what the full table has always done and what a wide screen never needs to
@@ -103,6 +109,10 @@ export function Hand({
    */
   fit?: boolean;
 }) {
+  // One width for the fan and for every card in it: off the height when this
+  // hand has been given one, off the ladder when it has not.
+  const cardWidth = height ? cardWidthAt(height) : CARD_WIDTH_PX[size];
+
   const [selected, setSelected] = useState<string | null>(null);
   const { anchor, isArriving, reduced } = useMotion();
   const legal = new Set(legalCardIds);
@@ -256,7 +266,7 @@ export function Hand({
       // `z-index` is needed. `justify-center` is what makes a short hand sit in
       // the middle of a wide landscape screen rather than hugging one edge —
       // `overflow-x-auto` only overrides it once there is genuinely too much.
-      style={step === null ? undefined : ({ "--fan": `${step - CARD_WIDTH_PX[size]}px` } as CSSProperties)}
+      style={step === null ? undefined : ({ "--fan": `${step - cardWidth}px` } as CSSProperties)}
       className={[
         // Same air above the cards as below them. The top has to clear the 14px
         // a selected card lifts — this row sets `overflow-x`, which makes the
@@ -288,6 +298,7 @@ export function Hand({
             key={card.id}
             card={card}
             size={size}
+            height={height}
             mirrored={irl}
             anchor={refFor(card.id)}
             arriving={isArriving(card.id)}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { NAME_LIMIT } from "@goleta/engine";
 import type { ClientMessage } from "@goleta/engine";
 
 import { Button, Field, Panel, inputClass } from "../components/ui.tsx";
@@ -84,7 +85,7 @@ export function Join({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Ryan"
-              maxLength={16}
+              maxLength={NAME_LIMIT}
               autoComplete="nickname"
               autoFocus
             />

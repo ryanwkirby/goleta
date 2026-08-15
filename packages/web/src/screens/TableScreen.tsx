@@ -448,7 +448,7 @@ function Playing({
       )}
 
       {/* The prompt, now a floating pill over the bottom of the table so it costs the board no height */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex max-w-136 justify-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex max-w-128 justify-center">
         <p
           className="rounded-2xl bg-felt-950/80 px-6 py-3 text-balance text-center text-2xl font-semibold leading-tight shadow-2xl backdrop-blur-sm"
           role="status"
@@ -530,30 +530,57 @@ function EdgeNames({
             itself on it.
           */
           <div key={seat.id} style={anchor} className="absolute h-0 w-0">
+            {/*
+              Every seat is a pill, and the seat on the clock is a brighter one.
+              It used to be that only the active seat had a shape at all, so the
+              highlight was a background *appearing* rather than a change of
+              emphasis — three names and a badge, instead of four names one of
+              which is lit (#165).
+
+              One size per thing, too. Name, count and the ask were three type
+              sizes sharing one baseline, which is most of what made the row
+              look thrown together; they are a hierarchy now, aligned on their
+              centres. The name coming down to `text-2xl` is also what lets a
+              ten-character one fit whole — see `LABEL` — and it puts a name at
+              the same size as the sentence about the game rather than above it.
+            */}
             <div
               style={{ transform: `translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)` }}
               className={[
-                "absolute left-0 top-0 flex w-max max-w-48 items-baseline gap-2",
-                "whitespace-nowrap rounded-full px-3 py-1",
-                "text-3xl font-semibold transition-colors",
-                onClock ? "bg-amber-300/15 text-amber-300" : "text-white/55",
-                player?.eliminated ? "opacity-40" : "",
+                "absolute left-0 top-0 flex w-max max-w-54 items-center gap-2",
+                "whitespace-nowrap rounded-full px-3 py-1 ring-1",
+                "text-2xl font-semibold transition-colors",
+                onClock
+                  ? "bg-amber-300/15 text-amber-300 ring-amber-300/40"
+                  : "bg-felt-950/40 text-white/60 ring-white/10",
+                player?.eliminated ? "opacity-45" : "",
               ].join(" ")}
             >
               <span className="min-w-0 truncate">{seat.name}</span>
               {player ? (
-                <span
-                  className={[
-                    "shrink-0 font-mono tabular-nums",
-                    player.cardCount <= 2 && !player.eliminated && !onClock
-                      ? "text-rose-300"
-                      : "opacity-60",
-                  ].join(" ")}
-                >
-                  {player.eliminated ? "out" : player.cardCount}
-                </span>
+                player.eliminated ? (
+                  /* A word, not a number in a number's slot. Being out is a
+                     state rather than a very small hand, and the two used to be
+                     three mono characters apart. */
+                  <span className="shrink-0 text-sm uppercase tracking-widest">out</span>
+                ) : (
+                  <span
+                    className={[
+                      "shrink-0 font-mono text-xl tabular-nums",
+                      /* Down to a couple of cards is marked whether or not it
+                         is their turn. It used to carry `!onClock`, so the seat
+                         about to play the turn that could finish them — the
+                         most interesting fact on the board — was the one seat
+                         whose count was drawn as ordinary text (#170). The
+                         phone's seat strip never had that clause. */
+                      player.cardCount <= 2 ? "text-rose-300" : "opacity-60",
+                    ].join(" ")}
+                  >
+                    {player.cardCount}
+                  </span>
+                )
               ) : null}
-              {asking.has(seat.id) ? <HelpAsk className="shrink-0 text-xl" /> : null}
+              {asking.has(seat.id) ? <HelpAsk className="shrink-0 text-lg" /> : null}
             </div>
           </div>
         );

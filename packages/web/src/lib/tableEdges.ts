@@ -51,8 +51,27 @@ export const TURN_FOR: Record<Edge, number> = { bottom: 0, left: 90, top: 180, r
  */
 export const BAND = { top: 48, bottom: 48, side: 56, corner: 120 };
 
-/** How long a name is allowed to get before it truncates (`max-w-48`). */
-export const LABEL = 192;
+/**
+ * How wide a seat's label is allowed to get (`max-w-60`), which is what the
+ * placement below is held against.
+ *
+ * Sized off the type rather than picked, and then capped by the tightest edge.
+ * A ten-character name at `text-2xl` with its count measures 193 at its widest
+ * in ordinary capitals, and 216 is the most the board can give it: two labels
+ * have to fit down a **side** edge, which is 560 long with a band reserved at
+ * each end, so 224 is where they start touching. The bottom band looks like the
+ * tight one and is not — it is the sides.
+ *
+ * At the old 192 the shared screen clipped at eight or nine characters —
+ * `Bartholo…` for somebody who typed `Bartholomew` — which is what #161 is
+ * about.
+ *
+ * `truncate` stays on the name as a backstop, and what it catches now is
+ * adversarial rather than ordinary: ten capital Ws measure 275 and there is
+ * nowhere on this board to put them. Every name anybody is actually called
+ * fits.
+ */
+export const LABEL = 216;
 
 export interface EdgeSeat {
   edge: Edge;
@@ -71,7 +90,14 @@ export interface EdgeSeat {
  * quarter (see `fitScale.ts`). Better an off-centre name at one edge than two
  * smaller decks at all four.
  */
-const TOP_ENDS = { lone: 22, pair: [22, 78] };
+/**
+ * The top pair moved in from 22 to 24 when the label went from 192 to 240
+ * (#161): the corners hold the room code and the view toggle, and a wider label
+ * reaches further into them from the same centre. The bottom pair did not have
+ * to move — it was already as far out as the board allows — so the room came
+ * from the prompt instead, which narrowed by one step.
+ */
+const TOP_ENDS = { lone: 24, pair: [24, 76] };
 const BOTTOM_ENDS = { lone: 12, pair: [12, 88] };
 const CENTRED = { lone: 50, pair: [30, 70] };
 

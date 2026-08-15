@@ -10,6 +10,7 @@ import {
   DEFAULT_OPTIONS,
   MAX_TABLE_PLAYERS,
   MIN_TABLE_PLAYERS,
+  NAME_LIMIT,
   SUNNY_LOCKOUT_DRAWS,
   applyIntent,
   decideBotIntent,
@@ -116,7 +117,9 @@ export type RoomStore = Map<string, Room>;
 
 export const createStore = (): RoomStore => new Map();
 
-const MAX_NAME_LENGTH = 16;
+/** Enforced here because anything can arrive over a socket; agreed in the
+ *  protocol so the field that stops you typing an eleventh cannot drift. */
+const MAX_NAME_LENGTH = NAME_LIMIT;
 /** One per seat, so a table of eight bots has eight distinct names. */
 const BOT_NAMES = [
   "Robot",

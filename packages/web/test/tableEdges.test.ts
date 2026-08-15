@@ -3,7 +3,19 @@ import { describe, expect, it } from "vitest";
 import { TABLE_DESIGN } from "../src/lib/fitScale.ts";
 import { BAND, edgeFor, edgeSeats, LABEL, TURN_FOR, type Edge } from "../src/lib/tableEdges.ts";
 
-/** The one measurement `TableScreen` owns: `max-w-136` on the prompt, centred. */
+/**
+ * The one measurement `TableScreen` owns: `max-w-128` on the prompt, centred.
+ *
+ * Kept in step by hand, and worth a test rather than a comment — the bottom
+ * band is the saturated one. Two labels and the prompt come to the full width
+ * of the design, so widening a name for #161 had to be paid for out of the
+ * prompt, and the next person to widen either needs to be told.
+ */
+const PROMPT = 512;
+const promptSpan: [number, number] = [
+  (TABLE_DESIGN.width - PROMPT) / 2,
+  (TABLE_DESIGN.width + PROMPT) / 2,
+];
 
 const MIN_SEATS = 4;
 const MAX_SEATS = 8;
@@ -49,7 +61,7 @@ describe("naming the seats round a shared table screen", () => {
 
   it("places a lone name in the middle of its edge, except along the top and bottom", () => {
     const four = edgeSeats(4);
-    expect(four[0]?.along).toBe(22);
+    expect(four[0]?.along).toBe(24);
     expect(four[1]?.along).toBe(50);
     expect(four[2]?.along).toBe(12);
     expect(four[3]?.along).toBe(50);
@@ -114,11 +126,25 @@ describe("naming the seats round a shared table screen", () => {
     }
   });
 
+  it("keeps the bottom names off the prompt they share a band with", () => {
+    // The prompt is centred in the bottom band and the names are pushed out
+    // past it — the asymmetry #141 describes. It is also the tightest fit on
+    // the board: two labels plus the prompt is the whole width of the design,
+    // so a name that grows has to be paid for by the prompt, and this is what
+    // says so out loud.
+    for (const count of everyTable) {
+      for (const seat of edgeSeats(count)) {
+        if (seat.edge !== "bottom") continue;
+        expect(overlaps(span(seat.along, "bottom"), promptSpan)).toBe(false);
+      }
+    }
+  });
+
   it("answers for a table too small to be dealt, rather than throwing", () => {
     // A lobby is a room before it is a game, and the board draws the names it
     // has: one seat, no seats, whatever the room is holding.
     expect(edgeSeats(0)).toEqual([]);
-    expect(edgeSeats(1)).toEqual([{ edge: "top", along: 22 }]);
+    expect(edgeSeats(1)).toEqual([{ edge: "top", along: 24 }]);
     expect(edgeFor(0, 0)).toBe("top");
   });
 });

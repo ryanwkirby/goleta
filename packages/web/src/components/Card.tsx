@@ -2,6 +2,11 @@ import type { RefCallback } from "react";
 
 import type { Card as CardModel, Suit } from "@goleta/engine";
 
+// Type-only, so it is erased and there is no runtime dependency in either
+// direction: `pile.ts` is the one place that decides whether a suit has been
+// named or is merely owed, and the mark below is how that answer is drawn.
+import type { PileSuit } from "../lib/pile.ts";
+
 export const SUIT_GLYPH: Record<Suit, string> = { C: "♣", D: "♦", H: "♥", S: "♠" };
 export const SUIT_LABEL: Record<Suit, string> = {
   C: "clubs",
@@ -54,6 +59,20 @@ export const CARD_WIDTH_PX: Record<CardSize, number> = {
   lg: 96,
   xl: 132,
   "2xl": 180,
+};
+
+/**
+ * The heights, same rule. Read by `pileBox.ts`, which works out how much room
+ * the two centre piles paint so the shared table screen can fit them into the
+ * space between its bands rather than scaling them by a number somebody picked
+ * (#159).
+ */
+export const CARD_HEIGHT_PX: Record<CardSize, number> = {
+  sm: 56,
+  md: 96,
+  lg: 128,
+  xl: 176,
+  "2xl": 240,
 };
 
 interface CardProps {
@@ -163,17 +182,37 @@ export function CardBack({
   );
 }
 
-export function SuitBadge({ suit, className = "" }: { suit: Suit; className?: string }) {
+/**
+ * A suit, as a mark rather than a word.
+ *
+ * It used to be the glyph *and* the suit's name, and the pile drew it inside a
+ * 48px circle: at `text-2xl` that measures 75px across, so fourteen pixels hung
+ * out of each side with nothing behind them — multiplied by whatever the shared
+ * table screen was scaling the piles by, which made it about fifty pixels of
+ * unbacked text lying across the card in play (#159).
+ *
+ * The word was never carrying much. At the pile there is a caption under the
+ * card saying whether a suit is being named or shown, and the peek strip has
+ * always drawn the glyph alone. This is the same treatment in both places now,
+ * with the name kept for whoever is listening rather than looking.
+ */
+export function SuitMark({ mark, className = "" }: { mark: PileSuit; className?: string }) {
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-sm font-semibold",
-        isRed(suit) ? "text-rose-300" : "text-slate-100",
+        "font-semibold",
+        mark.kind === "owed"
+          ? "text-white/45"
+          : isRed(mark.suit)
+            ? "text-rose-300"
+            : "text-slate-100",
         className,
       ].join(" ")}
     >
-      <span aria-hidden>{SUIT_GLYPH[suit]}</span>
-      <span className="capitalize">{SUIT_LABEL[suit]}</span>
+      <span aria-hidden>{mark.kind === "owed" ? "?" : SUIT_GLYPH[mark.suit]}</span>
+      <span className="sr-only">
+        {mark.kind === "owed" ? "a suit is being named" : `${SUIT_LABEL[mark.suit]} called`}
+      </span>
     </span>
   );
 }

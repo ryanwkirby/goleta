@@ -550,6 +550,41 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   Because the turn is one uniform transform, **anything that does not overlap in
   the design does not overlap on screen**, at any size and either way up. That
   is what makes the design box the only place the layout has to be right.
+
+  **That guarantee covers the board's transform and nothing else, so no piece
+  gets a scale of its own** (#159). The piles used to be `scale-[2.5]`, and a
+  paint transform is invisible to the layout around it: they were laid out at
+  their unscaled 198px, centred in the full height of the design — the container
+  asked for `top: 0, bottom: 0`, alone among the placements here — and the ink
+  then grew about its own middle, into the band the seat names live in, until a
+  name was drawn on top of the draw pile. The scale is **asked for** now:
+  `pileBox` says how much they paint, `fitScale` says how much of that the room
+  between the bands will take, and the wrapper reserves the answer, so the box
+  the layout sees and the ink on the screen are one rectangle. `pileBox.test.ts`
+  holds it at every card size. Anything else that wants to be bigger should *be*
+  bigger in the design.
+
+  Two details in there look arbitrary and are load-bearing. `pileBox` allows for
+  the suit circle's twelve-pixel overhang on **both** sides, because the piles
+  are centred and an allowance on one side moves the box's centre off the piles'
+  centre and hands the overhang straight back. And there is a `GUTTER` between
+  the piles and the bands: a name fills 46 of its 48-pixel band, so piles fitted
+  flush clear the top name by a pixel and a half, which across a room reads as
+  the collision this fixed rather than the absence of one.
+- **Texture is the one thing that must not scale, and `--paint-scale` is how it
+  doesn't** (#169). The card back's lattice is a *screen* measurement — six
+  pixels of thread whatever size the card is — and that constant is what makes a
+  40px sliver and a 180px hand card read as one deck. A transform takes the
+  background up with everything else, so at ×3.1 the weave landed at nearly
+  nineteen pixels and the draw pile became a lattice of Xs.
+
+  Nothing inside an element can see a transform on an ancestor, so the places
+  that scale publish what they are scaling by and `bee-back` divides it back
+  out. Unset — every phone screen — it is 1 and the pattern is exactly what it
+  always was. The two scales are multiplied **by hand** where they meet:
+  a custom property that referred to itself would be a cycle and resolve to
+  nothing at all. The quarter turn is deliberately not in it, because turning
+  changes nothing about how large a pixel is.
 - **Nothing is stacked in a column, and nothing may be** (#141). Every piece is
   placed against the design box inside bands reserved for the seat names on all
   four sides (`BAND` in `tableEdges.ts`). The board used to be a `flex-col`

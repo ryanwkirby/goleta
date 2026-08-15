@@ -31,14 +31,36 @@
    crossing at right angles, with the diamonds falling out of where they meet.
    Not a reproduction and not trying to be.
 
-   The 6px period is chosen for the small end of the range. `CardBack` is drawn
-   at 96px on the draw pile and at 40px for every card flying face-down into a
-   seat, and a lattice tuned to the big one turns to mush at the small one. */
+   The 6px period is a **screen** measurement, not a card one, and that is the
+   whole trick. `CardBack` is drawn anywhere from 40px in a peek strip to 180px
+   in a landscape hand, and across all of them the thread stays the same size
+   while the card grows — which is what makes them read as one deck. A lattice
+   tuned to the big card turns to mush on the small one; a lattice that grew
+   with the card would be a different deck at every size.
+
+   `--paint-scale` is how that survives being transformed. The shared table
+   screen paints its board through `scale()`, and a transform takes the
+   background up with everything else: at ×3.1 the six-pixel weave landed at
+   nearly nineteen and read as a lattice of Xs rather than as cloth (#169). No
+   unit inside the element can see an ancestor's transform, so the one place
+   that knows the number tells us, and the thread is divided back down to the
+   six pixels it is meant to be. Unset — every phone screen — it is 1 and this
+   is exactly the pattern it always was. */
 @utility bee-back {
+  --bee-thread: calc(1px / var(--paint-scale, 1));
+  --bee-period: calc(6px / var(--paint-scale, 1));
   background-color: var(--color-bee-700);
   background-image:
-    repeating-linear-gradient(45deg, transparent 0 5px, var(--color-bee-500) 5px 6px),
-    repeating-linear-gradient(-45deg, transparent 0 5px, var(--color-bee-500) 5px 6px);
+    repeating-linear-gradient(
+      45deg,
+      transparent 0 calc(var(--bee-period) - var(--bee-thread)),
+      var(--color-bee-500) calc(var(--bee-period) - var(--bee-thread)) var(--bee-period)
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0 calc(var(--bee-period) - var(--bee-thread)),
+      var(--color-bee-500) calc(var(--bee-period) - var(--bee-thread)) var(--bee-period)
+    );
 }
 
 /* "help!", rising off the hand that asked for it. */

@@ -201,6 +201,24 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   was silent on exactly that play (#114). Set only in `chooseSuit`, cleared
   wherever the card in play changes, and read only by `lib/pile.ts`. Don't move
   it into `activeSuit`, and don't tidy it away for having no rule behind it.
+- **A suit that has been asked for and not given is marked at the pile**, and
+  that is not #76 coming back. #76 was the pile *naming a suit* through that
+  window — a confident badge holding `activeSuit`, which through a pending call
+  is still the board from before the 8, so the answer it gave was a suit nobody
+  had chosen. This says only that one is owed, in the badge's own place, and
+  names nothing. `pileSuit` returns *owed* or *named* as one value for exactly
+  that reason: the two are drawn in the same place, and a caller that could
+  reach for a bare `Suit` is a caller that can print the stale one again.
+
+  The silence #76 left was the more expensive mistake, which is why the question
+  it recorded as open is answered the other way now. A board about to be replaced
+  looked exactly like a settled one, so a player read their hand against it,
+  reached for the deck, and had the suit land under their finger and make that
+  reach illegal (#150). **The answer is information at the pile, never a gate on
+  the deck.** No delay after a suit lands, no cooling-off on the draw button, and
+  nothing that keeps a tappable pile from being tapped — the first bullet in this
+  section still holds, and a guard rail there would be buying with the whole
+  Sunny Rule what a `?` buys for nothing.
 - **The suit picker waits for the deal, and nothing else waits for anything.**
   `MotionApi.dealing` is the only "this layer is busy" the motion code exposes,
   and it is deliberately about the deal rather than about movement in general.

@@ -37,6 +37,7 @@ import {
   wantsFirstGameHints,
 } from "../net/identity.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../net/useGoleta.ts";
+import { HandOver } from "./HandOver.tsx";
 import { HandView } from "./HandView.tsx";
 
 /** How long the table looks at "X called it on Y" before anything else. */
@@ -344,6 +345,14 @@ export function Table({
    * propped at one, and there is a game running. The lobby and the screens
    * between games are untouched by any of it, and an online room never sees a
    * word of it.
+   *
+   * **`!finished` stays in here**, even though a sideways phone at the end of a
+   * hand now has a screen of its own (`handOver` below). This flag is what the
+   * rotate bookkeeping hangs off, and `room.gamesPlayed` moves at *game over*
+   * rather than at the next deal — so a version of it that stayed true past the
+   * final event would stamp `rotatedFor` with the number the next deal is going
+   * to be asked about, and that deal would never prompt. Asked once per deal is
+   * the rule; this is the line that keeps it.
    */
   const irlPhone = room.irl && phone && seated && !finished;
 
@@ -358,6 +367,19 @@ export function Table({
    */
   const judging = peeling || announcing || caughtHold;
   const compact = irlPhone && !portrait && !judging;
+
+  /**
+   * The same phone, sideways, once the hand is over (#158).
+   *
+   * Not `irlPhone` for the reason above, and not `seated` either: a watcher's
+   * phone lands on the same upright column, and the offer it is scrolling past
+   * — join the next game — is the one thing it is there for.
+   *
+   * It waits for `judging` exactly as the hand view does. A game can end on the
+   * play a landed call forced, so the peel and the ruling may still have the
+   * screen; they get it, and this comes up after.
+   */
+  const handOver = room.irl && phone && !portrait && finished && !judging;
 
   /**
    * Which way up the phone is *is* the toggle, once it has been turned once.
@@ -379,6 +401,38 @@ export function Table({
   // late, not somebody the table waits on.
   if (irlPhone && portrait && rotatedFor !== room.gamesPlayed) {
     return <RotatePanel offline={offline} />;
+  }
+
+  if (handOver) {
+    return (
+      <>
+        <HandOver
+          room={room}
+          game={game}
+          nameOf={nameOf}
+          seated={seated}
+          onDealAgain={() => send({ t: "start" })}
+          onJoinNext={() =>
+            send({ t: "join", code: room.code, name: loadName() || "Watcher" })
+          }
+          onLeave={onLeave}
+        />
+
+        {/* Both of these are armed by the event that just ended the game, so
+            they have to be reachable from the screen that event lands on. The
+            graduation especially: it is shown once, after your first finished
+            game, and in landscape it had nowhere at all to appear. */}
+        {explainSunny ? (
+          <SunnyExplainer
+            onDone={() => {
+              markSunnySeen();
+              setExplainSunny(false);
+            }}
+          />
+        ) : null}
+        {graduating ? <Graduation onDone={() => setGraduating(false)} /> : null}
+      </>
+    );
   }
 
   if (compact) {

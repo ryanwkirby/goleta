@@ -61,9 +61,12 @@ function Seat({
       {shouting ? <HelpShout name={nameFor(room, player.id)} /> : null}
 
       <div className="flex items-baseline gap-2">
-        <span className="truncate text-sm font-semibold text-white">
-          {nameFor(room, player.id)}
-        </span>
+        {/* No `truncate`: at ten characters the longest name anybody can have
+            is under 90px at this size, and the seat grows to hold it — the
+            strip already scrolls, which #59 settled as the acceptable cost of
+            fitting a table on a phone. Clipping a name to save a few pixels of
+            scroll was the wrong side of that trade (#161). */}
+        <span className="text-sm font-semibold text-white">{nameFor(room, player.id)}</span>
         {sun ? (
           <SunnySign
             targetName={nameFor(room, player.id)}

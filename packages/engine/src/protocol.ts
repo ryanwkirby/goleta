@@ -181,3 +181,19 @@ export type ErrorKind = "move" | "session";
 
 /** Suit names for UI copy, kept next to the protocol so both sides agree. */
 export type SuitKey = Suit;
+
+/**
+ * How long a name may be, and the reason it is here rather than on the server.
+ *
+ * Ten characters is a **layout** number: it is what every surface that draws a
+ * name can show whole, and the narrowest of those is the seat strip on a phone
+ * with eight seats in it. The server is what enforces it — `cleanName` slices
+ * to it, because anything can arrive over a socket — but the field that stops
+ * you typing an eleventh has to agree, and a cap enforced in one package and
+ * typed in another is a cap that drifts.
+ *
+ * It used to be sixteen, and nothing could draw sixteen: the shared table
+ * screen clipped at eight or nine, so the app asked for names it had already
+ * decided not to show (#161). An ellipsis is the app admitting that.
+ */
+export const NAME_LIMIT = 10;

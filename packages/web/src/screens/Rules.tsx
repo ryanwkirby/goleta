@@ -19,6 +19,15 @@ import { Button, Panel } from "../components/ui.tsx";
  * three things you learn by playing one game with it — and a paragraph
  * explaining all three is a paragraph read by somebody who hasn't seen a card
  * yet.
+ *
+ * **Eights get a second sentence and every other rule gets one**, because they
+ * are the only item here that was actively wrong by omission. *An 8 plays on
+ * anything and you name the suit* is true of an 8 played from a hand and of
+ * nothing else, and a table meets the exception in its first minute: roughly one
+ * game in thirteen opens on an 8 nobody names a suit for, and a bot sheds an 8
+ * at the first opportunity, so a second one lands on it and is named for. A
+ * player briefed only by this screen has been given no way to tell those apart,
+ * and what it looks like is the app breaking its own rule (#151).
  */
 export function Rules({
   onDone,
@@ -65,7 +74,9 @@ export function Rules({
           <strong className="text-white">
             Eights are <em>wild</em>.
           </strong>{" "}
-          An 8 plays on anything, and after playing one, you get to name the suit.
+          An 8 plays on anything, and after playing one, you get to name the suit. An 8 turned up
+          off the deck was played by nobody, so nobody names anything — it's just an 8 of the suit
+          printed on it.
         </li>
       </ol>
 

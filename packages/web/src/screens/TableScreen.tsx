@@ -127,19 +127,29 @@ export function TableScreen({
       ].join(" ")}
     >
       <div
-        style={{
-          width: TABLE_DESIGN.width,
-          height: TABLE_DESIGN.height,
-          // Read right to left: sized first, then turned. A transform changes
-          // nothing about layout, so the box stays centred in the frame either
-          // way and the turn costs no arithmetic anywhere else on this screen.
-          transform: `${quarter ? "rotate(90deg) " : ""}scale(${scale})`,
-        }}
+        style={
+          {
+            width: TABLE_DESIGN.width,
+            height: TABLE_DESIGN.height,
+            // Read right to left: sized first, then turned. A transform changes
+            // nothing about layout, so the box stays centred in the frame either
+            // way and the turn costs no arithmetic anywhere else on this screen.
+            transform: `${quarter ? "rotate(90deg) " : ""}scale(${scale})`,
+            // How much bigger than its design size everything in here is being
+            // painted. Nothing inside an element can see a transform on an
+            // ancestor, so the one place that knows the number publishes it —
+            // and `bee-back` divides its thread back down to the width it has
+            // on every other screen in the app (#169). The quarter turn is not
+            // in it: turning changes nothing about how large a pixel is.
+            "--paint-scale": scale,
+          } as CSSProperties
+        }
         className="relative shrink-0"
       >
         {game ? (
           <Playing
             room={room}
+            boardScale={scale}
             game={game}
             nameOf={nameOf}
             call={call}
@@ -218,7 +228,7 @@ const HANDS_PILE_ROOM = { width: TABLE_DESIGN.width - 40, height: 240 };
  * ink on the screen are the same rectangle. `pileBox` is what makes the second
  * one true — including the twelve pixels the suit circle hangs off the corner.
  */
-function ScaledPiles({ room, children }: { room: Box; children: ReactNode }) {
+function ScaledPiles({ room, outer, children }: { room: Box; outer: number; children: ReactNode }) {
   const box = pileBox("xl");
   const scale = fitScale(room, box);
   return (
@@ -226,7 +236,20 @@ function ScaledPiles({ room, children }: { room: Box; children: ReactNode }) {
       style={{ width: box.width * scale, height: box.height * scale }}
       className="flex shrink-0 items-center justify-center"
     >
-      <div style={{ transform: `scale(${scale})` }} className="shrink-0">
+      <div
+        style={
+          {
+            transform: `scale(${scale})`,
+            // Multiplied by hand rather than compounded in CSS: a custom
+            // property that referred to itself would be a cycle and resolve to
+            // nothing at all. This is the scale the board is already applying
+            // times the one applied here, which together is what the ink on the
+            // draw pile is multiplied by (#169).
+            "--paint-scale": outer * scale,
+          } as CSSProperties
+        }
+        className="shrink-0"
+      >
         {children}
       </div>
     </div>
@@ -281,6 +304,7 @@ function Waiting({ room }: { room: RoomView }) {
 /** A game in progress: the two piles, whose turn it is, and what everyone holds. */
 function Playing({
   room,
+  boardScale,
   game,
   nameOf,
   call,
@@ -292,6 +316,8 @@ function Playing({
   onDraw,
 }: {
   room: RoomView;
+  /** What the board is being scaled by, for anything that has to divide it out. */
+  boardScale: number;
   game: GameView;
   nameOf: (playerId: string) => string;
   call: ReturnType<typeof useJudgedCall>["call"];
@@ -367,7 +393,9 @@ function Playing({
           className="absolute flex flex-col items-center gap-4"
         >
           <div className="flex h-60 shrink-0 items-center justify-center">
-            <ScaledPiles room={HANDS_PILE_ROOM}>{piles}</ScaledPiles>
+            <ScaledPiles room={HANDS_PILE_ROOM} outer={boardScale}>
+              {piles}
+            </ScaledPiles>
           </div>
           <div className="min-h-0 w-full flex-1">
             <Seats room={room} game={game} shouts={shouts} onCallSunny={() => undefined} />
@@ -378,7 +406,9 @@ function Playing({
           style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
           className="absolute flex items-center justify-center"
         >
-          <ScaledPiles room={CENTRE_PILE_ROOM}>{piles}</ScaledPiles>
+          <ScaledPiles room={CENTRE_PILE_ROOM} outer={boardScale}>
+            {piles}
+          </ScaledPiles>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { NAME_LIMIT } from "@goleta/engine";
 import type { ClientMessage } from "@goleta/engine";
@@ -25,6 +25,17 @@ export function Join({
   const [name, setName] = useState(loadName);
   const [code, setCode] = useState(() => codeFromHash() ?? "");
   /**
+   * What you came here to do, asked as a question rather than inferred from
+   * whether a field is empty. The code box belongs to one of the two answers
+   * and is hidden until it is the one given.
+   *
+   * A link with a code in it has already answered it — that is what the invite
+   * links and the QR are for — so those arrive on the code box with the code in
+   * it, rather than on a button that reveals what they were already sent.
+   */
+  const [joining, setJoining] = useState(() => codeFromHash() !== null);
+  const codeRef = useRef<HTMLInputElement>(null);
+  /**
    * The room that turned us away, latched here rather than read off the live
    * error: the banner expires after a few seconds, and an offer that vanishes
    * while somebody is still reading it is worse than not making it. Cleared
@@ -36,9 +47,18 @@ export function Join({
   const trimmedCode = code.trim().toUpperCase();
   const canCreate = trimmedName.length > 0;
   const canJoin = canCreate && trimmedCode.length === 4;
-  if (underWay && refused !== trimmedCode) setRefused(trimmedCode);
-  // Tied to the code in the box, so editing it takes the offer away with it.
-  const offerWatch = refused !== null && refused === trimmedCode;
+  // A refusal is always remembered against a whole code, so a box that has been
+  // cleared or half-typed since can never become the thing it points at.
+  if (underWay && canJoin && refused !== trimmedCode) setRefused(trimmedCode);
+  // Tied to the code in the box, so editing it takes the offer away with it —
+  // and drawn only where that box is, for the same reason.
+  const offerWatch = joining && refused !== null && refused === trimmedCode;
+
+  // The reveal puts the cursor where it just made room, and only there: a screen
+  // opened from an invite has its code already and its name still empty.
+  useEffect(() => {
+    if (joining && codeRef.current?.value === "") codeRef.current.focus();
+  }, [joining]);
 
   const go = (message: ClientMessage): void => {
     saveName(trimmedName);
@@ -66,7 +86,8 @@ export function Join({
       <header className="text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
         <p className="mt-2 text-balance text-white/60">
-          Crazy Eights, reversed. Hold on to your cards — the last player with any wins.
+          It's Crazy Eights, reversed. Hold on to your cards — when you're out of cards, you're out
+          of the game. Last man standing wins.
         </p>
       </header>
 
@@ -75,8 +96,11 @@ export function Join({
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (canJoin) go({ t: "join", code: trimmedCode, name: trimmedName });
-            else if (canCreate) go({ t: "create", name: trimmedName });
+            // Enter submits whichever of the two this screen is being, so it
+            // never quietly does the other one on a stale or empty code.
+            if (joining) {
+              if (canJoin) go({ t: "join", code: trimmedCode, name: trimmedName });
+            } else if (canCreate) go({ t: "create", name: trimmedName });
           }}
         >
           <Field label="Your name">
@@ -91,28 +115,44 @@ export function Join({
             />
           </Field>
 
-          <Field label="Room code" hint="Leave it empty to start a new table.">
-            <input
-              className={`${inputClass} font-mono text-2xl uppercase tracking-[0.4em]`}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/[^A-Za-z0-9]/g, ""))}
-              placeholder="––––"
-              maxLength={4}
-              inputMode="text"
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </Field>
+          {joining ? (
+            <>
+              <Field label="Room code" hint="Four characters, from whoever set the room up.">
+                <input
+                  ref={codeRef}
+                  className={`${inputClass} font-mono text-2xl uppercase tracking-[0.4em]`}
+                  value={code}
+                  onChange={(event) => setCode(event.target.value.replace(/[^A-Za-z0-9]/g, ""))}
+                  placeholder="––––"
+                  maxLength={4}
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </Field>
 
-          {trimmedCode.length === 4 ? (
-            <Button type="submit" variant="primary" full disabled={!canJoin || connecting}>
-              Join room {trimmedCode}
-            </Button>
+              <div className="space-y-2">
+                <Button type="submit" variant="primary" full disabled={!canJoin || connecting}>
+                  {/* Named once there is a whole code to name — a missing name
+                      disables the button, it doesn't unname the room. */}
+                  {trimmedCode.length === 4 ? `Join room ${trimmedCode}` : "Join room"}
+                </Button>
+                {/* Choosing wrong is not a dead end. */}
+                <Button variant="ghost" full onClick={() => setJoining(false)}>
+                  Create a new room instead
+                </Button>
+              </div>
+            </>
           ) : (
-            <Button type="submit" variant="primary" full disabled={!canCreate || connecting}>
-              Start a new table
-            </Button>
+            <div className="space-y-2">
+              <Button type="submit" variant="primary" full disabled={!canCreate || connecting}>
+                Create a new room
+              </Button>
+              <Button variant="secondary" full onClick={() => setJoining(true)}>
+                Join existing room
+              </Button>
+            </div>
           )}
         </form>
 
@@ -128,9 +168,11 @@ export function Join({
         ) : null}
       </Panel>
 
-      <p className="text-center text-xs text-white/40">
-        No account, no install. 4 to 8 players — share the room code and go.
-      </p>
+      {/*
+        No offer to share a code here: there isn't one on this screen to share.
+        A code exists once a room does, and handing it on is the lobby's job.
+      */}
+      <p className="text-center text-xs text-white/40">No account, no install. 4 to 8 players.</p>
     </div>
   );
 }

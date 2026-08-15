@@ -395,13 +395,28 @@ Things that will read as oversights in that view and are not:
   *noticing* a reach is easier with, and turning the phone upright is the answer
   to that. A sliver too small to read a rank off is worse than nothing
   (`fan.ts` has a floor for exactly this).
-- **The room code is the invite, in both views, and tapping it is how (#135).**
-  It is the same four characters in the same place — a button rather than a
-  span, so nothing is added to the strip's list and nothing changes width. A
-  code is the address of the room, and the two things that can arrive at one are
-  a **person** and a **shared screen**: same code, different link, which is
+- **The room code is the invite, on every screen, and tapping it is how (#135).**
+  A code is the address of the room, and the two things that can arrive at one
+  are a **person** and a **shared screen**: same code, different link, which is
   exactly what a QR should be hiding. The player invite leads, because a screen
   is set up once and a person turns up all evening.
+
+  **During a game it is a one-character QR glyph rather than the four
+  characters** (#162). The panel behind it leads with the code at reading-out
+  size, so what the characters were adding on the strip and in the top band was
+  width: the glyph says *there is a way in here* and the panel says the rest.
+  It is drawn rather than typed — a Unicode square is a gamble on the device's
+  font, and this has to read as a QR at three type sizes and again on a
+  television. The waiting state keeps its full-size code and its actual QR;
+  that screen exists to be scanned from across a room.
+
+  **The shared screen has it too, and until #162 it was the one surface where
+  the code was not tappable** — four grey characters in a `<p>`, so a table
+  wanting to add a player mid-hand had to go and find somebody's phone. The
+  panel renders *outside* the design box, alongside `TableRotateNudge` and for
+  a stronger version of the same reason: inside, `fitScale` would scale it and
+  the quarter turn would stand it on its side, and it is a panel somebody is
+  holding a camera up to.
 
   **Anybody may open it, not just the host.** Handing somebody the way in is not
   a host power at a real table, and nothing behind it changes the room — two
@@ -503,13 +518,18 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   The default is the whole of the old rule, which read *no hand, at any size,
   ever*, on the reasoning that a screen in the middle of a room is visible to
   everyone including whoever is walking past. #120 kept the reasoning and
-  narrowed the rule to a default: the toggle in the corner shows the same hand
-  strip a watcher sees, and it is a deliberate act by somebody in the room who
+  narrowed the rule to a default: the toggle in the corner — two icons rather
+  than two words since #168, because everything else in that band is a glyph or
+  a number and a word there reads as a heading for the view you are in about as
+  readily as a way out of it — shows the same hand strip a watcher sees, and it is a deliberate act by somebody in the room who
   can see who else is in it. It is never what the screen comes up in, it is not
   remembered, and the centre piles stay large in both views. Do not make it the
   default, and do not persist it.
-- **It has exactly one auxiliary action.** It still joins as a watcher (#16),
-  with a `table` bit on the watch message. In an IRL room, while the game is
+- **It has exactly one auxiliary action**, in the sense that matters: one thing
+  it can do that reaches the server. It still joins as a watcher (#16), with a
+  `table` bit on the watch message. (Opening the invite is not a second one —
+  it is a local panel over two links and a code, and it changes nothing about
+  the room.) In an IRL room, while the game is
   waiting on an ordinary action, tapping its draw pile draws for the current
   player. It cannot play, name a suit, call Sunny or surrender.
 

@@ -27,6 +27,40 @@ import { qrSymbol } from "../lib/qr.ts";
  * same reason. Failure is silent — an insecure origin has no clipboard, and the
  * code itself is still there to be scanned, which is what it was always for.
  */
+/**
+ * A QR, at the size of a character.
+ *
+ * The room code used to sit on every screen for the whole of every game: four
+ * characters that said what the room was called, on a strip that is deliberately
+ * one line and in a corner of a board where the bands are reserved. #135 gave
+ * them a job — tapping them opens the invite — and this keeps the job and gives
+ * back the space (#162). The code itself is the first thing on the panel behind
+ * it, at reading-out size, so nothing is lost: it goes from permanently on
+ * screen to one tap away, which is what a code is worth during a hand.
+ *
+ * Drawn rather than typed. A Unicode square is a gamble on whatever font the
+ * device has, and this has to read as *a QR* at three type sizes and again on a
+ * television. Seven modules with three finder squares is the smallest thing
+ * that unmistakably is one. `1em`, so it sits on the line like the characters
+ * it replaced, and `currentColor`, so it inherits whatever the row is doing.
+ */
+export function QrGlyph({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 7 7"
+      aria-hidden
+      shapeRendering="crispEdges"
+      fill="currentColor"
+      className={["h-[1em] w-[1em]", className].join(" ")}
+    >
+      {/* The three finder squares, which are what the eye reads as a QR. */}
+      <path d="M0 0h3v3H0zM1 1v1h1V1zM4 0h3v3H4zM5 1v1h1V1zM0 4h3v3H0zM1 5v1h1V5z" />
+      {/* Enough of a payload not to look like three boxes. */}
+      <path d="M4 4h1v1H4zM6 4h1v1H6zM5 5h1v1H5zM4 6h1v1H4zM6 6h1v1H6zM3 1h1v1H3zM3 3h1v1H3zM1 3h1v1H1z" />
+    </svg>
+  );
+}
+
 export function QrCode({
   value,
   label,

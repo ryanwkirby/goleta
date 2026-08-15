@@ -433,8 +433,8 @@ Things that will read as oversights in that view and are not:
 - **The rest of this view's furniture is on the strip too, and there is no row
   under the cards.** The sort control, the offer of help when you have sat on a
   turn, and the draws left on a missed call used to sit in a footer, and the
-  footer cost the hand a card size: `handSize` reads the height the row is left,
-  so a line of small print is paid for in cards (#131). What the table is
+  footer cost the hand a card size: `handHeight` reads the height the row is
+  left, so a line of small print is paid for in cards (#131). What the table is
   waiting for is said there in full rather than as whose turn it is, because the
   prompt is a superset of the line the strip already carried.
 
@@ -444,6 +444,23 @@ Things that will read as oversights in that view and are not:
   strip that has to be reachable, and a card's height to push onto a second
   line. Two lines of small print are shorter than the pile card beside them, so
   the crowded hand costs the cards nothing.
+- **The cards are as tall as the row, not as tall as the nearest rung** (#166).
+  `handHeight` returns a number and `PlayingCard` takes a `height`, with the
+  card's width, type, padding and radius following from it by the fractions in
+  `CARD_SHAPE` — read off `2xl`, so a card drawn this way at 240 is that rung to
+  the pixel. The ladder stays everywhere else, because it is what keeps a card
+  the same size in a seat strip on two different screens.
+
+  The ladder's top two rungs were 64px apart, so a row of 280 drew a 240 card
+  and a row of 279 drew a 176 — two-fifths of the height handed back over one
+  pixel. On a landscape iPhone the card went 240 → 289 and the felt under it
+  44 → 20, which is the `py-4` the turn ring needs and nothing else.
+
+  The row is `justify-end` rather than `justify-center` as well. It does almost
+  nothing now — the cards fill the row, so there is no slack to place — and it
+  is the right default for the two cases where there is: a row taller than
+  `TALLEST`, and one shorter than `SHORTEST`. Leftover belongs above the cards,
+  not split into a band of bare felt beneath them.
 - **A card drawn `mirrored` has no ghost pip.** The big faded suit in the
   bottom-right corner is the corner the second index sits in, so in an IRL room
   it was decoration underneath an upside-down rank, on the screens where reading
@@ -473,8 +490,9 @@ Things that will read as oversights in that view and are not:
   `PICKER_TIGHTEST`. That is what makes docking work: a picker whose height came
   in card-row steps had to be capped at a fraction of the column, and then the
   picker scrolled inside its cap *and* the hand under it scrolled its own
-  overflow, because `handSize` had no rung below `lg` to step down to. It has
-  one now. Nothing in the column scrolls while a call is being composed — do not
+  overflow, because `handSize` had no rung below `lg` to step down to. There is
+  no ladder left to run out of: `handHeight` is a number, so the hand gives back
+  exactly what the picker took (#166). Nothing in the column scrolls while a call is being composed — do not
   reintroduce a cap, a wrap or a scroll to fit a bigger hand in. The overlap is
   a layout, not a hint: every card leaves the same sliver, so it still says
   nothing about which of them was legal (#96).

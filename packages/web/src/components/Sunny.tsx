@@ -524,7 +524,7 @@ export function SunnyAccusePicker({
   const { width } = useBox(row);
   // Only the compact row fans. The full table's picker has the width to wrap
   // and the height to wrap into.
-  const step = handStep(width, reach.hand.length, "sm", PICKER_TIGHTEST);
+  const step = handStep(width, reach.hand.length, CARD_WIDTH_PX.sm, PICKER_TIGHTEST);
 
   return (
     <section

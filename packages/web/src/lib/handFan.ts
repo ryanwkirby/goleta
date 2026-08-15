@@ -18,7 +18,7 @@
  * a test rather than a squint at a phone.
  */
 
-import { CARD_WIDTH_PX, type CardSize } from "../components/Card.tsx";
+
 
 /** The air between two cards when there is room for air. */
 const GAP = 6;
@@ -62,14 +62,38 @@ export const PICKER_TIGHTEST = 28;
 export const FIT_TIGHTEST = 18;
 
 /** No overlap at all: a whole card and its gap. Nothing is ever looser. */
-export const loosest = (size: CardSize): number => CARD_WIDTH_PX[size] + GAP;
+export const loosest = (cardWidth: number): number => cardWidth + GAP;
 
 /** How wide `cards` sit at this step, the last one showing whole. */
-export const handWidth = (cards: number, step: number, size: CardSize): number =>
-  cards > 0 ? (cards - 1) * step + CARD_WIDTH_PX[size] : 0;
+export const handWidth = (cards: number, step: number, cardWidth: number): number =>
+  cards > 0 ? (cards - 1) * step + cardWidth : 0;
 
 /**
- * How tall the cards may be drawn, from the room the row actually has.
+ * The air the hand keeps around itself: `py-4` above and below the cards.
+ *
+ * Both halves earn it. The top has to clear the lift a selected card takes, and
+ * the bottom is what centres the cards inside the turn ring drawn round them —
+ * without it the hand sits visibly low in its own frame.
+ */
+const AIR = 32;
+
+/**
+ * The tallest a card is drawn, however much room there is.
+ *
+ * This view is gated on a phone, so the ceiling is not really about space; it
+ * is about a card that stops looking like a card. A little over the old `2xl`
+ * is as far as it is worth going.
+ */
+export const TALLEST = 300;
+
+/**
+ * The shortest, which is the one a docked picker needs. Below this the hand is
+ * no longer readable and scrolling is the better failure.
+ */
+export const SHORTEST = 96;
+
+/**
+ * How tall the cards are drawn, from the room the row actually has.
  *
  * The one place the hand view decides how big "as large as it will go" is. It
  * is answered from the *height*, not the card count: cards that grew as a hand
@@ -77,24 +101,21 @@ export const handWidth = (cards: number, step: number, size: CardSize): number =
  * looked, and a hand of three would sit there like a billboard. The width is
  * the fan's problem, and the fan solves it by closing up.
  *
- * Every rung needs a row with room for the card, the lift a selected card
- * takes, and the gap under it — the card's own height plus the row's 32px of
- * padding, plus a little. Anything shorter falls back a rung.
+ * **A number rather than a rung** since #166. It used to pick one of four card
+ * sizes off a ladder whose top two steps are sixty-four pixels apart, so a row
+ * of 280 drew a 240 card and a row of 279 drew a 176 — two-fifths of the height
+ * given back over one pixel, and on the ordinary phone the leftover was a band
+ * of bare felt under the cards on a screen that exists to show them. Now the
+ * cards are simply as tall as the row minus the air they keep, and the ladder
+ * stays where every other card in the app still uses it.
  *
- * `2xl` is the top of it and the ordinary case (#131). `xl` was the ceiling
- * while a row of furniture sat under the hand; without it a landscape phone
- * leaves the row about 300px, which is 60 more than this card needs, so the
- * step is taken on every phone this view is for and given back on a 320px one.
- *
- * The bottom rung is the one a picker needs. `lg` was the floor while nothing
- * ever docked over the hand; with a picker up, the row is left less height than
- * an `lg` card and its padding, and the row scrolls its own overflow rather than
- * admitting it — cards clipped top and bottom at the exact moment the screen is
- * asking you to read a hand. Stepping down again is the whole of the fix: a
- * short row is not a reason to render a broken one.
+ * It still falls back smoothly, which is what a docked picker needs: the row is
+ * measured, so a picker taking its room out of the column shrinks the cards by
+ * exactly what it took rather than by a rung, and nothing in the column ever
+ * has to scroll to fit (#96).
  */
-export const handSize = (rowHeight: number): CardSize =>
-  rowHeight >= 280 ? "2xl" : rowHeight >= 216 ? "xl" : rowHeight >= 168 ? "lg" : "md";
+export const handHeight = (rowHeight: number): number =>
+  Math.max(SHORTEST, Math.min(TALLEST, Math.floor(rowHeight - AIR)));
 
 /**
  * Left edge to left edge: how much of a card its neighbour leaves showing.
@@ -108,7 +129,8 @@ export const handSize = (rowHeight: number): CardSize =>
 export const handStep = (
   available: number,
   cards: number,
-  size: CardSize,
+  /** How wide one card is — a rung's width, or a height off `cardWidthAt`. */
+  cardWidth: number,
   /** Where tightening stops. The picker fans smaller cards, so it sets its own. */
   tightest: number = TIGHTEST,
   /**
@@ -118,13 +140,13 @@ export const handStep = (
    */
   fit = false,
 ): number => {
-  const loose = loosest(size);
+  const loose = loosest(cardWidth);
   if (cards <= 1 || available <= 0) return loose;
   for (let step = loose; step > tightest; step -= 1) {
-    if (handWidth(cards, step, size) <= available) return step;
+    if (handWidth(cards, step, cardWidth) <= available) return step;
   }
   if (fit) {
-    const fitted = Math.floor((available - CARD_WIDTH_PX[size]) / Math.max(cards - 1, 1));
+    const fitted = Math.floor((available - cardWidth) / Math.max(cards - 1, 1));
     return Math.max(FIT_TIGHTEST, Math.min(tightest, fitted));
   }
   return tightest;

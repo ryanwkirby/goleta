@@ -75,9 +75,33 @@ export const CARD_HEIGHT_PX: Record<CardSize, number> = {
   "2xl": 240,
 };
 
+/**
+ * A card's shape, as fractions of its own height.
+ *
+ * The ladder above is five rungs, and the landscape hand is the one place that
+ * wants a size *between* them: it is handed a row and should fill it, not fall
+ * back sixty-four pixels because the row came up one short (#166). So that view
+ * draws at a height it works out, and everything else about the card follows
+ * from these — which are read off `2xl`, the rung it replaces, so a card drawn
+ * this way at 240 is the `2xl` card to the pixel.
+ *
+ * Only `handFan.ts` and the landscape hand use them. Every other card in the
+ * app is a rung, and should stay one: the ladder is what keeps a card the same
+ * size in a seat strip on two different screens.
+ */
+export const CARD_SHAPE = { width: 0.75, text: 0.2167, pad: 0.05, radius: 0.1 } as const;
+
+/** How wide a card of this height is. The fan needs it to know what it is fitting. */
+export const cardWidthAt = (height: number): number => Math.round(height * CARD_SHAPE.width);
+
 interface CardProps {
   card: CardModel;
   size?: CardSize;
+  /**
+   * Drawn at this height in pixels rather than at `size`. The landscape hand
+   * sets it; nothing else should.
+   */
+  height?: number;
   /** In-person cards need to be readable from both sides of the table. */
   mirrored?: boolean;
   /** Dimmed but still legible: you can see it, you just can't play it. */
@@ -97,6 +121,7 @@ interface CardProps {
 export function PlayingCard({
   card,
   size = "md",
+  height,
   mirrored = false,
   dimmed = false,
   selected = false,
@@ -109,15 +134,30 @@ export function PlayingCard({
   const colour = isRed(card.suit) ? "text-rose-600" : "text-slate-900";
   const Tag = onClick ? "button" : "div";
 
+  // A height off the ladder replaces the rung's class outright rather than
+  // overriding half of it: the four numbers below are what `SIZES` is, and a
+  // card carrying both would be a card whose padding and type came from one
+  // size and whose box came from another.
+  const sized: CSSProperties | undefined = height
+    ? {
+        height,
+        width: cardWidthAt(height),
+        fontSize: height * CARD_SHAPE.text,
+        padding: height * CARD_SHAPE.pad,
+        borderRadius: height * CARD_SHAPE.radius,
+      }
+    : undefined;
+
   return (
     <Tag
       ref={anchor}
       type={onClick ? "button" : undefined}
       onClick={onClick}
       title={title}
+      style={sized}
       aria-label={`${card.rank} of ${SUIT_LABEL[card.suit]}`}
       className={[
-        SIZES[size],
+        height ? "" : SIZES[size],
         arriving ? "invisible" : "",
         // `overflow-hidden` is the belt to the layout's braces: a rank like 10
         // at a large text size must never spill past the card's edge.

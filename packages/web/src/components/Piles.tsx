@@ -1,6 +1,6 @@
 import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 
-import { calledSuit } from "../lib/pile.ts";
+import { pileSuit, type PileSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitBadge, type CardSize } from "./Card.tsx";
@@ -20,14 +20,24 @@ export interface Peel {
 /**
  * A word under a pile, or the room one would take.
  *
- * The captions come and go — `showing` only exists while a suit is called —
- * and the row is `items-center`, so a caption appearing under one column would
- * shove that column's card upwards. The space is held whether or not there's
- * anything to say, the same way `Table.tsx` holds a row above your hand.
+ * The captions come and go — there is only ever one when the badge beside the
+ * card has something to say — and the row is `items-center`, so a caption
+ * appearing under one column would shove that column's card upwards. The space
+ * is held whether or not there's anything to say, the same way `Table.tsx` holds
+ * a row above your hand.
  */
 function Caption({ children }: { children?: string }) {
   return <span className="h-4 text-xs leading-4 text-white/40">{children}</span>;
 }
+
+/**
+ * The word under the card in play, one per thing the badge can say.
+ *
+ * Written as a pair so the two cannot drift: a caption with no badge above it is
+ * a stray word, and a badge with no caption under it is a mark nobody can read
+ * (#76). Both appear together and both go together.
+ */
+const CAPTION: Record<PileSuit["kind"], string> = { owed: "naming", named: "showing" };
 
 export function Piles({
   game,
@@ -51,9 +61,11 @@ export function Piles({
   const face = pileFace(game.topCard);
   // Said whenever somebody has actually named one for the card that is up —
   // including when they named the suit already printed on it, which is a play
-  // and not a no-op. That condition lives in `calledSuit`; the peek strip asks
-  // it the same question.
-  const called = calledSuit(game, face);
+  // and not a no-op — and said while one is owed and nobody has answered, which
+  // is a board about to be replaced and used to look exactly like a settled one
+  // (#150). That condition lives in `pileSuit`; the peek strip asks it the same
+  // question.
+  const suit = pileSuit(game, face);
   const cardsLeft = game.drawPileSize;
 
   // Everything that isn't the evidence steps back while the peel is up. It also
@@ -112,13 +124,26 @@ export function Piles({
             />
           )}
           {peel ? <SunnyPeel {...peel} irl={irl} /> : null}
-          {called && !peel ? (
+          {/* One badge, two things it can say, in the same place at the corner
+              of the card either way — so an answer arriving fills the mark in
+              rather than putting a badge on the board out of nowhere. It is at
+              the pile because that is where the decision is made: a player
+              working out whether they have a play is looking at the cards, not
+              at the line of small print under them. */}
+          {suit && !peel ? (
             <div className="absolute -bottom-3 -right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-felt-900 shadow-xl ring-2 ring-white/10">
-              <SuitBadge suit={called} className="text-2xl" />
+              {suit.kind === "named" ? (
+                <SuitBadge suit={suit.suit} className="text-2xl" />
+              ) : (
+                <span className="text-2xl font-semibold text-white/45">
+                  <span aria-hidden>?</span>
+                  <span className="sr-only">a suit is being named</span>
+                </span>
+              )}
             </div>
           ) : null}
         </div>
-        <Caption>{called && !peel ? "showing" : undefined}</Caption>
+        <Caption>{suit && !peel ? CAPTION[suit.kind] : undefined}</Caption>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import type { GameView, RoomView } from "@goleta/engine";
 
 import type { NameOf } from "../lib/format.ts";
 import { useFullscreen } from "../lib/fullscreen.ts";
-import { calledSuit } from "../lib/pile.ts";
+import { pileSuit } from "../lib/pile.ts";
 import type { HandSort } from "../lib/sort.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
@@ -16,10 +16,11 @@ import { SunnySign } from "./Sunny.tsx";
  * and, since #131, the whole of this view's furniture as well.
  *
  * **What it carries of the table is the centre and nothing more:** the room
- * code, the draw pile and its count, the card in play with the suit named over
- * it when an 8 is live, what the table is waiting for, the sun when a call is on
- * offer, and somebody asking for help. That is the whole list, and the omission
- * that matters is the hands — nobody else's cards appear here at any size.
+ * code, the draw pile and its count, the card in play with the suit over it when
+ * an 8 is live — named, or asked for and not yet given — what the table is
+ * waiting for, the sun when a call is on offer, and somebody asking for help.
+ * That is the whole list, and the omission that matters is the hands — nobody
+ * else's cards appear here at any size.
  *
  * The rest is not table facts, and it is here because the alternative was a row
  * of it under the cards. Your hand is the point of this screen, `handSize` reads
@@ -100,10 +101,10 @@ export function PeekStrip({
   const { anchor, pileFace } = useMotion();
   const fullscreen = useFullscreen();
   const face = pileFace(game.topCard);
-  // The same question the full table's pile asks, answered in the same place:
-  // a suit that has been named, for the card that is actually up. Null while one
-  // is owed and while a flight is still landing — see `calledSuit`.
-  const called = calledSuit(game, face);
+  // The same question the full table's pile asks, answered in the same place: a
+  // suit named for the card that is actually up, or one owed and not yet given.
+  // Null only while a flight is still landing — see `pileSuit`.
+  const suit = pileSuit(game, face);
   const target = game.sunnyCallable ? game.sunnyTargetId : null;
 
   // The side insets are the landscape ones, and they are why this strip has
@@ -209,16 +210,25 @@ export function PeekStrip({
             className="h-14 w-10 rounded-md border border-dashed border-white/15"
           />
         )}
-        {/* The named suit only needs saying when it isn't the one you can see. */}
-        {called ? (
+        {/* The suit over the card in play: the one somebody named, or the mark
+            for one they have been asked for and not given. Same pill either way,
+            in the same place, so an answer arriving changes the glyph rather
+            than adding something to the strip (#150). */}
+        {suit ? (
           <span
             className={[
               "rounded-full bg-white/10 px-1.5 py-0.5 text-sm font-semibold",
-              isRed(called) ? "text-rose-300" : "text-slate-100",
+              suit.kind === "owed"
+                ? "text-white/45"
+                : isRed(suit.suit)
+                  ? "text-rose-300"
+                  : "text-slate-100",
             ].join(" ")}
-            aria-label={`${SUIT_LABEL[called]} called`}
+            aria-label={
+              suit.kind === "owed" ? "a suit is being named" : `${SUIT_LABEL[suit.suit]} called`
+            }
           >
-            <span aria-hidden>{SUIT_GLYPH[called]}</span>
+            <span aria-hidden>{suit.kind === "owed" ? "?" : SUIT_GLYPH[suit.suit]}</span>
           </span>
         ) : null}
       </div>

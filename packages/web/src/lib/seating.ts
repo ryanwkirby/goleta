@@ -16,30 +16,52 @@ import type { GameView, PlayerView } from "@goleta/engine";
  * which is where the person on your left sits at a real table. The order is
  * fixed for the whole game, so the strip never reshuffles under you.
  *
- * The rotation is by seat and not by who is still alive, so if the player
- * straight after you is out, an `out` seat sits at the left edge. That's the
- * honest picture — they're still at the table — and the price of a strip that
- * never reorders.
+ * **Still in first, then out** (#192). This is a reversal, and a deliberate
+ * one: the rotation used to be strictly by seat, so an out player straight
+ * after you sat at the left edge holding a full-width seat for the rest of the
+ * game. That was the honest picture and it was paid for in the only currency
+ * this strip has — at a table of eight, late on, the hands that still mattered
+ * were competing for width with three seats holding nothing.
+ *
+ * The honest picture survives: an out player is still on screen, still named,
+ * still at the table. What they stop doing is spending a hand's width on a hand
+ * they do not have. And the cost is real and is being paid on purpose — the
+ * strip reorders once per elimination, at a moment everybody is already
+ * watching, rather than getting steadily worse to read for the rest of the
+ * game.
+ *
+ * Order is preserved inside each group, so the seats you are still playing
+ * against stay in turn order from your own seat, and the ones who are out stay
+ * in seat order among themselves.
  *
  * A table view or a spectator has no seat to anchor on, and keeps absolute
- * seat order.
+ * seat order — partitioned the same way, because the shared screen's hands view
+ * draws this same strip.
  */
 export const inTurnOrder = (game: GameView): PlayerView[] => {
   const seat = game.players.findIndex((player) => player.id === game.you);
-  if (seat < 0) return game.players;
-  return [...game.players.slice(seat + 1), ...game.players.slice(0, seat)];
+  const order =
+    seat < 0
+      ? game.players
+      : [...game.players.slice(seat + 1), ...game.players.slice(0, seat)];
+  return [
+    ...order.filter((player) => !player.eliminated),
+    ...order.filter((player) => player.eliminated),
+  ];
 };
 
 /**
  * The first seat in that strip still holding cards — who the seat strip anchors
  * on while the table is waiting on you.
  *
- * That is the one place the "by seat, not by who is left" rule above needs a
- * companion rather than an exception. The strip keeps an out player at the
- * left-hand end, which is the honest picture; anchoring the *scroll* there
+ * It is unchanged by #192 and simpler for it. It existed because the strip used
+ * to keep an out player at the left-hand end, so anchoring the *scroll* there
  * spent the width on somebody with no hand to read and pushed the player you
- * are actually deciding against off the far edge (#132). The order doesn't
- * move, only what the strip scrolls to show.
+ * were actually deciding against off the far edge (#132). Now that out seats
+ * are collapsed to the end, the first seat in the strip is almost always the
+ * answer already — but "almost always" is not a rule, and the one it is stated
+ * as still holds: **the first seat still holding cards**, whatever order the
+ * strip happens to be in.
  *
  * Null when everybody else is out, which is the last turn of the game: there is
  * nothing left to look at and the strip stays where it is.

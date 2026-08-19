@@ -17,6 +17,14 @@ const table = (ids: string[], you: string | null): GameView =>
 
 const strip = (game: GameView): string[] => inTurnOrder(game).map((player) => player.id);
 
+/** The same table with those seats eliminated. */
+const out = (game: GameView, ...ids: string[]): GameView => ({
+  ...game,
+  players: game.players.map((player) =>
+    ids.includes(player.id) ? seat(player.id, true) : player,
+  ),
+});
+
 const SEATS = ["a", "b", "c", "d"];
 
 describe("the order of the seat strip", () => {
@@ -43,13 +51,37 @@ describe("the order of the seat strip", () => {
     expect(strip(table(SEATS, null))).toEqual(SEATS);
   });
 
-  // Rotating by seat rather than by who's left means an eliminated player can
-  // sit at the left edge. Deliberate: they're still at the table, and the strip
-  // never reorders mid-game.
-  it("holds its order when the player after you is eliminated", () => {
-    const game = table(SEATS, "a");
-    const out = { ...game, players: game.players.map((p) => (p.id === "b" ? seat("b", true) : p)) };
-    expect(strip(out)).toEqual(["b", "c", "d"]);
+  // The reversal in #192. It used to rotate strictly by seat, so an eliminated
+  // player straight after you sat at the left edge holding a full-width seat
+  // for the rest of the game — the honest picture, paid for in the only
+  // currency this strip has. They stay on screen and stay named; they stop
+  // spending a hand's width on a hand they do not have.
+  it("moves an eliminated player to the end rather than leaving them at the edge", () => {
+    expect(strip(out(table(SEATS, "a"), "b"))).toEqual(["c", "d", "b"]);
+  });
+
+  it("keeps turn order among the ones still in, and seat order among the ones out", () => {
+    // From seat `a` the strip is b, c, d; knock out b and c and the two of them
+    // stay in that relative order behind d.
+    expect(strip(out(table(SEATS, "a"), "b", "c"))).toEqual(["d", "b", "c"]);
+    // And from seat `c`, where the rotation starts at d.
+    expect(strip(out(table(SEATS, "c"), "d", "a"))).toEqual(["b", "d", "a"]);
+  });
+
+  it("does the same for a spectator, who sees this same strip on a shared screen", () => {
+    expect(strip(out(table(SEATS, null), "a", "c"))).toEqual(["b", "d", "a", "c"]);
+  });
+
+  it("reorders once per elimination and not otherwise", () => {
+    // The cost of the reversal, stated: the strip moves when somebody goes out,
+    // at a moment the whole table is already watching. It does not move again.
+    const one = strip(out(table(SEATS, "a"), "b"));
+    expect(strip(out(table(SEATS, "a"), "b"))).toEqual(one);
+  });
+
+  it("leaves a table with nobody out exactly as it was", () => {
+    for (const you of SEATS) expect(strip(table(SEATS, you))).toEqual(strip(table(SEATS, you)));
+    expect(strip(table(SEATS, "a"))).toEqual(["b", "c", "d"]);
   });
 });
 

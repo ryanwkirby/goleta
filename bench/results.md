@@ -425,3 +425,140 @@ The candidates, in the order the evidence supports them:
    the answer is a `useBox` call.
 3. **Do not split further for size.** It has been tried twice, in both shapes,
    and neither moved the total.
+
+---
+
+# Fifth measurement — round two, constraints at the code
+
+`79c6619` is round two: the prohibitions that govern four files stated at those
+files with the issue number as the authority (#235), two load-bearing questions
+answered where they get asked rather than in a distant file's prose (#236), and
+the round-one negative result written into `AGENTS.md` so it is not re-derived
+(#237). No source logic changed; the suite is unchanged at 490.
+
+Same task, same prompt, fifth arm.
+
+| Commit | What it is | Tokens | Tools | Secs | Insertions |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `e6a85b4` | before any of this | 106,518 | 34 | 376 | 138 |
+| `b239075` | `Table.tsx` split by state/render | 118,414 | 42 | 447 | 107 |
+| `c7452ab` | rationale consolidated, cycles fixed | 109,592 | 33 | 359 | 93 |
+| `9cffd68` | `Sunny.tsx` split by component | 106,196 | 38 | 363 | 99 |
+| `79c6619` | **constraints at the code** | **85,801** | **24** | **266** | **80** |
+
+**Against the state it followed (`9cffd68`): −19.2% tokens, −36.8% tool calls,
+−26.7% wall time.** Against the original starting point: −19.4%, −29.4%, −29.3%.
+
+That is the largest move in the programme by a factor of two and a half, in the
+direction round two predicted, and it is the first arm where every metric agrees
+in direction — tokens, tool calls, wall time **and** insertions all fell
+together. Four structural changes moved the total −0.3%; this moved it −19%.
+
+## It is not a smaller number bought with less work
+
+The obvious way to read a cheaper arm is that it did less. It did not. The
+feature is the same feature in both layouts, all three checks pass, and the
+patch is *smaller* — 80 insertions against 99 — because the design is better:
+it shares a wrap row with the sentence already there instead of adding a row.
+
+That choice is the intervention working, traceably. The agent's own account of
+what it had to hold at once, item 2:
+
+> *"The compact picker's height is measured, not fixed — `HandView` → `useBox` →
+> `handHeight` — so any row I add is paid for in the player's card size, which is
+> what pushed me to share a wrap row with the existing note instead of adding a
+> line."*
+
+That is the fact #236 put on the `compact` prop, almost verbatim, and it is the
+same fact the previous arm named `HandView.tsx` as its costliest file for —
+having read 240 lines of comment prose to get it. This arm read `HandView.tsx`
+lines 150–200 and nothing else.
+
+## What each half of the round actually bought
+
+**#236, candidate 1 — the docking/height coupling. Paid.** Directly, as above.
+
+**#236, candidate 2 — `PileSuit`'s `named` variant. Did not obviously pay.** The
+trap was avoided, and for the documented reason:
+
+> *"Its type is `PileSuit`, whose `named` variant is read out as 'spades
+> **called**' — a claim that a person chose the suit."*
+
+But the agent still read `lib/pile.ts` in full to get there, and described its
+*"entire value here"* as negative — it exists to tell you the obvious reuse is
+wrong. Moving that sentence onto the type did not save the read. Either the
+placement is still wrong or the fact needs to be where `SuitMark` is reached
+for, not where `PileSuit` is declared.
+
+**#235 — the signposts. Bought the search, cost something at the file.** The
+agent held all five prohibitions correctly without hunting through `AGENTS.md`.
+It also named the picker as its costliest file, and said why:
+
+> *"~140 lines of which roughly half is prose. The header block lists five
+> prohibitions in a deliberately intimidating register ('holding four of them is
+> not enough')... Both are load-bearing, and both are written to make you stop.
+> Working out that showing the *board* trips none of the five — every one of
+> them is about the offender's cards, not the position — took longer than
+> writing the change, and I re-read the block twice."*
+
+Worth taking seriously. A signpost that stops somebody is doing its job the
+first time and taxing them every time after. The net is still sharply down, but
+if headers accrete this is where the cost comes back.
+
+## The pattern that has held four times just broke
+
+Every previous arm named a costliest file that was **never** the one the
+previous step had just fixed. This one named `SunnyAccusePicker.tsx` — the file
+round two edited most.
+
+| After | Costliest file, per the agent |
+| --- | --- |
+| — (baseline) | `Table.tsx` |
+| `Table.tsx` split | `Sunny.tsx` and `PeekStrip.tsx` |
+| read-cost work | `Sunny.tsx` |
+| `Sunny.tsx` split | `HandView.tsx` |
+| **constraints at the code** | **`SunnyAccusePicker.tsx` — the file just edited** |
+
+Read one way that is the complaint finally landing where the work is instead of
+relocating. Read another it is the intervention becoming the new bottleneck.
+One sample cannot tell those apart.
+
+## What cannot be concluded, and two of these are serious
+
+**The model each arm ran on is not recorded anywhere in this directory.** Arm
+five ran as a general-purpose subagent of an Opus 5 session. If arms one to four
+ran on a different model or a different harness, that alone could account for
+some or all of a 19% move, and nothing here would show it. This is the largest
+threat to the result and it is unfalsifiable after the fact. **Record the model,
+the harness and the date on every arm from now on** — added to `README.md`.
+
+**The intervention was tuned to this benchmark's own complaints.** #236's first
+candidate was chosen *because* arm four named it. So arm five substantially
+tests whether answering the exact question the previous arm asked makes the next
+run of *that same task* cheaper — which is close to circular. It is good
+evidence the mechanism works and weak evidence it generalises. Rule 2 in
+`README.md` guards against swapping the task after seeing a number; it does not
+guard against tuning the intervention to a task already run four times, and it
+should.
+
+**One sample per arm still resolves very little.** 19% is roughly four times the
+noise floor and all four metrics agree, which is more than any previous arm
+managed — but it is one draw.
+
+## What to do next, before believing this
+
+1. **Record the model and harness for every arm**, retroactively where it can be
+   recovered.
+2. **Run a second, different task** from the open backlog against `9cffd68` and
+   `79c6619`, chosen on merit and never run before. If constraints-at-the-code
+   is a real effect it should show up on a task the intervention was not shaped
+   around. If it does not, this arm is teaching to the test and should be
+   recorded as such.
+
+Until (2) exists, the honest statement is: **the one intervention that has ever
+moved this number is putting facts where they are needed, it has now done so
+twice (−7.5%, then −19.2%), and both times it was measured on the task that
+prompted it.**
+
+The produced patch is kept at `task-220-arm5-roundtwo.patch` in the run's
+scratch directory and was otherwise discarded, per rule 7.

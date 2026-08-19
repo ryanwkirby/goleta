@@ -9,6 +9,12 @@ is that splitting files for size was measured twice, in both shapes, and moved
 the total by −0.3%, while consolidating scattered rationale moved it −7.5%
 against the state it followed.
 
+Round two moved it **−19.2%** by putting constraints at the code they constrain
+and answering load-bearing questions where they get asked. That is the largest
+move in the series and the only one where every metric agreed in direction —
+and it carries two caveats big enough to be rules 9 and 10 below. Read the
+fifth measurement in `results.md` before citing the number.
+
 ## The rules that make a measurement mean anything
 
 Learned the hard way; the first experiment broke three of them and had to be
@@ -39,6 +45,17 @@ thrown out.
 8. **Record the negative results.** Every arm so far is in `results.md`,
    including the ones that went backwards and the one where the conclusion was
    wrong.
+9. **Record the model and the harness with every arm.** Arms one to five did not,
+   and by arm five that was the largest unfalsifiable threat to a result — a
+   model change between arms would move a token count on its own and nothing in
+   the record would show it. Date, model, and how the agent was dispatched.
+10. **Do not tune the intervention to the task, either.** Rule 2 stops the task
+    being swapped after a number arrives; this is the same hazard from the other
+    end. An intervention chosen because a previous arm of *this* task complained
+    about it is being measured on the complaint that produced it, which is good
+    evidence the mechanism works and weak evidence it generalises. When that has
+    happened — round two did it deliberately — say so in `results.md`, and
+    confirm the effect on a task the intervention was not shaped around.
 
 ## Running an arm
 
@@ -72,9 +89,14 @@ arm that spends more and writes *less* is genuinely more expensive to work in.
 disagree in direction, be suspicious of both.
 
 **One sample per arm resolves very little.** Treat anything under about 5% as
-noise. The conclusions in `results.md` rest on four arms agreeing about
-*direction* and on what the agents said about *where* their time went, not on
-any single figure.
+noise. The conclusions in `results.md` rest on arms agreeing about *direction*
+and on what the agents said about *where* their time went, not on any single
+figure.
+
+**Agreement across metrics is worth more than any one of them.** The four
+structural arms had tokens and tool calls pointing different ways; arm five
+moved tokens, tool calls, wall time and insertions together, which is the only
+reason one sample was worth reporting as a result at all.
 
 **Read the NOTES section of every report.** It has been more informative than
 the numbers every single time. Every arm has named a costliest file, and the
@@ -84,7 +106,7 @@ sequence of those names is what actually produced round one's conclusion.
 
 | File | Status |
 | --- | --- |
-| `task-220-picker.md` | **Current.** Four arms recorded. Keep using it — the series is only comparable if the task does not change. |
+| `task-220-picker.md` | **Current.** Five arms recorded. Keep using it — the series is only comparable if the task does not change. But see rule 10: round two's intervention was shaped by this task's own complaints, so the next round needs a *second* task it was not shaped around. |
 | `task-you-are-next.md` | Superseded. Two arms. A synthetic feature, and it straddled the seam under test — see `results.md`. |
 
 **Do not merge PR #233 while `task-220-picker.md` is the benchmark**: it fixes

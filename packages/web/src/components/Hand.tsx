@@ -71,7 +71,7 @@ export function Hand({
   onChoose,
   size = "md",
   height,
-  step = null,
+  step,
   irl = false,
   fit = false,
 }: {
@@ -93,12 +93,20 @@ export function Hand({
    */
   height?: number;
   /**
-   * Left edge to left edge, in pixels, when the hand has to close up to fit —
-   * see `handFan.ts`. Null spaces the cards out with a plain gap, which is
-   * what the full table has always done and what a wide screen never needs to
-   * improve on.
+   * Left edge to left edge, in pixels — see `handFan.ts`.
+   *
+   * Required, and it did not use to be: the upright table passed nothing and
+   * got a plain `gap-1.5` row that overflowed and scrolled sideways, which is
+   * the failure #59 abolished everywhere except the one view that never got the
+   * fix (#191). Both callers measure their row now, so there is no unfanned
+   * branch left to fall into — and a hand fitted to a box it was never measured
+   * against is not a fallback worth keeping around.
+   *
+   * A hand with room to spare is handed `loosest`, which is a whole card and
+   * six pixels of air. That is the same spacing the old plain row had, so
+   * nothing about a hand that fits looks any different for this.
    */
-  step?: number | null;
+  step: number;
   /** IRL cards carry mirrored indices so the far side of the table can read them. */
   irl?: boolean;
   /**
@@ -245,7 +253,7 @@ export function Hand({
     // it would have been the normal case rather than the exception. Below
     // `TIGHTEST` the sliver is genuinely thinner than a thumb, which is the
     // condition #117 names and the only one worth a second tap.
-    const tight = step !== null && step < TIGHTEST;
+    const tight = step < TIGHTEST;
     const mustConfirm = CONFIRMS.has(mode) || (fit && tight);
     // The moves you can't take back ask twice, and so does a card too thin to
     // be sure you hit. Ordinary play doesn't: it is the whole rhythm of a turn,
@@ -266,7 +274,7 @@ export function Hand({
       // `z-index` is needed. `justify-center` is what makes a short hand sit in
       // the middle of a wide landscape screen rather than hugging one edge —
       // `overflow-x-auto` only overrides it once there is genuinely too much.
-      style={step === null ? undefined : ({ "--fan": `${step - cardWidth}px` } as CSSProperties)}
+      style={{ "--fan": `${step - cardWidth}px` } as CSSProperties}
       className={[
         // Same air above the cards as below them. The top has to clear the 14px
         // a selected card lifts — this row sets `overflow-x`, which makes the
@@ -275,17 +283,14 @@ export function Hand({
         // read the pair together until the turn ring was drawn around them and
         // the hand sat visibly low in its own frame.
         "flex items-end py-4",
-        // With a step, the row's width *is* the width the fan was fitted to, so
-        // it keeps no padding of its own — an inset here and an inset in the
-        // arithmetic are two places to disagree, and they did.
-        // Still `auto` rather than `hidden` on the fanned branch. A fitted hand
-        // fits by construction, so the scrollbar never appears — but `fit` has a
-        // floor, and past it clipping the ends silently would hide cards the
-        // turn needs. Scrolling is the release valve, exactly as it is for the
-        // seat strip (#59).
-        step === null
-          ? "gap-1.5 overflow-x-auto px-1"
-          : "justify-center overflow-x-auto [&>*+*]:ml-[var(--fan)]",
+        // The row's width *is* the width the fan was fitted to, so it keeps no
+        // padding of its own — an inset here and an inset in the arithmetic are
+        // two places to disagree, and they did.
+        // `auto` rather than `hidden`. A fitted hand fits by construction, so
+        // the scrollbar never appears — but `fit` has a floor, and past it
+        // clipping the ends silently would hide cards the turn needs. Scrolling
+        // is the release valve, exactly as it is for the seat strip (#59).
+        "justify-center overflow-x-auto [&>*+*]:ml-[var(--fan)]",
       ].join(" ")}
       onClick={(event) => {
         if (event.target === event.currentTarget) setSelected(null);

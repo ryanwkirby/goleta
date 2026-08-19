@@ -28,6 +28,7 @@ import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { handStep } from "../lib/handFan.ts";
 import { assisting, handMode } from "../lib/handMode.ts";
+import { caughtState, stillAccusable, sunnyTarget } from "../lib/sunnyOffer.ts";
 import { useBox } from "../lib/measure.ts";
 import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
 import { ANNOUNCE_MS } from "../lib/beats.ts";
@@ -253,17 +254,13 @@ export function Table({
    */
   useWakeLock(room.irl && seated && !finished);
 
-  // The seat a landed call is about gets a dialog instead of the banner. A
-  // timed notice at the top of the screen is the right weight for news about
-  // somebody else and much too light for a punishment you are about to be
-  // walked through — see #66.
-  //
-  // It waits for the peel like the banner does: being shown the evidence and
-  // then told what it meant is the order for the offender too, and they of all
-  // people are owed a look at why.
-  const caughtYou = call !== null && call.correct && call.targetId === game.you;
-  const caughtHold = caughtYou && (peeling || ackedCall !== lastCallId);
-  const showCaught = caughtHold && !peeling;
+  const { caughtYou, caughtHold, showCaught } = caughtState(
+    call,
+    lastCallId,
+    ackedCall,
+    peeling,
+    game.you,
+  );
 
   // Taught to players, by having it happen to them. A spectator has no call to
   // make and a table screen has nobody to read it, so neither is stopped to be
@@ -313,10 +310,10 @@ export function Table({
   // Somebody else may act — or call it first — while you're still choosing. The
   // picker goes with the window rather than sitting there offering a card you
   // can no longer name.
-  const stillAccusable = game.sunnyCallable && game.sunnyTargetId === accusing;
+  const accusable = stillAccusable(game, accusing);
   useEffect(() => {
-    if (accusing !== null && !stillAccusable) stopAccusing();
-  }, [accusing, stillAccusable, stopAccusing]);
+    if (accusing !== null && !accusable) stopAccusing();
+  }, [accusing, accusable, stopAccusing]);
 
   const assist = assisting(game, hints, helpedTurn);
 
@@ -417,17 +414,7 @@ export function Table({
   /** Your own shout, if you have one up — and which of the two it is. */
   const shoutingHere = shouts.findLast((shout) => shout.playerId === game.you) ?? null;
 
-  /**
-   * Whose reach is on offer, if anybody's — the one seat a call could be made
-   * about right now.
-   *
-   * `sunnyCallable` is false for a watcher, for the drawer themselves and for
-   * anybody eliminated, so this is already only ever a seat that may act on it
-   * (`redact.ts`). Null while the picker is open: the picker *is* the call
-   * being composed, and an offer to start one over the top of it is an offer to
-   * do the thing you are already doing.
-   */
-  const sunnyTarget = game.sunnyCallable && accusing === null ? game.sunnyTargetId : null;
+  const offeredTarget = sunnyTarget(game, accusing);
 
   /** Your hand, in whatever order you asked for. Both layouts draw this one. */
   const handCards = sortHand(you?.hand ?? [], handSort);
@@ -600,8 +587,8 @@ export function Table({
           shouting={shoutingHere?.kind ?? null}
           helpFrom={helpFrom ? { name: nameOf(helpFrom.playerId), kind: helpFrom.kind } : null}
           accusing={accusing}
-          stillAccusable={stillAccusable}
-          sunnyTarget={sunnyTarget}
+          stillAccusable={accusable}
+          sunnyTarget={offeredTarget}
           onStartAccusing={startAccusing}
           onStopAccusing={stopAccusing}
           onAccuse={accuse}
@@ -793,7 +780,7 @@ export function Table({
         {/* Both pickers dock above your hand rather than being thrown over the
             table: each is a decision you make by reading what everyone else is
             holding, and a scrim would take the evidence away. */}
-        {accusing !== null && stillAccusable && game.sunnyReach ? (
+        {accusing !== null && accusable && game.sunnyReach ? (
           <SunnyAccusePicker
             targetName={nameOf(accusing)}
             reach={game.sunnyReach}
@@ -827,12 +814,12 @@ export function Table({
               middle of the table: a fat target beside the deck is a mis-tap
               into the exact violation it accuses.
             */}
-            {sunnyTarget ? (
+            {offeredTarget ? (
               <div className="pointer-events-none absolute -top-12 left-0 z-20 flex">
                 <SunnyCall
-                  targetName={nameOf(sunnyTarget)}
+                  targetName={nameOf(offeredTarget)}
                   lockedDraws={game.sunnyLockedDraws}
-                  onCall={() => startAccusing(sunnyTarget)}
+                  onCall={() => startAccusing(offeredTarget)}
                   className="pointer-events-auto"
                 />
               </div>

@@ -8,10 +8,12 @@
  * the count only moved if a screen happened to be mounted at the instant a
  * `gameOver` event arrived.
  *
- * It is here rather than in the screen because it is not about drawing
- * anything, and because the `localStorage` stub written for `identity.ts` in
- * #223 means it can now be tested end to end rather than only in its arithmetic
- * (#225).
+ * It sits beside `identity.ts` because it is the same subject — what this
+ * browser remembers — and because putting it in `lib/` was a mistake: `lib` is
+ * a leaf that depends on nothing but the engine, and this reaches into storage,
+ * which put the two folders back in the cycle #224 had just removed. Being
+ * testable end to end is a payoff from the `localStorage` stub written for
+ * `identity.ts` in #223, and that works from either folder.
  */
 
 import {
@@ -20,7 +22,7 @@ import {
   gamesToCredit,
   markGamesSeen,
   recordGamesFinished,
-} from "../net/identity.ts";
+} from "./identity.ts";
 
 /**
  * Whether to ask this player if they want to keep the highlights.

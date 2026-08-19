@@ -15,6 +15,23 @@ import {
   type CardSize,
 } from "../lib/cardShape.ts";
 
+/**
+ * Re-exported, because this is where people look for them.
+ *
+ * They live in `lib/cardShape.ts` so that `lib` can use them without importing
+ * a component (#224), and that is right — but a paired benchmark caught the
+ * bill for it: two agents needed the same thing, "what does this app use to
+ * draw a suit", and the one working after the move read *both* files where the
+ * one working before read this one (`bench/results.md`).
+ *
+ * `components` may import from `lib`, so this reintroduces no cycle. Only the
+ * three suit helpers are re-exported, not the size ladder — the ladder is
+ * arithmetic that `handFan.ts` and `pileBox.ts` own and nobody goes hunting for
+ * it in a card component, whereas the glyphs are the half people actually look
+ * for next to the thing that draws them.
+ */
+export { isRed, SUIT_GLYPH, SUIT_LABEL } from "../lib/cardShape.ts";
+
 const SIZES: Record<CardSize, string> = {
   sm: "h-14 w-10 text-sm rounded-md p-1",
   md: "h-24 w-[4.25rem] text-xl rounded-lg p-1.5",

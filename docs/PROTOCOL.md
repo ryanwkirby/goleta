@@ -106,12 +106,13 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `rejoin` | seat owner | `playerId` + `token`. |
 | `watch` | anyone | No seat and no cards. `table: true` marks the shared IRL table screen. |
 | `intent` | seated, plus shared table draw | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. A `table: true` watcher may send only `drawCard`, only in IRL mode, and the server stamps it as the current player. |
-| `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round. |
+| `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round — or draws for it, if the table has asked for that. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order. Off either end does nothing rather than refusing. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
 | `setIrl` | host | **Any time, including mid-game.** "In person" rather than "remote play"; carried back to everyone on `RoomView`. |
+| `setDealerMode` | host | **Any time, including mid-game**, for the same reason as `setHouseRules`. `rotate` or `random`; carried back to everyone on `RoomView`. |
 | `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `ping` | anyone | Answered with `pong`. |
@@ -218,6 +219,36 @@ cannot be reached from a browser.
 With `sunny` off, the three challenge-window fields above are inert for
 everyone — `sunnyCallable` false, `sunnyReach` null, `sunnyLockedDraws` zero —
 because no challenge window is ever opened in the first place.
+
+## Who deals
+
+`RoomView.dealerMode` is `rotate` or `random`, and the host sets it with
+`{ t: "setDealerMode", mode }`. It defaults to `rotate`, which is the
+convention and is exactly what every table did before the setting existed.
+
+**Not a house rule, and deliberately not on `HouseRules`.** `startGame` takes a
+`dealerIndex` and knows nothing about how it was chosen: rotation is a
+`rooms.ts` convention rather than a rule of the game, and `docs/RULES.md` says
+dealing is all the dealer does. So it sits beside `irl` and `botSpeed` as a
+property of the room, and `packages/engine` never learns it exists. `HouseRules`
+stays the three written alternates and nothing else.
+
+It is read once, at `beginGame`, which is why it is **not** frozen mid-game —
+the same argument as the house rules, and the opposite of bot speed, which is
+read live. What a host changes mid-hand is always the next deal.
+
+What the dealer decides is two real things, which is why the setting is worth
+having: **who opens**, since the player to the dealer's left goes first and
+going first is not nothing in a game where playing is compulsory; and **the
+seeded 8** under Dealer's Choice, which is the one advantage dealing carries.
+
+A random draw may land on the same seat twice running. That is the honest
+answer for a random pick, and a table that finds it annoying is describing
+rotation. The randomness is the server's own, from the same source as room codes
+and seeds — `packages/engine` keeps its no-`Math.random()` rule untouched.
+
+The room snapshot gained a field for it, so `SNAPSHOT_VERSION` went up and older
+snapshots are discarded on boot. No migration; see `AGENTS.md`.
 
 ## IRL mode
 

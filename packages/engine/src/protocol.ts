@@ -44,6 +44,21 @@ export interface SeatView {
  */
 export type BotSpeed = "human" | "lightning";
 
+/**
+ * How a table picks who deals (#198).
+ *
+ * Not a house rule and not on `GameOptions`: `startGame` takes a `dealerIndex`
+ * and knows nothing about how it was chosen, rotation is a `rooms.ts`
+ * convention rather than a rule of the game, and `docs/RULES.md` says dealing
+ * is all the dealer does. So it sits beside `irl` and `botSpeed` as a property
+ * of the room, and `packages/engine` never learns it exists.
+ *
+ * What the dealer actually decides is two real things: who opens, since the
+ * player to the dealer's left goes first and going first is not nothing in a
+ * game where playing is compulsory; and the seeded 8 under Dealer's Choice.
+ */
+export type DealerMode = "rotate" | "random";
+
 export interface RoomView {
   code: string;
   hostId: PlayerId;
@@ -63,6 +78,15 @@ export interface RoomView {
    * never learns it exists.
    */
   irl: boolean;
+  /**
+   * Whether the deal passes one seat along or is picked at random (#198).
+   *
+   * Read once, at `beginGame`, so it describes the *next* deal and can never
+   * reach a hand already out — the same shape as `houseRules` beside it, and
+   * the reason neither is frozen mid-game the way `botSpeed` is. It goes to the
+   * whole table rather than to the host alone: who deals is not a secret.
+   */
+  dealerMode: DealerMode;
   /**
    * How many shared table screens are connected to this room right now (#138).
    *
@@ -125,6 +149,16 @@ export type ClientMessage =
    * stays frozen for exactly that reason.
    */
   | { t: "setHouseRules"; rules: HouseRules }
+  /**
+   * Host only, at any time: whether the deal rotates or is drawn at random.
+   *
+   * Unfrozen for the same reason as `setHouseRules` and not for the reason
+   * `setBotSpeed` is frozen: it is read once, at the deal, so what a host
+   * changes mid-game is always the next one. Deliberately its own message
+   * rather than a fourth field on `HouseRules`, which carries the three
+   * written alternates from the original rules and nothing else.
+   */
+  | { t: "setDealerMode"; mode: DealerMode }
   /**
    * "I've opened the picker to name a card", and then "I'm done with it".
    *

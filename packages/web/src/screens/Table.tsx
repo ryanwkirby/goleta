@@ -622,8 +622,10 @@ export function Table({
             <HostSettingsCog
               rules={room.houseRules}
               irl={room.irl}
+              dealerMode={room.dealerMode}
               onRules={(rules) => send({ t: "setHouseRules", rules })}
               onIrl={(on) => send({ t: "setIrl", on })}
+              onDealerMode={(dealer) => send({ t: "setDealerMode", mode: dealer })}
               // Pulled back over the column's own padding so the 44px box sits
               // the glyph roughly on the margin the rest of the header keeps.
               // The row was already this tall — `rules` and `leave` are

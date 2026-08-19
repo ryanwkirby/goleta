@@ -5,6 +5,8 @@ import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { QrCode } from "../components/QrCode.tsx";
 import {
+  DealerPicker,
+  describeDealing,
   describeRules,
   HouseRulesPicker,
   IrlToggle,
@@ -156,9 +158,11 @@ const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
  * the bot pace, which is the other thing inside it that a table would notice.
  */
 const describeTable = (room: RoomView, anyBots: boolean): string => {
-  const rules = describeRules(room.houseRules);
-  if (!anyBots) return rules;
-  return `${rules} Bots at ${room.botSpeed === "human" ? "human-like" : "lightning"} speed.`;
+  const said = [describeRules(room.houseRules), describeDealing(room.dealerMode)];
+  if (anyBots) {
+    said.push(`Bots at ${room.botSpeed === "human" ? "human-like" : "lightning"} speed.`);
+  }
+  return said.filter(Boolean).join(" ");
 };
 
 /**
@@ -568,6 +572,17 @@ export function Lobby({
                 rules={room.houseRules}
                 onChange={(rules) => send({ t: "setHouseRules", rules })}
               />
+              {/* A room setting rather than a house rule — `startGame` takes a
+                  dealer index and has never cared how it was chosen — but it is
+                  read at the same moment as the switches above, so it belongs
+                  beside them rather than beside bot speed, which is read live
+                  and is the one thing here that really is between-games-only. */}
+              <div className="border-t border-white/10 pt-3">
+                <DealerPicker
+                  mode={room.dealerMode}
+                  onChange={(mode) => send({ t: "setDealerMode", mode })}
+                />
+              </div>
               {anyBots ? (
                 <BotSpeedPicker
                   speed={room.botSpeed}
@@ -586,6 +601,14 @@ export function Lobby({
             </span>
           ) : null}
           <span className="mt-1 block text-xs text-white/40">{describeRules(room.houseRules)}</span>
+          {/* Visible to the whole table, not only the host: who deals is not a
+              secret, and it decides who opens. Silent when the deal rotates,
+              which is the convention and the default. */}
+          {describeDealing(room.dealerMode) ? (
+            <span className="mt-1 block text-xs text-white/40">
+              {describeDealing(room.dealerMode)}
+            </span>
+          ) : null}
           {anyBots ? (
             <span className="mt-1 block text-xs text-white/40">
               Bots play at {room.botSpeed === "human" ? "human-like" : "lightning"} speed.

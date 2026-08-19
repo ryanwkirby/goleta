@@ -20,6 +20,7 @@ import {
   topCard,
   type BotSpeed,
   type CardId,
+  type DealerMode,
   type ErrorCode,
   type GameEvent,
   type GameOptions,
@@ -31,7 +32,14 @@ import {
   type RoomView,
 } from "@goleta/engine";
 
-import { newPlayerId, newRoomCode, newSeed, newToken, normaliseCode } from "./ids.ts";
+import {
+  newPlayerId,
+  newRoomCode,
+  newSeed,
+  newToken,
+  normaliseCode,
+  randomIndex,
+} from "./ids.ts";
 
 export interface Seat {
   id: PlayerId;
@@ -95,6 +103,15 @@ export interface Room {
    * can be changed with a game already running.
    */
   irl: boolean;
+  /**
+   * Whether the deal passes one seat along or is drawn at random (#198).
+   *
+   * Read once, at `beginGame`, exactly like the house rules below — so what a
+   * host changes mid-game is always the next deal, and neither is frozen the
+   * way `botSpeed` is. Not a house rule and not on `GameOptions`: `startGame`
+   * takes a `dealerIndex` and has never cared how it was chosen.
+   */
+  dealerMode: DealerMode;
   /**
    * This table's house rules, chosen in the lobby and applied at the next deal.
    * Held on the room rather than read off the game so a table keeps its rules
@@ -194,6 +211,9 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     dealerId: null,
     botSpeed: "human",
     irl: false,
+    // Off by default: a table that never opens the setting deals exactly as it
+    // has always dealt.
+    dealerMode: "rotate",
     options: DEFAULT_OPTIONS,
     botSeed: newSeed(),
     callHolds: {},
@@ -319,6 +339,23 @@ export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
 };
 
 /**
+ * Whether the deal rotates or is drawn at random, said by the host (#198).
+ *
+ * No "wait for this game to finish", and for `setHouseRules`'s reason rather
+ * than `setBotSpeed`'s: this is read exactly once, at `beginGame`, so what a
+ * host changes mid-hand is always the next deal and can never reach the one on
+ * the table. Bot pace is read live, every time a bot is scheduled, which is why
+ * that one stays frozen.
+ */
+export const setDealerMode = (room: Room, byPlayerId: PlayerId, mode: DealerMode): void => {
+  requireHost(room, byPlayerId);
+  if (mode !== "rotate" && mode !== "random") fail("No such dealer mode");
+
+  room.dealerMode = mode;
+  touch(room);
+};
+
+/**
  * The table's house rules, set by the host — during a game as well as between
  * them, because what they choose is what the *next* deal plays.
  *
@@ -417,14 +454,23 @@ export const removeSeat = (room: Room, byPlayerId: PlayerId, target: PlayerId): 
 };
 
 /**
- * The seat that deals this round: one along from whoever dealt last, so the
- * lead moves around the table. The host deals the opening round.
+ * The seat that deals this round.
  *
- * If the last dealer has since left, `indexOf` gives -1 and the rotation starts
- * over at the top of the table. That's a small unfairness in exchange for not
- * tracking a seat that no longer exists.
+ * **Rotating** is one along from whoever dealt last, so the lead moves around
+ * the table, and the host deals the opening round. If the last dealer has since
+ * left, `indexOf` gives -1 and the rotation starts over at the top of the
+ * table — a small unfairness in exchange for not tracking a seat that no longer
+ * exists.
+ *
+ * **Random** is exactly that (#198). It may land on the same seat twice
+ * running, which is the honest answer for a random pick: a table that finds
+ * that annoying is describing rotation, and rotation is the other setting.
+ *
+ * Neither reaches the engine. `startGame` takes an index and has never cared
+ * how it was chosen; `docs/RULES.md` says dealing is all the dealer does.
  */
 const nextDealerIndex = (room: Room): number => {
+  if (room.dealerMode === "random") return randomIndex(room.seats.length);
   const seatIds = room.seats.map((seat) => seat.id);
   const previous = room.dealerId === null ? -1 : seatIds.indexOf(room.dealerId);
   return (previous + 1) % seatIds.length;
@@ -675,6 +721,7 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
   botSpeed: room.botSpeed,
   houseRules: houseRulesOf(room),
   irl: room.irl,
+  dealerMode: room.dealerMode,
   tableScreens,
 });
 

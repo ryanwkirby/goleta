@@ -37,6 +37,7 @@ import {
   roomView,
   seatOf,
   setBotSpeed,
+  setDealerMode,
   setHouseRules,
   setIrl,
   type Room,
@@ -349,6 +350,11 @@ export const attachSockets = (
         return broadcast(room);
       case "setHouseRules":
         setHouseRules(room, playerId, message.rules);
+        return broadcast(room);
+      case "setDealerMode":
+        // Unfrozen for the same reason as the house rules above: read once at
+        // the deal, so what changes is always the next one. See `setDealerMode`.
+        setDealerMode(room, playerId, message.mode);
         return broadcast(room);
       case "composingCall":
         // No broadcast: whether somebody is weighing a call is theirs, and

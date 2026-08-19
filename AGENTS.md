@@ -375,6 +375,20 @@ it mid-game moves a challenge window somebody is already watching. That is why
 it is not in the cog, and why `setBotSpeed` keeps its "wait for this game to
 finish" while `setHouseRules` no longer has one.
 
+**Who deals is a room setting rather than a house rule (#198).** A table can
+have the deal rotate one seat a game, or drawn at random. It lives on `Room`
+beside `irl` and `botSpeed`, is carried on `RoomView.dealerMode`, and
+`packages/engine` never learns it exists: `startGame` takes a `dealerIndex` and
+has never cared how it was chosen — rotation is a `rooms.ts` convention, and
+`docs/RULES.md` says dealing is all the dealer does. `HouseRules` on the wire
+stays the three written alternates and nothing else.
+
+It is read once, at `beginGame`, so it is **not** frozen mid-game — the house
+rules' argument, not bot speed's. A random draw may land on the same seat twice
+running; that is the honest answer for a random pick, and a table that objects
+is describing rotation. Off by default, and it goes to the whole table rather
+than the host alone, because who deals decides who opens.
+
 Two constraints on anything added here:
 
 - **Options are data, never behaviour.** `applyIntent` clones the state on

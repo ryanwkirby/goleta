@@ -54,7 +54,13 @@ import {
 } from "../net/identity.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../lib/feed.ts";
 import { HandOver } from "./HandOver.tsx";
-import { HandView } from "./HandView.tsx";
+import {
+  HandView,
+  type HandControls,
+  type HelpControls,
+  type SunnyControls,
+  type TableContext,
+} from "./HandView.tsx";
 
 /**
  * How long you can sit on a turn before the app offers you a hand.
@@ -504,6 +510,53 @@ export function Table({
     if (irlPhone && !portrait) setRotatedFor(room.gamesPlayed);
   }, [irlPhone, portrait, room.gamesPlayed]);
 
+  /**
+   * Whether the deck is tappable, and what happens when it is.
+   *
+   * Both layouts draw a draw pile and both were spelling this out for
+   * themselves. It stays tappable when you hold a legal play, with no warning
+   * and no disabled state — drawing when you could have played is the violation
+   * the entire Sunny Rule exists to punish, and the UI must permit it silently.
+   */
+  const canDraw = mine && game.phase.kind === "action" && !finished;
+  const drawCard = (): void =>
+    send({ t: "intent", intent: { type: "drawCard", playerId: me } });
+
+  /**
+   * What the landscape view is handed, in four bundles rather than thirty
+   * separate props (#225). `HandView` destructures them on its first line, so
+   * the grouping is at the boundary and nowhere else.
+   */
+  const tableContext: TableContext = { room, game, nameOf, send, offline, reshuffling };
+  const handControls: HandControls = {
+    cards: handCards,
+    mode,
+    assist,
+    onChooseCard,
+    refusal,
+    canDraw,
+    onDraw: drawCard,
+    mine,
+    handSort,
+    onCycleSort: cycleSort,
+  };
+  const helpControls: HelpControls = {
+    stalled,
+    onAskForHelp: askForHelp,
+    hints,
+    onChooseHints,
+    shouting: shoutingHere?.kind ?? null,
+    helpFrom: helpFrom ? { name: nameOf(helpFrom.playerId), kind: helpFrom.kind } : null,
+  };
+  const sunnyControls: SunnyControls = {
+    accusing,
+    stillAccusable: accusable,
+    target: offeredTarget,
+    onStartAccusing: startAccusing,
+    onStopAccusing: stopAccusing,
+    onAccuse: accuse,
+  };
+
   if (route.kind === "takeYourSeat") {
     const { shuffleId } = route;
     return <TakeYourSeat room={room} you={game.you} onDone={() => setSeatedFor(shuffleId)} />;
@@ -550,36 +603,12 @@ export function Table({
             one cue that should not depend on which way the phone is held. */}
         {glowing ? <TurnGlow /> : null}
         <HandView
-          room={room}
-          game={game}
-          nameOf={nameOf}
-          send={send}
-          offline={offline}
-          cards={handCards}
-          mode={mode}
-          assist={assist}
-          onChooseCard={onChooseCard}
-          refusal={refusal}
-          canDraw={mine && game.phase.kind === "action" && !finished}
-          onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
-          mine={mine}
-          handSort={handSort}
-          onCycleSort={cycleSort}
-          stalled={stalled}
-          onAskForHelp={askForHelp}
+          table={tableContext}
+          hand={handControls}
+          help={helpControls}
+          sunny={sunnyControls}
           onShowInvite={() => setInviting(true)}
           onShowRules={onShowRules}
-          reshuffling={reshuffling}
-          hints={hints}
-          onChooseHints={onChooseHints}
-          shouting={shoutingHere?.kind ?? null}
-          helpFrom={helpFrom ? { name: nameOf(helpFrom.playerId), kind: helpFrom.kind } : null}
-          accusing={accusing}
-          stillAccusable={accusable}
-          sunnyTarget={offeredTarget}
-          onStartAccusing={startAccusing}
-          onStopAccusing={stopAccusing}
-          onAccuse={accuse}
         />
         {explainSunny ? (
           <SunnyExplainer
@@ -701,8 +730,8 @@ export function Table({
         <div className="flex flex-1 flex-col justify-center gap-4 py-2">
           <Piles
             game={game}
-            canDraw={mine && game.phase.kind === "action" && !finished}
-            onDraw={() => send({ t: "intent", intent: { type: "drawCard", playerId: me } })}
+            canDraw={canDraw}
+            onDraw={drawCard}
             irl={room.irl}
             peel={
               peeling && call

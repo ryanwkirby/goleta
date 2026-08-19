@@ -17,12 +17,22 @@ import type { HandSort } from "../lib/sort.ts";
 import type { GoletaError } from "../lib/feed.ts";
 import type { Card, ShoutKind } from "@goleta/engine";
 
-export interface HandViewProps {
+/**
+ * The room, and how to talk to it. Everything here is a fact about the table
+ * rather than about you.
+ */
+export interface TableContext {
   room: RoomView;
   game: GameView;
   nameOf: NameOf;
   send: (message: ClientMessage) => void;
   offline: boolean;
+  /** Cards to draw, while the deck running out is being watched (#209). */
+  reshuffling: number | null;
+}
+
+/** Your own cards, and everything you can do with them. */
+export interface HandControls {
   /** Your hand, already in whatever order you asked for. */
   cards: Card[];
   mode: HandMode;
@@ -32,21 +42,20 @@ export interface HandViewProps {
   refusal: GoletaError | null;
   canDraw: boolean;
   onDraw: () => void;
+  /** The table is waiting on you. `waitingOn`, not whose turn it is. */
   mine: boolean;
   handSort: HandSort;
   onCycleSort: () => void;
+}
+
+/**
+ * Asking for a hand, and being seen to. Taking help is public by design (#33),
+ * so both directions are in here: what you are asking for, and what somebody
+ * else is.
+ */
+export interface HelpControls {
   stalled: boolean;
   onAskForHelp: () => void;
-  onShowInvite: () => void;
-  /**
-   * The way back to the rules screen (#195). Landscape had none: the upright
-   * table has a `rules` button in its header and this view has no header at
-   * all, so the answer to "what happens if I can't play anything?" was to turn
-   * the phone over, find the row of small grey print and come back.
-   */
-  onShowRules: () => void;
-  /** Cards to draw, while the deck running out is being watched (#209). */
-  reshuffling: number | null;
   /** Your own settings, which in landscape live on the strip (#188). */
   hints: boolean;
   onChooseHints: (on: boolean) => void;
@@ -58,7 +67,11 @@ export interface HandViewProps {
    * a table where help stopped being public.
    */
   helpFrom: { name: string; kind: ShoutKind } | null;
-  /** The Sunny call being composed, if any — the state lives on `Table`. */
+}
+
+/** The Sunny call: the offer, and the accusation being composed against it. */
+export interface SunnyControls {
+  /** The call being composed, if any — the state lives on `Table`. */
   accusing: string | null;
   stillAccusable: boolean;
   /**
@@ -66,10 +79,38 @@ export interface HandViewProps {
    * where the picker's own state lives, so the offer and the picker can never
    * be up at the same time.
    */
-  sunnyTarget: string | null;
+  target: string | null;
   onStartAccusing: (playerId: string) => void;
   onStopAccusing: () => void;
   onAccuse: (cardId: string) => void;
+}
+
+/**
+ * Four bundles and two links, rather than the thirty separate props this used
+ * to take (#225).
+ *
+ * Thirty is past the point where a list is easier to read than a grouping, and
+ * the call site on `Table` was thirty-five consecutive lines of prop-passing —
+ * which a fresh agent adding one boolean to this view reported as "edits in
+ * four spots across three files".
+ *
+ * The bundles are destructured on the first line of the component, so nothing
+ * inside it reads `table.game` or `hand.cards`: the grouping is at the boundary
+ * where it helps and nowhere else.
+ */
+export interface HandViewProps {
+  table: TableContext;
+  hand: HandControls;
+  help: HelpControls;
+  sunny: SunnyControls;
+  onShowInvite: () => void;
+  /**
+   * The way back to the rules screen (#195). Landscape had none: the upright
+   * table has a `rules` button in its header and this view has no header at
+   * all, so the answer to "what happens if I can't play anything?" was to turn
+   * the phone over, find the row of small grey print and come back.
+   */
+  onShowRules: () => void;
 }
 
 /**
@@ -102,38 +143,13 @@ export interface HandViewProps {
  * Upright is the table, sideways is your hand, and nothing on either screen
  * needs tapping to say so.
  */
-export function HandView({
-  room,
-  game,
-  nameOf,
-  send,
-  offline,
-  cards,
-  mode,
-  assist,
-  onChooseCard,
-  refusal,
-  canDraw,
-  onDraw,
-  mine,
-  handSort,
-  onCycleSort,
-  stalled,
-  onAskForHelp,
-  onShowInvite,
-  onShowRules,
-  reshuffling,
-  hints,
-  onChooseHints,
-  shouting,
-  helpFrom,
-  accusing,
-  stillAccusable,
-  sunnyTarget,
-  onStartAccusing,
-  onStopAccusing,
-  onAccuse,
-}: HandViewProps) {
+export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }: HandViewProps) {
+  const { room, game, nameOf, send, offline, reshuffling } = table;
+  const { cards, mode, assist, onChooseCard, refusal, canDraw, onDraw, mine } = hand;
+  const { handSort, onCycleSort } = hand;
+  const { stalled, onAskForHelp, hints, onChooseHints, shouting, helpFrom } = help;
+  const { accusing, stillAccusable, onStartAccusing, onStopAccusing, onAccuse } = sunny;
+  const sunnyTarget = sunny.target;
   /**
    * The room the hand has to spend, measured rather than assumed — the same
    * approach the seat strip takes, and for the same reason: how big the cards

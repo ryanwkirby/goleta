@@ -26,6 +26,7 @@ import { MoveRefusal } from "../components/Refusal.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
+import { creditFinishedGames } from "../lib/graduation.ts";
 import { handStep } from "../lib/handFan.ts";
 import { assisting, handMode } from "../lib/handMode.ts";
 import { caughtState, stillAccusable, sunnyTarget } from "../lib/sunnyOffer.ts";
@@ -46,15 +47,10 @@ import { FULL_TABLE, PEEK_TABLE } from "../motion/plan.ts";
 import { useMotion } from "../lib/motion.ts";
 import { TableMotion } from "../motion/TableMotion.tsx";
 import {
-  gamesFinished,
-  gamesSeen,
-  gamesToCredit,
   hasSeenSunny,
   loadHandSort,
   loadName,
-  markGamesSeen,
   markSunnySeen,
-  recordGamesFinished,
   saveHandSort,
 } from "../net/identity.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../lib/feed.ts";
@@ -367,14 +363,7 @@ export function Table({
    */
   const played = room.gamesPlayed;
   useLayoutEffect(() => {
-    const credit = gamesToCredit(gamesSeen(room.code), played);
-    markGamesSeen(room.code, played);
-    if (credit === 0 || game.you === null) return;
-    const before = gamesFinished();
-    const total = recordGamesFinished(credit);
-    // Only worth asking somebody who has the highlights to keep. Nothing is
-    // being offered back to a player who never took them.
-    if (before === 0 && total > 0 && hints) setGraduating(true);
+    if (creditFinishedGames(room.code, played, game.you !== null, hints)) setGraduating(true);
   }, [room.code, played, game.you, hints]);
 
   // A while on a turn you haven't moved on, and the app offers a hand. Every

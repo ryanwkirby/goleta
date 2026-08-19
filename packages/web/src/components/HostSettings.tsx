@@ -44,6 +44,16 @@ export const describeDealing = (mode: DealerMode): string =>
   mode === "random" ? "The dealer is drawn at random each game." : "";
 
 /**
+ * Whether the seats move, for everyone who isn't the host (#199).
+ *
+ * Silent when they don't, which is the default — a table that has not chosen
+ * anything is not being told about a choice. Worth saying out loud when they
+ * do, because seat order is turn order and it decides who you are handing to.
+ */
+export const describeSeating = (shuffled: boolean): string =>
+  shuffled ? "The seats are shuffled each game." : "";
+
+/**
  * The two answers, named — the same shape as `IrlToggle`, and for the same
  * reason: a question with two real answers should say both out loud rather than
  * state one and leave the other to be inferred from an Off.
@@ -62,6 +72,53 @@ const DEALERS: { key: DealerMode; label: string; blurb: string }[] = [
   { key: "rotate", label: "Pass it along", blurb: "The deal moves one seat each game." },
   { key: "random", label: "Draw for it", blurb: "A seat is picked at random each game." },
 ];
+
+/**
+ * Whether the seats are shuffled at each deal.
+ *
+ * A switch rather than two named answers, unlike the dealer beside it, and the
+ * difference is real: *pass it along* and *draw for it* are two conventions and
+ * neither is the absence of the other, whereas this genuinely is a thing a
+ * table either does or does not do.
+ *
+ * The copy says what it costs an IRL table, because that is the part somebody
+ * has to agree to: turn order is where you are sitting, so shuffling it means
+ * getting up. The screen that tells everybody where to go is the other half of
+ * this feature, not a nicety on top of it.
+ */
+export function ShuffleSeatsToggle({
+  on,
+  irl,
+  onChange,
+}: {
+  on: boolean;
+  /** Whether this table is in one room, which is what changes what it costs. */
+  irl: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white">Shuffle the seats</p>
+        <p className="text-xs text-white/40">
+          {irl
+            ? "Turn order changes each game, and everyone is shown where to sit."
+            : "Turn order changes each game, so you don't play the same neighbours all night."}
+        </p>
+      </div>
+      <Button
+        variant={on ? "primary" : "secondary"}
+        className="min-w-16 px-3 py-1.5 text-xs"
+        role="switch"
+        aria-checked={on}
+        aria-label="Shuffle the seats"
+        onClick={() => onChange(!on)}
+      >
+        {on ? "On" : "Off"}
+      </Button>
+    </div>
+  );
+}
 
 export function DealerPicker({
   mode,
@@ -304,17 +361,21 @@ export function HostSettingsCog({
   rules,
   irl,
   dealerMode,
+  shuffleSeats,
   onRules,
   onIrl,
   onDealerMode,
+  onShuffleSeats,
   className = "",
 }: {
   rules: HouseRules;
   irl: boolean;
   dealerMode: DealerMode;
+  shuffleSeats: boolean;
   onRules: (rules: HouseRules) => void;
   onIrl: (on: boolean) => void;
   onDealerMode: (mode: DealerMode) => void;
+  onShuffleSeats: (on: boolean) => void;
   /** Where the caller wants it sat in its row. The size is not the caller's. */
   className?: string;
 }) {
@@ -363,6 +424,9 @@ export function HostSettingsCog({
                   like the switches above it, so the one note below covers
                   both. */}
               <DealerPicker mode={dealerMode} onChange={onDealerMode} />
+              {/* Beside the dealer and independent of it: that one changes who
+                  deals, this one changes who follows whom. */}
+              <ShuffleSeatsToggle on={shuffleSeats} irl={irl} onChange={onShuffleSeats} />
               {/* Said once, under everything it is true of, rather than against
                   each of them: the same sentence four times is a warning, not a
                   note. */}

@@ -113,6 +113,7 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
 | `setIrl` | host | **Any time, including mid-game.** "In person" rather than "remote play"; carried back to everyone on `RoomView`. |
 | `setDealerMode` | host | **Any time, including mid-game**, for the same reason as `setHouseRules`. `rotate` or `random`; carried back to everyone on `RoomView`. |
+| `setShuffleSeats` | host | **Any time, including mid-game**, same reason again. Whether the seats are reshuffled at each deal; carried back to everyone on `RoomView`. |
 | `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `setHints` | seated | "Mark up my playable cards" / "stop". Yours alone, host or not, mid-game included. Sets `SeatView.hinted` for everyone; shouted only when it turns *on*. |
@@ -281,6 +282,47 @@ and seeds — `packages/engine` keeps its no-`Math.random()` rule untouched.
 
 The room snapshot gained a field for it, so `SNAPSHOT_VERSION` went up and older
 snapshots are discarded on boot. No migration; see `AGENTS.md`.
+
+## Shuffled seats
+
+`RoomView.shuffleSeats` says the table reorders itself at each deal. The host
+sets it with `{ t: "setShuffleSeats", on }`, off by default, and — like
+`dealerMode` and the house rules — it is read once at `beginGame`, so what a
+host changes mid-hand is always the next deal.
+
+**Seat order is turn order, so this is not cosmetic.** It changes who follows
+whom, which is the point: without it, whoever is on your left is on your left
+all evening, and you spend every hand deciding against the same person and
+handing to the same person.
+
+`beginGame` shuffles `room.seats` before anything reads the order, using the
+engine's Fisher-Yates on a seed the server has just generated — the randomness
+is the server's, and `packages/engine` never learns the list it is handed came
+out of a hat. The shuffle goes **first** so the deal is passed in the new order:
+`nextDealerIndex` looks the last dealer up by id, so the seat that dealt is
+found wherever it has landed and the deal moves one along from there. That is
+what "the dealer is not lost across a shuffle" means — the person is tracked,
+and only their neighbours change.
+
+It is independent of `dealerMode`: that one changes who deals, this one changes
+who follows whom. With both on the shuffle largely subsumes the rotation, which
+reads sensibly rather than needing them made exclusive.
+
+**The IRL half is the actual feature.** `gameStarted` carries `seatsShuffled`,
+and an IRL room answers it with a "take your seat" screen: the new order,
+numbered, with your own seat called out, shown to every phone before it draws
+the table. A setting that reshuffled turn order every hand and said nothing
+would undo everything the lobby does to make turn order and physical order
+agree — the app would deal across the table and back, and it would be three
+turns before anybody noticed. Online rooms just deal in the new order; there is
+nobody to move.
+
+Nothing pauses behind that screen, the same deal `RotatePanel` has: the cards
+are already dealt and this cannot hold a deal open. It is dismissed by hand
+rather than on a timer, by each phone for itself, because people have to get up
+and move and a countdown is the wrong pressure for that.
+
+`SNAPSHOT_VERSION` went up again for the new room field.
 
 ## IRL mode
 

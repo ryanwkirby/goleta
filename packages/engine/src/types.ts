@@ -321,7 +321,16 @@ export type Intent =
 export type TurnUpReason = "recycle" | "sunnyTouched";
 
 export type GameEvent =
-  | { type: "gameStarted"; upcard: Card }
+  /**
+   * `seatsShuffled` says this deal reordered the table (#199).
+   *
+   * It rides on the event that describes the deal rather than getting one of
+   * its own, because that is what it is: part of how *this* hand was set up,
+   * not a thing that happened separately. The engine neither sets it nor reads
+   * it — the server constructs this event, and shuffling seats is a `rooms.ts`
+   * decision the engine has never known about.
+   */
+  | { type: "gameStarted"; upcard: Card; seatsShuffled: boolean }
   | { type: "played"; playerId: PlayerId; card: Card }
   | { type: "suitChosen"; playerId: PlayerId; suit: Suit }
   | { type: "drew"; playerId: PlayerId; card: Card }

@@ -39,7 +39,11 @@ const surrenderPhrase: Record<SurrenderReason, string> = {
 export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
   switch (event.type) {
     case "gameStarted":
-      return `New game. ${cardName(event.upcard)} turned up.`;
+      // The shuffle is said here as well as shown, because the log is what a
+      // table scrolls back through to work out why the order looks wrong.
+      return event.seatsShuffled
+        ? `New game, seats shuffled. ${cardName(event.upcard)} turned up.`
+        : `New game. ${cardName(event.upcard)} turned up.`;
     case "played":
       return `${nameOf(event.playerId)} played ${cardName(event.card)}.`;
     case "suitChosen":

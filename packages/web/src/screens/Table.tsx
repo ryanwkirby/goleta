@@ -6,6 +6,7 @@ import { EventLog } from "../components/EventLog.tsx";
 import { Hand, HandSortButton, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { RotatePanel } from "../components/RotatePanel.tsx";
+import { TakeYourSeat } from "../components/TakeYourSeat.tsx";
 import { Seats } from "../components/Seats.tsx";
 import { TurnGlow } from "../components/TurnGlow.tsx";
 import {
@@ -152,6 +153,16 @@ export function Table({
    * load, does not.
    */
   const [rotatedFor, setRotatedFor] = useState<number | null>(null);
+  /**
+   * The shuffle this phone has already been shown the new order for (#199).
+   *
+   * The log entry's id rather than a boolean, so a second shuffled deal puts
+   * the list back up and a dismissal cannot be carried over from the last one.
+   * The log starts empty on every page load, so a reload mid-hand does not
+   * reopen it — which is right: it is a "get up and move" screen, and by then
+   * everybody has.
+   */
+  const [seatedFor, setSeatedFor] = useState<number | null>(null);
   /**
    * The room the upright hand has to spend, measured rather than assumed.
    *
@@ -539,6 +550,30 @@ export function Table({
     if (irlPhone && !portrait) setRotatedFor(room.gamesPlayed);
   }, [irlPhone, portrait, room.gamesPlayed]);
 
+  /**
+   * The seats have just been shuffled, and this is a table sitting in one room.
+   *
+   * Only in an IRL room: online there is nobody to move, so the table simply
+   * deals in the new order (#199). It is ahead of `RotatePanel` below because
+   * getting up and sitting somewhere else has to happen before which way you
+   * are holding your phone matters at all.
+   */
+  const shuffleEntry = log.find(
+    (logged) => logged.event.type === "gameStarted" && logged.event.seatsShuffled,
+  );
+  const takeYourSeat =
+    room.irl && !finished && shuffleEntry !== undefined && seatedFor !== shuffleEntry.id;
+
+  if (takeYourSeat && shuffleEntry) {
+    return (
+      <TakeYourSeat
+        room={room}
+        you={game.you}
+        onDone={() => setSeatedFor(shuffleEntry.id)}
+      />
+    );
+  }
+
   // A landscape layout on a phone held upright shows half of itself, and no web
   // page can turn somebody's phone for them — so the prompt *is* the mechanism
   // (#79). It is asked once a deal: after that, upright means the whole table,
@@ -682,9 +717,11 @@ export function Table({
               rules={room.houseRules}
               irl={room.irl}
               dealerMode={room.dealerMode}
+            shuffleSeats={room.shuffleSeats}
               onRules={(rules) => send({ t: "setHouseRules", rules })}
               onIrl={(on) => send({ t: "setIrl", on })}
               onDealerMode={(dealer) => send({ t: "setDealerMode", mode: dealer })}
+            onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
               // Pulled back over the column's own padding only when it leads
               // the row. With the player's cog before it there is nothing to
               // pull back over. The row was already this tall — `rules` and

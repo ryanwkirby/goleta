@@ -41,6 +41,7 @@ import {
   setHints,
   setHouseRules,
   setIrl,
+  setShuffleSeats,
   type Room,
   type RoomStore,
   type Seat,
@@ -356,6 +357,9 @@ export const attachSockets = (
         // Unfrozen for the same reason as the house rules above: read once at
         // the deal, so what changes is always the next one. See `setDealerMode`.
         setDealerMode(room, playerId, message.mode);
+        return broadcast(room);
+      case "setShuffleSeats":
+        setShuffleSeats(room, playerId, message.on === true);
         return broadcast(room);
       case "composingCall":
         // No broadcast: whether somebody is weighing a call is theirs, and

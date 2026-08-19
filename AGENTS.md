@@ -424,8 +424,18 @@ nothing it touches is running — see `docs/PROTOCOL.md`.
 order is real in every room; it is only a table sitting in one that has a
 physical order for it to disagree with, and a game that deals across the table
 and back gets noticed three turns in, when it's too late to fix. So the lobby
-numbers the seats and gives the host up and down arrows, and the first deal into
-an IRL room asks *"Does the seat order look correct?"* once. `moveSeat` on the
+numbers the seats and gives the host up and down arrows — and, since #197, a
+handle to drag a name by. **The arrows stay**: they are the keyboard path and
+the precise one, and a drag handle is neither, so the grip is `tabIndex={-1}`
+and `aria-hidden` rather than a second way of describing the list.
+
+**A drag sends the message that already exists.** A drop three places up is
+three `moveSeat` hops, not a new `order:` field — an order posted from a browser
+can arrive after a seat has left, and a stale permutation is a worse thing to
+reconcile than a swap that no longer applies. It is also what makes a list
+changing mid-drag harmless: a hop is relative to wherever the server has that
+seat, so the worst case is a name one place out rather than a wrong order. The
+first deal into an IRL room asks *"Does the seat order look correct?"* once. `moveSeat` on the
 wire is deliberately **not** gated on `irl`: which rooms are worth offering
 arrows in is a presentation call, and refusing the message would throw an error
 at a host who flipped an unrelated setting mid-shuffle. Moving off either end

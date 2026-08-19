@@ -116,7 +116,7 @@ describe("a draw", () => {
 
 describe("a deal", () => {
   it("says it is a deal, so a prompt that has to wait for one can (#75)", () => {
-    expect(plan([{ type: "gameStarted", upcard: card("up") }]).deals).toBe(true);
+    expect(plan([{ type: "gameStarted", seatsShuffled: false, upcard: card("up") }]).deals).toBe(true);
   });
 
   it("is the only batch that says so", () => {
@@ -127,7 +127,7 @@ describe("a deal", () => {
   });
 
   it("fans every dealt card out of the deck, then the upcard", () => {
-    const { flights, emptiesPile } = plan([{ type: "gameStarted", upcard: card("up") }]);
+    const { flights, emptiesPile } = plan([{ type: "gameStarted", seatsShuffled: false, upcard: card("up") }]);
 
     expect(emptiesPile).toBe(true);
     // Three cards each, plus the upcard.
@@ -140,7 +140,7 @@ describe("a deal", () => {
   });
 
   it("deals round-robin, and face down even to you", () => {
-    const { flights } = plan([{ type: "gameStarted", upcard: card("up") }]);
+    const { flights } = plan([{ type: "gameStarted", seatsShuffled: false, upcard: card("up") }]);
     const dealt = flights.slice(0, -1);
 
     expect(dealt.map((flight) => flight.to[0])).toEqual([
@@ -163,7 +163,7 @@ describe("a deal", () => {
       eliminated: false,
       hand: [0, 1, 2, 3, 4].map((n) => card(`p${index}c${n}`)),
     }));
-    const { flights } = plan([{ type: "gameStarted", upcard: card("up") }], view({ players }));
+    const { flights } = plan([{ type: "gameStarted", seatsShuffled: false, upcard: card("up") }], view({ players }));
 
     expect(flights).toHaveLength(31);
     expect(settlesAt(flights)).toBeLessThan(1200);

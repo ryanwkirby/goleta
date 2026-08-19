@@ -16,7 +16,7 @@ const say = (event: GameEvent): string => describeEvent(event, nameOf);
 
 /** Every event that names a card at all. */
 const namingCards: GameEvent[] = [
-  { type: "gameStarted", upcard: card("7S") },
+  { type: "gameStarted", upcard: card("7S"), seatsShuffled: false },
   { type: "played", playerId: "p1", card: card("JH") },
   { type: "drew", playerId: "p2", card: card("10D") },
   { type: "turnedUp", cards: [card("3C"), card("QH")], reason: "recycle" },
@@ -27,7 +27,7 @@ describe("naming a card in the log", () => {
   it("uses the pip, not the letter", () => {
     expect(say({ type: "played", playerId: "p1", card: card("7S") })).toBe("Ana played 7♠.");
     expect(say({ type: "drew", playerId: "p2", card: card("JH") })).toBe("Bo drew J♥.");
-    expect(say({ type: "gameStarted", upcard: card("10D") })).toBe("New game. 10♦ turned up.");
+    expect(say({ type: "gameStarted", upcard: card("10D"), seatsShuffled: false })).toBe("New game. 10♦ turned up.");
   });
 
   it("turns every card up with a pip, however many there are", () => {

@@ -405,6 +405,27 @@ it mid-game moves a challenge window somebody is already watching. That is why
 it is not in the cog, and why `setBotSpeed` keeps its "wait for this game to
 finish" while `setHouseRules` no longer has one.
 
+**Shuffled seats are the other one (#199), and the same shape.** A table can
+reorder itself at each deal. Seat order is turn order, so it is not cosmetic —
+it changes who follows whom, which is the point. `beginGame` shuffles
+`room.seats` before anything reads the order, with the engine's Fisher-Yates on
+a server-generated seed, and the deal is passed *in the new order*: the last
+dealer is looked up by id, so they are found wherever they landed and only their
+neighbours change.
+
+**The IRL half is the actual feature, and the two ship together.** An IRL room
+gets a "take your seat" screen — the new order, numbered, your own seat called
+out — before it draws the table, off `seatsShuffled` on the `gameStarted` event.
+A setting that reshuffled turn order every hand and said nothing would undo
+everything the lobby does to make turn order and physical order agree: the app
+would deal across the table and back and it would be three turns before anybody
+noticed. Online rooms just deal in the new order, because there is nobody to
+move. Do not ship the shuffle to an IRL room without the screen.
+
+It is independent of the dealer setting. With both on the shuffle largely
+subsumes the rotation, and that reads sensibly rather than needing them made
+exclusive.
+
 **Who deals is a room setting rather than a house rule (#198).** A table can
 have the deal rotate one seat a game, or drawn at random. It lives on `Room`
 beside `irl` and `botSpeed`, is carried on `RoomView.dealerMode`, and

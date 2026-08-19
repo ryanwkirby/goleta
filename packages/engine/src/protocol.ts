@@ -114,6 +114,21 @@ export interface RoomView {
    */
   dealerMode: DealerMode;
   /**
+   * Whether the seats are shuffled at each deal (#199).
+   *
+   * Seat order is turn order, everywhere and always, so this is not cosmetic:
+   * it changes who follows whom, which is the whole point. It sits beside
+   * `dealerMode` and for the same reasons — a room setting rather than a house
+   * rule, read once at `beginGame`, and `packages/engine` never learns it
+   * exists, having been handed a list of seat ids it has never cared about the
+   * order of.
+   *
+   * The two are independent: that one changes who deals, this one changes who
+   * follows whom. With both on the shuffle largely subsumes the rotation, and
+   * that reads sensibly rather than needing them made exclusive.
+   */
+  shuffleSeats: boolean;
+  /**
    * How many shared table screens are connected to this room right now (#138).
    *
    * A count rather than a list, because there is nothing to list: a shared
@@ -185,6 +200,13 @@ export type ClientMessage =
    * written alternates from the original rules and nothing else.
    */
   | { t: "setDealerMode"; mode: DealerMode }
+  /**
+   * Host only, at any time: whether the seats are shuffled at each deal.
+   *
+   * Same argument as `setDealerMode` beside it — read once, at the deal, so
+   * what a host changes mid-game is always the next one.
+   */
+  | { t: "setShuffleSeats"; on: boolean }
   /**
    * "I've opened the picker to name a card", and then "I'm done with it".
    *

@@ -14,6 +14,8 @@ import {
   DealerPicker,
   describeDealing,
   describeRules,
+  describeSeating,
+  ShuffleSeatsToggle,
   HouseRulesPicker,
   IrlToggle,
 } from "../components/HostSettings.tsx";
@@ -164,7 +166,11 @@ const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
  * the bot pace, which is the other thing inside it that a table would notice.
  */
 const describeTable = (room: RoomView, anyBots: boolean): string => {
-  const said = [describeRules(room.houseRules), describeDealing(room.dealerMode)];
+  const said = [
+    describeRules(room.houseRules),
+    describeDealing(room.dealerMode),
+    describeSeating(room.shuffleSeats),
+  ];
   if (anyBots) {
     said.push(`Bots at ${room.botSpeed === "human" ? "human-like" : "lightning"} speed.`);
   }
@@ -703,10 +709,19 @@ export function Lobby({
                   read at the same moment as the switches above, so it belongs
                   beside them rather than beside bot speed, which is read live
                   and is the one thing here that really is between-games-only. */}
-              <div className="border-t border-white/10 pt-3">
+              <div className="flex flex-col gap-3 border-t border-white/10 pt-3">
                 <DealerPicker
                   mode={room.dealerMode}
                   onChange={(mode) => send({ t: "setDealerMode", mode })}
+                />
+                {/* Beside the dealer and independent of it: that one changes
+                    who deals, this one changes who follows whom. In an IRL room
+                    it is also what puts the "take your seat" screen up, which
+                    is the half of it that does the work (#199). */}
+                <ShuffleSeatsToggle
+                  on={room.shuffleSeats}
+                  irl={room.irl}
+                  onChange={(on) => send({ t: "setShuffleSeats", on })}
                 />
               </div>
               {anyBots ? (
@@ -733,6 +748,13 @@ export function Lobby({
           {describeDealing(room.dealerMode) ? (
             <span className="mt-1 block text-xs text-white/40">
               {describeDealing(room.dealerMode)}
+            </span>
+          ) : null}
+          {/* Seat order is turn order, so this is one everybody at the table
+              wants to know before the cards come out rather than after. */}
+          {describeSeating(room.shuffleSeats) ? (
+            <span className="mt-1 block text-xs text-white/40">
+              {describeSeating(room.shuffleSeats)}
             </span>
           ) : null}
           {anyBots ? (

@@ -16,6 +16,7 @@ import {
   decideBotIntent,
   redact,
   rollSunnyCall,
+  shuffle,
   startGame,
   topCard,
   type BotSpeed,
@@ -124,6 +125,14 @@ export interface Room {
    */
   dealerMode: DealerMode;
   /**
+   * Whether the seats are shuffled at each deal (#199).
+   *
+   * Seat order is turn order, so this changes who follows whom — not cosmetic.
+   * Read once at `beginGame` like `dealerMode` beside it, and independent of
+   * it: that one changes who deals, this one changes the order they deal into.
+   */
+  shuffleSeats: boolean;
+  /**
    * This table's house rules, chosen in the lobby and applied at the next deal.
    * Held on the room rather than read off the game so a table keeps its rules
    * between games — and so they can be changed while no game is running.
@@ -229,6 +238,9 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     // Off by default: a table that never opens the setting deals exactly as it
     // has always dealt.
     dealerMode: "rotate",
+    // Off by default. A table that never opens the setting keeps whoever is on
+    // its left on its left, exactly as it always has.
+    shuffleSeats: false,
     options: DEFAULT_OPTIONS,
     botSeed: newSeed(),
     callHolds: {},
@@ -367,6 +379,23 @@ export const setDealerMode = (room: Room, byPlayerId: PlayerId, mode: DealerMode
   if (mode !== "rotate" && mode !== "random") fail("No such dealer mode");
 
   room.dealerMode = mode;
+  touch(room);
+};
+
+/**
+ * Whether the seats are shuffled at each deal, said by the host (#199).
+ *
+ * Same shape and same argument as `setDealerMode` above: read once, at the
+ * deal, so what a host changes mid-hand is always the next one. The two are
+ * independent — that one changes who deals, this one changes who follows whom —
+ * and with both on the shuffle largely subsumes the rotation, which reads
+ * sensibly rather than needing them made exclusive.
+ */
+export const setShuffleSeats = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
+  requireHost(room, byPlayerId);
+  if (typeof on !== "boolean") fail("Shuffled seats are on or off");
+
+  room.shuffleSeats = on;
   touch(room);
 };
 
@@ -524,6 +553,23 @@ export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
     fail(`Goleta needs ${MIN_TABLE_PLAYERS} players — add a bot to make up the numbers`);
   }
 
+  /**
+   * The shuffle, before anything reads the order (#199).
+   *
+   * It goes first so the deal is passed *in the new order*: `nextDealerIndex`
+   * looks the last dealer up by id, so the seat that dealt is still found after
+   * the reshuffle and the deal moves one along from wherever they have landed.
+   * That is what "the dealer is not lost across a shuffle" means — the person
+   * is tracked, and only their neighbours change.
+   *
+   * `shuffle` is the engine's Fisher-Yates, run on a seed this process just
+   * generated. The randomness is the server's; the engine's no-`Math.random()`
+   * rule is untouched, and it never learns the order it is handed came out of
+   * a hat.
+   */
+  const shuffled = room.shuffleSeats && room.seats.length > 1;
+  if (shuffled) [room.seats] = shuffle(room.seats, newSeed());
+
   const dealerIndex = nextDealerIndex(room);
   room.dealerId = room.seats[dealerIndex]?.id ?? null;
   room.game = startGame(
@@ -538,7 +584,7 @@ export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
     dealerIndex,
   );
   touch(room);
-  return [{ type: "gameStarted", upcard: topCard(room.game) }];
+  return [{ type: "gameStarted", upcard: topCard(room.game), seatsShuffled: shuffled }];
 };
 
 // ---------------------------------------------------------------------------
@@ -764,6 +810,7 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
   houseRules: houseRulesOf(room),
   irl: room.irl,
   dealerMode: room.dealerMode,
+  shuffleSeats: room.shuffleSeats,
   tableScreens,
 });
 

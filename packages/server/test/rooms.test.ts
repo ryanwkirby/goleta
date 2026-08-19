@@ -26,6 +26,7 @@ import {
   setHints,
   setHouseRules,
   setIrl,
+  setShuffleSeats,
   type Room,
 } from "../src/rooms.ts";
 
@@ -213,6 +214,97 @@ describe("drawing for the deal", () => {
     const landed = room.seats.findIndex((seat) => seat.id === room.dealerId);
     dealAgain(room);
     expect(room.dealerId).toBe(room.seats[(landed + 1) % room.seats.length]?.id);
+  });
+});
+
+describe("shuffling the seats", () => {
+  it("is off by default, so a table keeps whoever is on its left", () => {
+    const room = seatedRoom(4);
+    expect(room.shuffleSeats).toBe(false);
+    expect(roomView(room).shuffleSeats).toBe(false);
+
+    const before = seatOrder(room);
+    beginGame(room, room.hostId);
+    for (let round = 0; round < 5; round++) dealAgain(room);
+    expect(seatOrder(room)).toEqual(before);
+  });
+
+  it("is the host's to set", () => {
+    const room = seatedRoom();
+    const guest = room.seats[1]?.id ?? "";
+
+    expect(() => setShuffleSeats(room, guest, true)).toThrow(/Only the host/);
+    expect(room.shuffleSeats).toBe(false);
+  });
+
+  it("changes the order at the deal, and keeps everybody at the table", () => {
+    const room = seatedRoom(6);
+    setShuffleSeats(room, room.hostId, true);
+    const names = seatOrder(room).toSorted();
+
+    let moved = false;
+    let order = seatOrder(room);
+    beginGame(room, room.hostId);
+    for (let round = 0; round < 20; round++) {
+      // Nobody joins, nobody leaves, nobody is duplicated: it is a permutation.
+      expect(seatOrder(room).toSorted()).toEqual(names);
+      if (seatOrder(room).join() !== order.join()) moved = true;
+      order = seatOrder(room);
+      dealAgain(room);
+    }
+    expect(moved).toBe(true);
+  });
+
+  it("says so on the event that describes the deal", () => {
+    const room = seatedRoom(4);
+    expect(beginGame(room, room.hostId)[0]).toMatchObject({ seatsShuffled: false });
+
+    room.game = null;
+    setShuffleSeats(room, room.hostId, true);
+    expect(beginGame(room, room.hostId)[0]).toMatchObject({ seatsShuffled: true });
+  });
+
+  it("does not lose the dealer across a shuffle", () => {
+    const room = seatedRoom(5);
+    setShuffleSeats(room, room.hostId, true);
+    beginGame(room, room.hostId);
+
+    for (let round = 0; round < 20; round++) {
+      const dealt = room.dealerId;
+      // The last dealer is looked up by id, so a reshuffle finds them wherever
+      // they landed and the deal moves one along from there.
+      const wasAt = room.seats.findIndex((seat) => seat.id === dealt);
+      expect(wasAt).toBeGreaterThanOrEqual(0);
+      dealAgain(room);
+      expect(room.seats.some((seat) => seat.id === room.dealerId)).toBe(true);
+    }
+  });
+
+  it("applies at the next deal and never to the hand on the table", () => {
+    const room = seatedRoom(4);
+    beginGame(room, room.hostId);
+    const order = seatOrder(room);
+    const before = JSON.stringify(room.game);
+
+    setShuffleSeats(room, room.hostId, true);
+    expect(roomView(room).shuffleSeats).toBe(true);
+    expect(seatOrder(room)).toEqual(order);
+    expect(JSON.stringify(room.game)).toBe(before);
+  });
+
+  it("reads sensibly alongside a random dealer, with both on", () => {
+    const room = seatedRoom(4);
+    setShuffleSeats(room, room.hostId, true);
+    setDealerMode(room, room.hostId, "random");
+    beginGame(room, room.hostId);
+
+    const names = seatOrder(room).toSorted();
+    for (let round = 0; round < 20; round++) {
+      dealAgain(room);
+      expect(seatOrder(room).toSorted()).toEqual(names);
+      expect(room.seats.some((seat) => seat.id === room.dealerId)).toBe(true);
+      expect(room.game?.players).toHaveLength(room.seats.length);
+    }
   });
 });
 

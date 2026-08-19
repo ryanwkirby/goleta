@@ -5,7 +5,7 @@ import { DECK, PILE } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import type { CardSize } from "../lib/cardShape.ts";
-import { SunnyPeel } from "./Sunny.tsx";
+import { SunnyPeel } from "./sunny/SunnyPeel.tsx";
 
 /**
  * A judged Sunny call, being shown its working at the pile. Null the rest of

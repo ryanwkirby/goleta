@@ -10,10 +10,10 @@ the total by −0.3%, while consolidating scattered rationale moved it −7.5%
 against the state it followed.
 
 Round two moved it **−19.2%** by putting constraints at the code they constrain
-and answering load-bearing questions where they get asked. That is the largest
-move in the series and the only one where every metric agreed in direction —
-and it carries two caveats big enough to be rules 9 and 10 below. Read the
-fifth measurement in `results.md` before citing the number.
+and answering load-bearing questions where they get asked — and then **−1.4% on
+a second task the intervention was not shaped around.** One strong positive that
+does not replicate. Read both write-ups in `results.md` before citing either
+number, and do not cite the −19.2% on its own.
 
 ## The rules that make a measurement mean anything
 
@@ -64,8 +64,30 @@ SP=<some scratch dir>
 git worktree add --detach $SP/<name> <commit>
 ln -s /Users/ryan/git/goleta/node_modules              $SP/<name>/node_modules
 ln -s /Users/ryan/git/goleta/packages/web/node_modules $SP/<name>/packages/web/node_modules
+
+# REQUIRED. Without this the worktree tests the *live repo's* packages.
+mkdir -p $SP/<name>/packages/node_modules/@goleta
+for pkg in engine server web; do
+  ln -sfn ../../$pkg $SP/<name>/packages/node_modules/@goleta/$pkg
+done
+
 cd $SP/<name> && npm test        # sanity: the suite must run before the agent starts
 ```
+
+**Why that third step exists.** The root `node_modules` is a symlink to the live
+repo's, and inside it `@goleta/engine → ../../packages/engine` is a *relative*
+link — which resolves back through the symlink to
+`/Users/ryan/git/goleta/packages/engine`. An arm editing the engine or the server
+was silently compiled and tested against a different checkout. It cost one
+thrown-out arm before anybody noticed, because a task confined to
+`packages/web/src` never trips it: those tests import `../src/…` relatively.
+`packages/node_modules` is resolved before the root one, so the links above win.
+
+**Verify it with a canary, not by reading the above.** Rename an exported symbol
+in the worktree's engine and typecheck: you should get `packages/server/src/
+rooms.ts: Module '"@goleta/engine"' has no exported member`. If that error does
+not appear, resolution is still escaping the worktree and any number you take is
+worthless.
 
 Then dispatch a **general-purpose subagent** with the task file's contents
 verbatim, substituting the worktree path where it says so. Record from the
@@ -106,7 +128,8 @@ sequence of those names is what actually produced round one's conclusion.
 
 | File | Status |
 | --- | --- |
-| `task-220-picker.md` | **Current.** Five arms recorded. Keep using it — the series is only comparable if the task does not change. But see rule 10: round two's intervention was shaped by this task's own complaints, so the next round needs a *second* task it was not shaped around. |
+| `task-220-picker.md` | **Current.** Five arms recorded. Keep using it — the series is only comparable if the task does not change. But see rule 10: round two's intervention was shaped by this task's own complaints, and its −19.2% did not reproduce on the second task. |
+| `task-222-lockout.md` | **Current, paired.** Two arms, `9cffd68` vs `79c6619`, flat (−1.4%). Written as round two's rule-10 control. A rename, so it needs little constraint-assembly, and it is centred on `packages/engine` which no round of this work has touched — read it as a weak test rather than a verdict. |
 | `task-you-are-next.md` | Superseded. Two arms. A synthetic feature, and it straddled the seam under test — see `results.md`. |
 
 **Do not merge PR #233 while `task-220-picker.md` is the benchmark**: it fixes

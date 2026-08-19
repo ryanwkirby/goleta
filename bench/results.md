@@ -562,3 +562,148 @@ prompted it.**
 
 The produced patch is kept at `task-220-arm5-roundtwo.patch` in the run's
 scratch directory and was otherwise discarded, per rule 7.
+
+---
+
+# Second task — the lockout's unit (#222), paired
+
+Round two's confirmation run, and the point of it is rule 10: `task-220-picker
+.md` had been run four times *before* round two was designed, and two of the
+three parts of that intervention were chosen because arms of that task
+complained about them. −19.2% on the task the work was shaped around is
+evidence the mechanism works. It is not evidence it generalises.
+
+So: a second task, chosen on merit from the open backlog, never run before, both
+arms byte-identical, sequential, on the same pair of trees.
+
+| Arm | Tree | Tokens | Tools | Secs | Insertions | Files edited |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| before | `9cffd68` | 109,330 | 56 | 326 | 104 | 20 |
+| after | `79c6619` | 107,769 | 48 | 350 | 111 | 22 |
+| | | **−1.4%** | −14.3% | **+7.4%** | +6.7% | |
+
+**Flat.** −1.4% on tokens is a quarter of the noise floor, and the metrics
+disagree in direction — tool calls down, wall time up. Nothing here reproduces
+the −19.2%.
+
+## Why this is a weak test, which is a finding about the backlog
+
+#222 was chosen because it is the **only** open issue that lands in the four
+files round two put headers on. It turned out to be centred somewhere else
+anyway: both arms named `packages/engine/src/rules.ts` as the costliest file,
+and the engine is explicitly out of scope for this work and was never touched by
+it. An intervention with no surface in the area a task lives in cannot be
+expected to move that task's cost.
+
+That the backlog offered exactly one candidate, and that even it was centred
+outside the intervention, is the real result here. **The pilot was narrow — four
+files — so the set of tasks that can fairly test it is nearly empty.**
+
+Two more reasons to hold this loosely. It is a **rename**, and both arms said a
+single well-chosen grep returned the whole file set up front; both reported the
+lowest irrelevant-reading figures ever recorded here (~20%, against "roughly a
+third" and "roughly half" on #220). Assembling interlocking constraints is what
+round two attacked, and a rename needs comparatively little of it. And it is
+still one sample per arm.
+
+## The after arm did produce a better patch
+
+Not a cost finding, but the only quality difference between the arms and worth
+recording. The task said a rename must be complete. The **before** arm left two
+player-facing strings describing the lockout in the old unit:
+
+- `SunnyExplainer.tsx:33` — *"you can't call again for three draws"*
+- `SunnyAccusePicker.tsx:83` — *"Get it wrong and you can't call again for three
+  draws."*
+
+The after arm found and fixed both, which is why its patch is seven lines
+larger. Both arms correctly left `drawsThisTurn` and `MAX_DRAWS_PER_TURN` alone
+— those count cards and are a genuinely different concept nine lines away in the
+same interface.
+
+**Do not read this as the intervention working.** The discarded contaminated run
+on the *before* tree also found both strings, via a grep for behaviour phrasing
+rather than for the identifier. So this is within-arm variance in how thoroughly
+an agent sweeps for stray copy, not a property of the tree.
+
+## What both arms found that the task never mentioned
+
+Both, independently: `GameState` is persisted through `JSON.stringify` in
+`persist.ts`, so renaming `totalDraws` is a snapshot-shape change and needs
+`SNAPSHOT_VERSION` bumped. Miss it and all three gates pass while every lockout
+breaks on the next redeploy. Worth keeping for whenever #222 is actually done,
+along with the fact that root `AGENTS.md` still cites `SUNNY_LOCKOUT_DRAWS` and
+was outside both arms' edit scope.
+
+## The criticism worth taking on the chin
+
+From the after arm's notes, about the tree this work supposedly improved:
+
+> *"The waste was in `CLAUDE.md`/`AGENTS.md`, which arrives pre-loaded and is
+> enormous — roughly forty bullets of design reasoning about fan geometry, wake
+> locks, shared-screen scaling and rotate prompts, none of which touches this
+> change. The two bullets that mattered are buried in it."*
+
+Round two **added** 49 lines to that document (#237). Every task pays for it,
+including every task that has nothing to do with refactoring. Putting facts at
+the code does not shrink the document; on this round it grew it. That cost is
+real, it is paid on every arm, and it is invisible in a comparison where both
+trees carry a large document and only one carries a slightly larger one.
+
+## Where round two actually stands
+
+| Task | Shaped around it? | Result |
+| --- | --- | ---: |
+| `task-220-picker.md` | **Yes** — two of three parts chosen from its own arms | −19.2% |
+| `task-222-lockout.md` | No | −1.4% |
+
+One large gain on the task the intervention was built from, and nothing on the
+only other task available. The honest reading is that **the −19.2% is
+substantially teaching to the test**, and that what generalises has not been
+demonstrated.
+
+`REFACTOR_PLAN.md` said what to do if round two came back negative, before the
+number was known:
+
+> *"If the answer is no again, that is a real answer and the honest response is
+> to stop optimising for this and spend the effort on the feature backlog."*
+
+This is not a clean "no" — it is one strong positive that does not replicate and
+one flat result on a weak test. But it is not the confirmation the round needed,
+and the cost of chasing it further is now well understood: **two rounds, seven
+arms, two tasks, and the only reproducible finding is that the cost here is
+domain reasoning rather than navigation.** Recommend stopping and spending the
+effort on the feature backlog, exactly as the plan said.
+
+What to keep regardless: the signposts and the in-code answers are correct on
+their own terms, cost nothing to carry, and one arm demonstrably used one of
+them. They just should not be expected to pay again.
+
+## A discarded arm, and a harness bug that invalidated it
+
+The first run of the before arm is thrown out. It is recorded because rule 8
+says so and because the bug it found had been latent since the directory was
+created.
+
+`README.md`'s setup symlinks the worktree's `node_modules` at the live repo's.
+Inside that directory `@goleta/engine → ../../packages/engine`, a **relative**
+link, which resolves back through the symlink to
+`/Users/ryan/git/goleta/packages/engine`. **Any arm that edits the engine or the
+server has been compiling and testing against a different checkout.**
+
+The arm hit it as a correct rename producing `expected 31000 to be +0` in an
+unrelated pacing test — `NaN` from an undefined counter — and spent an unknowable
+share of 126,122 tokens and 66 tool calls diagnosing my environment rather than
+the task. That number measures the harness, not the tree.
+
+**Arms one to five are unaffected**, checked rather than assumed:
+`task-220-picker.md` confines edits to `packages/web/src`, whose tests import
+`../src/…` relatively, and the engine was identical in every arm, so the wrong
+resolution was type-only and invisible. The −19.2% stands.
+
+Fixed by adding worktree-relative `packages/node_modules/@goleta/{engine,server,
+web}` symlinks, which node resolves before the root `node_modules`. Verified
+with a canary rather than by reasoning: renaming an exported symbol in the
+worktree's engine now produces `packages/server/src/rooms.ts: Module
+'"@goleta/engine"' has no exported member`, which is exactly the error that
+failed to appear before. `README.md`'s setup block carries it now.

@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { TABLE_DESIGN } from "../src/lib/fitScale.ts";
-import { BAND, edgeFor, edgeSeats, LABEL, TURN_FOR, type Edge } from "../src/lib/tableEdges.ts";
+import {
+  BAND,
+  edgeFor,
+  edgeSeats,
+  LABEL,
+  seatPoint,
+  TURN_FOR,
+  type Edge,
+  type EdgeSeat,
+} from "../src/lib/tableEdges.ts";
 
 /**
  * The one measurement `TableScreen` owns: `max-w-128` on the prompt, centred.
@@ -30,6 +39,30 @@ const span = (along: number, edge: Edge): [number, number] => {
 
 const overlaps = ([a, b]: [number, number], [c, d]: [number, number]): boolean => a < d && c < b;
 
+/**
+ * How far round the edge of the design a seat sits, measured clockwise from
+ * the top-left corner.
+ *
+ * The board is a rectangle, so "clockwise" is only an ordering once every
+ * placement is on one scale. Unrolling the perimeter into a single number is
+ * that scale, and it makes the property a comparison rather than a table of
+ * expected values.
+ */
+const { width: W, height: H } = TABLE_DESIGN;
+const perimeter = (seat: EdgeSeat): number => {
+  const along = seat.along / 100;
+  switch (seat.edge) {
+    case "top":
+      return along * W;
+    case "right":
+      return W + along * H;
+    case "bottom":
+      return W + H + (1 - along) * W;
+    case "left":
+      return 2 * W + H + (1 - along) * H;
+  }
+};
+
 describe("naming the seats round a shared table screen", () => {
   it("reads each name from outside the edge it is on", () => {
     // The whole point, and it was 180° out on all four sides until #141: the
@@ -57,6 +90,51 @@ describe("naming the seats round a shared table screen", () => {
       "left",
       "left",
     ]);
+  });
+
+  it("walks clockwise round the perimeter, all the way from seat 0 back to the start", () => {
+    // Seat order is turn order and this screen is the seating chart, so a
+    // table reading it to work out who is next has to be told the truth. The
+    // edges were always right; the placement *along* two of them was not.
+    //
+    // `along` runs left-to-right and top-to-bottom, which is clockwise on the
+    // top and right edges and anticlockwise on the bottom and left ones — so
+    // handing pairs out in raw `along` order swapped seats 3 and 4 at a table
+    // of six, and 6 and 7 as well at a table of eight (#186).
+    //
+    // Asked as distance travelled round the edge rather than as a table of
+    // expected numbers: this is the property, and it stays true if the spreads
+    // are ever retuned.
+    for (const count of everyTable) {
+      const walked = edgeSeats(count).map(perimeter);
+      for (const [index, at] of walked.entries()) {
+        const previous = walked[index - 1];
+        if (previous !== undefined) expect(at).toBeGreaterThan(previous);
+      }
+    }
+  });
+
+  it("throws a drawn card at the seat that drew it, at every table size", () => {
+    // The other half of #186, and the half that isn't cosmetic. Since #164 the
+    // flight aims at `seatPoint`, the same placement that draws the names — so
+    // a name in the wrong place is a card thrown at the wrong player. Two
+    // seats on one edge have to land on opposite sides of that edge's middle,
+    // in clockwise order.
+    for (const count of everyTable) {
+      const placed = edgeSeats(count);
+      for (const edge of ["top", "right", "bottom", "left"] as const) {
+        const here = placed.filter((seat) => seat.edge === edge);
+        if (here.length < 2) continue;
+        const [first, second] = here.map((seat) => seatPoint(seat, TABLE_DESIGN));
+        if (!first || !second) continue;
+        // Clockwise: rightwards along the top, downwards on the right,
+        // leftwards along the bottom, upwards on the left.
+        if (edge === "top") expect(second.x).toBeGreaterThan(first.x);
+        if (edge === "bottom") expect(second.x).toBeLessThan(first.x);
+        if (edge === "right") expect(second.y).toBeGreaterThan(first.y);
+        if (edge === "left") expect(second.y).toBeLessThan(first.y);
+      }
+    }
   });
 
   it("places a lone name in the middle of its edge, except along the top and bottom", () => {

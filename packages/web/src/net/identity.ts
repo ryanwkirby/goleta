@@ -38,6 +38,9 @@ export const saveIdentity = (code: string, identity: Identity): void => {
 export const forgetIdentity = (code: string): void => {
   try {
     localStorage.removeItem(seatKey(code));
+    // The bookmark goes with the seat. Coming back to a room you walked out of
+    // makes you a new arrival, and games played in between were not yours.
+    localStorage.removeItem(seenKey(code));
   } catch {
     /* nothing to be done */
   }
@@ -95,14 +98,73 @@ export const gamesFinished = (): number => {
 };
 
 /** Returns the new count, so a caller can notice the first one going by. */
-export const recordGameFinished = (): number => {
-  const next = gamesFinished() + 1;
+export const recordGamesFinished = (games: number): number => {
+  const next = gamesFinished() + Math.max(games, 0);
   try {
     localStorage.setItem(GAMES_KEY, String(next));
   } catch {
     // Private browsing. The guardrails just never come off.
   }
   return next;
+};
+
+const seenKey = (code: string): string => `goleta:games-seen:${code.toUpperCase()}`;
+
+/**
+ * How many games this room had finished the last time this browser looked.
+ *
+ * The count above used to move only when a screen happened to be mounted at
+ * the instant a `gameOver` event arrived — and the event log starts empty on
+ * every page load, so a reload, a force-quit, a socket that dropped and came
+ * back after the hand, or a rejoin from a new tab all left it at zero. The
+ * training wheels then stayed on for the second game, and the third (#184).
+ *
+ * `room.gamesPlayed` is durable: the server owns it, every `RoomView` carries
+ * it, and it survives a reload, a reconnect and a redeploy. So the count moves
+ * when the *room* says a game finished, and this is the bookmark that keeps
+ * each one counted exactly once.
+ *
+ * `null` means this browser has never seen this room, which is a different
+ * thing from having seen it at zero: arriving at a table three games in is not
+ * the same as sitting through three games, and only the second is yours.
+ */
+export const gamesSeen = (code: string): number | null => {
+  try {
+    const raw = localStorage.getItem(seenKey(code));
+    if (raw === null) return null;
+    const seen = Number(raw);
+    return Number.isFinite(seen) && seen >= 0 ? seen : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * How many of a room's finished games this browser gets credit for.
+ *
+ * The whole rule of #184 in one place, and the reason it is a function rather
+ * than two comparisons at the call site: the two mistakes it is between are
+ * opposites, and both were live. Under-counting is the bug — a first game that
+ * ended while the phone was away left the training wheels on for the second.
+ * Over-counting is the one the old code was careful about and this has to stay
+ * careful about: coming back to a room whose game has already finished must
+ * not count it a second time.
+ *
+ * A room never seen before is a starting line, not a score. Somebody who walks
+ * up to a table three games in has finished none of them, and neither has a
+ * watcher who has been sitting there all evening — the bookmark moves for them
+ * too, so taking a seat starts the count from where they sat down.
+ */
+export const gamesToCredit = (seen: number | null, played: number): number =>
+  seen === null ? 0 : Math.max(played - seen, 0);
+
+export const markGamesSeen = (code: string, played: number): void => {
+  try {
+    localStorage.setItem(seenKey(code), String(played));
+  } catch {
+    // Private browsing, again — and it fails the same kind way. Nothing is
+    // remembered, so nothing is ever counted, so the guardrails stay on.
+  }
 };
 
 const HINTS_KEY = "goleta:first-game-hints";

@@ -16,22 +16,9 @@ import { useMotion } from "../motion/TableMotion.tsx";
 import type { Shout } from "../net/useGoleta.ts";
 import { CARD_WIDTH_PX, PlayingCard } from "./Card.tsx";
 import { HelpShout } from "./Help.tsx";
-import { SunnySign } from "./Sunny.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>
   room.seats.find((seat) => seat.id === id)?.name ?? "Player";
-
-/**
- * The sun belongs to whoever a call would land on, wherever the turn has got
- * to — not to whoever is playing. Those are the same seat right up until the
- * drawer plays and the turn moves on with the window still open, and following
- * the target through that is what keeps the icon pointing at the right head.
- *
- * No target, no sun. On screen it means one thing and only one thing: you could
- * accuse them. It has never meant you'd be right.
- */
-const hasSun = (game: GameView, playerId: string): boolean =>
-  game.sunnyCallable && game.sunnyTargetId === playerId;
 
 /**
  * A seat that has run out of cards, collapsed to its name (#192).
@@ -79,13 +66,21 @@ function OutSeat({
   );
 }
 
+/**
+ * A seat, its name, its count and its hand.
+ *
+ * **No sun.** There used to be one wedged between the name and the count for
+ * whoever a call would land on — 20px of it, in a strip that scrolls sideways,
+ * for the most time-critical control in the app. It has left the seat entirely
+ * (#189): there is only ever one target, so the control names them instead, and
+ * that is what stops a call being a thing you do to a name in a list.
+ */
 function Seat({
   player,
   room,
   game,
   shouting,
   rows,
-  onCallSunny,
 }: {
   player: PlayerView;
   room: RoomView;
@@ -93,12 +88,10 @@ function Seat({
   shouting: boolean;
   /** How many rows this hand takes at the strip's shared sliver. */
   rows: number;
-  onCallSunny: (playerId: string) => void;
 }) {
   const { anchor, isArriving } = useMotion();
   const onClock = game.waitingOn === player.id;
   const out = player.eliminated;
-  const sun = hasSun(game, player.id);
 
   // Kept even for a seat with nothing left to fly to it: the anchor is how the
   // motion layer knows where this seat is, and a `data-seat` is how the strip
@@ -128,14 +121,6 @@ function Seat({
             fitting a table on a phone. Clipping a name to save a few pixels of
             scroll was the wrong side of that trade (#161). */}
         <span className="text-sm font-semibold text-white">{nameFor(room, player.id)}</span>
-        {sun ? (
-          <SunnySign
-            targetName={nameFor(room, player.id)}
-            lockedDraws={game.sunnyLockedDraws}
-            onCall={() => onCallSunny(player.id)}
-            className="self-center"
-          />
-        ) : null}
         <span
           className={[
             "ml-auto font-mono text-sm tabular-nums",
@@ -182,12 +167,10 @@ export function Seats({
   room,
   game,
   shouts,
-  onCallSunny,
 }: {
   room: RoomView;
   game: GameView;
   shouts: Shout[];
-  onCallSunny: (playerId: string) => void;
 }) {
   const others = inTurnOrder(game);
   const shouting = new Set(shouts.map((shout) => shout.playerId));
@@ -342,7 +325,6 @@ export function Seats({
           game={game}
           shouting={shouting.has(player.id)}
           rows={fan.rows[seat] ?? 1}
-          onCallSunny={onCallSunny}
         />
       ))}
     </ul>

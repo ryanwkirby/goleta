@@ -1,6 +1,5 @@
 import type { ClientMessage, GameView, RoomView } from "@goleta/engine";
 
-import type { NameOf } from "../lib/format.ts";
 import { useFullscreen } from "../lib/fullscreen.ts";
 import { pileSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../motion/anchors.ts";
@@ -9,7 +8,6 @@ import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
 import { HostSettingsCog } from "./HostSettings.tsx";
 import { QrGlyph } from "./QrCode.tsx";
-import { SunnySign } from "./Sunny.tsx";
 
 /**
  * The middle of the table, as much of it as a phone in landscape can spare —
@@ -18,9 +16,15 @@ import { SunnySign } from "./Sunny.tsx";
  * **What it carries of the table is the centre and nothing more:** the room
  * code, the draw pile and its count, the card in play with the suit over it when
  * an 8 is live — named, or asked for and not yet given — what the table is
- * waiting for, the sun when a call is on offer, and somebody asking for help.
- * That is the whole list, and the omission that matters is the hands — nobody
- * else's cards appear here at any size.
+ * waiting for, and somebody asking for help. That is the whole list, and the
+ * omission that matters is the hands — nobody else's cards appear here at any
+ * size.
+ *
+ * The sun was on that list until #189 and is deliberately off it now. It was
+ * rendered immediately before the draw pile button, so the enlarged version of
+ * it could only grow *towards* the deck — and a fat target beside the deck is a
+ * mis-tap into the exact violation it accuses. It hangs under this strip now,
+ * at the far end from the pile, naming the player it is about.
  *
  * The rest is not table facts, and it is here because the alternative was a row
  * of it under the cards. Your hand is the point of this screen, `handSize` reads
@@ -74,10 +78,8 @@ import { SunnySign } from "./Sunny.tsx";
 export function PeekStrip({
   room,
   game,
-  nameOf,
   canDraw,
   onDraw,
-  onCallSunny,
   offline,
   helpFrom,
   prompt,
@@ -88,10 +90,8 @@ export function PeekStrip({
 }: {
   room: RoomView;
   game: GameView;
-  nameOf: NameOf;
   canDraw: boolean;
   onDraw: () => void;
-  onCallSunny: (playerId: string) => void;
   offline: boolean;
   /** Somebody else asking for a hand, by name. Your own goes over your cards. */
   helpFrom: string | null;
@@ -113,7 +113,6 @@ export function PeekStrip({
   // suit named for the card that is actually up, or one owed and not yet given.
   // Null only while a flight is still landing — see `pileSuit`.
   const suit = pileSuit(game, face);
-  const target = game.sunnyCallable ? game.sunnyTargetId : null;
 
   // The side insets are the landscape ones, and they are why this strip has
   // ends worth protecting: the room code sits at the left end and the prompt
@@ -291,15 +290,6 @@ export function PeekStrip({
       {/* Not a game fact, and the one thing here that isn't: a player blocked on
           a dead socket needs to know that's what it is. */}
       {offline ? <span className="shrink-0 text-xs text-amber-300">reconnecting…</span> : null}
-
-      {target ? (
-        <SunnySign
-          targetName={nameOf(target)}
-          lockedDraws={game.sunnyLockedDraws}
-          onCall={() => onCallSunny(target)}
-          className="shrink-0"
-        />
-      ) : null}
 
       {/*
         Tappable whenever it's your turn, including when you're holding a card

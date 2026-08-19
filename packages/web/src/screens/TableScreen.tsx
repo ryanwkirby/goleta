@@ -616,7 +616,7 @@ function Playing({
               about its own middle, it stays where it was drawn.
             */}
             <div style={{ transform: `rotate(${turn}deg)` }}>
-              <Seats room={room} game={game} shouts={shouts} onCallSunny={() => undefined} />
+              <Seats room={room} game={game} shouts={shouts} />
             </div>
           </div>
         </div>

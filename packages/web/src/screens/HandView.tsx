@@ -45,6 +45,9 @@ export interface HandViewProps {
    * the phone over, find the row of small grey print and come back.
    */
   onShowRules: () => void;
+  /** Your own settings, which in landscape live on the strip (#188). */
+  hints: boolean;
+  onChooseHints: (on: boolean) => void;
   /** Your own shout, if you have one up, and which of the two kinds it is. */
   shouting: ShoutKind | null;
   /**
@@ -117,6 +120,8 @@ export function HandView({
   onAskForHelp,
   onShowInvite,
   onShowRules,
+  hints,
+  onChooseHints,
   shouting,
   helpFrom,
   accusing,
@@ -173,6 +178,9 @@ export function HandView({
         mine={mine}
         onShowInvite={onShowInvite}
         onShowRules={onShowRules}
+        hints={hints}
+        onChooseHints={onChooseHints}
+        seated={game.you !== null}
         send={send}
       />
 

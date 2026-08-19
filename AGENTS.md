@@ -125,12 +125,33 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   play you cannot spot, and #117 already decided what to do below the tap floor.
   A laptop's `max-w-3xl` column never reaches it.
 - **The app does not tell you which of your own cards are playable either**, and
-  the turn prompt won't say whether you have a play. That guardrail is offered
-  on the rules screen on the way in, lasts until you finish your first game if
-  you took it, and then comes off for good — after which you can ask for it
-  back, one turn at a time, and everyone at the table hears you ask (#33).
-  Restoring the highlights unconditionally removes the chance to make the
-  mistake the Sunny Rule feeds on.
+  the turn prompt won't say whether you have a play. Restoring the highlights
+  unconditionally removes the chance to make the mistake the Sunny Rule feeds
+  on (#33).
+
+  **It is a setting you keep, not a countdown (#187).** It used to be offered
+  once, on the way in, run for exactly one game and then stop — a fork in the
+  road taken before you had seen a card, expiring on a schedule nobody chose.
+  Now it is a preference: a toggle at the foot of the rules screen, a question
+  after your first finished game that offers rather than announces, and your own
+  cog at any time after that.
+
+  What makes that safe rather than a free silent switch is that **it is public,
+  and it stays public**. `SeatView.hinted` carries it to the whole table,
+  switching it **on** is shouted like `want help?` is, and the seat carries a
+  standing mark — in the strip and on the shared screen — for as long as it
+  lasts. Switching it **off** is silent: giving up an advantage is nobody else's
+  business. So help is still always there and taking it is still never quiet;
+  what is gone is only the expiry. Do not make it quiet, and do not make it
+  expire again.
+
+  It is presentation, never a rule: `packages/engine` never learns it exists,
+  it is not on `GameOptions` or `HouseRules`, and no bot may read it — that
+  would be the view leaking into pacing. `assist`'s two other sources are
+  untouched: the forced play after a landed call, and a single turn bought with
+  `want help?`. The turn prompt's "you have a card that matches" follows the
+  same toggle, because that sentence gives the answer away as surely as the
+  highlights do.
 - **The edges of the screen glow when the table is waiting on you, and that is
   the only thing they say (#190).** Knowing it was your turn used to require
   reading — a prompt and a one-pixel ring — and at a table of six with the
@@ -368,6 +389,15 @@ and the panel says which of its two halves takes effect when. Two things keep
 that true and both are load-bearing: `setHouseRules` replaces `room.options`
 wholesale rather than editing it in place, and `beginGame` spreads it into a
 fresh object on the way to `startGame`. Don't make either of them share.
+
+**Your own cog is a different door (#188).** Every seated player has one, top
+left, beside the host's where you are the host. The bar for putting something in
+it is that it belongs to one player and changes nothing about the room — today
+that is the hints toggle and nothing else, and #202 is the other candidate. The
+host's cog says *table settings* and this one says *yours*, so they are a gear
+and a person rather than two gears: two doors an inch apart, one of which
+changes the game for everybody, want the difference to be legible. A watcher
+gets no cog, because the only thing in it is about cards they do not have.
 
 **Bot speed is the one that stays frozen**, and it sits beside them in the lobby
 looking identical. It is read *live*, every time a bot is scheduled, so moving

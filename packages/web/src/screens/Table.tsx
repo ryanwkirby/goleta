@@ -19,6 +19,7 @@ import {
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { HostSettingsCog } from "../components/HostSettings.tsx";
+import { PlayerSettingsCog } from "../components/PlayerSettings.tsx";
 import { QrGlyph } from "../components/QrCode.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
@@ -606,6 +607,8 @@ export function Table({
           onAskForHelp={askForHelp}
           onShowInvite={() => setInviting(true)}
           onShowRules={onShowRules}
+          hints={hints}
+          onChooseHints={onChooseHints}
           shouting={shoutingHere?.kind ?? null}
           helpFrom={helpFrom ? { name: nameOf(helpFrom.playerId), kind: helpFrom.kind } : null}
           accusing={accusing}
@@ -656,7 +659,18 @@ export function Table({
         ].join(" ")}
       >
         <header className="flex items-center gap-2 text-xs text-white/50">
-          {/* Leading the row, before the code, because it is the host's way
+          {/* Yours first, the host's second, and the two are legible as
+              different things: a person and a gear, an inch apart, one of which
+              changes the game for everybody (#188). A watcher gets neither —
+              the only thing in this drawer is about your own cards. */}
+          {seated ? (
+            <PlayerSettingsCog
+              hints={hints}
+              onHints={onChooseHints}
+              className="-ml-2"
+            />
+          ) : null}
+          {/* Beside the player's, not in place of it, because it is the host's way
               back to everything the lobby held and the rest of this line is
               facts about the room rather than things to press. What used to sit
               at the far end was a lone `in person: on` button — the only host
@@ -671,12 +685,12 @@ export function Table({
               onRules={(rules) => send({ t: "setHouseRules", rules })}
               onIrl={(on) => send({ t: "setIrl", on })}
               onDealerMode={(dealer) => send({ t: "setDealerMode", mode: dealer })}
-              // Pulled back over the column's own padding so the 44px box sits
-              // the glyph roughly on the margin the rest of the header keeps.
-              // The row was already this tall — `rules` and `leave` are
-              // `Button`s, and every `Button` is `min-h-11` — so the bigger
-              // target costs the header nothing.
-              className="-ml-2"
+              // Pulled back over the column's own padding only when it leads
+              // the row. With the player's cog before it there is nothing to
+              // pull back over. The row was already this tall — `rules` and
+              // `leave` are `Button`s, and every `Button` is `min-h-11` — so
+              // neither target costs the header anything.
+              className={seated ? "" : "-ml-2"}
             />
           ) : null}
           {/* The code was four characters saying what the room was called and

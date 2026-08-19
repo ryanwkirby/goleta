@@ -23,6 +23,7 @@ import {
   roomView,
   setBotSpeed,
   setDealerMode,
+  setHints,
   setHouseRules,
   setIrl,
   type Room,
@@ -440,6 +441,61 @@ describe("IRL mode", () => {
     // No timer moved, no window shifted, no card went anywhere: the engine
     // never learns this flag exists.
     expect(JSON.stringify(room.game)).toBe(before);
+  });
+});
+
+describe("playing with the highlights on", () => {
+  it("is off until a browser says otherwise", () => {
+    const room = seatedRoom();
+    expect(roomView(room).seats.every((seat) => !seat.hinted)).toBe(true);
+  });
+
+  it("is the seat's own to set, host or not", () => {
+    const room = seatedRoom();
+    const guest = room.seats[1]?.id ?? "";
+
+    // No `requireHost` anywhere near it: it changes one screen and nothing
+    // about the room.
+    expect(setHints(room, guest, true)).toBe(true);
+    expect(roomView(room).seats.find((seat) => seat.id === guest)?.hinted).toBe(true);
+  });
+
+  it("can be changed with a game already running", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    const before = JSON.stringify(room.game);
+
+    // The whole point of #187 is that it is a thing you decide rather than a
+    // thing that expires, and mid-hand is when somebody works out they want it.
+    expect(setHints(room, room.hostId, true)).toBe(true);
+    expect(roomView(room).seats[0]?.hinted).toBe(true);
+    // And the engine never learns it happened.
+    expect(JSON.stringify(room.game)).toBe(before);
+  });
+
+  it("only announces the change that turns it on", () => {
+    const room = seatedRoom();
+
+    expect(setHints(room, room.hostId, true)).toBe(true);
+    // A browser re-asserting its own preference on reconnect says nothing.
+    expect(setHints(room, room.hostId, true)).toBe(false);
+    // And giving up an advantage is nobody else's business.
+    expect(setHints(room, room.hostId, false)).toBe(false);
+    expect(setHints(room, room.hostId, true)).toBe(true);
+  });
+
+  it("refuses a seat that is not at this table", () => {
+    const room = seatedRoom();
+    expect(() => setHints(room, "somebody-else", true)).toThrow(/not at this table/);
+  });
+
+  it("marks one seat and no others", () => {
+    const room = seatedRoom(4);
+    const guest = room.seats[2]?.id ?? "";
+    setHints(room, guest, true);
+
+    const marked = roomView(room).seats.filter((seat) => seat.hinted);
+    expect(marked.map((seat) => seat.id)).toEqual([guest]);
   });
 });
 

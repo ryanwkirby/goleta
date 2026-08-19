@@ -7,6 +7,7 @@ import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
 import { HostSettingsCog } from "./HostSettings.tsx";
+import { PlayerSettingsCog } from "./PlayerSettings.tsx";
 import { QrGlyph } from "./QrCode.tsx";
 
 /**
@@ -86,6 +87,9 @@ export function PeekStrip({
   mine,
   onShowInvite,
   onShowRules,
+  hints,
+  onChooseHints,
+  seated,
   send,
 }: {
   room: RoomView;
@@ -103,6 +107,10 @@ export function PeekStrip({
   onShowInvite: () => void;
   /** The way back to the rules, which this view had none of before #195. */
   onShowRules: () => void;
+  /** Your own settings (#188). A watcher has no cards, so no cog. */
+  hints: boolean;
+  onChooseHints: (on: boolean) => void;
+  seated: boolean;
   /** Only the host's cog reaches this, and only to set what the cog holds. */
   send: (message: ClientMessage) => void;
 }) {
@@ -168,6 +176,13 @@ export function PeekStrip({
             held. #188 puts a *player's* cog top-left as well; it goes beside
             this one rather than in place of it, and the two have to stay legible
             as different things — this one changes the table for everybody. */}
+        {/* Yours first and the host's second, the same order and the same two
+            glyphs as the upright header, so the pair means the same thing
+            whichever way the phone is held (#188). */}
+        {seated ? (
+          <PlayerSettingsCog hints={hints} onHints={onChooseHints} className="-my-1" />
+        ) : null}
+
         {room.hostId === game.you ? (
           <HostSettingsCog
             rules={room.houseRules}

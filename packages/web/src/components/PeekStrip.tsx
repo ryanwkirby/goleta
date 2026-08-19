@@ -1,4 +1,4 @@
-import type { GameView, RoomView } from "@goleta/engine";
+import type { ClientMessage, GameView, RoomView } from "@goleta/engine";
 
 import type { NameOf } from "../lib/format.ts";
 import { useFullscreen } from "../lib/fullscreen.ts";
@@ -7,6 +7,7 @@ import { DECK, PILE } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
+import { HostSettingsCog } from "./HostSettings.tsx";
 import { QrGlyph } from "./QrCode.tsx";
 import { SunnySign } from "./Sunny.tsx";
 
@@ -32,6 +33,20 @@ import { SunnySign } from "./Sunny.tsx";
  * from the orientation it is about — `RotatePanel` is shown only to a phone held
  * upright, and a phone already sideways when the cards come out is deliberately
  * never prompted at all (#125).
+ *
+ * **The host's cog and the way back to the rules are here for a third reason:
+ * they were nowhere at all** (#194, #195). `HandView` has no header, so the
+ * cog rendered in the upright one simply did not exist here, and a host at an
+ * IRL table — a host holding a phone sideways, which is the whole point of this
+ * view — had to turn the phone upright to reach the house rules. The rules had
+ * the same gap and it is worse: landscape is the IRL view, an IRL table is
+ * where the new players are, and looking a rule up is a thing that happens
+ * mid-hand.
+ *
+ * Both go in the cluster rather than at the right-hand end, which belongs to
+ * the prompt, the sun and the deck. The cluster is the one part of this row
+ * allowed to wrap, so it is the only place a new control may take its width
+ * from — see the note on the row itself.
  *
  * What the table is waiting for is said in full rather than as whose turn it is:
  * the prompt is a superset — it numbers the steps of a landed call and says who
@@ -68,6 +83,8 @@ export function PeekStrip({
   prompt,
   mine,
   onShowInvite,
+  onShowRules,
+  send,
 }: {
   room: RoomView;
   game: GameView;
@@ -84,6 +101,10 @@ export function PeekStrip({
   mine: boolean;
   /** Tapping the room code: the invite, opened by whoever is holding the phone. */
   onShowInvite: () => void;
+  /** The way back to the rules, which this view had none of before #195. */
+  onShowRules: () => void;
+  /** Only the host's cog reaches this, and only to set what the cog holds. */
+  send: (message: ClientMessage) => void;
 }) {
   const { anchor, pileFace } = useMotion();
   const fullscreen = useFullscreen();
@@ -133,8 +154,37 @@ export function PeekStrip({
         about. Absent, not disabled, where the API doesn't exist, and it takes
         itself away once fullscreen is held and comes back if the browser drops
         it.
+
+        The host's cog (#194) and the way back to the rules (#195) are here for
+        the same reason as each other: this view had neither, and the two of them
+        are the same question with the same answer. A host at an IRL table is a
+        host holding a phone sideways — which is the entire point of this view —
+        and could not reach the house rules without turning it upright; and
+        "wait, what happens if I can't play anything?" is a question people ask
+        mid-hand, at exactly the table where the new players are.
       */}
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
+        {/* Leading the cluster, as it leads the upright header, so the host's
+            door into the table is in the same corner whichever way the phone is
+            held. #188 puts a *player's* cog top-left as well; it goes beside
+            this one rather than in place of it, and the two have to stay legible
+            as different things — this one changes the table for everybody. */}
+        {room.hostId === game.you ? (
+          <HostSettingsCog
+            rules={room.houseRules}
+            irl={room.irl}
+            onRules={(rules) => send({ t: "setHouseRules", rules })}
+            onIrl={(on) => send({ t: "setIrl", on })}
+            // 44px of target painted out of 36px of row. The strip's height is
+            // the pile card's 56px, and the cluster is allowed to wrap within
+            // itself precisely because two lines of small print still come to
+            // less than that — a full 44px line would spend the difference, and
+            // what it would spend it out of is the hand. The negative margin
+            // keeps the target whole and hands the layout back the slack.
+            className="-my-1"
+          />
+        ) : null}
+
         {/* Tappable here for the same reason as upright, and this is the one
             that matters: an IRL table is every phone in this view, so the way
             in that somebody actually holds out to a newcomer is this one
@@ -154,6 +204,25 @@ export function PeekStrip({
           ].join(" ")}
         >
           <QrGlyph />
+        </button>
+
+        {/* The same screen the upright header opens, and the same one #196 is
+            reshaping — five headlines you can expand. It opens without the
+            first-run hints question: that belongs to the first time through,
+            not to a mid-hand look-up. Nothing pauses behind it, exactly as
+            upright — the game is on the server, and a challenge window can
+            close while you are reading, which is the deal the full table has
+            always had. */}
+        <button
+          type="button"
+          onClick={onShowRules}
+          className={[
+            "flex shrink-0 items-center rounded-md px-1.5 py-1 text-xs text-white/40",
+            "transition-colors hover:text-white/70",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+          ].join(" ")}
+        >
+          rules
         </button>
 
         {fullscreen.offer ? (

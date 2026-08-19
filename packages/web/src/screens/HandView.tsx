@@ -38,6 +38,13 @@ export interface HandViewProps {
   stalled: boolean;
   onAskForHelp: () => void;
   onShowInvite: () => void;
+  /**
+   * The way back to the rules screen (#195). Landscape had none: the upright
+   * table has a `rules` button in its header and this view has no header at
+   * all, so the answer to "what happens if I can't play anything?" was to turn
+   * the phone over, find the row of small grey print and come back.
+   */
+  onShowRules: () => void;
   shouting: boolean;
   /**
    * Somebody else asking for a hand, by name — drawn in the strip, because this
@@ -102,6 +109,7 @@ export function HandView({
   stalled,
   onAskForHelp,
   onShowInvite,
+  onShowRules,
   shouting,
   helpFrom,
   accusing,
@@ -158,6 +166,8 @@ export function HandView({
         prompt={prompt}
         mine={mine}
         onShowInvite={onShowInvite}
+        onShowRules={onShowRules}
+        send={send}
       />
 
       <div className="flex min-h-0 flex-1 flex-col">

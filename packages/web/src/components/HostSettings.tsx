@@ -221,17 +221,38 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
  * already watching — the one thing on the lobby's settings panel that is a
  * genuine "between games only", and the server still refuses it. The lobby is
  * where it stays.
+ *
+ * **It is drawn at 44px in both layouts, and it exists in both** (#194). It was
+ * a `text-base` glyph in a `p-1` box — sixteen pixels of ink and a 24px target,
+ * in a header of small grey print, at the far left where the eye does not go —
+ * and hosts did not find it. It is also the host's only way back to everything
+ * the lobby held, so being hard to spot is the whole of what is wrong with it.
+ * 44px is the number the rest of this app designs to (`handFan.ts` has the same
+ * floor, for the same reason), and the ink is drawn to match rather than left
+ * as punctuation in a bigger box.
+ *
+ * And it used to render only in the upright header, which `HandView` does not
+ * have — so a host at an IRL table, which is to say a host holding a phone
+ * sideways, which is the entire point of that view, could not reach their own
+ * settings without turning the phone upright. It goes in the peek strip's
+ * small-print cluster now, which is the one part of that row allowed to wrap.
+ *
+ * One size and one look in both places, deliberately: it is the same door, and
+ * a control that changed shape with the orientation would read as two.
  */
 export function HostSettingsCog({
   rules,
   irl,
   onRules,
   onIrl,
+  className = "",
 }: {
   rules: HouseRules;
   irl: boolean;
   onRules: (rules: HouseRules) => void;
   onIrl: (on: boolean) => void;
+  /** Where the caller wants it sat in its row. The size is not the caller's. */
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -244,9 +265,14 @@ export function HostSettingsCog({
         title="Table settings"
         onClick={() => setOpen(true)}
         className={[
-          "-m-1 shrink-0 rounded-lg p-1 text-base leading-none text-white/60",
-          "transition-colors hover:text-white",
+          // 44px square, the floor everything here is designed to. The glyph is
+          // drawn at a size that fills it rather than sitting in the middle of
+          // it: a big target around a small mark still reads as small print.
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
+          "text-xl leading-none text-white/60",
+          "transition-colors hover:bg-white/5 hover:text-white",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+          className,
         ].join(" ")}
       >
         <span aria-hidden>⚙</span>

@@ -497,6 +497,7 @@ export function Table({
           stalled={stalled}
           onAskForHelp={askForHelp}
           onShowInvite={() => setInviting(true)}
+          onShowRules={onShowRules}
           shouting={shoutingHere}
           helpFrom={helpFrom ? nameOf(helpFrom.playerId) : null}
           accusing={accusing}
@@ -559,6 +560,12 @@ export function Table({
               irl={room.irl}
               onRules={(rules) => send({ t: "setHouseRules", rules })}
               onIrl={(on) => send({ t: "setIrl", on })}
+              // Pulled back over the column's own padding so the 44px box sits
+              // the glyph roughly on the margin the rest of the header keeps.
+              // The row was already this tall — `rules` and `leave` are
+              // `Button`s, and every `Button` is `min-h-11` — so the bigger
+              // target costs the header nothing.
+              className="-ml-2"
             />
           ) : null}
           {/* The code was four characters saying what the room was called and

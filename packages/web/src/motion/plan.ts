@@ -16,7 +16,6 @@ import { cardAnchor, DECK, HAND, PILE, seatAnchor, type AnchorKey } from "./anch
 
 export const FLIGHT_MS = 220;
 const DEAL_MS = 190;
-const RESHUFFLE_MS = 260;
 
 /** Gap between one card's flight and the next in the same batch. */
 const BEAT_MS = 110;
@@ -40,8 +39,41 @@ const DEAL_BEAT_MS = 38;
 const DEAL_WINDOW_MS = 820;
 /** A burst that would run longer than this is compressed rather than queued. */
 const BATCH_CAP_MS = 900;
-/** The pile is a stack; shuffling it back only needs to look like a few cards. */
-const RESHUFFLE_CARDS = 3;
+
+/**
+ * How long the whole table stops for a reshuffle (#209).
+ *
+ * It is one of the biggest things that happens in a game and it used to pass in
+ * under half a second — three face-down cards at 260ms on a 60ms stagger, and
+ * less than that in practice, because a recycle always arrives batched with the
+ * `drew` and `turnedUp` around it and `BATCH_CAP_MS` squeezed the whole burst
+ * into 900ms. What people at the table saw was the deck count jumping, the pile
+ * dropping to one card, the card to match changing, and play carrying on. They
+ * read it as the game skipping ahead and asked what had happened.
+ *
+ * Five seconds, next to `PEEL_MS` and `ANNOUNCE_MS`, because it is the same
+ * kind of number: the length of a moment the whole table is in, rather than a
+ * decision any one screen gets to make. It is affordable because this happens
+ * once or twice in a game rather than once a turn — if a variant ever makes it
+ * frequent, this is the figure to revisit.
+ */
+export const RESHUFFLE_MS = 4800;
+
+/**
+ * The pile going back into the deck, slowly enough to watch.
+ *
+ * Nine rather than three, at more than twice the duration and six times the
+ * stagger. The last card lands around 3.7s into a 4.8s beat, which leaves a
+ * held second at the end for the words to be read before the new card turns
+ * up — "visible for most of it" is the ask, not "busy for all of it".
+ *
+ * Every one of them is face down and must stay that way. The recycled pile is
+ * shuffled and its order *is* deck order, which `redact.ts` guards; the only
+ * face this moment shows is the card `turnedUp` flies at the end of it.
+ */
+export const RESHUFFLE_CARDS = 9;
+export const RESHUFFLE_BEAT_MS = 380;
+const RESHUFFLE_FLIGHT_MS = 620;
 
 export interface FlightPlan {
   id: string;
@@ -135,6 +167,16 @@ export const planFlights = (
   const flights: FlightPlan[] = [];
   let emptiesPile = false;
   let deals = false;
+  /**
+   * Where the compressible part of this batch begins.
+   *
+   * The peel and the reshuffle are deliberate holds, and a hold may not be
+   * squeezed to fit `BATCH_CAP_MS` — the cap exists to stop the table narrating
+   * a queue of bot moves it has already left behind, which is the opposite
+   * problem. Everything the table is still *waiting* for, on the far side of
+   * the last hold, is fair game. See `compress`.
+   */
+  let floor = 0;
   // Events in a batch happened in order and should read that way, so each one
   // starts a beat after the last rather than all at once.
   let cursor = 0;
@@ -221,7 +263,24 @@ export const planFlights = (
         break;
       }
 
+      /**
+       * The deck running out, given a beat of its own (#209).
+       *
+       * The flights are the smaller half of it: what makes this readable is
+       * that **nothing else in the batch moves until it is over**. `cursor`
+       * jumps the full `RESHUFFLE_MS` rather than to the end of the last
+       * flight, so the card turned up afterwards — which always arrives in the
+       * same breath — lands on the far side of the hold instead of chasing the
+       * last card back into the deck.
+       *
+       * That hold is also why `held` is set: `compress` must not squeeze a
+       * pause somebody is meant to sit through, which is the same rule the peel
+       * has and the same rule this beat needs for a different reason. The peel
+       * gets it for free by being first in its batch; a recycle is in the
+       * middle of one.
+       */
       case "reshuffled": {
+        const start = cursor;
         for (let index = 0; index < RESHUFFLE_CARDS; index += 1) {
           add({
             card: null,
@@ -229,13 +288,14 @@ export const planFlights = (
             to: [DECK],
             size: scale.pile,
             fromSize: scale.pile,
-            duration: RESHUFFLE_MS,
+            delay: start + index * RESHUFFLE_BEAT_MS,
+            duration: RESHUFFLE_FLIGHT_MS,
             hides: null,
             toPile: false,
           });
-          cursor += 60;
         }
-        cursor += BEAT_MS;
+        cursor = start + RESHUFFLE_MS;
+        floor = cursor;
         break;
       }
 
@@ -255,6 +315,7 @@ export const planFlights = (
        */
       case "sunnyCalled": {
         cursor += PEEL_MS;
+        floor = cursor;
         if (event.returned.length === 0) break;
         cursor += CALL_BEAT_MS;
         for (const card of event.returned) {
@@ -285,7 +346,7 @@ export const planFlights = (
     }
   }
 
-  return { flights: compress(flights), emptiesPile, deals };
+  return { flights: compress(flights, floor), emptiesPile, deals };
 };
 
 /**
@@ -351,21 +412,29 @@ const dealFlights = (
  * behind, squeeze the delays so the whole batch still finishes promptly.
  *
  * The cap is on how long the burst takes, not on how long the table waits
- * before it starts. A batch that opens with a deliberate hold — the peel — is
- * measured from the end of it, because squeezing the hold would drag the rewind
- * back underneath the evidence it is meant to follow.
+ * before it starts. `floor` is where the waiting ends: the cursor on the far
+ * side of the last deliberate hold in the batch. Nothing before it is touched,
+ * and everything after it is measured from there.
+ *
+ * That used to be `Math.min(...delays)`, which worked only because the one hold
+ * there was — the peel — opens its batch. A recycle lands in the *middle* of
+ * one, between the draw that emptied the deck and the card turned up after it,
+ * so the earliest flight is a reshuffle card at delay zero and the span
+ * measured from there would have squeezed five seconds into 900ms (#209). The
+ * hold's own flights sit below the floor and are left exactly where they were.
  */
-const compress = (flights: FlightPlan[]): FlightPlan[] => {
+const compress = (flights: FlightPlan[], floor: number): FlightPlan[] => {
   if (flights.length === 0) return flights;
-  const delays = flights.map((flight) => flight.delay);
-  const held = Math.min(...delays);
-  const span = Math.max(...delays) - held;
+  const burst = flights.filter((flight) => flight.delay >= floor);
+  if (burst.length === 0) return flights;
+  const span = Math.max(...burst.map((flight) => flight.delay)) - floor;
   if (span <= BATCH_CAP_MS) return flights;
   const factor = BATCH_CAP_MS / span;
-  return flights.map((flight) => ({
-    ...flight,
-    delay: held + Math.round((flight.delay - held) * factor),
-  }));
+  return flights.map((flight) =>
+    flight.delay < floor
+      ? flight
+      : { ...flight, delay: floor + Math.round((flight.delay - floor) * factor) },
+  );
 };
 
 /** When the last card in a batch comes to rest. */

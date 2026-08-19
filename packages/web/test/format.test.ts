@@ -128,3 +128,36 @@ describe("what the table is waiting for", () => {
     expect(asks(table({ phase: { kind: "suit", playerId: "p1" } }), false)).toBe("Name a suit.");
   });
 });
+
+describe("what the table is told when the deck runs out", () => {
+  it("says it in words, with the count that came on the wire", () => {
+    const line = turnPrompt(table(), nameOf, false, false, 31);
+
+    expect(line).toContain("Deck ran out");
+    expect(line).toContain("31");
+  });
+
+  it("outranks whose turn it is, because for five seconds it is the answer", () => {
+    // Every screen has this one line and only one of them has a log, so the
+    // reshuffle takes it while it lasts (#209).
+    const waiting = table({ waitingOn: "p1", you: "p1" });
+
+    expect(turnPrompt(waiting, nameOf, false)).toBe("Your turn.");
+    expect(turnPrompt(waiting, nameOf, false, false, 31)).toContain("Deck ran out");
+  });
+
+  it("does not outrank the game being over", () => {
+    const over = table({
+      status: "over",
+      winnerId: "p1",
+      phase: { kind: "over" },
+    });
+
+    expect(turnPrompt(over, nameOf, false, false, 31)).toContain("wins");
+  });
+
+  it("says nothing at all the rest of the time", () => {
+    expect(turnPrompt(table(), nameOf, false)).not.toContain("Deck ran out");
+    expect(turnPrompt(table(), nameOf, false, false, null)).not.toContain("Deck ran out");
+  });
+});

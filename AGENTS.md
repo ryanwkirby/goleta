@@ -316,6 +316,37 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   nothing that keeps a tappable pile from being tapped — the first bullet in this
   section still holds, and a guard rail there would be buying with the whole
   Sunny Rule what a `?` buys for nothing.
+- **A reshuffle holds the table for about five seconds, and holds nothing else
+  (#209).** The deck running out is one of the biggest things that happens in a
+  game and it used to pass in under half a second — three face-down cards, and
+  less than that in practice, because a recycle always arrives batched with the
+  `drew` and `turnedUp` around it and `BATCH_CAP_MS` squeezed the burst. People
+  read it as the game skipping ahead and asked what had happened.
+
+  `RESHUFFLE_MS` sits beside `PEEL_MS` and `ANNOUNCE_MS` because it is the same
+  kind of number: the length of a moment the whole table is in, so the timing is
+  a hook read off the log (`lib/reshuffle.ts`, the shape `useJudgedCall` set)
+  rather than a decision either screen makes. The words go on the **prompt
+  line**, which is the one surface all three screens have — the log says it too,
+  and the log is drawn on exactly one of them.
+
+  Four things it must not become. **Every card in it stays face down**: the
+  recycled pile is shuffled and its order *is* deck order, which `redact.ts`
+  guards, and the only face this moment shows is the card turned up at the end.
+  **It is presentation, never rules** — no server change, no engine event, and
+  `DEFAULT_BOT_TIMING` untouched, so bots may well move underneath it exactly as
+  they do under the peel. **It is not a gate on anything, least of all the draw
+  pile**, which stays tappable throughout with no warning and no disabled state;
+  five seconds of animation is a tempting place to quietly break the first rule
+  in this section. And **it queues behind a judged call rather than racing one**,
+  because a recycle can land in the same breath as a call and a landed call
+  rewinds the recycle — the peel goes first, always.
+
+  `compress` learned a `floor` for it. The cap is about a queue nobody is
+  watching any more; a hold is the opposite. It used to measure the span from
+  the earliest flight, which worked only because the peel opens its batch — a
+  recycle sits in the *middle* of one, so measuring from the first flight
+  squeezed five seconds into 900ms.
 - **The suit picker waits for the deal, and nothing else waits for anything.**
   `MotionApi.dealing` is the only "this layer is busy" the motion code exposes,
   and it is deliberately about the deal rather than about movement in general.

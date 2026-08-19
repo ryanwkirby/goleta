@@ -45,6 +45,8 @@ export interface HandViewProps {
    * the phone over, find the row of small grey print and come back.
    */
   onShowRules: () => void;
+  /** Cards to draw, while the deck running out is being watched (#209). */
+  reshuffling: number | null;
   /** Your own settings, which in landscape live on the strip (#188). */
   hints: boolean;
   onChooseHints: (on: boolean) => void;
@@ -120,6 +122,7 @@ export function HandView({
   onAskForHelp,
   onShowInvite,
   onShowRules,
+  reshuffling,
   hints,
   onChooseHints,
   shouting,
@@ -151,7 +154,7 @@ export function HandView({
    * shrinking the hand — while the cards were still going out (#75).
    */
   const { dealing } = useMotion();
-  const prompt = turnPrompt(game, nameOf, assist, dealing);
+  const prompt = turnPrompt(game, nameOf, assist, dealing, reshuffling);
 
   // Measured against the row's *content* box, and the row is the only thing
   // with padding — the hand inside it has none when it is fanning. So this is
@@ -175,7 +178,9 @@ export function HandView({
         offline={offline}
         helpFrom={helpFrom}
         prompt={prompt}
-        mine={mine}
+        // Loud for your own turn, and loud for the deck running out — which is
+        // nobody's turn and is the more important of the two while it lasts.
+        loud={mine || reshuffling !== null}
         onShowInvite={onShowInvite}
         onShowRules={onShowRules}
         hints={hints}

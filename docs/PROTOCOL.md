@@ -338,10 +338,24 @@ So the client sends `ping` every 10s and budgets 25s of total silence — measur
 against *anything* arriving, not just the answer — after which it closes the
 socket itself and reconnects through the ordinary `rejoin` / `watch` path. It
 runs the same check the moment the tab becomes visible or the machine reports
-itself online, and a budget that lapsed while the tab was frozen is judged the
-same as one that lapsed in the open: a socket nobody could vouch for is not a
-connection. Being wrong that way costs one round trip. Being wrong the other way
-shows somebody a board that has moved.
+itself online.
+
+**It judges nothing while the tab is hidden.** A hidden tab has its timers
+throttled to a minute or stopped altogether, so silence there is the browser's
+doing rather than the network's, and condemning a socket on it would reconnect a
+backgrounded tab in a quiet room once a minute for as long as it stayed
+backgrounded — each one costing the table a seat blinking away and back and the
+bots a rescheduling, to protect a board nobody is looking at. Nothing is lost by
+waiting: the browser answers the server's protocol-level pings from its network
+stack whether or not any script is running, so a hidden tab is never dropped for
+being quiet.
+
+The guarantee is therefore about what somebody can see: **any board on screen has
+been verified inside the budget.** Coming back from a lock screen is where the
+two rules meet, and it is judged the hard way — a socket nobody could vouch for
+is not a connection, so a long absence usually costs one reconnect on the way
+back. Being wrong that way costs a round trip. Being wrong the other way shows
+somebody a board that has moved.
 
 The figures are picked against the server's 60s, not against the network: this
 end gives up first and reconnects rather than waiting to be terminated, and 25s

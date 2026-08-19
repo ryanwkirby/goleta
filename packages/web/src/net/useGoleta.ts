@@ -213,15 +213,27 @@ export const useGoleta = (): Goleta => {
        *
        * Run on a timer and again the moment this tab is looked at or the
        * machine says it is online — the three ways a connection comes back
-       * from the dead without anybody noticing it died. A tab that has been
-       * hidden had its timers throttled or frozen, so a budget that ran out
-       * while nothing was watching it is judged the same as one that ran out
-       * in the open: **a socket nobody could vouch for is not a connection.**
-       * The cost of being wrong that way is one `rejoin` round trip; the cost
-       * of being wrong the other way is a player shown a board that has moved.
+       * from the dead without anybody noticing it died.
+       *
+       * **Nothing is judged while the tab is hidden**, and that is the whole
+       * of what makes the budget safe to act on. A hidden tab has its timers
+       * throttled to a minute or stopped altogether, so silence there is the
+       * browser's doing rather than the network's — and a socket condemned on
+       * it would reconnect a backgrounded tab in a quiet room once a minute,
+       * for as long as it stayed backgrounded. Every one of those costs the
+       * table a seat blinking away and back and the bots a rescheduling, to
+       * protect a board nobody is looking at.
+       *
+       * Which leaves the guarantee where it belongs: **any board somebody can
+       * see has been verified inside the budget.** Coming back from a lock
+       * screen is the one moment the two rules meet, and it is judged the hard
+       * way — a socket nobody could vouch for is not a connection. The cost of
+       * being wrong that way is one `rejoin` round trip. The cost of being
+       * wrong the other way is a player shown a board that has moved.
        */
       check = (): void => {
         if (mine !== generation || socket.readyState !== WebSocket.OPEN) return;
+        if (document.visibilityState === "hidden") return;
         if (Date.now() - lastHeard > SILENCE_MS) {
           // Ask for it to be closed, then stop waiting to hear about it — on a
           // network that has gone away the closing handshake is the same

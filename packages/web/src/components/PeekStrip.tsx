@@ -49,9 +49,9 @@ import { QrGlyph } from "./QrCode.tsx";
  * mid-hand.
  *
  * Both go in the cluster rather than at the right-hand end, which belongs to
- * the prompt, the sun and the deck. The cluster is the one part of this row
- * allowed to wrap, so it is the only place a new control may take its width
- * from — see the note on the row itself.
+ * the prompt, the sun and the deck. **Where anything new on this strip may go,
+ * and why, is stated once on the cluster element itself** — that is the rule to
+ * read before adding to this row, and it is deliberately not repeated here.
  *
  * What the table is waiting for is said in full rather than as whose turn it is:
  * the prompt is a superset — it numbers the steps of a landed call and says who
@@ -139,54 +139,63 @@ export function PeekStrip({
   return (
     <header
       className={[
-        // One line, and the give is inside the small print at the left rather
-        // than here. A row that wraps has to wrap *something*, and what it picks
-        // is whatever no longer fits — the draw pile, which is the one thing on
-        // this strip that has to be reachable, and which would take a card's
-        // height off the hand on the way down. Wrapping the cluster instead
-        // costs nothing at all: two lines of it are shorter than the pile card
-        // beside them.
+        // One line, and it never wraps — the give is inside the small print at
+        // the left instead. The cluster below says why.
         "flex shrink-0 items-center gap-3 border-b border-white/10 py-1",
         "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
       ].join(" ")}
     >
       {/*
-        Your own end of the strip, and it is this end deliberately: the right is
-        the draw reach (#117), and a control beside it is a control under a thumb
-        aimed at something else. The sort and the offer of help are here because
-        the alternative was a row of them under the cards, which cost the hand a
-        card size (#131).
+        ┌───────────────────────────────────────────────────────────────────┐
+        │ THIS IS WHERE ANYTHING NEW ON THIS STRIP GOES, AND HERE IS WHY.   │
+        └───────────────────────────────────────────────────────────────────┘
 
-        All of it is small print, so it wraps within itself before the strip
-        does. Two lines of it are still shorter than the pile card beside them,
-        which means the crowded hand — a missed call, an offer of help, a shout
-        and a dead socket at once — costs the cards nothing at all.
+        The strip is one line and must stay one line. A row that wraps has to
+        wrap *something*, and what it picks is whatever no longer fits — which
+        at the right-hand end is the draw pile, the one thing on this strip that
+        has to be reachable, and a card's height to push onto a second row. That
+        height comes straight off the hand, because `handHeight` measures the
+        room the strip leaves.
 
-        The offer of the screen is here rather than on `RotatePanel` because the
-        panel is only ever shown to a phone held *upright*, and a phone already
-        sideways when the cards come out is never prompted — so the one offer of
-        screen space in the app was unreachable from the orientation it was
-        about. Absent, not disabled, where the API doesn't exist, and it takes
-        itself away once fullscreen is held and comes back if the browser drops
-        it.
+        This cluster is the release valve. It is all small print, so it wraps
+        *within itself* before the strip does, and two wrapped lines of it still
+        come to less than the 56px pile card beside them — so the crowded case (a
+        missed call, an offer of help, a shout and a dead socket at once) costs
+        the cards nothing.
 
-        The host's cog (#194) and the way back to the rules (#195) are here for
-        the same reason as each other: this view had neither, and the two of them
-        are the same question with the same answer. A host at an IRL table is a
-        host holding a phone sideways — which is the entire point of this view —
-        and could not reach the house rules without turning it upright; and
-        "wait, what happens if I can't play anything?" is a question people ask
-        mid-hand, at exactly the table where the new players are.
+        **So: the right-hand end belongs to the prompt, the sun and the deck, and
+        this cluster is the only part of the row a new control may take its width
+        from.** Nothing else on this strip may grow.
+
+        It is also the correct end on its own merits: the right is the draw reach
+        (#117), and a control beside it is a control under a thumb aimed at
+        something else.
+
+        What is already here, and why each earned its place:
+
+        - The sort and the offer of help — the alternative was a row of them
+          under the cards, which cost the hand a card size (#131).
+        - The offer of the screen — `RotatePanel` is shown only to a phone held
+          *upright*, and a phone already sideways when the cards come out is
+          never prompted, so the app's one offer of screen space was unreachable
+          from the orientation it is about. Absent rather than disabled where the
+          API doesn't exist; it takes itself away once fullscreen is held and
+          comes back if the browser drops it.
+        - The host's cog (#194) and the way back to the rules (#195) — this view
+          had neither, and they are the same question with the same answer. A
+          host at an IRL table is a host holding a phone sideways, which is the
+          entire point of this view, and could not reach the house rules without
+          turning it upright; and "what happens if I can't play anything?" is
+          asked mid-hand, at exactly the table where the new players are.
       */}
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
-        {/* Leading the cluster, as it leads the upright header, so the host's
-            door into the table is in the same corner whichever way the phone is
-            held. #188 puts a *player's* cog top-left as well; it goes beside
-            this one rather than in place of it, and the two have to stay legible
-            as different things — this one changes the table for everybody. */}
-        {/* Yours first and the host's second, the same order and the same two
+        {/* Yours first and the host's second — the same order and the same two
             glyphs as the upright header, so the pair means the same thing
-            whichever way the phone is held (#188). */}
+            whichever way the phone is held, and the host's door into the table
+            is in the same corner either way. They go beside each other rather
+            than one in place of the other, and must stay legible as different
+            things: a person and a gear, one of which changes the game for
+            everybody (#188). */}
         {seated ? (
           <PlayerSettingsCog hints={hints} onHints={onChooseHints} className="-my-1" />
         ) : null}
@@ -201,12 +210,10 @@ export function PeekStrip({
             onIrl={(on) => send({ t: "setIrl", on })}
             onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
             onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
-            // 44px of target painted out of 36px of row. The strip's height is
-            // the pile card's 56px, and the cluster is allowed to wrap within
-            // itself precisely because two lines of small print still come to
-            // less than that — a full 44px line would spend the difference, and
-            // what it would spend it out of is the hand. The negative margin
-            // keeps the target whole and hands the layout back the slack.
+            // 44px of target painted out of 36px of row: a full-height line
+            // would spend the cluster's slack, and what it spends it out of is
+            // the hand. The negative margin keeps the target whole and hands the
+            // layout back the difference.
             className="-my-1"
           />
         ) : null}

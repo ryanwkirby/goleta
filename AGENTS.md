@@ -991,6 +991,55 @@ that serialises a redacted payload and asserts none of them appear anywhere in
 it. Any new field on the game state has to be considered there, and it defaults
 to *not* being sent.
 
+### File size is not this repo's cost driver, and that was measured
+
+This one reads as an oversight and is the reverse of one. There are files here
+well over five hundred lines, and splitting one is the first thing a fresh pair
+of eyes reaches for. It was tried, four times, and it did nothing. **Do not
+split a file because it is large, and do not expect a split to pay for itself.**
+
+One real change from this backlog (#220) was made by a fresh agent on four
+different trees, from a byte-identical prompt each time:
+
+| Tree | Tokens | Tools | Secs |
+| --- | ---: | ---: | ---: |
+| before any of it | 106,518 | 34 | 376 |
+| `Table.tsx` 1,016 → 355, split by state/render | 118,414 | 42 | 447 |
+| rationale consolidated, import cycles fixed | 109,592 | 33 | 359 |
+| `Sunny.tsx` 677 → seven files, split by component | 106,196 | 38 | 363 |
+
+**Net across the whole programme: −0.3% tokens.** Both shapes of split were
+tried — one cohesive file cut along its seam, one file holding eight unrelated
+things — and neither moved the total. The cohesive split made it *worse* by 11%,
+because a change needing both halves then read both halves.
+
+Every arm named a costliest file. It was never the same one twice and never one
+the previous step had just fixed: `Table.tsx` → `Sunny.tsx` and `PeekStrip.tsx`
+→ `Sunny.tsx` → `HandView.tsx`, the last of which was named for a question it
+changed nothing to answer. The complaint relocates and the total stays put,
+because what costs here is assembling **interlocking domain constraints** rather
+than finding code, and that does not get cheaper when the constraints are spread
+over more files.
+
+Two things this does not claim. Splitting for **cohesion** — one file doing two
+genuinely unrelated jobs — is ordinary good practice, and #234 was a reasonable
+change on its own terms; what is ruled out is splitting on a line count and
+expecting the next change to be cheaper for it. And the programme bought real
+things no token count shows: 490 tests against 391, a DAG the build enforces
+instead of a claim in a commit message, and rationale stated once.
+
+The reusable lesson is the mis-step at the front of it. **`Table.tsx` was chosen
+as the target because 48 of 233 commits had touched it, and historical churn did
+not predict where the work actually was** — of the nine issues open at the time,
+none was squarely in it. If cost is attacked again, attack what every arm
+actually complained about: constraints living far from the code they constrain
+(#235), and facts that live only in prose (#236).
+
+The evidence is `bench/results.md` in full, the protocol for adding to it is
+`bench/README.md`, and `REFACTOR_FINDINGS.md` and `REFACTOR_PLAN.md` carry what
+was concluded. Read them before re-deriving any of this from first principles,
+which is exactly how it came to be run the first time.
+
 ## Testing
 
 - Engine tests are the safety net for the rules; every rule in `docs/RULES.md`

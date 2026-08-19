@@ -8,6 +8,22 @@ Round one's plan is in the git history at `6b3f635`; every step of it shipped.
 
 ---
 
+## Answered — round two is finished, and the answer is "not demonstrated"
+
+Round two shipped (#235/#236/#237) and was measured twice. **−19.2% on the task
+it was shaped around, −1.4% on the one other task the backlog could offer.** The
+plan below said what to do in that case before the numbers were known, so it
+stands: **stop optimising for token cost and spend the effort on the feature
+backlog.**
+
+The rest of this file is left as written, because it is the plan the result is
+read against. `bench/results.md` § "Second task" has the detail, including why
+the control was a weak test and the harness bug that cost one thrown-out arm.
+
+What to keep: the signposts and the in-code answers are correct on their own
+terms and cost nothing to carry. What not to do: another round of this,
+expecting it to pay.
+
 ## The goal, stated so it can fail
 
 Round one asked whether shrinking the largest file makes the next change

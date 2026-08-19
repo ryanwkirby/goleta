@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
 import { EventLog } from "../components/EventLog.tsx";
-import { Hand, HandSortButton, type HandMode } from "../components/Hand.tsx";
+import { Hand, HandSortButton } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { RotatePanel } from "../components/RotatePanel.tsx";
 import { TakeYourSeat } from "../components/TakeYourSeat.tsx";
@@ -27,6 +27,7 @@ import { RoomInvite } from "../components/RoomInvite.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { handStep } from "../lib/handFan.ts";
+import { assisting, handMode } from "../lib/handMode.ts";
 import { useBox } from "../lib/measure.ts";
 import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
 import { ANNOUNCE_MS } from "../lib/beats.ts";
@@ -317,25 +318,7 @@ export function Table({
     if (accusing !== null && !stillAccusable) stopAccusing();
   }, [accusing, stillAccusable, stopAccusing]);
 
-  /**
-   * Whether the table is marking up your playable cards.
-   *
-   * Three sources, and #187 changed exactly one of them. `hints` is your own
-   * standing preference, read live, set from the rules screen or your own cog
-   * and changeable at any time — it used to be `finishedGames === 0 &&
-   * wantedHints`, a countdown nobody set which expired after one game.
-   *
-   * The other two are untouched. `sunnyPlay` is the play you owe after a call
-   * has landed on you: you have already been caught, the move is forced, and
-   * there is nothing left to fumble. And `helpedTurn` is a single turn bought
-   * with `want help?`, out loud, in front of everybody.
-   *
-   * Being caught out having a play you didn't make is the whole subject of the
-   * Sunny Rule, and an app that points at the answer never lets anyone be
-   * caught — which is why turning this on is public. See `SeatView.hinted`.
-   */
-  const assist =
-    game.phase.kind === "sunnyPlay" || hints || helpedTurn === game.turnNumber;
+  const assist = assisting(game, hints, helpedTurn);
 
   /**
    * Telling the room what this browser wants, so the table can see it.
@@ -488,19 +471,7 @@ export function Table({
    */
   const helpFrom = shouts.findLast((shout) => shout.playerId !== game.you) ?? null;
 
-  // Dead from the moment the call lands until the dialog is dismissed. The tap
-  // that would have fired the forced play is very often the tail of the one
-  // that drew the card you were caught for, and a punishment served before
-  // you've watched the evidence and read the sentence isn't one.
-  const mode: HandMode = caughtHold
-    ? "idle"
-    : game.phase.kind === "surrender" && game.phase.playerId === game.you
-      ? "surrender"
-      : mine && game.phase.kind === "sunnyPlay"
-        ? "forced"
-        : mine && game.phase.kind === "action"
-          ? "play"
-          : "idle";
+  const mode = handMode(game, mine, caughtHold);
 
   /** The server stamps the real seat on every intent; this id is a courtesy. */
   const me = game.you ?? "";

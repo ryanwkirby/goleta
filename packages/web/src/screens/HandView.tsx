@@ -12,7 +12,7 @@ import { handHeight, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
 import { useMotion } from "../lib/motion.ts";
 import { cardWidthAt } from "../lib/cardShape.ts";
-import type { HandMode } from "../components/Hand.tsx";
+import type { HandMode } from "../lib/handMode.ts";
 import type { HandSort } from "../lib/sort.ts";
 import type { GoletaError } from "../lib/feed.ts";
 import type { Card, ShoutKind } from "@goleta/engine";

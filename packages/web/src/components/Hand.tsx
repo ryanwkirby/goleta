@@ -15,6 +15,7 @@ import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
 import { cardAnchor, HAND } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
 import { PlayingCard } from "./Card.tsx";
+import type { HandMode } from "../lib/handMode.ts";
 import { CARD_WIDTH_PX, cardWidthAt, type CardSize } from "../lib/cardShape.ts";
 
 /**
@@ -23,7 +24,6 @@ import { CARD_WIDTH_PX, cardWidthAt, type CardSize } from "../lib/cardShape.ts";
  * does: it is one step of a punishment, and a punishment you can fire off with
  * a stray thumb is one you never find out you were served (#66).
  */
-export type HandMode = "play" | "forced" | "surrender" | "idle";
 
 /** The moves that ask twice, because you can't take them back. */
 const CONFIRMS: ReadonlySet<HandMode> = new Set<HandMode>(["forced", "surrender"]);

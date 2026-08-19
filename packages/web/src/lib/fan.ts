@@ -39,6 +39,23 @@ const GAP = 4;
 /** A seat's `px-3`, and the `min-w-32` it keeps however few cards it holds. */
 const SEAT_PAD = 24;
 const SEAT_MIN = 128;
+
+/**
+ * A collapsed seat's `min-w-20`, which is what an eliminated player costs the
+ * strip since #192.
+ *
+ * **This is the part of that change that is easy to miss.** `fanTable` is
+ * handed card counts and works the strip's width out from them, and
+ * `seatWidth(0, sliver)` returns `SEAT_MIN` — 128px, far wider than a name
+ * chip. Left alone, the fan would go on reserving a full seat for something no
+ * longer drawn as one and tighten everybody else's cards to pay for it, which
+ * is the opposite of the point.
+ *
+ * A long name grows the chip past this, exactly as a long name already grows a
+ * live seat past `SEAT_MIN`: names are outside this arithmetic on purpose, and
+ * the strip scrolls, which #59 settled as the acceptable cost.
+ */
+const SEAT_OUT_MIN = 80;
 /** `gap-2`, between one seat and the next. */
 const SEAT_GAP = 8;
 
@@ -65,13 +82,23 @@ export const TIGHTEST = 22;
 export const handWidth = (cards: number, sliver: number): number =>
   cards > 0 ? (cards - 1) * sliver + CARD : 0;
 
-/** The same, as the seat around it: its padding, and the width it never goes under. */
-export const seatWidth = (cards: number, sliver: number): number =>
-  Math.max(SEAT_MIN, handWidth(cards, sliver) + SEAT_PAD);
+/**
+ * What one seat costs the strip: a hand of that many cards, or a chip.
+ *
+ * Two kinds rather than a number and a flag, because an eliminated seat is not
+ * a hand of zero — it is a different shape, whose width owes nothing to the
+ * sliver and never wraps. `number` is assignable to it, so a caller with no out
+ * seats says exactly what it always said.
+ */
+export type SeatHand = number | "out";
+
+/** The seat around a hand: its padding, and the width it never goes under. */
+export const seatWidth = (hand: SeatHand, sliver: number): number =>
+  hand === "out" ? SEAT_OUT_MIN : Math.max(SEAT_MIN, handWidth(hand, sliver) + SEAT_PAD);
 
 /** Every seat side by side, which is what has to fit the strip. */
-export const stripWidth = (hands: readonly number[], sliver: number): number =>
-  hands.reduce((total, cards) => total + seatWidth(cards, sliver), 0) +
+export const stripWidth = (hands: readonly SeatHand[], sliver: number): number =>
+  hands.reduce<number>((total, hand) => total + seatWidth(hand, sliver), 0) +
   SEAT_GAP * Math.max(0, hands.length - 1);
 
 export interface Fan {
@@ -82,7 +109,7 @@ export interface Fan {
 }
 
 /** The loosest sliver that fits the whole strip, or the floor if none does. */
-const tighten = (available: number, hands: readonly number[]): number => {
+const tighten = (available: number, hands: readonly SeatHand[]): number => {
   for (let sliver = LOOSEST; sliver > TIGHTEST; sliver--) {
     if (stripWidth(hands, sliver) <= available) return sliver;
   }
@@ -96,6 +123,16 @@ const rowCapacity = (available: number, sliver: number): number => {
 };
 
 /**
+ * How many rows one hand takes. A collapsed seat takes none, because it has no
+ * cards to put in them, and that is its answer at every width — which is also
+ * what `null` means here, for a strip that has not been measured yet.
+ */
+const rowsFor = (hand: SeatHand, perRow: number | null): number => {
+  if (hand === "out" || hand === 0) return 0;
+  return perRow === null ? 1 : Math.ceil(hand / perRow);
+};
+
+/**
  * How to lay every hand on the table out, given the width the strip has to
  * spend and how many cards each seat is holding.
  *
@@ -106,12 +143,12 @@ const rowCapacity = (available: number, sliver: number): number => {
  * Before the strip has been measured there is nothing to fit anything to, so it
  * renders the way it always did and the observer corrects it in the same frame.
  */
-export const fanTable = (available: number, hands: readonly number[]): Fan => {
-  if (available <= 0) return { sliver: LOOSEST, rows: hands.map((cards) => (cards > 0 ? 1 : 0)) };
+export const fanTable = (available: number, hands: readonly SeatHand[]): Fan => {
+  if (available <= 0) return { sliver: LOOSEST, rows: hands.map((hand) => rowsFor(hand, null)) };
 
   const sliver = tighten(available, hands);
   const perRow = rowCapacity(available, sliver);
-  return { sliver, rows: hands.map((cards) => Math.ceil(cards / perRow)) };
+  return { sliver, rows: hands.map((hand) => rowsFor(hand, perRow)) };
 };
 
 /** A row of a fanned hand. Never empty, which is a promise `inRows` keeps. */

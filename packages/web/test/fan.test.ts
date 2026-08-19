@@ -8,6 +8,7 @@ import {
   seatWidth,
   stripWidth,
   TIGHTEST,
+  type SeatHand,
 } from "../src/lib/fan.ts";
 
 /** A desktop strip inside `max-w-3xl`, and a phone one. */
@@ -124,6 +125,67 @@ describe("when a hand wraps", () => {
 
   it("gives an eliminated player's empty hand no rows at all", () => {
     expect(fanTable(PHONE, [0, 5]).rows[0]).toBe(0);
+    expect(fanTable(PHONE, ["out", 5]).rows[0]).toBe(0);
+  });
+});
+
+/**
+ * A seat that has run out of cards collapses to a name chip and moves to the
+ * end of the strip (#192). The part that is easy to miss is this one: the fan
+ * works the strip's width out from card counts, and `seatWidth(0, …)` is
+ * `SEAT_MIN` — a full 128px reserved for something no longer drawn as a seat.
+ */
+describe("a table with players who are out", () => {
+  it("costs the strip less than a seat holding nothing did", () => {
+    // The old shape: an out player entered the arithmetic as a hand of zero.
+    expect(seatWidth("out", LOOSEST)).toBeLessThan(seatWidth(0, LOOSEST));
+    // And less than any live seat, at any sliver — that is the whole point.
+    for (const sliver of [LOOSEST, TIGHTEST, 30]) {
+      expect(seatWidth("out", sliver)).toBeLessThan(seatWidth(1, sliver));
+    }
+  });
+
+  it("does not change width as the fan tightens under it", () => {
+    // A chip has no cards in it, so there is nothing for a sliver to squeeze.
+    expect(seatWidth("out", LOOSEST)).toBe(seatWidth("out", TIGHTEST));
+  });
+
+  it("hands the room back to the hands that are still being read", () => {
+    // Six seats, three of them out — the late-game table the issue is about.
+    // Modelled as empty hands each out seat reserves `SEAT_MIN`, the survivors
+    // are squeezed to the floor to pay for it, and the cards get harder to read
+    // for the rest of the game. Modelled as chips they are drawn looser.
+    const asEmptyHands = [5, 5, 5, 0, 0, 0];
+    const asChips: SeatHand[] = [5, 5, 5, "out", "out", "out"];
+
+    expect(stripWidth(asChips, LOOSEST)).toBeLessThan(stripWidth(asEmptyHands, LOOSEST));
+    expect(fanTable(DESKTOP, asEmptyHands).sliver).toBe(TIGHTEST);
+    expect(fanTable(DESKTOP, asChips).sliver).toBeGreaterThan(TIGHTEST);
+  });
+
+  it("still fits the strip it was fitted to, out seats and all", () => {
+    for (const available of [PHONE, 500, DESKTOP]) {
+      for (const hands of [
+        ["out", 4] as SeatHand[],
+        [4, "out", 4] as SeatHand[],
+        ["out", "out", "out", 9] as SeatHand[],
+        [3, 3, 3, "out", "out"] as SeatHand[],
+      ]) {
+        const { sliver } = fanTable(available, hands);
+        if (sliver > TIGHTEST) expect(stripWidth(hands, sliver)).toBeLessThanOrEqual(available);
+      }
+    }
+  });
+
+  it("leaves a table with nobody out exactly as it was", () => {
+    expect(fanTable(PHONE, [7, 7, 7])).toEqual(fanTable(PHONE, [7, 7, 7]));
+    expect(seatWidth(7, LOOSEST)).toBe(handWidth(7, LOOSEST) + 24);
+  });
+
+  it("is nothing but chips once everybody else is out", () => {
+    const fan = fanTable(PHONE, ["out", "out", "out"]);
+    expect(fan.rows).toEqual([0, 0, 0]);
+    expect(stripWidth(["out", "out", "out"], fan.sliver)).toBeLessThan(PHONE);
   });
 });
 

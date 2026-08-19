@@ -1,8 +1,15 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefCallback,
+} from "react";
 
 import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
-import { fanTable, inRows } from "../lib/fan.ts";
+import { fanTable, inRows, type SeatHand } from "../lib/fan.ts";
 import { inTurnOrder, nextStillIn } from "../lib/seating.ts";
 import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
@@ -26,6 +33,52 @@ const nameFor = (room: RoomView, id: string): string =>
 const hasSun = (game: GameView, playerId: string): boolean =>
   game.sunnyCallable && game.sunnyTargetId === playerId;
 
+/**
+ * A seat that has run out of cards, collapsed to its name (#192).
+ *
+ * It used to keep a full-width seat for the rest of the game — `SEAT_MIN` is
+ * 128px — faded to `opacity-45` with the word *out* where the count goes. At a
+ * table of eight, late on, the hands that still mattered were competing for
+ * width with three seats holding nothing, in a strip whose whole job is showing
+ * hands you can read.
+ *
+ * It is still on screen and still named, which is the honest half of the old
+ * rule: they are still at the table. What goes is the width, and with it the
+ * word — a chip this size, faded, at the end of the strip, is not somewhere
+ * anybody looks for a card count. The word survives for a screen reader, which
+ * has no fade and no position to read it off.
+ *
+ * No sun and no shout. Neither can happen to somebody with no hand: a call is
+ * about a draw, and the offer of help is about a turn.
+ */
+function OutSeat({
+  playerId,
+  name,
+  seatRef,
+}: {
+  playerId: string;
+  name: string;
+  seatRef: RefCallback<HTMLElement>;
+}) {
+  return (
+    <li
+      ref={seatRef}
+      data-seat={playerId}
+      title={`${name} is out`}
+      className={[
+        // `min-w-20` is the number `SEAT_OUT_MIN` in `fan.ts` is holding a
+        // place for; keep the two in step. A longer name grows it, exactly as a
+        // longer name already grows a live seat past `min-w-32`.
+        "flex min-w-20 shrink-0 items-center rounded-xl bg-black/20 px-3 py-2 text-sm",
+        "font-semibold text-white opacity-45 ring-1 ring-white/10",
+      ].join(" ")}
+    >
+      {name}
+      <span className="sr-only"> is out</span>
+    </li>
+  );
+}
+
 function Seat({
   player,
   room,
@@ -47,14 +100,22 @@ function Seat({
   const out = player.eliminated;
   const sun = hasSun(game, player.id);
 
+  // Kept even for a seat with nothing left to fly to it: the anchor is how the
+  // motion layer knows where this seat is, and a `data-seat` is how the strip
+  // finds one to scroll to. Neither wants a hole in it.
+  const seatRef = anchor(seatAnchor(player.id));
+
+  if (out) {
+    return <OutSeat playerId={player.id} name={nameFor(room, player.id)} seatRef={seatRef} />;
+  }
+
   return (
     <li
-      ref={anchor(seatAnchor(player.id))}
+      ref={seatRef}
       data-seat={player.id}
       className={[
         "relative min-w-32 shrink-0 rounded-xl px-3 py-2 ring-1 transition-colors",
         onClock ? "bg-amber-400/15 ring-amber-300/60" : "bg-black/20 ring-white/10",
-        out ? "opacity-45" : "",
       ].join(" ")}
     >
       {/* Somebody asking for a hand, said out loud over their own cards. */}
@@ -78,10 +139,10 @@ function Seat({
         <span
           className={[
             "ml-auto font-mono text-sm tabular-nums",
-            player.cardCount <= 2 && !out ? "text-rose-300" : "text-white/60",
+            player.cardCount <= 2 ? "text-rose-300" : "text-white/60",
           ].join(" ")}
         >
-          {out ? "out" : player.cardCount}
+          {player.cardCount}
         </span>
       </div>
 
@@ -159,7 +220,18 @@ export function Seats({
     return () => watch.disconnect();
   }, []);
 
-  const held = others.map((player) => player.hand.length);
+  /**
+   * What each seat costs the strip. An eliminated seat is `"out"` rather than a
+   * hand of zero — `seatWidth(0, …)` is `SEAT_MIN`, a full 128px, and reserving
+   * that for a name chip would tighten everybody else's cards to pay for a seat
+   * that is no longer drawn as one.
+   *
+   * Keyed on `eliminated` and not on an empty hand, which is the same thing in
+   * this game and is the same thing for one reason rather than by construction.
+   */
+  const held: SeatHand[] = others.map((player) =>
+    player.eliminated ? "out" : player.hand.length,
+  );
   const fan = fanTable(available, held);
 
   /**

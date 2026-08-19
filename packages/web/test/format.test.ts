@@ -98,6 +98,29 @@ describe("what the table is waiting for", () => {
     expect(asks(table({ phase: { kind: "sunnyPlay" } }), true)).toContain("Step 1 of 3");
   });
 
+  // The shared table screen reads this same line, as a viewer holding no cards
+  // (#185). It used to say only whose turn it was, in a sentence of its own —
+  // so a landed call's punishment, the one moment the table most needs telling
+  // what is going on, was the thing it could not say.
+  it("answers for a screen with nobody behind it, at every phase", () => {
+    const watching = (overrides: Partial<GameView> = {}): string =>
+      asks(table({ you: null, waitingOn: "p2", turnPlayerId: "p2", ...overrides }));
+
+    expect(watching()).toBe("Bo to play.");
+    expect(watching({ phase: { kind: "suit", playerId: "p2" } })).toBe("Bo is naming a suit.");
+    // The two the band was silent on, and the reason this matters: a call lands
+    // and the table is walked through a numbered punishment.
+    expect(watching({ phase: { kind: "sunnyPlay" } })).toBe(
+      "Bo has to make the play they skipped — step 1 of 3.",
+    );
+    expect(watching({ phase: { kind: "surrender", playerId: "p2", reason: "sunnyPunishment" } })).toBe(
+      "Bo owes a punishment card — step 2 of 3.",
+    );
+    expect(
+      watching({ phase: { kind: "over" }, status: "over", winnerId: "p2", waitingOn: null }),
+    ).toBe("Bo wins, still holding cards.");
+  });
+
   // Reduced motion plans no flights at all, so nothing is ever mid-deal there —
   // and the default is what every caller outside the motion layer gets.
   it("asks for the suit straight away when nothing is in the air", () => {

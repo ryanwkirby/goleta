@@ -1,4 +1,11 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 
 import type { ClientMessage, GameEvent, GameView, PlayerId, RoomView } from "@goleta/engine";
 
@@ -12,7 +19,7 @@ import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
 import { Button } from "../components/ui.tsx";
 import { facingTurn } from "../lib/facing.ts";
-import { namerFor } from "../lib/format.ts";
+import { namerFor, turnPrompt } from "../lib/format.ts";
 import {
   fitScale,
   shouldTurn,
@@ -21,7 +28,7 @@ import {
   type Box,
   type Point,
 } from "../lib/fitScale.ts";
-import { useJudgedCall } from "../lib/judgedCall.ts";
+import { ANNOUNCE_MS, useJudgedCall } from "../lib/judgedCall.ts";
 import { deckPoint, pileBox } from "../lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
@@ -82,7 +89,28 @@ export function TableScreen({
   send: (message: ClientMessage) => void;
 }) {
   const nameOf = namerFor(room);
-  const { call, peeling } = useJudgedCall(log);
+  const { call, peeling, announcing, endAnnouncement } = useJudgedCall(log);
+
+  /**
+   * The ruling's own clock.
+   *
+   * A judged call gets the same beat wherever it is watched — peel, ruling,
+   * back to the game — and this screen was taking the first half and ignoring
+   * the second. It rendered on `call && !peeling`, and `call` is simply the
+   * most recent `sunnyCalled` in the log, so once the peel was over the ruling
+   * was true forever: in practice until the *next* call, which at a quiet
+   * table is the rest of the game (#185).
+   *
+   * The phone's copy of this hangs off `SunnyAnnounce`, which has something to
+   * dismiss it early — the offender's dialog. Nobody dismisses anything on a
+   * propped-up screen, so here it is the timer alone, off the duration both
+   * screens now read from `useJudgedCall`.
+   */
+  useEffect(() => {
+    if (!announcing) return;
+    const timer = setTimeout(endAnnouncement, ANNOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [announcing, endAnnouncement]);
   const [view, setView] = useState<"center" | "hands">("center");
   /**
    * The invite, opened off the glyph in the top-left corner (#162).
@@ -172,6 +200,7 @@ export function TableScreen({
             nameOf={nameOf}
             call={call}
             peeling={peeling}
+            announcing={announcing}
             shouts={shouts}
             log={log}
             view={view}
@@ -423,6 +452,7 @@ function Playing({
   nameOf,
   call,
   peeling,
+  announcing,
   shouts,
   log,
   view,
@@ -437,6 +467,8 @@ function Playing({
   nameOf: (playerId: string) => string;
   call: ReturnType<typeof useJudgedCall>["call"];
   peeling: boolean;
+  /** The evidence has gone and the ruling is up. It has a life; see above. */
+  announcing: boolean;
   shouts: Shout[];
   log: LoggedEvent[];
   view: "center" | "hands";
@@ -609,29 +641,28 @@ function Playing({
           className="rounded-2xl bg-felt-950/80 px-6 py-3 text-balance text-center text-2xl font-semibold leading-tight shadow-2xl backdrop-blur-sm"
           role="status"
         >
-          {finished ? (
-            <span className="text-amber-300">
-              {game.winnerId
-                ? `${nameOf(game.winnerId)} wins, still holding cards.`
-                : "A dead end. Nobody could move."}
-            </span>
-          ) : call && !peeling ? (
+          {announcing && call ? (
             // The ruling, once the evidence has been and gone. The whole table
-            // watched the peel; this is what it came to.
+            // watched the peel; this is what it came to. It holds the band for
+            // the announce beat and then gives it back — a game can end on the
+            // play a landed call forced, so this comes before `finished` and
+            // the news waits its turn.
             <span className="text-amber-300">
               <span aria-hidden>☀️</span> {nameOf(call.callerId)} called it on{" "}
               {nameOf(call.targetId)} — said the {call.card.rank}
               {SUIT_GLYPH[call.card.suit]}.{" "}
               <span className="text-white/70">{call.correct ? "Right." : "Wrong."}</span>
             </span>
-          ) : game.waitingOn ? (
+          ) : finished ? (
+            <span className="text-amber-300">{turnPrompt(game, nameOf, false)}</span>
+          ) : (
             <span className="text-white/60">
               <span aria-hidden className="text-amber-300">
                 ▸{" "}
               </span>
-              {nameOf(game.waitingOn)} to play
+              {turnPrompt(game, nameOf, false)}
             </span>
-          ) : null}
+          )}
         </p>
       </div>
     </>

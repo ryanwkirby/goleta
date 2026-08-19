@@ -19,6 +19,18 @@ import type { GameEvent } from "@goleta/engine";
 import { PEEL_MS } from "../motion/plan.ts";
 import type { LoggedEvent } from "../net/useGoleta.ts";
 
+/**
+ * How long the table looks at "X called it on Y" before anything else.
+ *
+ * The second half of the beat, and it lives here beside `PEEL_MS` for the same
+ * reason: it is the length of a moment the whole table is in, not a decision
+ * either screen gets to make on its own. It used to be a constant in
+ * `Table.tsx`, which is how the shared screen came to have no timer at all —
+ * it read `peeling` off this hook and then held the ruling until the *next*
+ * call, which at a quiet table is the rest of the game (#185).
+ */
+export const ANNOUNCE_MS = 3200;
+
 /** The event itself, narrowed to the one variant this is about. */
 export type SunnyCalled = Extract<GameEvent, { type: "sunnyCalled" }>;
 

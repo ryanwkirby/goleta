@@ -22,7 +22,7 @@ import { MoveRefusal } from "../components/Refusal.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
-import { useJudgedCall } from "../lib/judgedCall.ts";
+import { ANNOUNCE_MS, useJudgedCall } from "../lib/judgedCall.ts";
 import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { PEEK_TABLE } from "../motion/plan.ts";
@@ -40,9 +40,6 @@ import {
 import type { GoletaError, LoggedEvent, Shout } from "../net/useGoleta.ts";
 import { HandOver } from "./HandOver.tsx";
 import { HandView } from "./HandView.tsx";
-
-/** How long the table looks at "X called it on Y" before anything else. */
-const ANNOUNCE_MS = 3200;
 
 /**
  * How long you can sit on a turn before the app offers you a hand.

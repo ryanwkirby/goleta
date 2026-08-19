@@ -325,6 +325,28 @@ The server pings every 30s and drops sockets that stop answering. A dropped
 connection marks the seat disconnected but keeps it: the game carries on and the
 seat is waiting when they come back.
 
+**Both ends have to do this, because only one of them notices a half-open
+socket.** A connection that *closes* says so and the client's retry picks it
+up. One that half-opens — a screen locking, wifi handing over to cellular, a
+tab backgrounded for two minutes — does not: the server terminated its end a
+minute ago, `terminate()` is abrupt, and nothing about it reaches a browser
+that has left the network. `readyState` stays `OPEN`, every tap is written into
+it and vanishes, and the board freezes on the last state that got through with
+nothing on screen to say so (#183).
+
+So the client sends `ping` every 10s and budgets 25s of total silence — measured
+against *anything* arriving, not just the answer — after which it closes the
+socket itself and reconnects through the ordinary `rejoin` / `watch` path. It
+runs the same check the moment the tab becomes visible or the machine reports
+itself online, and a budget that lapsed while the tab was frozen is judged the
+same as one that lapsed in the open: a socket nobody could vouch for is not a
+connection. Being wrong that way costs one round trip. Being wrong the other way
+shows somebody a board that has moved.
+
+The figures are picked against the server's 60s, not against the network: this
+end gives up first and reconnects rather than waiting to be terminated, and 25s
+is two and a half pings, so one lost answer never costs anybody a reconnect.
+
 If the host disconnects, host powers move to the first connected human so the
 table isn't stranded. A player returning to a room with no other connected human
 becomes the host, so an empty room can always be restarted.

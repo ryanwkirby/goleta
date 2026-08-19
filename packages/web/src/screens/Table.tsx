@@ -12,17 +12,10 @@ import { Seats } from "../components/Seats.tsx";
 import { TurnGlow } from "../components/TurnGlow.tsx";
 import {
   SunnyAccusePicker,
-  SunnyAnnounce,
-  SunnyCaught,
-  SunnyExplainer,
   SuitPicker,
 } from "../components/Sunny.tsx";
 import { Button, Panel } from "../components/ui.tsx";
-import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
-import { HostSettingsCog } from "../components/HostSettings.tsx";
-import { PlayerSettingsCog } from "../components/PlayerSettings.tsx";
-import { QrGlyph } from "../components/QrCode.tsx";
-import { RoomInvite } from "../components/RoomInvite.tsx";
+import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { creditFinishedGames } from "../lib/graduation.ts";
@@ -31,7 +24,6 @@ import { assisting, handMode } from "../lib/handMode.ts";
 import { caughtState, stillAccusable, sunnyTarget } from "../lib/sunnyOffer.ts";
 import { useBox } from "../lib/measure.ts";
 import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
-import { ANNOUNCE_MS } from "../lib/beats.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import {
@@ -53,6 +45,8 @@ import {
   saveHandSort,
 } from "../net/identity.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../lib/feed.ts";
+import { TableHeader } from "./table/TableHeader.tsx";
+import { TableOverlays } from "./table/TableOverlays.tsx";
 import { HandOver } from "./HandOver.tsx";
 import {
   HandView,
@@ -522,6 +516,20 @@ export function Table({
   const drawCard = (): void =>
     send({ t: "intent", intent: { type: "drawCard", playerId: me } });
 
+  /** Written once and passed to whichever screen is up. */
+  const sunnyExplained = (): void => {
+    markSunnySeen();
+    setExplainSunny(false);
+  };
+  const invitePanel = inviting
+    ? {
+        code: room.code,
+        underWay: !finished,
+        screens: room.tableScreens,
+        onClose: () => setInviting(false),
+      }
+    : null;
+
   /**
    * What the landscape view is handed, in four bundles rather than thirty
    * separate props (#225). `HandView` destructures them on its first line, so
@@ -583,15 +591,13 @@ export function Table({
             they have to be reachable from the screen that event lands on. The
             graduation especially: it is shown once, after your first finished
             game, and in landscape it had nowhere at all to appear. */}
-        {explainSunny ? (
-          <SunnyExplainer
-            onDone={() => {
-              markSunnySeen();
-              setExplainSunny(false);
-            }}
-          />
-        ) : null}
-        {graduating ? <Graduation onChoose={answerGraduation} /> : null}
+        <TableOverlays
+          nameOf={nameOf}
+          explaining={explainSunny}
+          onExplained={sunnyExplained}
+          graduating={graduating}
+          onGraduate={answerGraduation}
+        />
       </>
     );
   }
@@ -610,27 +616,12 @@ export function Table({
           onShowInvite={() => setInviting(true)}
           onShowRules={onShowRules}
         />
-        {explainSunny ? (
-          <SunnyExplainer
-            onDone={() => {
-              markSunnySeen();
-              setExplainSunny(false);
-            }}
-          />
-        ) : null}
-
-        {/* Over the hand rather than docked into it, unlike the two pickers.
-            Nothing here is a decision made by reading your cards against the
-            board, so covering them costs nothing — and this is the view an IRL
-            table is actually in when somebody walks up (#135). */}
-        {inviting ? (
-          <RoomInvite
-            code={room.code}
-            underWay={!finished}
-            screens={room.tableScreens}
-            onClose={() => setInviting(false)}
-          />
-        ) : null}
+        <TableOverlays
+          nameOf={nameOf}
+          explaining={explainSunny}
+          onExplained={sunnyExplained}
+          invite={invitePanel}
+        />
       </TableMotion>
     );
   }
@@ -650,80 +641,18 @@ export function Table({
           "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
         ].join(" ")}
       >
-        <header className="flex items-center gap-2 text-xs text-white/50">
-          {/* Yours first, the host's second, and the two are legible as
-              different things: a person and a gear, an inch apart, one of which
-              changes the game for everybody (#188). A watcher gets neither —
-              the only thing in this drawer is about your own cards. */}
-          {seated ? (
-            <PlayerSettingsCog
-              hints={hints}
-              onHints={onChooseHints}
-              className="-ml-2"
-            />
-          ) : null}
-          {/* Beside the player's, not in place of it, because it is the host's way
-              back to everything the lobby held and the rest of this line is
-              facts about the room rather than things to press. What used to sit
-              at the far end was a lone `in person: on` button — the only host
-              control that survived the lobby, reading like a status somebody
-              had left switched on. It lives behind the cog now, with the rules
-              for the next deal beside it (#134). */}
-          {room.hostId === game.you ? (
-            <HostSettingsCog
-              rules={room.houseRules}
-              irl={room.irl}
-              dealerMode={room.dealerMode}
-            shuffleSeats={room.shuffleSeats}
-              onRules={(rules) => send({ t: "setHouseRules", rules })}
-              onIrl={(on) => send({ t: "setIrl", on })}
-              onDealerMode={(dealer) => send({ t: "setDealerMode", mode: dealer })}
-            onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
-              // Pulled back over the column's own padding only when it leads
-              // the row. With the player's cog before it there is nothing to
-              // pull back over. The row was already this tall — `rules` and
-              // `leave` are `Button`s, and every `Button` is `min-h-11` — so
-              // neither target costs the header anything.
-              className={seated ? "" : "-ml-2"}
-            />
-          ) : null}
-          {/* The code was four characters saying what the room was called and
-              doing nothing, which is the whole of what a code is for when
-              there is no lobby left to go back to. Tapping it is the invite —
-              a person or a shared screen, same room, different link (#135).
-              Anybody may open it: handing somebody the way in is not a host
-              power, and nothing behind it changes the room.
-
-              It is a glyph rather than the four characters since #162. The
-              panel leads with the code at reading-out size, so during a hand
-              the characters were furniture: this says *there is a way in here*
-              and the way in says the rest. */}
-          <button
-            type="button"
-            aria-label={`Invite to room ${room.code}`}
-            aria-haspopup="dialog"
-            title={`Invite to room ${room.code}`}
-            onClick={() => setInviting(true)}
-            className={[
-              "-m-1 flex shrink-0 items-center rounded-lg p-1 text-base text-white/70",
-              "transition-colors hover:text-white",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-            ].join(" ")}
-          >
-            <QrGlyph />
-          </button>
-          {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
-          {/* No way back to the hand here, and none needed: at an IRL table the
-              phone is the toggle. Turning it sideways is the hand view and
-              turning it upright is this one — a gesture the table can see you
-              make, which two words in a corner never were. */}
-          <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
-            rules
-          </Button>
-          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onLeave}>
-            leave
-          </Button>
-        </header>
+        <TableHeader
+          room={room}
+          isHost={room.hostId === game.you}
+          seated={seated}
+          hints={hints}
+          onChooseHints={onChooseHints}
+          offline={offline}
+          send={send}
+          onShowInvite={() => setInviting(true)}
+          onShowRules={onShowRules}
+          onLeave={onLeave}
+        />
 
         <Seats room={room} game={game} shouts={shouts} />
 
@@ -895,46 +824,20 @@ export function Table({
 
         <EventLog log={log} nameOf={nameOf} />
 
-        {announcing && call && !caughtYou ? (
-          <SunnyAnnounce
-            callerName={nameOf(call.callerId)}
-            targetName={nameOf(call.targetId)}
-            card={call.card}
-            correct={call.correct}
-            onDone={announcementOver}
-            ms={ANNOUNCE_MS}
-          />
-        ) : null}
-
-        {showCaught && call ? (
-          <SunnyCaught
-            callerName={nameOf(call.callerId)}
-            skipped={skipped}
-            returned={call.returned}
-            owesPunishment={owesPunishment}
-            onDone={acknowledgeCaught}
-          />
-        ) : null}
-
-        {explainSunny ? (
-          <SunnyExplainer
-            onDone={() => {
-              markSunnySeen();
-              setExplainSunny(false);
-            }}
-          />
-        ) : null}
-
-        {inviting ? (
-          <RoomInvite
-            code={room.code}
-            underWay={!finished}
-            screens={room.tableScreens}
-            onClose={() => setInviting(false)}
-          />
-        ) : null}
-
-        {graduating ? <Graduation onChoose={answerGraduation} /> : null}
+        <TableOverlays
+          nameOf={nameOf}
+          explaining={explainSunny}
+          onExplained={sunnyExplained}
+          graduating={graduating}
+          onGraduate={answerGraduation}
+          invite={invitePanel}
+          announce={announcing && call && !caughtYou ? { call, onDone: announcementOver } : null}
+          caught={
+            showCaught && call
+              ? { call, skipped, owesPunishment, onDone: acknowledgeCaught }
+              : null
+          }
+        />
       </div>
     </TableMotion>
   );

@@ -48,6 +48,17 @@ export interface Seat {
   token: string;
   bot: boolean;
   connected: boolean;
+  /**
+   * Whether this seat has its playable cards marked up (#187).
+   *
+   * The durable copy of the preference lives in the player's own
+   * `localStorage`, because it follows them between rooms and there are no
+   * accounts here. This is the room's copy, and it exists for one reason: the
+   * rest of the table has to be able to see it. Presentation only — no rule,
+   * no timer and no legality reads it, and `packages/engine` never learns it
+   * exists.
+   */
+  hinted: boolean;
 }
 
 /**
@@ -200,6 +211,10 @@ const newSeatFor = (name: string, bot: boolean): Seat => ({
   token: newToken(),
   bot,
   connected: !bot,
+  // Off until the browser says otherwise. A seat's own preference lives in its
+  // `localStorage` and is asserted on arrival, so a new seat starting bare is
+  // the honest state rather than a guess at one.
+  hinted: false,
 });
 
 export const createRoom = (store: RoomStore, name: string): { room: Room; seat: Seat } => {
@@ -353,6 +368,32 @@ export const setDealerMode = (room: Room, byPlayerId: PlayerId, mode: DealerMode
 
   room.dealerMode = mode;
   touch(room);
+};
+
+/**
+ * "Mark up my playable cards", said by the seat itself (#187).
+ *
+ * **Not a host power and not a rule.** It changes one screen and nothing about
+ * the room, so there is no `requireHost` here and no "wait for this game to
+ * finish" — the whole point of #187 is that it is a thing you decide rather
+ * than a thing that expires, and mid-hand is exactly when somebody works out
+ * they want it.
+ *
+ * Returns whether this turned the mark **on**, which is the only case the table
+ * is told about out loud. Re-asserting a state the seat already had says
+ * nothing, which is what makes a browser safe to sync on every reconnect; and
+ * switching it off says nothing either, because giving up an advantage is not
+ * something the table has to be told.
+ */
+export const setHints = (room: Room, byPlayerId: PlayerId, on: boolean): boolean => {
+  if (typeof on !== "boolean") fail("Hints are on or off");
+  const seat = room.seats.find((candidate) => candidate.id === byPlayerId);
+  if (!seat) fail("You're not at this table");
+
+  const announced = on && !seat.hinted;
+  seat.hinted = on;
+  touch(room);
+  return announced;
 };
 
 /**
@@ -712,6 +753,7 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
     bot: seat.bot,
     connected: seat.connected,
     isHost: seat.id === room.hostId,
+    hinted: seat.hinted,
   })),
   status: roomStatus(room),
   gamesPlayed: room.gamesPlayed,

@@ -1,4 +1,4 @@
-import type { ClientMessage, GameView, RoomView } from "@goleta/engine";
+import type { ClientMessage, GameView, RoomView, ShoutKind } from "@goleta/engine";
 
 import { useFullscreen } from "../lib/fullscreen.ts";
 import { pileSuit } from "../lib/pile.ts";
@@ -93,8 +93,8 @@ export function PeekStrip({
   canDraw: boolean;
   onDraw: () => void;
   offline: boolean;
-  /** Somebody else asking for a hand, by name. Your own goes over your cards. */
-  helpFrom: string | null;
+  /** Somebody else's shout, by name. Your own goes over your cards. */
+  helpFrom: { name: string; kind: ShoutKind } | null;
   /** What the table is waiting for, in the words the full table uses. */
   prompt: string;
   /** Whether it is waiting for you — the prompt is drawn up when it is. */
@@ -276,7 +276,9 @@ export function PeekStrip({
       {/* Before the turn indicator rather than after it: the sun keeps the end
           of the strip, and a shout is the one thing here that isn't a standing
           fact — it arrives, it is read, it goes. */}
-      {helpFrom ? <HelpAsk name={helpFrom} className="ml-auto text-xs" /> : null}
+      {helpFrom ? (
+        <HelpAsk name={helpFrom.name} kind={helpFrom.kind} className="ml-auto text-xs" />
+      ) : null}
 
       <span
         className={[

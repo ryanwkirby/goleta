@@ -38,6 +38,7 @@ import {
   seatOf,
   setBotSpeed,
   setDealerMode,
+  setHints,
   setHouseRules,
   setIrl,
   type Room,
@@ -369,6 +370,16 @@ export const attachSockets = (
         if (now - client.lastShoutAt < SHOUT_COOLDOWN_MS) return;
         client.lastShoutAt = now;
         return announce(room, { t: "shout", playerId, kind: "help" });
+      }
+      case "setHints": {
+        // Not host-gated and not frozen mid-game: it changes one screen and
+        // nothing about the room. See `setHints`.
+        const announced = setHints(room, playerId, message.on === true);
+        // The mark on the seat goes to everybody either way; the shout only
+        // when this switched it on, so a browser re-asserting its own
+        // preference on reconnect is silent.
+        if (announced) announce(room, { t: "shout", playerId, kind: "hints" });
+        return broadcast(room);
       }
       case "removeSeat":
         removeSeat(room, playerId, message.playerId);

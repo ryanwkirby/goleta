@@ -7,9 +7,16 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ClientMessage, GameEvent, GameView, PlayerId, RoomView } from "@goleta/engine";
+import type {
+  ClientMessage,
+  GameEvent,
+  GameView,
+  PlayerId,
+  RoomView,
+  ShoutKind,
+} from "@goleta/engine";
 
-import { HelpAsk } from "../components/Help.tsx";
+import { HelpAsk, HintedMark, shoutingNow } from "../components/Help.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { QrCode, QrGlyph } from "../components/QrCode.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
@@ -477,7 +484,7 @@ function Playing({
   onDraw: () => void;
 }) {
   const finished = game.status === "over";
-  const asking = new Set(shouts.map((shout) => shout.playerId));
+  const asking = shoutingNow(shouts);
   // The same conditions the server checks, so the pile is only offered when the
   // tap will land — including the bot one: a bot's turn passes under a finger
   // already on its way down, and nothing off this screen moves a bot.
@@ -683,11 +690,11 @@ function Playing({
 function EdgeNames({
   room,
   game = null,
-  asking = new Set<PlayerId>(),
+  asking = new Map<PlayerId, ShoutKind>(),
 }: {
   room: RoomView;
   game?: GameView | null;
-  asking?: ReadonlySet<PlayerId>;
+  asking?: ReadonlyMap<PlayerId, ShoutKind>;
 }) {
   const placed = edgeSeats(room.seats.length);
 
@@ -767,7 +774,14 @@ function EdgeNames({
                   </span>
                 )
               ) : null}
-              {asking.has(seat.id) ? <HelpAsk className="shrink-0 text-lg" /> : null}
+              {/* The standing mark, and then whatever is being said this
+                  second. Both, because they answer different questions: one is
+                  *this seat is playing with hints on* and lasts, the other is
+                  *they just said something* and does not. */}
+              {seat.hinted ? <HintedMark name={seat.name} className="text-lg" /> : null}
+              {asking.get(seat.id) ? (
+                <HelpAsk kind={asking.get(seat.id)} className="shrink-0 text-lg" />
+              ) : null}
             </div>
           </div>
         );

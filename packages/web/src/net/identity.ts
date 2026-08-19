@@ -83,10 +83,10 @@ const GAMES_KEY = "goleta:games-finished";
 /**
  * How many games this browser has seen through to the end.
  *
- * It decides one thing: whether the table still marks up your playable cards
- * for you. It does that until your first game is over, and then stops — see
- * `AGENTS.md`. Still no accounts; this is a number in `localStorage` next to
- * the seat tokens, and clearing it just means you get the guardrails again.
+ * It used to decide whether the table still marked up your playable cards. It
+ * does not any more (#187): that is a preference you set and keep. What the
+ * count decides now is one thing, once — whether to *ask* you, after your first
+ * finished game, whether you want to keep the help. See `Graduation`.
  */
 export const gamesFinished = (): number => {
   try {
@@ -167,15 +167,32 @@ export const markGamesSeen = (code: string, played: number): void => {
   }
 };
 
+// The key keeps its old name. What it stores changed in #187 — a standing
+// preference rather than an answer about one game — but a browser that already
+// has a value in here has said something true about what it wants, and
+// renaming the key would throw that away to make a comment read better.
 const HINTS_KEY = "goleta:first-game-hints";
 
 /**
- * Whether you asked for the training wheels on the way in.
+ * Whether the table marks up your playable cards.
  *
- * Offered once, on the rules screen, before your first game. Anyone who saw the
- * rules before that choice existed gets them, which is what they'd have had.
+ * **A setting, not a countdown** (#187). It used to be an answer given once, on
+ * the way in, before you had seen a card: it ran for exactly one game, and then
+ * stopped, and you were told it had stopped. At no point did anybody choose to
+ * keep it or to give it up.
+ *
+ * So it is a preference now, read live, changed from your own cog at any time —
+ * and read live is the whole of the change here as far as this file is
+ * concerned. It is still a value in `localStorage` next to the seat tokens,
+ * still no account anywhere, and clearing it still just means you get the
+ * guardrails again.
+ *
+ * The bargain of #33 survives intact and is enforced elsewhere: taking help is
+ * never quiet. Switching this on is announced to the table and marks your seat
+ * for as long as it lasts, so nobody can quietly stop being catchable. What is
+ * gone is only the expiry.
  */
-export const wantsFirstGameHints = (): boolean => {
+export const wantsHints = (): boolean => {
   try {
     return localStorage.getItem(HINTS_KEY) !== "0";
   } catch {
@@ -183,7 +200,7 @@ export const wantsFirstGameHints = (): boolean => {
   }
 };
 
-export const setFirstGameHints = (wanted: boolean): void => {
+export const setWantsHints = (wanted: boolean): void => {
   try {
     localStorage.setItem(HINTS_KEY, wanted ? "1" : "0");
   } catch {

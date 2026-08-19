@@ -8,6 +8,7 @@ import type {
   GameView,
   RoomView,
   ServerMessage,
+  ShoutKind,
 } from "@goleta/engine";
 
 import { forgetIdentity, loadIdentity, saveIdentity } from "./identity.ts";
@@ -22,11 +23,17 @@ export interface LoggedEvent {
   at: number;
 }
 
-/** Somebody asking for help, out loud. Lives for a couple of seconds. */
+/**
+ * Something a seat said out loud. Lives for a couple of seconds.
+ *
+ * `help` is one turn's worth of marked-up cards, asked for and gone. `hints`
+ * is the standing version being switched on — announced once here, and then
+ * visible on the seat itself for as long as it lasts (#187).
+ */
 export interface Shout {
   id: number;
   playerId: string;
-  kind: "help";
+  kind: ShoutKind;
 }
 
 /**

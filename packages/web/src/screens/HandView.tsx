@@ -15,7 +15,7 @@ import { cardWidthAt } from "../components/Card.tsx";
 import type { HandMode } from "../components/Hand.tsx";
 import type { HandSort } from "../lib/sort.ts";
 import type { GoletaError } from "../net/useGoleta.ts";
-import type { Card } from "@goleta/engine";
+import type { Card, ShoutKind } from "@goleta/engine";
 
 export interface HandViewProps {
   room: RoomView;
@@ -45,13 +45,14 @@ export interface HandViewProps {
    * the phone over, find the row of small grey print and come back.
    */
   onShowRules: () => void;
-  shouting: boolean;
+  /** Your own shout, if you have one up, and which of the two kinds it is. */
+  shouting: ShoutKind | null;
   /**
    * Somebody else asking for a hand, by name — drawn in the strip, because this
    * view has no seats for it to rise off and a table that can't see the ask is
    * a table where help stopped being public.
    */
-  helpFrom: string | null;
+  helpFrom: { name: string; kind: ShoutKind } | null;
   /** The Sunny call being composed, if any — the state lives on `Table`. */
   accusing: string | null;
   stillAccusable: boolean;
@@ -283,7 +284,7 @@ export function HandView({
           ].join(" ")}
         >
           {/* Your own shout, over your own cards, same as everyone else sees. */}
-          {shouting ? <HelpShout /> : null}
+          {shouting ? <HelpShout kind={shouting} /> : null}
 
           <div
             className={[

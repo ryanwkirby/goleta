@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { MOVE_MS, SESSION_MS, SessionError } from "./components/Refusal.tsx";
-import { hasSeenRules, markRulesSeen, setFirstGameHints } from "./net/identity.ts";
+import { hasSeenRules, markRulesSeen, setWantsHints, wantsHints } from "./net/identity.ts";
 import { useGoleta } from "./net/useGoleta.ts";
 import { Join } from "./screens/Join.tsx";
 import { Lobby } from "./screens/Lobby.tsx";
@@ -34,8 +34,16 @@ export function App() {
     useGoleta();
   const [showRules, setShowRules] = useState(false);
   const [seatedOnce, setSeatedOnce] = useState(false);
-  /** True only for the read on the way in, where the hints are also offered. */
-  const [firstRead, setFirstRead] = useState(false);
+  /**
+   * Whether the table marks up your playable cards.
+   *
+   * Lives here rather than on `Table` because two screens set it — the rules,
+   * on the way in and whenever they are reopened, and your own cog behind the
+   * table (#188) — and one of them is not a child of the other. `localStorage`
+   * is the durable copy; this is the one the app reads live, which is the whole
+   * of what #187 changed about it.
+   */
+  const [hints, setHints] = useState(wantsHints);
   const watching = mode !== "play";
 
   // First time in, explain the game before the lobby. Everything except the
@@ -47,10 +55,7 @@ export function App() {
   useEffect(() => {
     if (room && !seatedOnce && !watching) {
       setSeatedOnce(true);
-      if (!hasSeenRules()) {
-        setFirstRead(true);
-        setShowRules(true);
-      }
+      if (!hasSeenRules()) setShowRules(true);
     }
   }, [room, seatedOnce, watching]);
 
@@ -68,13 +73,18 @@ export function App() {
 
   const dismissRules = (): void => {
     markRulesSeen();
-    setFirstRead(false);
     setShowRules(false);
   };
 
+  /**
+   * Setting it here rather than only on the way out: it is a switch, and a
+   * switch that waits for a Continue button to be pressed is a form. The
+   * announcement and the mark on the seat are the server's job — `Table` syncs
+   * this to the room, so it reaches the table from whichever screen set it.
+   */
   const chooseHints = (wanted: boolean): void => {
-    setFirstGameHints(wanted);
-    dismissRules();
+    setWantsHints(wanted);
+    setHints(wanted);
   };
 
   const body = (() => {
@@ -95,7 +105,8 @@ export function App() {
           <Rules
             onDone={dismissRules}
             ctaLabel={room.status === "lobby" ? "Continue" : "Play"}
-            onChooseHints={firstRead ? chooseHints : undefined}
+            hints={hints}
+            onChooseHints={chooseHints}
           />
         </div>
       );
@@ -139,6 +150,8 @@ export function App() {
         send={send}
         onLeave={leave}
         onShowRules={() => setShowRules(true)}
+        hints={hints}
+        onChooseHints={chooseHints}
         offline={status !== "open"}
       />
     );

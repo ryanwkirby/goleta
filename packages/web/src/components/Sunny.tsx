@@ -504,6 +504,85 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
 }
 
 /**
+ * The board the call will be judged against: the suit that had to be matched at
+ * the reach, and the rank that was in play then.
+ *
+ * The other half of `SunnyReach`, and it used to be drawn nowhere at all. The
+ * picker listed `reach.hand` and left the board to be read off the pile — and
+ * the pile is very often no longer the board a call is judged against, because
+ * the challenge window deliberately outlives the turn: it shuts on the *next*
+ * player's first action, so the offender routinely draws and then plays before
+ * anybody calls. An 8 makes it worse than a coin flip, since naming a suit is
+ * exactly the play that leaves the board maximally unlike the board before it.
+ * A player who read the table correctly was punished for it.
+ *
+ * Two chips rather than one. `topRank` and `activeSuit` are not a card and must
+ * not be drawn as one: after an 8 they are the 8's rank and somebody else's
+ * suit, so a single `8♣` would put a card on this panel that nobody has played
+ * and that the pile is not showing. They are two facts, so they are two marks
+ * with the word between them.
+ *
+ * It says what the board was and stops. It does not say which of the cards
+ * below answered it, does not mark, sort, dim or count them, and says nothing
+ * about whether a call would land — nothing on the client knows that (#50).
+ * Wilds go unmentioned for the same reason: "or any 8" would be this panel
+ * pointing at cards in the hand it is deliberately silent about.
+ */
+function ReachBoard({
+  reach,
+  compact = false,
+  className = "",
+}: {
+  reach: SunnyReach;
+  /** Landscape, where this shares a line with the caption rather than taking one. */
+  compact?: boolean;
+  className?: string;
+}) {
+  // `CardChip`'s own shape, which is how the caught dialog names a card: white,
+  // in the suit's colour. This is a board, so it is drawn in the register of the
+  // cards it is about rather than as another line of small print. The rank stays
+  // dark whatever the suit is — it is a rank, and colouring it would print a
+  // card that was never played.
+  const chip = "rounded bg-white px-1 py-px font-semibold tabular-nums";
+
+  return (
+    <div
+      className={[
+        // `inline-flex` so it hugs its own contents wherever it is put: the full
+        // table drops it into the panel's block flow, where a flex box would
+        // stretch to the width and read as a band rather than as a mark.
+        "inline-flex shrink-0 items-center rounded-lg bg-black/30 ring-1 ring-white/10",
+        compact ? "gap-1.5 px-1.5 py-0.5" : "gap-2 px-2 py-1",
+        className,
+      ].join(" ")}
+    >
+      <span className="text-[0.6rem] font-semibold uppercase leading-none tracking-wider text-amber-300">
+        had to match
+      </span>
+      <span
+        aria-hidden
+        className={[
+          "flex items-center gap-1 leading-none",
+          compact ? "text-xs" : "text-sm",
+        ].join(" ")}
+      >
+        <span
+          className={[chip, isRed(reach.activeSuit) ? "text-rose-600" : "text-slate-900"].join(" ")}
+        >
+          {SUIT_GLYPH[reach.activeSuit]}
+        </span>
+        <span className="text-[0.65rem] font-medium uppercase tracking-wide text-white/40">or</span>
+        <span className={[chip, "text-slate-900"].join(" ")}>{reach.topRank}</span>
+      </span>
+      <span className="sr-only">
+        When they reached, they had to match {SUIT_LABEL[reach.activeSuit]}, or the {reach.topRank}{" "}
+        that was in play.
+      </span>
+    </div>
+  );
+}
+
+/**
  * Naming the card, which is what a Sunny call now is.
  *
  * Docked rather than modal, for the same reason the suit picker is: the whole
@@ -512,6 +591,9 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
  * second reason too — the cards it lists are the offender's hand *as it was*,
  * and being able to compare that against the pile and against what they hold
  * now, without anything covered, is the entire judgement being asked of you.
+ *
+ * It carries the board that hand is judged against as well, because the pile
+ * usually isn't it by the time anybody calls — see `ReachBoard`.
  *
  * Deliberately unhelpful: every card is offered at equal weight. Which of them
  * was legal is exactly the question, and dimming the ones that weren't would
@@ -572,11 +654,30 @@ export function SunnyAccusePicker({
           never mind
         </Button>
       </div>
-      <p className={["text-xs text-white/50", compact ? "mt-0.5" : "mt-1"].join(" ")}>
-        {compact
-          ? "Their hand as it was when they reached."
-          : "Their hand as it was when they reached. Get it wrong and you can't call again for three draws."}
-      </p>
+      {/* The caption, and under it the board the cards are judged against —
+          last before the hand, because it is the thing being read against it.
+
+          Landscape puts the two on one line rather than taking a second. The
+          picker's height is what the hand below steps down by (#96), and the
+          board is a label and two marks beside a caption with width to spare,
+          so the compact view buys the whole of it for no cards at all: what the
+          caption gives up is only the room it wasn't using. */}
+      {compact ? (
+        <div className="mt-0.5 flex items-center gap-2">
+          <ReachBoard reach={reach} compact />
+          <p className="min-w-0 truncate text-xs text-white/50">
+            Their hand as it was when they reached.
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="mt-1 text-xs text-white/50">
+            Their hand as it was when they reached. Get it wrong and you can't call again for three
+            draws.
+          </p>
+          <ReachBoard reach={reach} className="mt-2" />
+        </>
+      )}
       {/* One row when it is docked over a hand, wrapped when it isn't. The row
           keeps no padding of its own: its width *is* the width the fan was
           fitted to, and an inset here and an inset in the arithmetic are two

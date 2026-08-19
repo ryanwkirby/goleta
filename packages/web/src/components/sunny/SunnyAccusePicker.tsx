@@ -58,6 +58,13 @@ export function SunnyAccusePicker({
   /**
    * Landscape, where the whole viewport is about 350px tall (#78).
    *
+   * **Compact means docked, and a docked panel is paid for in card size.** The
+   * hand column below is *measured*, not fixed: `HandView` reads what this
+   * leaves with `useBox` and `handHeight` sizes the player's own cards to it,
+   * continuously rather than by a rung (#166). So a row added in here comes
+   * straight off their cards — and nothing has to be capped or scrolled to make
+   * it fit, because the hand gives back exactly what this takes.
+   *
    * The cards drop a size, the second line of explanation goes, and the hand
    * lays out in **one row, always** — whole cards with air between them while
    * they fit, closing up onto each other once they don't, the same trade

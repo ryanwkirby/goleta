@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
@@ -23,10 +23,13 @@ import { MoveRefusal } from "../components/Refusal.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
+import { handStep } from "../lib/handFan.ts";
+import { useBox } from "../lib/measure.ts";
+import { CARD_WIDTH_PX } from "../components/Card.tsx";
 import { ANNOUNCE_MS, useJudgedCall } from "../lib/judgedCall.ts";
 import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
-import { PEEK_TABLE } from "../motion/plan.ts";
+import { FULL_TABLE, PEEK_TABLE } from "../motion/plan.ts";
 import { TableMotion, useMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
@@ -145,6 +148,22 @@ export function Table({
    * load, does not.
    */
   const [rotatedFor, setRotatedFor] = useState<number | null>(null);
+  /**
+   * The room the upright hand has to spend, measured rather than assumed.
+   *
+   * The landscape view has always done this and the upright one never did, so
+   * upright was the one place left in the app where a hand you could not read
+   * without scrolling sideways was still possible — the exact failure #59 set
+   * out to abolish, living on in the view that never got the fix (#191).
+   *
+   * **Width only.** `handHeight` exists because the landscape hand owns the
+   * whole column and is entitled to fill it; this column is shared with the
+   * seat strip, the piles, the prompt and the log, and the hand is not entitled
+   * to grow into any of them. The card stays on the ladder at `FULL_TABLE.hand`
+   * and only the *step* is measured.
+   */
+  const handRow = useRef<HTMLDivElement>(null);
+  const handBox = useBox(handRow);
   const phone = useIsPhone();
   const portrait = useIsPortrait();
   const nameOf = namerFor(room);
@@ -330,6 +349,37 @@ export function Table({
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
 
+  /** Your hand, in whatever order you asked for. Both layouts draw this one. */
+  const handCards = sortHand(you?.hand ?? [], handSort);
+
+  /**
+   * Left edge to left edge for the upright hand — the same three stages, in the
+   * same order, with the same numbers as landscape (#191).
+   *
+   * Whole cards with air between them while there is room; then overlapping,
+   * each leaving the one before it a sliver, down to the 44px tap floor; then
+   * `fit`, down to 18px, where one tap raises a card and the second commits it
+   * (#117); and only past that does anything scroll.
+   *
+   * Unmeasured is the loosest step, and the loosest step is a whole card plus
+   * six pixels — which is exactly the `gap-1.5` this row used to be laid out
+   * with, so the frame before the first measurement is the layout it always
+   * had rather than a flash of something else.
+   *
+   * `fit` brings the double-tap confirm with it, and that is right: below the
+   * tap floor the target is thinner than a thumb. It stays conditional on the
+   * squeeze rather than on the mode — `Hand` checks the step against `TIGHTEST`
+   * itself — because a confirm on every card would wreck the rhythm of an
+   * ordinary turn.
+   */
+  const handFanStep = handStep(
+    handBox.width,
+    handCards.length,
+    CARD_WIDTH_PX[FULL_TABLE.hand],
+    undefined,
+    true,
+  );
+
   /**
    * Somebody else's ask, for the landscape view to carry.
    *
@@ -484,7 +534,7 @@ export function Table({
           nameOf={nameOf}
           send={send}
           offline={offline}
-          cards={sortHand(you?.hand ?? [], handSort)}
+          cards={handCards}
           mode={mode}
           assist={assist}
           onChooseCard={onChooseCard}
@@ -733,6 +783,14 @@ export function Table({
                 its own overflow, and a box that clips one axis clips both, so it
                 would trim its own ring. */}
             <div
+              // The box the fan is fitted against. It has no padding of its
+              // own and `Hand` keeps none once it is fanning, so the width
+              // measured here is the width the cards actually get — an inset
+              // here and an inset in the arithmetic are two places to
+              // disagree. Its own width comes from the column above rather
+              // than from the cards inside it, so measuring it cannot feed
+              // back into what it measures.
+              ref={handRow}
               className={[
                 "relative rounded-2xl transition-colors",
                 mine ? "ring-1 ring-amber-300/60" : "",
@@ -743,11 +801,17 @@ export function Table({
                   pill that never moved. */}
               {refusal ? <MoveRefusal key={refusal.id} error={refusal} /> : null}
               <Hand
-                cards={sortHand(you?.hand ?? [], handSort)}
+                cards={handCards}
                 legalCardIds={game.legalCardIds}
                 mode={mode}
                 assist={assist}
                 onChoose={onChooseCard}
+                // Named rather than left to `Hand`'s default, because the step
+                // above is fitted against this rung's width and the two have to
+                // be the same rung.
+                size={FULL_TABLE.hand}
+                step={handFanStep}
+                fit
                 irl={room.irl}
               />
             </div>

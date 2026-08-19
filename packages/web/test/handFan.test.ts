@@ -16,10 +16,21 @@ import {
 /** A landscape phone, once the padding either side has taken its share. */
 const PHONE = 828;
 
+/**
+ * The same phone held upright, once the column's `p-3` has taken its share:
+ * 390 across, less twelve pixels each side. The narrow case, and the one #191
+ * is about — the upright hand shares its column with the seat strip, the piles,
+ * the prompt and the log, so it gets the ladder's `md` card rather than a
+ * measured height, and only the *step* is fitted.
+ */
+const UPRIGHT = 366;
+
 /** The widths the ladder still uses, for the tests that fan a rung. */
 const XL = CARD_WIDTH_PX.xl;
 const LG = CARD_WIDTH_PX.lg;
 const SM = CARD_WIDTH_PX.sm;
+/** What the upright table draws — `FULL_TABLE.hand`, and it stays a rung. */
+const MD = CARD_WIDTH_PX.md;
 
 /** The largest hand that still fits without scrolling, once fully closed up. */
 const atMostAtTheFloor = (available: number, cardWidth: number): number => {
@@ -183,6 +194,95 @@ describe("fanning your own hand in landscape", () => {
   it("agrees with the card widths it is drawn against", () => {
     expect(loosest(XL)).toBe(CARD_WIDTH_PX.xl + 6);
     expect(handWidth(1, 999, XL)).toBe(CARD_WIDTH_PX.xl);
+  });
+});
+
+describe("fanning your own hand upright", () => {
+  /** The upright hand is fitted, exactly as the landscape one is. */
+  const upright = (cards: number, available = UPRIGHT): number =>
+    handStep(available, cards, MD, TIGHTEST, true);
+
+  it("leaves a hand that fits completely alone, at the spacing it always had", () => {
+    // Five `md` cards and their air fit an upright phone. The loosest step is a
+    // whole card plus six pixels, which is the `gap-1.5` this row used to be
+    // laid out with — so nothing about a hand that fits looks different (#191).
+    expect(loosest(MD)).toBe(CARD_WIDTH_PX.md + 6);
+    for (const cards of [1, 2, 4, 5]) {
+      expect(upright(cards)).toBe(loosest(MD));
+    }
+    expect(handWidth(5, loosest(MD), MD)).toBeLessThanOrEqual(UPRIGHT);
+  });
+
+  it("tightens before it scrolls, at every hand size a game reaches", () => {
+    // The whole of the bug: past five cards the old upright row simply
+    // overflowed and you read your own hand by scrolling it sideways.
+    for (let cards = 6; cards <= 12; cards += 1) {
+      const step = upright(cards);
+      expect(step).toBeLessThan(loosest(MD));
+      expect(handWidth(cards, step, MD)).toBeLessThanOrEqual(UPRIGHT);
+    }
+  });
+
+  it("holds the biggest hand the simulation reaches, and pays for it with a tap", () => {
+    // Twelve across three hundred games. It fits an upright phone without
+    // scrolling, and it only fits by going under the tap floor — which is the
+    // trade #117 already made and the reason `fit` brings the confirm with it.
+    // An upright column is 366px against a landscape row's 828, so this binds
+    // far earlier here than it ever does sideways: seven cards is the last
+    // one-tap hand on a 390px phone.
+    const step = upright(12);
+    expect(handWidth(12, step, MD)).toBeLessThanOrEqual(UPRIGHT);
+    expect(step).toBeLessThan(TIGHTEST);
+    expect(step).toBeGreaterThanOrEqual(FIT_TIGHTEST);
+  });
+
+  it("gives a wide column the whole hand on one tap each", () => {
+    // The upright table is not only a phone: `max-w-3xl` is 768px on a laptop,
+    // where every hand a game can produce stays above the tap floor. The
+    // squeeze is a small-screen answer, not a new rule about upright hands.
+    const LAPTOP = 744;
+    for (let cards = 1; cards <= 16; cards += 1) {
+      expect(upright(cards, LAPTOP)).toBeGreaterThanOrEqual(TIGHTEST);
+      expect(handWidth(cards, upright(cards, LAPTOP), MD)).toBeLessThanOrEqual(LAPTOP);
+    }
+  });
+
+  it("takes the second tap only once the sliver is thinner than a thumb", () => {
+    // `Hand` asks twice when the step is under `TIGHTEST` and not before, so
+    // the boundary is the thing worth pinning: everything up to the floor is an
+    // ordinary turn, and a confirm on every card would wreck its rhythm.
+    let most = 1;
+    while (handWidth(most + 1, TIGHTEST, MD) <= UPRIGHT) most += 1;
+    for (let cards = 1; cards <= most; cards += 1) {
+      expect(upright(cards)).toBeGreaterThanOrEqual(TIGHTEST);
+    }
+    expect(upright(most + 1)).toBeLessThan(TIGHTEST);
+  });
+
+  it("fits an adversarial hand well past anything a deck can deal", () => {
+    // Seventeen still fits an upright phone once fitting is allowed, which is
+    // past every hand a 52-card game can produce at a table of two.
+    expect(handWidth(17, upright(17), MD)).toBeLessThanOrEqual(UPRIGHT);
+    // And past that it stops at its own floor and scrolls, rather than shaving
+    // the hand to stripes — the same release valve the seat strip has (#59).
+    expect(upright(60)).toBe(FIT_TIGHTEST);
+  });
+
+  it("keeps the card on the ladder however tight the fan gets", () => {
+    // Only the step is measured upright: the column is shared, and a hand that
+    // grew into the piles and the log would be taking room that is not its own.
+    // The fan closing up is the whole of the release valve here.
+    for (const cards of [1, 8, 20, 60]) {
+      expect(upright(cards)).toBeLessThanOrEqual(loosest(MD));
+      expect(handWidth(1, upright(cards), MD)).toBe(CARD_WIDTH_PX.md);
+    }
+  });
+
+  it("has nothing to fan before it has been measured", () => {
+    // Zero is what `useBox` reports until the first observation, and the answer
+    // has to be the layout the row already had rather than a flash of anything
+    // else.
+    expect(upright(8, 0)).toBe(loosest(MD));
   });
 });
 

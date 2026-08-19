@@ -110,6 +110,20 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   fit more seats on a phone and quietly break the rule above: a hand you can't
   read is a play you can't spot. Rows are the release valve, not a tighter
   sliver, and the scrolling left between seats is the accepted cost (#59).
+- **Your own hand fans in both layouts, but only landscape sizes its cards to
+  the row.** Both are measured with `useBox` and stepped by `handFan.ts`, and
+  both take `fit`, so a hand closes up before it scrolls and takes a second tap
+  once the sliver is thinner than a thumb (#117). What upright deliberately does
+  *not* take is `height`: `handHeight` exists because the landscape hand owns
+  the whole column and is entitled to fill it, and the upright column is shared
+  with the seat strip, the piles, the prompt and the log. The card stays on the
+  ladder at `FULL_TABLE.hand` and only the step is measured (#191).
+
+  The consequence worth knowing about is that the squeeze binds much earlier
+  upright: a 366px column is the last one-tap hand at seven cards, against
+  fifteen sideways. That is the trade — a hand you have to scroll to read is a
+  play you cannot spot, and #117 already decided what to do below the tap floor.
+  A laptop's `max-w-3xl` column never reaches it.
 - **The app does not tell you which of your own cards are playable either**, and
   the turn prompt won't say whether you have a play. That guardrail is offered
   on the rules screen on the way in, lasts until you finish your first game if

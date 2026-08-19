@@ -11,6 +11,7 @@ import { TurnGlow } from "../components/TurnGlow.tsx";
 import {
   SunnyAccusePicker,
   SunnyAnnounce,
+  SunnyCall,
   SunnyCaught,
   SunnyExplainer,
   SuitPicker,
@@ -349,6 +350,18 @@ export function Table({
 
   const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
 
+  /**
+   * Whose reach is on offer, if anybody's — the one seat a call could be made
+   * about right now.
+   *
+   * `sunnyCallable` is false for a watcher, for the drawer themselves and for
+   * anybody eliminated, so this is already only ever a seat that may act on it
+   * (`redact.ts`). Null while the picker is open: the picker *is* the call
+   * being composed, and an offer to start one over the top of it is an offer to
+   * do the thing you are already doing.
+   */
+  const sunnyTarget = game.sunnyCallable && accusing === null ? game.sunnyTargetId : null;
+
   /** Your hand, in whatever order you asked for. Both layouts draw this one. */
   const handCards = sortHand(you?.hand ?? [], handSort);
 
@@ -552,6 +565,7 @@ export function Table({
           helpFrom={helpFrom ? nameOf(helpFrom.playerId) : null}
           accusing={accusing}
           stillAccusable={stillAccusable}
+          sunnyTarget={sunnyTarget}
           onStartAccusing={startAccusing}
           onStopAccusing={stopAccusing}
           onAccuse={accuse}
@@ -656,12 +670,7 @@ export function Table({
           </Button>
         </header>
 
-        <Seats
-          room={room}
-          game={game}
-          shouts={shouts}
-          onCallSunny={startAccusing}
-        />
+        <Seats room={room} game={game} shouts={shouts} />
 
         <div className="flex flex-1 flex-col justify-center gap-4 py-2">
           <Piles
@@ -755,6 +764,29 @@ export function Table({
             shown the table and nothing that implies they are at it. */}
         {seated ? (
           <div className="relative flex flex-col">
+            {/*
+              The way into a call, over the felt just above your own cards —
+              where your eyes are during somebody else's turn, and which is the
+              whole reason it is here rather than back in the seat strip (#189).
+
+              Absolute, so it arrives with some presence without moving the
+              cards underneath it, and pinned to the left rather than the middle
+              because the middle above this box is where your own `HelpShout`
+              rises. It is nowhere near the draw pile, which is up in the
+              middle of the table: a fat target beside the deck is a mis-tap
+              into the exact violation it accuses.
+            */}
+            {sunnyTarget ? (
+              <div className="pointer-events-none absolute -top-12 left-0 z-20 flex">
+                <SunnyCall
+                  targetName={nameOf(sunnyTarget)}
+                  lockedDraws={game.sunnyLockedDraws}
+                  onCall={() => startAccusing(sunnyTarget)}
+                  className="pointer-events-auto"
+                />
+              </div>
+            ) : null}
+
             {/* Kept clear whether or not the offer is showing, so the hand
                 doesn't move under your fingers when it appears. */}
             <div className="flex min-h-7 items-center gap-2 px-1">

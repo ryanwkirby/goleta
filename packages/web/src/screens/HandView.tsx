@@ -6,7 +6,7 @@ import { Hand, HandSortButton } from "../components/Hand.tsx";
 import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
-import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
+import { SunnyAccusePicker, SunnyCall, SuitPicker } from "../components/Sunny.tsx";
 import { turnPrompt, type NameOf } from "../lib/format.ts";
 import { handHeight, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
@@ -55,6 +55,12 @@ export interface HandViewProps {
   /** The Sunny call being composed, if any — the state lives on `Table`. */
   accusing: string | null;
   stillAccusable: boolean;
+  /**
+   * Whose reach is on offer, if anybody's. Worked out on `Table`, which is
+   * where the picker's own state lives, so the offer and the picker can never
+   * be up at the same time.
+   */
+  sunnyTarget: string | null;
   onStartAccusing: (playerId: string) => void;
   onStopAccusing: () => void;
   onAccuse: (cardId: string) => void;
@@ -114,6 +120,7 @@ export function HandView({
   helpFrom,
   accusing,
   stillAccusable,
+  sunnyTarget,
   onStartAccusing,
   onStopAccusing,
   onAccuse,
@@ -157,10 +164,8 @@ export function HandView({
       <PeekStrip
         room={room}
         game={game}
-        nameOf={nameOf}
         canDraw={canDraw}
         onDraw={onDraw}
-        onCallSunny={onStartAccusing}
         offline={offline}
         helpFrom={helpFrom}
         prompt={prompt}
@@ -170,7 +175,34 @@ export function HandView({
         send={send}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {/*
+          The way into a call, hung under the strip at the end furthest from
+          the deck (#189).
+
+          The sun used to sit *in* the strip, immediately before the draw pile
+          button, so a bigger version of it could only grow towards the deck —
+          and a fat target beside the deck is a mis-tap into the exact violation
+          it accuses. The two bottom corners are spoken for (#167), so this is
+          the corner left, and it is the same idea as the upright table's: over
+          the felt, near your own cards, naming who it is about.
+
+          Absolute, so it never moves the cards underneath it. With a wide fan
+          it sits over the top-left corner of the outermost card — the accepted
+          cost the bottom two corners already pay, and cheaper here, because a
+          window is only ever open on somebody else's turn.
+        */}
+        {sunnyTarget ? (
+          <div className="pointer-events-none absolute left-2 top-2 z-20 flex">
+            <SunnyCall
+              targetName={nameOf(sunnyTarget)}
+              lockedDraws={game.sunnyLockedDraws}
+              onCall={() => onStartAccusing(sunnyTarget)}
+              className="pointer-events-auto"
+            />
+          </div>
+        ) : null}
+
         {/*
           Both pickers **dock**: they take their room out of the column rather
           than being laid over it. Overlaying was the obvious thing and it was

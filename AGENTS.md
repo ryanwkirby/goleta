@@ -156,6 +156,13 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   a legal draw from an illegal one. The sun has exactly one appearance and it
   means "somebody reached, and you may accuse them."
 
+  It got much bigger in #189 and that did not change: **a bigger sun must never
+  become a brighter one when a call would land.** Nothing on the client knows
+  whether it would, and nothing ever will. `SunnyCall` has one look, plus a
+  disabled one for a caller serving their own lockout — which the server sends
+  to nobody else, so a locked-out caller is indistinguishable from any other on
+  every screen but their own.
+
   This bullet has been round the houses, so the history is worth keeping. #31
   reversed the rule and shipped the answer as `GameView.sunnyWouldLand`, behind
   a ten-second glow ramp, on the reasoning that a wrong call cost the caller a
@@ -164,6 +171,26 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   has to be a specific claim, made out loud, that can be specifically wrong. The
   tell had nothing left to buy. Both the flag and the ramp are gone; do not
   reintroduce either, under any name.
+- **The call leaves the seat, and that is the point rather than a side effect
+  (#189).** It was a 20px circle wedged between somebody's name and their card
+  count, in a strip that scrolls sideways — half a thumb, aimed at by eye, for
+  the one control in this app whose window closes when the next player takes
+  their first action. A missed tap was usually a missed call.
+
+  There is only ever one `sunnyTargetId`, so the control names them — *call it
+  on Angela* — which is what stops a call being a thing you do to a name in a
+  list. It is 44px in both layouts, it is over the felt near your own cards in
+  both, and it is nowhere near the draw pile in either. It is **absolute** in
+  both, because it must arrive with some presence without moving the cards
+  underneath it; with a wide fan it sits over a corner of the outermost card,
+  which is the cost the two bottom corners already pay (#167) and a cheaper one
+  here, since a window is only ever open on somebody else's turn.
+
+  Tapping it opens the picker and does not call. An accusation names a card, so
+  the tap that starts one cannot be the tap that commits it — and opening the
+  picker sends `composingCall`, which holds the bots (#73), so the bigger target
+  buys time twice over. The shared table screen has no sun and gets none: it
+  cannot call.
 - **What does go out is `sunnyReach` — evidence, not a verdict.** A viewer who
   could call is sent the offender's hand and the board as they stood before the
   reach, because an accusation has to name one of those cards. Nothing says
@@ -411,8 +438,13 @@ down or handed over.
 Things that will read as oversights in that view and are not:
 
 - **The peek strip shows no hands, at any size.** Of the table it carries the
-  room code, the piles, the card in play, what the table is waiting for, the
-  sun, and somebody asking for help — and that is the whole list. The
+  room code, the piles, the card in play, what the table is waiting for, and
+  somebody asking for help — and that is the whole list. The sun was on it
+  until #189 and is deliberately off it now: it was drawn immediately before
+  the draw pile button, so a bigger version of it could only grow *towards* the
+  deck, and a fat target beside the deck is a mis-tap into the exact violation
+  it accuses. It hangs under the strip instead, at the far end from the pile.
+  The
   fullscreen offer is the first item on it that is not a table fact, and it is
   here because this is the only surface the landscape view has: `RotatePanel` is
   shown only to a phone held *upright*, and a phone already sideways when the

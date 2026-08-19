@@ -319,3 +319,109 @@ If there is a next experiment, that is the hypothesis to test, and it should be
 tested **cheaply and first**: split `Sunny.tsx` by component, change nothing
 else, re-run this same task. One commit, one measurement. Three flat results is
 enough evidence to stop assuming and start checking before spending.
+
+
+---
+
+# Fourth measurement, and the conclusion
+
+`9cffd68` splits `Sunny.tsx` — 677 lines holding eight unrelated components —
+into seven files, one per component. Not a line of component code changed. It
+was chosen because all three previous arms named that file as the costliest
+thing to understand, and because it is a **different shape** of split from
+`Table.tsx`: no cohesive seam for a change to straddle, so a change to the
+picker should stop paying to read seven neighbours.
+
+| Commit | What changed | Tokens | Tools | Secs | Lines written |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `e6a85b4` | before anything | 106,518 | 34 | 376 | 138 |
+| `b239075` | `Table.tsx` split by state/render | 118,414 | 42 | 447 | 107 |
+| `c7452ab` | rationale consolidated, cycles fixed | 109,592 | 33 | 359 | 93 |
+| `9cffd68` | `Sunny.tsx` split by component | **106,196** | 38 | 363 | 99 |
+
+**Net across the whole programme: −0.3% tokens, +11.8% tool calls, −3.5% wall
+time.** Four structural changes, two of them substantial, and the cost of a real
+change from this backlog is indistinguishable from where it started.
+
+The hypothesis this arm tested was right in its own terms — splitting by
+component did recover 3.1% where splitting by cohesion had cost 11% — but the
+effect is small and the total is flat.
+
+## The pattern across all four
+
+Every arm named a costliest file. It was never the same file twice, and it was
+never a file the previous step had just fixed:
+
+| After | Costliest file, per the agent |
+| --- | --- |
+| — (baseline) | `Table.tsx` — *"to place one boolean I had to scan the whole thing"* |
+| `Table.tsx` split | `Sunny.tsx` and `PeekStrip.tsx` |
+| read-cost work | `Sunny.tsx` — *"eight unrelated components"* |
+| `Sunny.tsx` split | `HandView.tsx` — **and not for anything it changed there** |
+
+The complaint relocates every single time and the total never moves. Removing a
+constraint from a system with several does not speed the system up; it promotes
+the next one.
+
+## Why the number will not move: the cost is not navigation
+
+The last arm said it outright, and it is the most useful sentence in this file:
+
+> *"The genuinely hard part was not finding the fields — the task named them —
+> but deciding the **shape** of the display such that it survives the wild-8 case
+> without lying. Everything else was mechanical."*
+
+And on what it actually had to hold at once: that legality is `wild || suit ===
+activeSuit || rank === topRank`, so the obvious phrasing "match 5 or ♠" is
+*wrong* rather than merely a hint; that `topRank` and `activeSuit` can belong to
+different physical cards after an 8, so they must not be drawn as one; that five
+separate `AGENTS.md` prohibitions converge on this one panel; and that the
+compact picker's height is subtracted from the player's own card size.
+
+None of that is a navigation problem. **It is domain reasoning, and no
+arrangement of files reduces it.** Each arm paid roughly the same to assemble the
+same set of constraints, whichever files they happened to be spread across —
+which is exactly what a flat line across four structural changes looks like.
+
+Note also that even `HandView.tsx` was named as expensive *for a question it did
+not answer in code*: "is the column measured or fixed?", whose answer lives in
+comment prose. That is the same finding as #229 and #230, arriving for the third
+time.
+
+## What the programme actually bought
+
+Nothing in tokens. Worth keeping anyway, and worth being honest that it is not
+what was being aimed at:
+
+- 490 tests against 391 — 67 of them over decision logic with no coverage at all,
+  including the screen-routing rule and the flag the Sunny Rule depends on.
+- The largest file in `packages/web` went 1,016 → 355 lines; no file in the
+  table area is now over 550.
+- Three import cycles removed, two more found and fixed that #228 had wrongly
+  claimed were gone, and a test that fails on exactly that mistake — a property
+  the build checks instead of a claim in a commit message.
+- Rationale stated once instead of four times, and a written map of where a new
+  control may go.
+
+## Recommendation: stop refactoring for token cost
+
+Four measurements, two tasks, one clear answer. The protocol's premise — that
+shrinking the largest file makes the next change measurably cheaper — does not
+hold in this repo, and the reason is now well evidenced rather than guessed:
+**this codebase is expensive because its rules are subtle and interlocking, not
+because its files are large.** The prose that makes it expensive is also what
+makes it correct; `AGENTS.md` exists precisely because these decisions read as
+bugs to a fresh pair of eyes.
+
+If cost is to be attacked, attack the thing every arm actually complained about.
+The candidates, in the order the evidence supports them:
+
+1. **Put the constraints where the code is.** Five prohibitions converge on the
+   accusation picker and all five live in `AGENTS.md`. #229 and #230 were the
+   first two steps of this and were the only intervention that improved a
+   measurement against the state it followed (−7.5%).
+2. **Answer load-bearing questions in code rather than in comments.** "Is this
+   column measured or fixed?" cost an agent 240 lines of prose to answer, and
+   the answer is a `useBox` call.
+3. **Do not split further for size.** It has been tried twice, in both shapes,
+   and neither moved the total.

@@ -1,3 +1,27 @@
+/**
+ * The draw pile and the card in play — and the one control in this app that is
+ * deliberately unsafe.
+ *
+ * **Rules converge here.** In brief, so nobody trips one without knowing it was
+ * there. `AGENTS.md` § "Rules that look like bugs and are not" carries the
+ * argument for each and is the authority: if a line here and the document ever
+ * disagree, the document is right and this is stale.
+ *
+ * - **The draw pile stays tappable while you hold a legal play, with no
+ *   warning.** No disabled state, no confirmation, no hint. Drawing when you
+ *   could have played is the violation the whole Sunny Rule exists to punish,
+ *   so the UI has to permit it silently. It is the most load-bearing rule in
+ *   the app and this is the file that implements it.
+ * - **Nothing here says whether a call would land.** The client is never told
+ *   and never will be (#50), and the peel runs identically for a wrong call and
+ *   a right one (#63).
+ * - **The badge names a suit only when somebody chose one**, and otherwise says
+ *   only that one is *owed* — never the stale board still standing behind a
+ *   pending call (#76, #150). `pileSuit` returns the two as one value so a
+ *   caller cannot reach for a bare `Suit` and print the stale one again.
+ * - **A five-second reshuffle gates nothing**, least of all this pile (#209).
+ */
+
 import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 
 import { pileSuit, type PileSuit } from "../lib/pile.ts";
@@ -89,12 +113,8 @@ export function Piles({
   return (
     <div className="flex items-center justify-center gap-6">
       <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
-        {/*
-          Tappable whenever it's your turn, including when you're holding a
-          playable card. Drawing then breaks the rules, and letting you do it
-          without a word of warning is the entire point of the Sunny Rule. No
-          disabled state, no confirmation — see AGENTS.md.
-        */}
+        {/* Tappable whenever it's your turn, playable card in hand or not.
+            First rule in the header above, and the one most often "fixed". */}
         <button
           type="button"
           onClick={onDraw}

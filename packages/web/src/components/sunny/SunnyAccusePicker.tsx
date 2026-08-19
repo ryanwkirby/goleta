@@ -1,3 +1,28 @@
+/**
+ * The offender's hand, offered as an accusation.
+ *
+ * **Five prohibitions converge on this one panel, and holding four of them is
+ * not enough.** They are listed here in brief so nobody trips one without
+ * knowing it was there; `AGENTS.md` § "Rules that look like bugs and are not"
+ * carries the argument for each and is the authority. If a line here and the
+ * document ever disagree, the document is right and this is stale.
+ *
+ * 1. **Nothing says which card was legal.** No highlight, at any strength.
+ * 2. **No helpful sort.** The hand is offered in the order `sunnyReach` sent
+ *    it, which is the order it was held in.
+ * 3. **Nothing is dimmed or disabled.** Every card is offered at equal weight,
+ *    including the ones that would not have played.
+ * 4. **Nothing indicates whether a call would land.** No client knows and none
+ *    ever will: #31 shipped that answer as `sunnyWouldLand` and #50 took it
+ *    back out, because making the caller name the card is the better brake.
+ * 5. **`sunnyReach` is evidence, never a verdict** — the offender's hand and
+ *    the board as they stood at the reach, and nothing that reads it out for
+ *    you. Do not add a `legalCardIds` equivalent for it.
+ *
+ * The first three are one idea approached from three directions: which card was
+ * legal is exactly the question, so any weighting at all answers it.
+ */
+
 import { useRef, type CSSProperties } from "react";
 
 import type { SunnyReach } from "@goleta/engine";
@@ -17,10 +42,6 @@ import { Button } from "../ui.tsx";
  * second reason too — the cards it lists are the offender's hand *as it was*,
  * and being able to compare that against the pile and against what they hold
  * now, without anything covered, is the entire judgement being asked of you.
- *
- * Deliberately unhelpful: every card is offered at equal weight. Which of them
- * was legal is exactly the question, and dimming the ones that weren't would
- * answer it.
  */
 export function SunnyAccusePicker({
   targetName,
@@ -37,6 +58,13 @@ export function SunnyAccusePicker({
   /**
    * Landscape, where the whole viewport is about 350px tall (#78).
    *
+   * **Compact means docked, and a docked panel is paid for in card size.** The
+   * hand column below is *measured*, not fixed: `HandView` reads what this
+   * leaves with `useBox` and `handHeight` sizes the player's own cards to it,
+   * continuously rather than by a rung (#166). So a row added in here comes
+   * straight off their cards — and nothing has to be capped or scrolled to make
+   * it fit, because the hand gives back exactly what this takes.
+   *
    * The cards drop a size, the second line of explanation goes, and the hand
    * lays out in **one row, always** — whole cards with air between them while
    * they fit, closing up onto each other once they don't, the same trade
@@ -47,10 +75,8 @@ export function SunnyAccusePicker({
    * its own overflow with cards clipped top and bottom. Two nested scrolls, at
    * the one moment nothing may be covered or cut off.
    *
-   * Nothing about *which* cards are offered changes: it is still the whole
-   * pre-draw hand, still at equal weight, still unsorted and undimmed. The
-   * overlap is a layout and not a hint — every card in the row leaves the same
-   * sliver, so it says nothing about which of them was legal.
+   * The overlap is a layout and not a hint: every card in the row leaves the
+   * same sliver, so it still says nothing about which of them was legal (#96).
    */
   compact?: boolean;
   irl?: boolean;

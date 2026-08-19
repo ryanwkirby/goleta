@@ -1,3 +1,24 @@
+/**
+ * The sun: the way an accusation starts.
+ *
+ * **Rules converge here.** In brief, so nobody trips one without knowing it was
+ * there. `AGENTS.md` § "Rules that look like bugs and are not" carries the
+ * argument for each and is the authority: if a line here and the document ever
+ * disagree, the document is right and this is stale.
+ *
+ * - **One look, and a bigger sun must never become a brighter one when a call
+ *   would land** (#50, #189). Nothing on the client knows whether it would, and
+ *   nothing ever will. No ramp, no glow, no ordering and no wording separates a
+ *   legal draw from an illegal one.
+ * - **The disabled variant is the only second look**, and it is not about the
+ *   draw: it is your own missed call still being served. The server sends
+ *   `lockedDraws` to nobody else, so a locked-out caller is indistinguishable
+ *   from any other on every screen but their own.
+ * - **44px, and nowhere near the draw pile** in either layout (#189). A fat
+ *   target beside the deck is a mis-tap into the exact violation it accuses.
+ * - **Tapping it opens the picker and does not call.** An accusation names a
+ *   card, so the tap that starts one cannot be the tap that commits it.
+ */
 
 /** A plain outline. It is furniture until it has something to say. */
 function SunGlyph() {
@@ -32,23 +53,12 @@ function SunGlyph() {
  * is more legible than a glyph beside a name in a scrolling strip ever was, and
  * it stops the call being a thing you do *to a name in a list*.
  *
- * One state, and that is the entire point. It appears when a draw is standing
- * and you are free to call, and it means only that: somebody reached for the
- * deck. Whether they were allowed to is on the table in front of you, in their
- * hand, and working it out is the game. Nothing here brightens, ramps or
- * otherwise leaks the answer, and a bigger sun must not become a brighter one
- * when a call would land — nothing on the client knows that and nothing ever
- * will (`AGENTS.md`, #50).
+ * It appears when a draw is standing and you are free to call, and it means
+ * only that: somebody reached for the deck. Whether they were allowed to is on
+ * the table in front of you, in their hand, and working it out is the game.
  *
- * **Tapping it opens the picker; it does not call.** An accusation names a
- * card, so the tap that starts one cannot be the tap that commits it — and
- * opening the picker also sends `composingCall`, which holds the bots (#73), so
+ * Opening the picker also sends `composingCall`, which holds the bots (#73), so
  * the bigger target buys time twice over.
- *
- * `lockedDraws` is the one thing that changes its appearance, and it isn't
- * about the draw at all: it is your own missed call still being served. The
- * server sends it to nobody else, so a caller serving one looks exactly the
- * same on everybody else's screen.
  */
 export function SunnyCall({
   targetName,

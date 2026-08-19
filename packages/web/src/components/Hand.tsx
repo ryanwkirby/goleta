@@ -1,3 +1,24 @@
+/**
+ * Your own cards, and the one control over them.
+ *
+ * **Rules converge here.** In brief, so nobody trips one without knowing it was
+ * there. `AGENTS.md` § "Rules that look like bugs and are not" carries the
+ * argument for each and is the authority: if a line here and the document ever
+ * disagree, the document is right and this is stale.
+ *
+ * - **Nothing marks a playable card except under `assist`** (#33). Being able
+ *   to see your own legal move at a glance is exactly what stops you making the
+ *   mistake the Sunny Rule exists to punish, and the mistake is the game. The
+ *   tooltip follows the same toggle, because it is a highlight in slow motion.
+ * - **`assist` is a setting you keep, and it is public** (#187). It is
+ *   presentation and never a rule: `packages/engine` never learns it exists, it
+ *   is not on `GameOptions` or `HouseRules`, and no bot may read it.
+ * - **`legalCardIds` is your own hand and nobody else's**, by `redact.ts`. This
+ *   file never draws another player's cards, and nothing anywhere works out
+ *   which of *their* cards were playable — that is the table's job, and it is
+ *   what a Sunny call is made of.
+ */
+
 import {
   useCallback,
   useEffect,
@@ -80,10 +101,9 @@ export function Hand({
   legalCardIds: string[];
   mode: HandMode;
   /**
-   * Whether to mark up the cards you can play. Off by default once you've
-   * finished a game — see `AGENTS.md`. Being able to see your own legal move
-   * at a glance is exactly what stops you making the mistake the Sunny Rule
-   * exists to punish, and the mistake is the game.
+   * Whether to mark up the cards you can play. Off unless this player has
+   * turned it on — the first rule in the header above, and #187 for why it is
+   * a setting they keep rather than a countdown.
    */
   assist: boolean;
   onChoose: (cardId: string) => void;

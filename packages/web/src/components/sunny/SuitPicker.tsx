@@ -16,7 +16,14 @@ export function SuitPicker({
   compact = false,
 }: {
   onPick: (suit: "C" | "D" | "H" | "S") => void;
-  /** Landscape: one row of four, shorter, and the aside goes. */
+  /**
+   * Landscape: one row of four, shorter, and the aside goes.
+   *
+   * Compact means docked into the hand column, and a docked panel is paid for
+   * in card size. That column is *measured*, not fixed: `HandView` reads what
+   * this leaves with `useBox` and `handHeight` sizes the player's own cards to
+   * it (#166). A row added in here comes straight off their cards.
+   */
   compact?: boolean;
 }) {
   const suits = [

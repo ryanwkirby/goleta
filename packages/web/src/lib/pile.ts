@@ -46,6 +46,16 @@ import type { Card, GameView, Suit } from "@goleta/engine";
  * drawn in the same place and the caller has to pick between them, so making
  * them one answer is what stops a badge that means "waiting" being read as one
  * that means "clubs".
+ *
+ * **`named` is a claim, and it is read out as one.** `SuitMark` renders it
+ * "spades called" for whoever is listening rather than looking, so this is the
+ * wrong type for a suit that was merely *printed* — an upcard, a card turned up
+ * by a recycle, the card played to settle a call. Every one of those leaves a
+ * board with a live suit and nobody who chose it, and drawing one through here
+ * puts a claim in the screen-reader text that nothing at the table made. It is
+ * the same distinction `namedSuit` exists for on the game state, arriving one
+ * layer further out: `activeSuit` says which suit must be matched, and only
+ * this says a person picked it.
  */
 export type PileSuit = { kind: "owed" } | { kind: "named"; suit: Suit };
 

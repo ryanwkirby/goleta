@@ -12,6 +12,15 @@
 
   --animate-help-shout: help-shout 2.6s ease-out forwards;
 
+  /* The offer of a hand, settling into place seven seconds into a turn nobody
+     has moved on. A tenth of the shout's life and a fraction of its travel: the
+     shout is a pill leaping off a hand for the whole table to read, this is a
+     line of small print that should look like it was always going to be there.
+     `both` rather than `forwards` so the first frame is the faded one — without
+     it the offer is drawn at full strength for a frame and then fades in from
+     nothing, which reads as a flicker. */
+  --animate-help-offer: help-offer 420ms cubic-bezier(0.22, 0.72, 0.3, 1) both;
+
   /* A refused move, over the hand it was refused from. The whole life of the
      thing is in the one animation — in, held, out — and `MOVE_MS` clears up
      after it, so the two figures move together. */
@@ -80,6 +89,24 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -2.2rem) scale(1);
+  }
+}
+
+/* "want help?", rising into the place it was already going to occupy.
+
+   A quarter of a rem, which is deliberately less than it sounds: the point is
+   to be caught out of the corner of an eye that is on the cards, not to ask for
+   one. Nothing around it moves — upright the row is kept clear whether or not
+   the offer is showing, and in landscape it is an absolute corner over the felt
+   — so the whole of the movement happens inside the offer's own box. */
+@keyframes help-offer {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -163,6 +190,17 @@
     70% {
       opacity: 1;
       transform: translate(-50%, -0.5rem);
+    }
+  }
+
+  /* The fade stays and the rise goes. An offer that appeared with no change at
+     all would be the thing this fixed: something has to say it just arrived. */
+  @keyframes help-offer {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 

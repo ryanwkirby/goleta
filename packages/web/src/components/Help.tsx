@@ -12,6 +12,22 @@ import { Button } from "./ui.tsx";
 /**
  * Appears a few seconds into a turn you haven't moved on. Deliberately quiet:
  * it should read as an offer you can ignore, not a prompt you owe an answer.
+ *
+ * Quiet is not the same as silent, and until #193 this was the second one. It
+ * arrived the way a `null` becomes an element — instantly, fully formed, in
+ * small grey type at the edge of a screen somebody is already staring at — at
+ * the exact moment they have stopped knowing what to do. So it fades in and
+ * rises a quarter of a rem into the place it was always going to occupy:
+ * enough to be caught in the corner of an eye that is on the cards, not enough
+ * to ask for one.
+ *
+ * Three things the animation is careful about, all of them in `index.css`.
+ * **Nothing around it moves** — the rise is a transform inside its own box, and
+ * both rows it sits in reserve their room whether or not it is showing.
+ * **It does not re-run**: the element is mounted when the offer opens and
+ * unmounted when it closes, so the animation has exactly one life per offer.
+ * And **it leaves without one** — the offer expires because you moved, and an
+ * app that animated that would be commenting on your turn.
  */
 export function HelpLink({ onAsk }: { onAsk: () => void }) {
   return (
@@ -23,7 +39,7 @@ export function HelpLink({ onAsk }: { onAsk: () => void }) {
       // its own width to a long prompt would be a tap target squeezed to a
       // sliver of itself.
       className={[
-        "shrink-0 rounded-lg px-2 py-1 text-xs text-white/35",
+        "animate-help-offer shrink-0 rounded-lg px-2 py-1 text-xs text-white/35",
         "transition-colors hover:bg-white/5 hover:text-white/70",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
       ].join(" ")}

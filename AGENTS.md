@@ -117,6 +117,26 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   back, one turn at a time, and everyone at the table hears you ask (#33).
   Restoring the highlights unconditionally removes the chance to make the
   mistake the Sunny Rule feeds on.
+- **The edges of the screen glow when the table is waiting on you, and that is
+  the only thing they say (#190).** Knowing it was your turn used to require
+  reading — a prompt and a one-pixel ring — and at a table of six with the
+  phone flat on the felt, the commonest thing anybody said out loud was "it's
+  you". `TurnGlow` answers *is it me*, in the amber the ring and the prompt
+  already use, at the physical edge of the display where the felt already
+  bleeds (#124).
+
+  Three things it must never become. **It says nothing about your cards** —
+  same glow whether you hold a play, are stuck, or are about to be caught; the
+  bullet above is why. **It is not a timer**: no ramp, no pulse, no
+  intensifying, because that would be pressure on exactly the decision the
+  Sunny Rule wants people to take their time over — and a thing that never
+  moves is also the whole of what `prefers-reduced-motion` needs here. **And it
+  does not replace the prompt**, which still says what is being asked for.
+
+  It follows `waitingOn` rather than whose turn it is, which is what makes it
+  cover naming a suit under Power of Eights and the card owed after a landed
+  call. A watcher never gets it and the shared screen has none — that screen
+  has no "you", and it already turns to face whoever is up next (#160).
 - **Whether a draw was illegal never leaves the server.** No field carries it,
   and nothing on screen — no glow, no ramp, no ordering, no wording — separates
   a legal draw from an illegal one. The sun has exactly one appearance and it
@@ -395,6 +415,28 @@ Things that will read as oversights in that view and are not:
   *noticing* a reach is easier with, and turning the phone upright is the answer
   to that. A sliver too small to read a rank off is worse than nothing
   (`fan.ts` has a floor for exactly this).
+- **The host's cog and the way back to the rules are the other two, and they
+  are here because they were nowhere (#194, #195).** `HandView` has no header,
+  so the cog the upright table draws in its own simply did not exist in
+  landscape — and a host at an IRL table *is* a host holding a phone sideways,
+  which is the whole point of that view. The rules had the same gap and it is
+  the worse one: landscape is the IRL view, an IRL table is where the new
+  players are, and looking a rule up is a thing that happens mid-hand.
+
+  Both live in the **small-print cluster at the left**, which is the only part
+  of that row allowed to wrap and therefore the only place a new control may
+  take its width from. The right-hand end belongs to the prompt, the sun and
+  the deck, and the strip itself still never wraps.
+
+  The cog is **44px in both layouts and the same shape in both** — it was a
+  16px glyph in a 24px box, in a header of small grey print, and hosts did not
+  find it. In the strip its target is painted out of a shorter row box, because
+  the rule above it is that two lines of small print stay shorter than the pile
+  card beside them, and what a full-height line would spend the difference out
+  of is the hand. The rules link opens the same screen the upright header does,
+  **without** the first-run hints question: that belongs to the first time
+  through, not to a mid-hand look-up, and nothing pauses behind it — a
+  challenge window can close while you read, exactly as it always could.
 - **The room code is the invite, on every screen, and tapping it is how (#135).**
   A code is the address of the room, and the two things that can arrive at one
   are a **person** and a **shared screen**: same code, different link, which is

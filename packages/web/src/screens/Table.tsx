@@ -7,6 +7,7 @@ import { Hand, HandSortButton, type HandMode } from "../components/Hand.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { RotatePanel } from "../components/RotatePanel.tsx";
 import { Seats } from "../components/Seats.tsx";
+import { TurnGlow } from "../components/TurnGlow.tsx";
 import {
   SunnyAccusePicker,
   SunnyAnnounce,
@@ -150,6 +151,16 @@ export function Table({
   const you = game.players.find((player) => player.id === game.you);
   const mine = game.waitingOn === game.you;
   const finished = game.status === "over";
+  /**
+   * Whether the four edges of the screen are lit (#190).
+   *
+   * `mine` is `waitingOn`, not whose turn it is, which is what makes this cover
+   * naming a suit under the Power of Eights and the card owed after a landed
+   * call — two moments the table is waiting on you while somebody else holds
+   * the turn. A watcher never has it, because `mine` is already false for them
+   * everywhere.
+   */
+  const glowing = mine && !finished;
   /**
    * Whether there is a seat behind this screen at all.
    *
@@ -464,6 +475,9 @@ export function Table({
   if (compact) {
     return (
       <TableMotion game={game} log={log} scale={PEEK_TABLE}>
+        {/* Both layouts, and deliberately the same thing in both: this is the
+            one cue that should not depend on which way the phone is held. */}
+        {glowing ? <TurnGlow /> : null}
         <HandView
           room={room}
           game={game}
@@ -483,6 +497,7 @@ export function Table({
           stalled={stalled}
           onAskForHelp={askForHelp}
           onShowInvite={() => setInviting(true)}
+          onShowRules={onShowRules}
           shouting={shoutingHere}
           helpFrom={helpFrom ? nameOf(helpFrom.playerId) : null}
           accusing={accusing}
@@ -518,6 +533,7 @@ export function Table({
 
   return (
     <TableMotion game={game} log={log}>
+      {glowing ? <TurnGlow /> : null}
       {/* All four, not just the bottom. The top costs nothing in Safari, where
           the browser's own chrome covers the island — and stops costing nothing
           the moment this runs standalone. The sides are for the landscape look
@@ -544,6 +560,12 @@ export function Table({
               irl={room.irl}
               onRules={(rules) => send({ t: "setHouseRules", rules })}
               onIrl={(on) => send({ t: "setIrl", on })}
+              // Pulled back over the column's own padding so the 44px box sits
+              // the glyph roughly on the margin the rest of the header keeps.
+              // The row was already this tall — `rules` and `leave` are
+              // `Button`s, and every `Button` is `min-h-11` — so the bigger
+              // target costs the header nothing.
+              className="-ml-2"
             />
           ) : null}
           {/* The code was four characters saying what the room was called and

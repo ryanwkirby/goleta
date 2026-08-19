@@ -12,6 +12,15 @@
 
   --animate-help-shout: help-shout 2.6s ease-out forwards;
 
+  /* The offer of a hand, settling into place seven seconds into a turn nobody
+     has moved on. A tenth of the shout's life and a fraction of its travel: the
+     shout is a pill leaping off a hand for the whole table to read, this is a
+     line of small print that should look like it was always going to be there.
+     `both` rather than `forwards` so the first frame is the faded one — without
+     it the offer is drawn at full strength for a frame and then fades in from
+     nothing, which reads as a flicker. */
+  --animate-help-offer: help-offer 420ms cubic-bezier(0.22, 0.72, 0.3, 1) both;
+
   /* A refused move, over the hand it was refused from. The whole life of the
      thing is in the one animation — in, held, out — and `MOVE_MS` clears up
      after it, so the two figures move together. */
@@ -63,6 +72,29 @@
     );
 }
 
+/* The table is waiting on you, said without words.
+
+   Two inset shadows on one viewport-sized overlay: a tight bright band hugging
+   the four edges and a broad dim wash behind it, in the same amber the hand's
+   turn ring and the prompt already use. Same light, more of it, and far enough
+   from the middle of the screen that it never competes with the cards.
+
+   **It does not move, and that is the design rather than a shortcut.** A glow
+   that ramped would be a timer, and a timer is pressure on exactly the decision
+   the Sunny Rule wants people to take their time over. It also means there is
+   nothing for `prefers-reduced-motion` to reduce, which is the simplest way to
+   honour it.
+
+   The two shadows differ in spread as well as blur. A positive spread on an
+   inset shadow contracts the rectangle the light falls from, so the wash reaches
+   further in than its blur alone would — which is what stops the pair reading as
+   a border with a halo instead of as an edge of light. */
+@utility turn-glow {
+  box-shadow:
+    inset 0 0 1rem 0 color-mix(in oklab, var(--color-amber-300) 42%, transparent),
+    inset 0 0 3.5rem 0.5rem color-mix(in oklab, var(--color-amber-300) 18%, transparent);
+}
+
 /* "help!", rising off the hand that asked for it. */
 @keyframes help-shout {
   0% {
@@ -80,6 +112,24 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -2.2rem) scale(1);
+  }
+}
+
+/* "want help?", rising into the place it was already going to occupy.
+
+   A quarter of a rem, which is deliberately less than it sounds: the point is
+   to be caught out of the corner of an eye that is on the cards, not to ask for
+   one. Nothing around it moves — upright the row is kept clear whether or not
+   the offer is showing, and in landscape it is an absolute corner over the felt
+   — so the whole of the movement happens inside the offer's own box. */
+@keyframes help-offer {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -163,6 +213,17 @@
     70% {
       opacity: 1;
       transform: translate(-50%, -0.5rem);
+    }
+  }
+
+  /* The fade stays and the rise goes. An offer that appeared with no change at
+     all would be the thing this fixed: something has to say it just arrived. */
+  @keyframes help-offer {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 

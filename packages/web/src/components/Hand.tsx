@@ -12,9 +12,11 @@ import type { Card } from "@goleta/engine";
 
 import { TIGHTEST } from "../lib/handFan.ts";
 import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
-import { cardAnchor, HAND } from "../motion/anchors.ts";
-import { useMotion } from "../motion/TableMotion.tsx";
-import { CARD_WIDTH_PX, PlayingCard, cardWidthAt, type CardSize } from "./Card.tsx";
+import { cardAnchor, HAND } from "../lib/anchors.ts";
+import { useMotion } from "../lib/motion.ts";
+import { PlayingCard } from "./Card.tsx";
+import type { HandMode } from "../lib/handMode.ts";
+import { CARD_WIDTH_PX, cardWidthAt, type CardSize } from "../lib/cardShape.ts";
 
 /**
  * `forced` is the play you owe after a Sunny call has landed on you. It plays a
@@ -22,7 +24,6 @@ import { CARD_WIDTH_PX, PlayingCard, cardWidthAt, type CardSize } from "./Card.t
  * does: it is one step of a punishment, and a punishment you can fire off with
  * a stray thumb is one you never find out you were served (#66).
  */
-export type HandMode = "play" | "forced" | "surrender" | "idle";
 
 /** The moves that ask twice, because you can't take them back. */
 const CONFIRMS: ReadonlySet<HandMode> = new Set<HandMode>(["forced", "surrender"]);

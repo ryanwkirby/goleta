@@ -523,11 +523,21 @@ arrows in is a presentation call, and refusing the message would throw an error
 at a host who flipped an unrelated setting mid-shuffle. Moving off either end
 does nothing rather than refusing, for the same reason.
 
-A table has **two views, one brain**. `Table.tsx` holds all the state — the
-Sunny state machine, the stall timer, the assist, the sort — and picks a layout
-at the bottom. `HandView` is the landscape one: a peek strip, and the whole of
-the rest of the screen given to your hand. Anything that needs table state
-belongs on `Table`; the layouts are given what to draw.
+A table has **two views, one brain**. The brain is `screens/table/useTableState
+.ts` — the Sunny state machine, the stall timer, the assist, the sort — and
+`Table.tsx` picks a layout from what it returns. `HandView` is the landscape
+one: a peek strip, and the whole of the rest of the screen given to your hand.
+Anything that needs table state belongs in the hook; the layouts are given what
+to draw, in four bundles (`TableContext`, `HandControls`, `HelpControls`,
+`SunnyControls`) rather than thirty loose props.
+
+**The decisions are not in the brain either.** Which of the five screens you are
+owed is `lib/tableRoute.ts`; what tapping one of your own cards does, and
+whether the app is pointing at the answer, is `lib/handMode.ts`; the call window
+and the caught dialog are `lib/sunnyOffer.ts`; counting finished games is
+`lib/graduation.ts`. All four are pure, all four have tests, and that is the
+point — nothing in this repo renders a React component in a test, so a decision
+left inside a screen is a decision nothing checks. Put new ones there too.
 
 **Which way up the phone is picks between them, and nothing else does.**
 Sideways is your hand, upright is the whole table. There is no stored
@@ -923,6 +933,16 @@ npm workspaces monorepo, one Docker image, one process.
   *intents*, the server validates through the engine and broadcasts *events*.
   Also serves the built web bundle in production.
 - `packages/web` — React + Vite + TypeScript + Tailwind, `oxlint`.
+
+  **The folders are a one-way street and there are no import cycles.** `lib` is
+  a leaf: pure logic and the hooks over it, depending on nothing but the engine.
+  `net` and `components` may reach into `lib`, `motion` may reach into `lib` and
+  `components`, and `screens` may reach into all of them. Three cycles existed
+  until #224 and every one of them came from a pure value parked inside a module
+  that renders or connects — card geometry inside a component, the moment
+  durations inside the flight planner, the log's shape inside the socket hook.
+  If something pure is wanted by two folders, it belongs in `lib`, not in
+  whichever one wrote it first.
 
 **`packages/engine/src/redact.ts` is the security boundary.** Nothing outside it
 decides what a client may see. Hands are not what it guards — every hand is face

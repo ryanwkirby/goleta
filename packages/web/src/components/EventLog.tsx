@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { describeEvent, spellSuits, type NameOf } from "../lib/format.ts";
-import type { LoggedEvent } from "../net/useGoleta.ts";
+import type { LoggedEvent } from "../lib/feed.ts";
 
 /**
  * One line of the log, shown with its pips and read out with its words. Same

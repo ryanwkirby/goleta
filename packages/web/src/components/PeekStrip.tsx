@@ -2,8 +2,8 @@ import type { ClientMessage, GameView, RoomView, ShoutKind } from "@goleta/engin
 
 import { useFullscreen } from "../lib/fullscreen.ts";
 import { pileSuit } from "../lib/pile.ts";
-import { DECK, PILE } from "../motion/anchors.ts";
-import { useMotion } from "../motion/TableMotion.tsx";
+import { DECK, PILE } from "../lib/anchors.ts";
+import { useMotion } from "../lib/motion.ts";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
 import { HostSettingsCog } from "./HostSettings.tsx";

@@ -11,8 +11,9 @@
 
 import type { Card, GameEvent, GameView, PlayerId } from "@goleta/engine";
 
-import type { CardSize } from "../components/Card.tsx";
-import { cardAnchor, DECK, HAND, PILE, seatAnchor, type AnchorKey } from "./anchors.ts";
+import { PEEL_MS, RESHUFFLE_MS } from "../lib/beats.ts";
+import type { CardSize } from "../lib/cardShape.ts";
+import { cardAnchor, DECK, HAND, PILE, seatAnchor, type AnchorKey } from "../lib/anchors.ts";
 
 export const FLIGHT_MS = 220;
 const DEAL_MS = 190;
@@ -22,42 +23,12 @@ const BEAT_MS = 110;
 const TURN_UP_BEAT_MS = 95;
 /** A held pause either side of a Sunny rewind, so it reads as its own moment. */
 const CALL_BEAT_MS = 260;
-/**
- * How long the pile spends peeled back over a judged call before anything is
- * allowed to move again: long enough to fan the pile aside and then read the
- * two cards that decide it, since a glimpse of the evidence would be
- * decoration rather than evidence.
- *
- * The table sees the evidence, then the ruling, then the consequence — a rewind
- * that started underneath the evidence would be the consequence arriving first.
- * `Table.tsx` holds the peel itself up for exactly this long, and the ruling
- * banner follows it. (#63)
- */
-export const PEEL_MS = 1700;
 /** Cards fan out of the deck this fast, squeezed to fit `DEAL_WINDOW_MS`. */
 const DEAL_BEAT_MS = 38;
 const DEAL_WINDOW_MS = 820;
 /** A burst that would run longer than this is compressed rather than queued. */
 const BATCH_CAP_MS = 900;
 
-/**
- * How long the whole table stops for a reshuffle (#209).
- *
- * It is one of the biggest things that happens in a game and it used to pass in
- * under half a second — three face-down cards at 260ms on a 60ms stagger, and
- * less than that in practice, because a recycle always arrives batched with the
- * `drew` and `turnedUp` around it and `BATCH_CAP_MS` squeezed the whole burst
- * into 900ms. What people at the table saw was the deck count jumping, the pile
- * dropping to one card, the card to match changing, and play carrying on. They
- * read it as the game skipping ahead and asked what had happened.
- *
- * Five seconds, next to `PEEL_MS` and `ANNOUNCE_MS`, because it is the same
- * kind of number: the length of a moment the whole table is in, rather than a
- * decision any one screen gets to make. It is affordable because this happens
- * once or twice in a game rather than once a turn — if a variant ever makes it
- * frequent, this is the figure to revisit.
- */
-export const RESHUFFLE_MS = 4800;
 
 /**
  * The pile going back into the deck, slowly enough to watch.

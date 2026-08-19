@@ -1,9 +1,10 @@
 import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 
 import { pileSuit, type PileSuit } from "../lib/pile.ts";
-import { DECK, PILE } from "../motion/anchors.ts";
-import { useMotion } from "../motion/TableMotion.tsx";
-import { CardBack, PlayingCard, SuitMark, type CardSize } from "./Card.tsx";
+import { DECK, PILE } from "../lib/anchors.ts";
+import { useMotion } from "../lib/motion.ts";
+import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
+import type { CardSize } from "../lib/cardShape.ts";
 import { SunnyPeel } from "./Sunny.tsx";
 
 /**

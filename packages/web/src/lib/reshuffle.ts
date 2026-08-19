@@ -30,8 +30,8 @@ import { useEffect, useState } from "react";
 
 import type { GameEvent } from "@goleta/engine";
 
-import { RESHUFFLE_MS } from "../motion/plan.ts";
-import type { LoggedEvent } from "../net/useGoleta.ts";
+import { RESHUFFLE_MS } from "./beats.ts";
+import type { LoggedEvent } from "./feed.ts";
 
 /** The event itself, narrowed to the one variant this is about. */
 export type Reshuffled = Extract<GameEvent, { type: "reshuffled" }>;

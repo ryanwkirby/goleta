@@ -1,60 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type {
-  ClientMessage,
-  ErrorCode,
-  ErrorKind,
-  GameEvent,
-  GameView,
-  RoomView,
-  ServerMessage,
-  ShoutKind,
-} from "@goleta/engine";
+import type { ClientMessage, GameView, RoomView, ServerMessage } from "@goleta/engine";
 
+import type {
+  ConnectionStatus,
+  GoletaError,
+  LoggedEvent,
+  Shout,
+} from "../lib/feed.ts";
 import { forgetIdentity, loadIdentity, saveIdentity } from "./identity.ts";
 import { routeFromHash, setHashCode, type ViewMode } from "./route.ts";
-
-export type ConnectionStatus = "connecting" | "open" | "closed";
-
-export interface LoggedEvent {
-  id: number;
-  event: GameEvent;
-  /** When this reached the browser. The table won't act out old news. */
-  at: number;
-}
-
-/**
- * Something a seat said out loud. Lives for a couple of seconds.
- *
- * `help` is one turn's worth of marked-up cards, asked for and gone. `hints`
- * is the standing version being switched on — announced once here, and then
- * visible on the seat itself for as long as it lasts (#187).
- */
-export interface Shout {
-  id: number;
-  playerId: string;
-  kind: ShoutKind;
-}
-
-/**
- * A refusal, as the app has to deal with it. The sentence is for the player;
- * `code` is for the app, on the few refusals it can offer a way out of.
- */
-export interface GoletaError {
-  /**
-   * Bumped on every refusal, including a repeat of one word for word.
-   *
-   * Tap two cards that don't match and the second one has to look like a second
-   * answer — but the words are identical, so React keeps the same element and a
-   * CSS animation that has already run doesn't run again. Keying the pill on
-   * this is what replays it.
-   */
-  id: number;
-  message: string;
-  code?: ErrorCode;
-  /** How long it's worth showing. See `ErrorKind`. */
-  kind: ErrorKind;
-}
 
 export interface Goleta {
   status: ConnectionStatus;

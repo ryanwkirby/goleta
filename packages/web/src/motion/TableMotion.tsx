@@ -22,9 +22,7 @@
  */
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -36,9 +34,11 @@ import { createPortal } from "react-dom";
 
 import type { Card, GameView } from "@goleta/engine";
 
-import { CardBack, CARD_WIDTH_PX, PlayingCard } from "../components/Card.tsx";
-import type { LoggedEvent } from "../net/useGoleta.ts";
-import { resolveAnchor, type AnchorGeometry, type AnchorKey } from "./anchors.ts";
+import { CardBack, PlayingCard } from "../components/Card.tsx";
+import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
+import type { LoggedEvent } from "../lib/feed.ts";
+import { resolveAnchor, type AnchorGeometry, type AnchorKey } from "../lib/anchors.ts";
+import { MotionContext, type MotionApi } from "../lib/motion.ts";
 import { FULL_TABLE, planFlights, type FlightPlan, type TableScale } from "./plan.ts";
 import { usePrefersReducedMotion } from "./reducedMotion.ts";
 
@@ -56,45 +56,6 @@ interface LiveFlight extends Omit<FlightPlan, "from" | "to"> {
 /** What the pile draws while cards are still on their way to it. */
 type PileFace = { kind: "actual" } | { kind: "card"; card: Card } | { kind: "empty" };
 
-interface MotionApi {
-  /** Registers an element as somewhere a card can fly to or from. */
-  anchor: (key: AnchorKey) => RefCallback<HTMLElement>;
-  /** True while this card is still in the air on its way to a hand. */
-  isArriving: (cardId: string) => boolean;
-  /**
-   * What the pile should show. The state's own top card once everything has
-   * landed; the previous one, or nothing at all, while a card is inbound.
-   */
-  pileFace: (actual: Card) => Card | null;
-  /**
-   * True while the cards are still going out.
-   *
-   * The one piece of "this layer is busy" anything else may read, and it is
-   * about the deal rather than motion in general on purpose. Exactly one prompt
-   * has to wait on it: under Dealer's Choice the game opens in `phase: "suit"`,
-   * so the dealer was asked to name a suit for an 8 that had not landed on a
-   * pile that was not there yet (#75). Every other prompt describes a state
-   * somebody can act on, and a card in the air is no reason to hold one back.
-   *
-   * False under reduced motion — nothing is planned, so there is nothing to wait
-   * for and no artificial wait to invent.
-   */
-  dealing: boolean;
-  /** Motion is off. Anything that moves should skip straight to the result. */
-  reduced: boolean;
-}
-
-const noopRef: RefCallback<HTMLElement> = () => () => {};
-
-const MotionContext = createContext<MotionApi>({
-  anchor: () => noopRef,
-  isArriving: () => false,
-  pileFace: (actual) => actual,
-  dealing: false,
-  reduced: true,
-});
-
-export const useMotion = (): MotionApi => useContext(MotionContext);
 
 export function TableMotion({
   game,

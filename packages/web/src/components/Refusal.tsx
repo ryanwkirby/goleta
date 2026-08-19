@@ -1,4 +1,4 @@
-import type { GoletaError } from "../net/useGoleta.ts";
+import type { GoletaError } from "../lib/feed.ts";
 
 /**
  * How long each weight of refusal stays up.

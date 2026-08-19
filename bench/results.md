@@ -240,3 +240,82 @@ Neither arm blamed finding code. Both blamed assembling *constraints*:
 Both arms found the trap and neither fell in — but both paid to find it. That is
 what #229 and #230 are about, and on this evidence they are worth more than
 another round of file-splitting.
+
+
+---
+
+# Third measurement — the same task again, after the read-cost work
+
+`c7452ab` adds nothing structural. It states the peek strip's wrap rule once
+instead of four times (#229), writes down the placement map that was scattered
+across four files (#230), puts the suit helpers back where people look for them
+(#231), and fixes two import cycles #228 wrongly claimed were gone — plus a test
+that fails on that exact mistake.
+
+Same task, same prompt, third arm.
+
+| Commit | What it is | Tokens | Tools | Seconds | Insertions |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `e6a85b4` | before any of this | 106,518 | 34 | 376 | 138 |
+| `b239075` | after the big refactor | 118,414 | 42 | 447 | 107 |
+| `c7452ab` | after the read-cost work | **109,592** | **33** | **359** | 93 |
+
+## Read against the state it followed, it worked
+
+Against `b239075`: **−7.5% tokens, −21% tool calls, −20% wall time.** The
+read-cost pass recovered most of the regression the refactor introduced, and it
+did so while the produced patch got *smaller* again (93 insertions against 107),
+so this is not a case of doing less work.
+
+The agent's own account moved too. Both earlier arms put irrelevant reading at
+*"roughly half"*; this one says **"roughly a third."**
+
+## Read against the actual starting point, it is a wash
+
+Against `e6a85b4`: **+2.9% tokens, −3% tool calls, −4.5% wall time.**
+
+That is the number that answers the question. After a twelve-step refactor that
+took the largest file from 1,016 lines to 355, added 99 tests, removed the import
+cycles and consolidated the rationale — **a real change from this backlog costs
+about what it cost before.** Tokens marginally up, tool calls and wall time
+marginally down, all three inside what one sample per arm can resolve.
+
+## The conclusion, after three experiments
+
+**This work did not make changes cheaper, and further refactoring of the same
+kind should not be expected to.**
+
+What it did buy is real and worth keeping: 490 tests against 391, decision logic
+that had no coverage now having 67 tests, a DAG the build enforces instead of a
+claim in a commit message, and rationale that is stated once. None of that shows
+up in a token count and none of it is nothing.
+
+But the premise the protocol is built on — that shrinking the largest file makes
+the next change measurably cheaper — did not hold here, across three
+measurements and two different tasks. The most likely reason is in the Phase 0
+notes and was visible before any of it started: **`Table.tsx` was chosen for
+having the most historical churn, and historical churn turned out not to predict
+where today's work lands.** Of nine open issues at the time, none was squarely in
+it.
+
+## What every arm agreed on
+
+All three runs of this task named the same file, and it is not one that was
+touched:
+
+> *"Costliest single file: `Sunny.tsx` itself. It is 677 lines holding eight
+> unrelated components — the call button, the peel, the announcement, the caught
+> dialog, the explainer, the picker, the suit picker — and the doc comments are
+> long enough that finding the ~50 lines that actually render the picker meant
+> reading nearly all of it."* (third arm)
+
+That is a different problem from the one #228 solved. `Table.tsx` was one large
+*cohesive* thing — state and render for one screen — and splitting it along that
+seam meant a change needing both halves read both halves. `Sunny.tsx` is eight
+*unrelated* things in one file, where a change needs one of them and pays for
+all eight.
+
+If there is a next experiment, that is the hypothesis to test, and it should be
+tested **cheaply and first**: split `Sunny.tsx` by component, change nothing
+else, re-run this same task. One commit, one measurement. Three flat results is
+enough evidence to stop assuming and start checking before spending.

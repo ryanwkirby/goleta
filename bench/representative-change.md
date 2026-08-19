@@ -60,7 +60,8 @@ from `AGENTS.md`; an implementation that breaks one has not done the task.
 
 ## Done means
 
-- `npm test` passes (391 tests).
+- `npm test` passes (391 tests at the baseline; 486 after #223–#226 — the
+  point is that the suite is green, not that the number is unchanged).
 - `npm run lint` passes.
 - `npm run typecheck` passes.
 
@@ -68,3 +69,9 @@ from `AGENTS.md`; an implementation that breaks one has not done the task.
 
 Do not commit, do not push, do not open a PR, do not start a dev server, and do
 not touch anything outside `packages/web/src`.
+
+**A known flaw in this benchmark, recorded rather than fixed:** the edit
+boundary excludes `packages/web/test`, so a run that (correctly) extracts a pure
+module cannot give it the unit test every other `lib/` module here has. Changing
+the boundary now would make later runs incomparable with the baseline. Fix it
+only if the whole series is being re-baselined.

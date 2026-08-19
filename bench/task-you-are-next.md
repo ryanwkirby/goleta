@@ -1,3 +1,18 @@
+# Benchmark task — "you're next" (SUPERSEDED)
+
+> **Superseded by `task-220-picker.md`. Kept as a record, not for reuse.**
+>
+> Two arms were run against it (`results.md`). It has two flaws, both recorded
+> rather than corrected: it is a **synthetic** feature rather than a real
+> backlog item, and it **straddles the seam** the refactor under test was
+> cutting — it needs a new derived fact *and* something drawn in two layouts, so
+> splitting derivation from rendering could not possibly have helped it. Neither
+> flaw was visible until after the baseline was taken.
+>
+> Do not resume this series. Start a new task file and a new baseline.
+
+## Original text follows
+
 # Representative change — "you're next"
 
 A benchmark task, not a feature to ship. It is executed by a fresh agent with no

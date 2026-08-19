@@ -325,6 +325,66 @@ The server pings every 30s and drops sockets that stop answering. A dropped
 connection marks the seat disconnected but keeps it: the game carries on and the
 seat is waiting when they come back.
 
+**Both ends have to do this, because only one of them notices a half-open
+socket.** A connection that *closes* says so and the client's retry picks it
+up. One that half-opens — a screen locking, wifi handing over to cellular, a
+tab backgrounded for two minutes — does not: the server terminated its end a
+minute ago, `terminate()` is abrupt, and nothing about it reaches a browser
+that has left the network. `readyState` stays `OPEN`, every tap is written into
+it and vanishes, and the board freezes on the last state that got through with
+nothing on screen to say so (#183).
+
+So the client sends `ping` every 10s and budgets 25s of total silence — measured
+against *anything* arriving, not just the answer — after which it closes the
+socket itself and reconnects through the ordinary `rejoin` / `watch` path. It
+runs the same check the moment the tab becomes visible or the machine reports
+itself online.
+
+**It judges nothing while the tab is hidden.** A hidden tab has its timers
+throttled to a minute or stopped altogether, so silence there is the browser's
+doing rather than the network's, and condemning a socket on it would reconnect a
+backgrounded tab in a quiet room once a minute for as long as it stayed
+backgrounded — each one costing the table a seat blinking away and back and the
+bots a rescheduling, to protect a board nobody is looking at. Nothing is lost by
+waiting: the browser answers the server's protocol-level pings from its network
+stack whether or not any script is running, so a hidden tab is never dropped for
+being quiet.
+
+The guarantee is therefore about what somebody can see: **any board on screen has
+been verified inside the budget.** Coming back from a lock screen is where the
+two rules meet, and it is judged the hard way — a socket nobody could vouch for
+is not a connection, so a long absence usually costs one reconnect on the way
+back. Being wrong that way costs a round trip. Being wrong the other way shows
+somebody a board that has moved.
+
+The figures are picked against the server's 60s, not against the network: this
+end gives up first and reconnects rather than waiting to be terminated, and 25s
+is two and a half pings, so one lost answer never costs anybody a reconnect.
+
+### What survives a reconnect, and what does not
+
+Anything the client cannot deliver waits for the next socket — **except an
+`intent`, which is refused on the spot** (#152).
+
+`rejoin`, `watch` and the lobby messages say *who you are* and *what you want
+the room to be*. Neither goes stale; arriving a connection late, they still mean
+what they meant. An `intent` is the opposite: it is a move against the board as
+it stood when the finger came down, nothing on the wire carries that moment, and
+the server judges it against whatever is true when it lands.
+
+Most of a queue survives that because the engine refuses it — `Not your turn`,
+`Doesn't match`, `Nothing to call`. **A draw does not.** It is legal or illegal
+depending on what the board looked like at the instant it was taken, and the
+board moves while a seat is away: a landed Sunny call rewinds the whole state,
+the host can deal again. A draw that was the only move on the board when it was
+tapped can arrive as a Sunny violation its player never chose to commit, and
+they cannot see it happen.
+
+The drop is **said out loud**, in the same place and register as every other
+refused move. Swallowing it silently is the same failure wearing a hat: the hand
+doesn't move either way, so with nothing on screen a dropped tap and a tap that
+missed are one picture.
+
 If the host disconnects, host powers move to the first connected human so the
 table isn't stranded. A player returning to a room with no other connected human
 becomes the host, so an empty room can always be restarted.

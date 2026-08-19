@@ -4,6 +4,7 @@ import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
 import { EventLog } from "../components/EventLog.tsx";
 import { Hand, HandSortButton } from "../components/Hand.tsx";
+import { HandFrame, SunnyCallOffer } from "../components/HandFrame.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { RotatePanel } from "../components/RotatePanel.tsx";
 import { TakeYourSeat } from "../components/TakeYourSeat.tsx";
@@ -12,7 +13,6 @@ import { TurnGlow } from "../components/TurnGlow.tsx";
 import {
   SunnyAccusePicker,
   SunnyAnnounce,
-  SunnyCall,
   SunnyCaught,
   SunnyExplainer,
   SuitPicker,
@@ -22,7 +22,6 @@ import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { HostSettingsCog } from "../components/HostSettings.tsx";
 import { PlayerSettingsCog } from "../components/PlayerSettings.tsx";
 import { QrGlyph } from "../components/QrCode.tsx";
-import { MoveRefusal } from "../components/Refusal.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
@@ -804,14 +803,12 @@ export function Table({
               into the exact violation it accuses.
             */}
             {offeredTarget ? (
-              <div className="pointer-events-none absolute -top-12 left-0 z-20 flex">
-                <SunnyCall
-                  targetName={nameOf(offeredTarget)}
-                  lockedDraws={game.sunnyLockedDraws}
-                  onCall={() => startAccusing(offeredTarget)}
-                  className="pointer-events-auto"
-                />
-              </div>
+              <SunnyCallOffer
+                targetName={nameOf(offeredTarget)}
+                lockedDraws={game.sunnyLockedDraws}
+                onCall={() => startAccusing(offeredTarget)}
+                className="-top-12 left-0"
+              />
             ) : null}
 
             {/* Kept clear whether or not the offer is showing, so the hand
@@ -841,24 +838,14 @@ export function Table({
                 On a wrapper rather than on `Hand` itself: that element scrolls
                 its own overflow, and a box that clips one axis clips both, so it
                 would trim its own ring. */}
-            <div
-              // The box the fan is fitted against. It has no padding of its
-              // own and `Hand` keeps none once it is fanning, so the width
-              // measured here is the width the cards actually get — an inset
-              // here and an inset in the arithmetic are two places to
-              // disagree. Its own width comes from the column above rather
-              // than from the cards inside it, so measuring it cannot feed
-              // back into what it measures.
-              ref={handRow}
-              className={[
-                "relative rounded-2xl transition-colors",
-                mine ? "ring-1 ring-amber-300/60" : "",
-              ].join(" ")}
-            >
-              {/* Hung off the top edge of your own cards, keyed so a second
-                  refusal in the same words is a second answer rather than a
-                  pill that never moved. */}
-              {refusal ? <MoveRefusal key={refusal.id} error={refusal} /> : null}
+            {/* The box the fan is fitted against. It has no padding of its own
+                and `Hand` keeps none once it is fanning, so the width measured
+                here is the width the cards actually get — an inset here and an
+                inset in the arithmetic are two places to disagree. Its own
+                width comes from the column above rather than from the cards
+                inside it, so measuring it cannot feed back into what it
+                measures. */}
+            <HandFrame ref={handRow} mine={mine} refusal={refusal}>
               <Hand
                 cards={handCards}
                 legalCardIds={game.legalCardIds}
@@ -873,7 +860,7 @@ export function Table({
                 fit
                 irl={room.irl}
               />
-            </div>
+            </HandFrame>
           </div>
         ) : null}
 

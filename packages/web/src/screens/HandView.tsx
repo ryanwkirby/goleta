@@ -3,10 +3,10 @@ import { useRef } from "react";
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
 import { Hand, HandSortButton } from "../components/Hand.tsx";
+import { HandFrame, SunnyCallOffer } from "../components/HandFrame.tsx";
 import { HelpLink, HelpShout } from "../components/Help.tsx";
-import { MoveRefusal } from "../components/Refusal.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
-import { SunnyAccusePicker, SunnyCall, SuitPicker } from "../components/Sunny.tsx";
+import { SunnyAccusePicker, SuitPicker } from "../components/Sunny.tsx";
 import { turnPrompt, type NameOf } from "../lib/format.ts";
 import { handHeight, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
@@ -207,14 +207,12 @@ export function HandView({
           window is only ever open on somebody else's turn.
         */}
         {sunnyTarget ? (
-          <div className="pointer-events-none absolute left-2 top-2 z-20 flex">
-            <SunnyCall
-              targetName={nameOf(sunnyTarget)}
-              lockedDraws={game.sunnyLockedDraws}
-              onCall={() => onStartAccusing(sunnyTarget)}
-              className="pointer-events-auto"
-            />
-          </div>
+          <SunnyCallOffer
+            targetName={nameOf(sunnyTarget)}
+            lockedDraws={game.sunnyLockedDraws}
+            onCall={() => onStartAccusing(sunnyTarget)}
+            className="left-2 top-2"
+          />
         ) : null}
 
         {/*
@@ -299,15 +297,9 @@ export function HandView({
           {/* Your own shout, over your own cards, same as everyone else sees. */}
           {shouting ? <HelpShout kind={shouting} /> : null}
 
-          <div
-            className={[
-              "relative rounded-2xl transition-colors",
-              mine ? "ring-1 ring-amber-300/60" : "",
-            ].join(" ")}
-          >
-            {/* The same answer in the same place as upright: turning the phone
-                must not move where a refusal appears. */}
-            {refusal ? <MoveRefusal key={refusal.id} error={refusal} /> : null}
+          {/* The same answer in the same place as upright: turning the phone
+              must not move where a refusal appears (#99). */}
+          <HandFrame mine={mine} refusal={refusal}>
             <Hand
               cards={cards}
               legalCardIds={game.legalCardIds}
@@ -319,7 +311,7 @@ export function HandView({
               irl
               fit
             />
-          </div>
+          </HandFrame>
         </div>
       </div>
 

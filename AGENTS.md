@@ -730,6 +730,46 @@ Things that will read as oversights in that view and are not:
   without the lock is the whole of what was worth having** — it survives a
   rotation, so a player who takes it in landscape still has it upright (#125).
 
+### Where a new control goes
+
+Placement, not logic, is what a change to these screens actually costs. The
+constraints ruling out each candidate spot are individually well argued and
+none of them should move — but they live in `HandView.tsx`, `PeekStrip.tsx`,
+`Table.tsx` and this file, and had to be reassembled from scratch every time
+somebody wanted to add one quiet line (#230).
+
+This is a **map of decisions already taken**, so you can stop looking once you
+have found your row. It is not a new rule and nothing in it may be cited as one;
+the linked issue is the authority, and if this table and the code ever disagree
+the code is right and this is stale.
+
+**Landscape — `HandView`**
+
+| Where | What is there now | Free? |
+| --- | --- | --- |
+| Peek strip, left cluster | both cogs, rules, fullscreen offer, sort, help offer, missed-call count | **Yes — this is the place.** The only part of the row allowed to wrap, so the only one a new control may take its width from. `PeekStrip.tsx` states the rule in full, once, on the cluster element. |
+| Peek strip, right end | prompt, sun, draw pile | **No.** The pile has to stay reachable, and anything pushed off it wraps *the pile* onto a second row — a card's height off the hand. |
+| Under the strip, left | `SunnyCallOffer` | **No.** Deliberately the far end from the deck: a fat target beside the pile is a mis-tap into the exact violation it accuses (#189). |
+| Bottom-left felt corner | the offer of help | **No** (#167). |
+| Bottom-right felt corner | the sort control | **No** (#167). |
+| Under the cards | — | **Never.** `handHeight` reads the room the row is left, so a line there is paid for in card size (#131). |
+
+**Upright — `Table`**
+
+| Where | What is there now | Free? |
+| --- | --- | --- |
+| Header row (`TableHeader`) | both cogs, invite glyph, rules, leave | Yes, for a control rather than a table fact. |
+| The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
+| Above the hand, left | `SunnyCallOffer` | **No.** The middle of that box is where your own `HelpShout` rises. |
+| Top of the screen | the Sunny announcement | **Never.** It is the one thing at this table nobody may miss, which is exactly why a refused move answers against the hand instead (#99). |
+
+**Shared table screen — `TableScreen`**
+
+Nothing is stacked in a column and nothing may be: every piece is placed against
+the design box, inside the bands reserved for seat names (#141), and no piece
+gets a scale of its own (#159). Adding anything back into a flow is how the
+overflow that pushed names through the edges returns.
+
 ### The shared table screen
 
 An optional extra device at `#/r/ABCD/table`, showing the middle of the table.

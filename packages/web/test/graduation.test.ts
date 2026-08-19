@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { creditFinishedGames, shouldAskAboutHints } from "../src/lib/graduation.ts";
+import { creditFinishedGames, shouldAskAboutHints } from "../src/net/graduation.ts";
 import { gamesFinished, gamesSeen } from "../src/net/identity.ts";
 
 /**

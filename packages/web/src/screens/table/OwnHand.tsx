@@ -6,7 +6,7 @@ import { HandFrame, SunnyCallOffer } from "../../components/HandFrame.tsx";
 import { HelpLink, HelpShout } from "../../components/Help.tsx";
 import type { NameOf } from "../../lib/format.ts";
 import { FULL_TABLE } from "../../motion/plan.ts";
-import type { HandControls, HelpControls, SunnyControls } from "../HandView.tsx";
+import type { HandControls, HelpControls, SunnyControls } from "../../lib/tableProps.ts";
 
 /**
  * Your own cards at the foot of the upright table, and the small print that

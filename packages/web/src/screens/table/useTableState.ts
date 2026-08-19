@@ -5,7 +5,7 @@ import type { ClientMessage, GameView, RoomView } from "@goleta/engine";
 import { CARD_WIDTH_PX } from "../../lib/cardShape.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../../lib/feed.ts";
 import { namerFor } from "../../lib/format.ts";
-import { creditFinishedGames } from "../../lib/graduation.ts";
+import { creditFinishedGames } from "../../net/graduation.ts";
 import { handStep } from "../../lib/handFan.ts";
 import { assisting, handMode } from "../../lib/handMode.ts";
 import { useJudgedCall } from "../../lib/judgedCall.ts";
@@ -28,7 +28,12 @@ import {
   markSunnySeen,
   saveHandSort,
 } from "../../net/identity.ts";
-import type { HandControls, HelpControls, SunnyControls, TableContext } from "../HandView.tsx";
+import type {
+  HandControls,
+  HelpControls,
+  SunnyControls,
+  TableContext,
+} from "../../lib/tableProps.ts";
 
 /**
  * How long you can sit on a turn before the app offers you a hand.

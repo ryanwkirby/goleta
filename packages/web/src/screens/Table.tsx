@@ -14,7 +14,6 @@ import {
   SunnyAccusePicker,
   SuitPicker,
 } from "../components/Sunny.tsx";
-import { Button, Panel } from "../components/ui.tsx";
 import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
@@ -45,6 +44,7 @@ import {
   saveHandSort,
 } from "../net/identity.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../lib/feed.ts";
+import { GameOverPanel } from "./table/GameOverPanel.tsx";
 import { TableHeader } from "./table/TableHeader.tsx";
 import { TableOverlays } from "./table/TableOverlays.tsx";
 import { HandOver } from "./HandOver.tsx";
@@ -678,43 +678,15 @@ export function Table({
         </div>
 
         {finished ? (
-          <Panel className="text-center">
-            <p className="text-lg font-semibold text-amber-300">
-              {game.winnerId === game.you
-                ? "You win — you kept your cards."
-                : game.winnerId
-                  ? `${nameOf(game.winnerId)} wins.`
-                  : "A dead end. Nobody could move."}
-            </p>
-            {room.hostId === game.you ? (
-              <Button variant="primary" className="mt-3" onClick={() => send({ t: "start" })}>
-                Deal again
-              </Button>
-            ) : (
-              <>
-                <p className="mt-2 text-sm text-white/50">
-                  Waiting for {nameOf(room.hostId)} to deal again.
-                </p>
-                {!seated ? (
-                  <div className="mt-4 border-t border-white/10 pt-4">
-                    <Button
-                      variant="primary"
-                      onClick={() =>
-                        send({
-                          t: "join",
-                          code: room.code,
-                          name: loadName() || "Watcher",
-                        })
-                      }
-                      disabled={room.seats.length >= room.maxPlayers}
-                    >
-                      {room.seats.length >= room.maxPlayers ? "Table is full" : "Join next game"}
-                    </Button>
-                  </div>
-                ) : null}
-              </>
-            )}
-          </Panel>
+          <GameOverPanel
+            room={room}
+            game={game}
+            nameOf={nameOf}
+            isHost={room.hostId === game.you}
+            seated={seated}
+            onDealAgain={() => send({ t: "start" })}
+            onJoinNext={() => send({ t: "join", code: room.code, name: loadName() || "Watcher" })}
+          />
         ) : null}
 
         {mode === "surrender" ? (

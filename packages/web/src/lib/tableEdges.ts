@@ -159,10 +159,32 @@ export const edgeSeats = (count: number): EdgeSeat[] => {
       return all;
     }, []);
     const slot = onEdge.indexOf(index);
+    /**
+     * Which end of the edge this seat gets, walking **clockwise**.
+     *
+     * `along` is measured left-to-right on the horizontal edges and
+     * top-to-bottom on the vertical ones, which is the direction play runs on
+     * the top edge and on the right one — and the opposite of it on the other
+     * two. Going clockwise, the bottom edge runs right-to-left and the left
+     * edge runs bottom-to-top, so on those the pair is handed out in reverse
+     * and the first seat takes the far end.
+     *
+     * Handing them out in raw `along` order put seats 3 and 4 the wrong way
+     * round on a table of six and seats 6 and 7 the wrong way round on a table
+     * of eight (#186). At four or five seats every edge holds one name, which
+     * is why it took a big table to show up. It cost more than a seating
+     * chart: since #164 a drawn card flies at `seatPoint`, so a draw by the
+     * player at bottom-right was thrown to the bottom-left.
+     *
+     * Only *which* seat gets which end changes. The ends themselves are
+     * untouched, so nothing about overlap, the prompt's share of the bottom
+     * band, or the label cap moves.
+     */
+    const end = edge === "bottom" || edge === "left" ? onEdge.length - 1 - slot : slot;
     const spread = edge === "top" ? TOP_ENDS : edge === "bottom" ? BOTTOM_ENDS : CENTRED;
     placed.push({
       edge,
-      along: onEdge.length <= 1 ? spread.lone : (spread.pair[slot] ?? spread.lone),
+      along: onEdge.length <= 1 ? spread.lone : (spread.pair[end] ?? spread.lone),
     });
   }
   return placed;

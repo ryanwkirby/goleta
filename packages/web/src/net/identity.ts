@@ -16,9 +16,62 @@ const seatKey = (code: string): string => `goleta:seat:${code.toUpperCase()}`;
 const NAME_KEY = "goleta:name";
 const RULES_KEY = "goleta:rules-seen";
 
-const readJson = <T>(key: string): T | null => {
+/**
+ * The guard every accessor in this file used to write out for itself.
+ *
+ * `localStorage` does not politely return null when it is unavailable — it
+ * *throws*. Private browsing, a full quota and an origin with storage blocked
+ * all raise on contact, and one uncaught here is an exception thrown out of a
+ * render. So every read falls back to whatever a brand-new browser would have
+ * got, which is the same answer by a different route and is always the safe
+ * one: no seat, no name, nothing seen, no games counted, and the hints left on.
+ */
+const readLocal = (key: string): string | null => {
   try {
-    const raw = localStorage.getItem(key);
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * The same guard for writes, where the consequence is worth naming once.
+ *
+ * A refused write means this browser remembers nothing, ever — so you cannot
+ * reclaim your seat after a reload, your name is asked for again, the rules and
+ * the Sunny explainer are offered every time, no game is ever counted as
+ * finished, and the guardrails consequently never come off. Every one of those
+ * is a degraded evening rather than a broken one, and none of them is worth an
+ * error in front of somebody who is only trying to play a card. There is
+ * nothing to tell them and nothing they could do about it.
+ */
+const writeLocal = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* nothing to be done — see above */
+  }
+};
+
+const removeLocal = (key: string): void => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* nothing to be done — see above */
+  }
+};
+
+/**
+ * A stored object, or null if it is missing, unreadable or unparseable.
+ *
+ * Two failures rather than one, which is why this keeps a `try` of its own:
+ * storage refusing is `readLocal`'s problem, and a value that is there but is
+ * not JSON is this one's. Both answer null.
+ */
+const readJson = <T>(key: string): T | null => {
+  const raw = readLocal(key);
+  if (raw === null) return null;
+  try {
     return raw ? (JSON.parse(raw) as T) : null;
   } catch {
     return null;
@@ -27,56 +80,23 @@ const readJson = <T>(key: string): T | null => {
 
 export const loadIdentity = (code: string): Identity | null => readJson<Identity>(seatKey(code));
 
-export const saveIdentity = (code: string, identity: Identity): void => {
-  try {
-    localStorage.setItem(seatKey(code), JSON.stringify(identity));
-  } catch {
-    // Private browsing, or a full quota. You just can't reclaim your seat.
-  }
-};
+export const saveIdentity = (code: string, identity: Identity): void =>
+  writeLocal(seatKey(code), JSON.stringify(identity));
 
 export const forgetIdentity = (code: string): void => {
-  try {
-    localStorage.removeItem(seatKey(code));
-    // The bookmark goes with the seat. Coming back to a room you walked out of
-    // makes you a new arrival, and games played in between were not yours.
-    localStorage.removeItem(seenKey(code));
-  } catch {
-    /* nothing to be done */
-  }
+  removeLocal(seatKey(code));
+  // The bookmark goes with the seat. Coming back to a room you walked out of
+  // makes you a new arrival, and games played in between were not yours.
+  removeLocal(seenKey(code));
 };
 
-export const loadName = (): string => {
-  try {
-    return localStorage.getItem(NAME_KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
+export const loadName = (): string => readLocal(NAME_KEY) ?? "";
 
-export const saveName = (name: string): void => {
-  try {
-    localStorage.setItem(NAME_KEY, name);
-  } catch {
-    /* nothing to be done */
-  }
-};
+export const saveName = (name: string): void => writeLocal(NAME_KEY, name);
 
-export const hasSeenRules = (): boolean => {
-  try {
-    return localStorage.getItem(RULES_KEY) === "1";
-  } catch {
-    return false;
-  }
-};
+export const hasSeenRules = (): boolean => readLocal(RULES_KEY) === "1";
 
-export const markRulesSeen = (): void => {
-  try {
-    localStorage.setItem(RULES_KEY, "1");
-  } catch {
-    /* nothing to be done */
-  }
-};
+export const markRulesSeen = (): void => writeLocal(RULES_KEY, "1");
 
 const GAMES_KEY = "goleta:games-finished";
 
@@ -89,22 +109,14 @@ const GAMES_KEY = "goleta:games-finished";
  * finished game, whether you want to keep the help. See `Graduation`.
  */
 export const gamesFinished = (): number => {
-  try {
-    const raw = Number(localStorage.getItem(GAMES_KEY));
-    return Number.isFinite(raw) && raw > 0 ? raw : 0;
-  } catch {
-    return 0;
-  }
+  const raw = Number(readLocal(GAMES_KEY));
+  return Number.isFinite(raw) && raw > 0 ? raw : 0;
 };
 
 /** Returns the new count, so a caller can notice the first one going by. */
 export const recordGamesFinished = (games: number): number => {
   const next = gamesFinished() + Math.max(games, 0);
-  try {
-    localStorage.setItem(GAMES_KEY, String(next));
-  } catch {
-    // Private browsing. The guardrails just never come off.
-  }
+  writeLocal(GAMES_KEY, String(next));
   return next;
 };
 
@@ -129,14 +141,10 @@ const seenKey = (code: string): string => `goleta:games-seen:${code.toUpperCase(
  * the same as sitting through three games, and only the second is yours.
  */
 export const gamesSeen = (code: string): number | null => {
-  try {
-    const raw = localStorage.getItem(seenKey(code));
-    if (raw === null) return null;
-    const seen = Number(raw);
-    return Number.isFinite(seen) && seen >= 0 ? seen : null;
-  } catch {
-    return null;
-  }
+  const raw = readLocal(seenKey(code));
+  if (raw === null) return null;
+  const seen = Number(raw);
+  return Number.isFinite(seen) && seen >= 0 ? seen : null;
 };
 
 /**
@@ -158,14 +166,8 @@ export const gamesSeen = (code: string): number | null => {
 export const gamesToCredit = (seen: number | null, played: number): number =>
   seen === null ? 0 : Math.max(played - seen, 0);
 
-export const markGamesSeen = (code: string, played: number): void => {
-  try {
-    localStorage.setItem(seenKey(code), String(played));
-  } catch {
-    // Private browsing, again — and it fails the same kind way. Nothing is
-    // remembered, so nothing is ever counted, so the guardrails stay on.
-  }
-};
+export const markGamesSeen = (code: string, played: number): void =>
+  writeLocal(seenKey(code), String(played));
 
 // The key keeps its old name. What it stores changed in #187 — a standing
 // preference rather than an answer about one game — but a browser that already
@@ -192,21 +194,10 @@ const HINTS_KEY = "goleta:first-game-hints";
  * for as long as it lasts, so nobody can quietly stop being catchable. What is
  * gone is only the expiry.
  */
-export const wantsHints = (): boolean => {
-  try {
-    return localStorage.getItem(HINTS_KEY) !== "0";
-  } catch {
-    return true;
-  }
-};
+export const wantsHints = (): boolean => readLocal(HINTS_KEY) !== "0";
 
-export const setWantsHints = (wanted: boolean): void => {
-  try {
-    localStorage.setItem(HINTS_KEY, wanted ? "1" : "0");
-  } catch {
-    // Private browsing. You get the hints, which is the kinder default.
-  }
-};
+export const setWantsHints = (wanted: boolean): void =>
+  writeLocal(HINTS_KEY, wanted ? "1" : "0");
 
 const SORT_KEY = "goleta:hand-sort";
 
@@ -215,21 +206,11 @@ const SORT_KEY = "goleta:hand-sort";
  * time you reload is exactly the sort of small annoyance nobody reports.
  */
 export const loadHandSort = (): HandSort => {
-  try {
-    const raw = localStorage.getItem(SORT_KEY);
-    return raw === "rank" || raw === "suit" ? raw : "dealt";
-  } catch {
-    return "dealt";
-  }
+  const raw = readLocal(SORT_KEY);
+  return raw === "rank" || raw === "suit" ? raw : "dealt";
 };
 
-export const saveHandSort = (sort: HandSort): void => {
-  try {
-    localStorage.setItem(SORT_KEY, sort);
-  } catch {
-    /* nothing to be done */
-  }
-};
+export const saveHandSort = (sort: HandSort): void => writeLocal(SORT_KEY, sort);
 
 /*
  * There is no `goleta:table-view` any more. Which way you are looking at an IRL
@@ -242,18 +223,6 @@ export const saveHandSort = (sort: HandSort): void => {
 const SUNNY_KEY = "goleta:sunny-seen";
 
 /** The Sunny Rule is taught by being used, so we only explain it once. */
-export const hasSeenSunny = (): boolean => {
-  try {
-    return localStorage.getItem(SUNNY_KEY) === "1";
-  } catch {
-    return false;
-  }
-};
+export const hasSeenSunny = (): boolean => readLocal(SUNNY_KEY) === "1";
 
-export const markSunnySeen = (): void => {
-  try {
-    localStorage.setItem(SUNNY_KEY, "1");
-  } catch {
-    /* nothing to be done */
-  }
-};
+export const markSunnySeen = (): void => writeLocal(SUNNY_KEY, "1");

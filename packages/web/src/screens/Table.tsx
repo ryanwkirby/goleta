@@ -32,6 +32,12 @@ import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
 import { ANNOUNCE_MS } from "../lib/beats.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
+import {
+  isIrlPhone,
+  shuffleEntryId,
+  tableRoute,
+  type TableSituation,
+} from "../lib/tableRoute.ts";
 import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { FULL_TABLE, PEEK_TABLE } from "../motion/plan.ts";
@@ -516,48 +522,29 @@ export function Table({
   const owesPunishment = (you?.hand.length ?? 0) > 1;
 
   /**
-   * Whether this screen is a phone at a table of people in the same room.
+   * Which of five screens this is, worked out in one place (#225).
    *
-   * All three have to hold, and none of them is a user agent: the room says it
-   * is an IRL table, the viewport says this is a phone rather than a tablet
-   * propped at one, and there is a game running. The lobby and the screens
-   * between games are untouched by any of it, and an online room never sees a
-   * word of it.
-   *
-   * **`!finished` stays in here**, even though a sideways phone at the end of a
-   * hand now has a screen of its own (`handOver` below). This flag is what the
-   * rotate bookkeeping hangs off, and `room.gamesPlayed` moves at *game over*
-   * rather than at the next deal — so a version of it that stayed true past the
-   * final event would stamp `rotatedFor` with the number the next deal is going
-   * to be asked about, and that deal would never prompt. Asked once per deal is
-   * the rule; this is the line that keeps it.
-   */
-  const irlPhone = room.irl && phone && seated && !finished;
-
-  /**
-   * A judged call takes the whole table back, whichever view you were in.
-   *
-   * The peel rewinds the pile to the moment of the reach with two cards marked
-   * and then announces the ruling (#63) — the one moment in this game the whole
-   * table is meant to watch happen. It cannot play out in a 40px strip, so the
-   * hand view hands over for the length of it, offender's dialog included, and
-   * comes back when it is done.
+   * These were four early returns spread across eighty lines, built out of
+   * flags declared thirty lines apart, and between them they decide whether
+   * somebody sees their hand, the table, a prompt to turn the phone over, or a
+   * list telling them where to go and sit. `lib/tableRoute.ts` has the order
+   * and the reasoning, and — for the first time — tests.
    */
   const judging = peeling || announcing || caughtHold;
-  const compact = irlPhone && !portrait && !judging;
-
-  /**
-   * The same phone, sideways, once the hand is over (#158).
-   *
-   * Not `irlPhone` for the reason above, and not `seated` either: a watcher's
-   * phone lands on the same upright column, and the offer it is scrolling past
-   * — join the next game — is the one thing it is there for.
-   *
-   * It waits for `judging` exactly as the hand view does. A game can end on the
-   * play a landed call forced, so the peel and the ruling may still have the
-   * screen; they get it, and this comes up after.
-   */
-  const handOver = room.irl && phone && !portrait && finished && !judging;
+  const situation: TableSituation = {
+    irl: room.irl,
+    gamesPlayed: room.gamesPlayed,
+    finished,
+    seated,
+    phone,
+    portrait,
+    judging,
+    shuffleId: shuffleEntryId(log),
+    seatedFor,
+    rotatedFor,
+  };
+  const route = tableRoute(situation);
+  const irlPhone = isIrlPhone(situation);
 
   /**
    * Which way up the phone is *is* the toggle, once it has been turned once.
@@ -571,41 +558,14 @@ export function Table({
     if (irlPhone && !portrait) setRotatedFor(room.gamesPlayed);
   }, [irlPhone, portrait, room.gamesPlayed]);
 
-  /**
-   * The seats have just been shuffled, and this is a table sitting in one room.
-   *
-   * Only in an IRL room: online there is nobody to move, so the table simply
-   * deals in the new order (#199). It is ahead of `RotatePanel` below because
-   * getting up and sitting somewhere else has to happen before which way you
-   * are holding your phone matters at all.
-   */
-  const shuffleEntry = log.find(
-    (logged) => logged.event.type === "gameStarted" && logged.event.seatsShuffled,
-  );
-  const takeYourSeat =
-    room.irl && !finished && shuffleEntry !== undefined && seatedFor !== shuffleEntry.id;
-
-  if (takeYourSeat && shuffleEntry) {
-    return (
-      <TakeYourSeat
-        room={room}
-        you={game.you}
-        onDone={() => setSeatedFor(shuffleEntry.id)}
-      />
-    );
+  if (route.kind === "takeYourSeat") {
+    const { shuffleId } = route;
+    return <TakeYourSeat room={room} you={game.you} onDone={() => setSeatedFor(shuffleId)} />;
   }
 
-  // A landscape layout on a phone held upright shows half of itself, and no web
-  // page can turn somebody's phone for them — so the prompt *is* the mechanism
-  // (#79). It is asked once a deal: after that, upright means the whole table,
-  // which is a view rather than a mistake. Nothing pauses behind it either way —
-  // the game is on the server, and a player holding their phone the wrong way is
-  // late, not somebody the table waits on.
-  if (irlPhone && portrait && rotatedFor !== room.gamesPlayed) {
-    return <RotatePanel offline={offline} />;
-  }
+  if (route.kind === "rotate") return <RotatePanel offline={offline} />;
 
-  if (handOver) {
+  if (route.kind === "handOver") {
     return (
       <>
         <HandOver
@@ -637,7 +597,7 @@ export function Table({
     );
   }
 
-  if (compact) {
+  if (route.kind === "compact") {
     return (
       <TableMotion game={game} log={log} scale={PEEK_TABLE}>
         {/* Both layouts, and deliberately the same thing in both: this is the

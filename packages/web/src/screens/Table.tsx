@@ -19,6 +19,7 @@ import {
 import { Button, Panel } from "../components/ui.tsx";
 import { Graduation, HelpLink, HelpShout } from "../components/Help.tsx";
 import { HostSettingsCog } from "../components/HostSettings.tsx";
+import { PlayerSettingsCog } from "../components/PlayerSettings.tsx";
 import { QrGlyph } from "../components/QrCode.tsx";
 import { MoveRefusal } from "../components/Refusal.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
@@ -43,7 +44,6 @@ import {
   markSunnySeen,
   recordGamesFinished,
   saveHandSort,
-  wantsFirstGameHints,
 } from "../net/identity.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../net/useGoleta.ts";
 import { HandOver } from "./HandOver.tsx";
@@ -114,6 +114,8 @@ export function Table({
   send,
   onLeave,
   onShowRules,
+  hints,
+  onChooseHints,
   offline,
 }: {
   room: RoomView;
@@ -125,6 +127,9 @@ export function Table({
   send: (message: ClientMessage) => void;
   onLeave: () => void;
   onShowRules: () => void;
+  /** Whether the table is marking up your playable cards. Live, not a countdown. */
+  hints: boolean;
+  onChooseHints: (wanted: boolean) => void;
   offline: boolean;
 }) {
   const [explainSunny, setExplainSunny] = useState(false);
@@ -133,12 +138,10 @@ export function Table({
   /** Whose reach you are part-way through accusing, if any. */
   const [accusing, setAccusing] = useState<string | null>(null);
   const [ackedCall, setAckedCall] = useState<number | null>(null);
-  const [finishedGames, setFinishedGames] = useState(gamesFinished);
   const [graduating, setGraduating] = useState(false);
   const [helpedTurn, setHelpedTurn] = useState<number | null>(null);
   const [stalled, setStalled] = useState(false);
   const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
-  const [wantedHints] = useState(wantsFirstGameHints);
   /**
    * Which deal this phone has already been turned sideways for, if any.
    *
@@ -277,18 +280,41 @@ export function Table({
   }, [accusing, stillAccusable, stopAccusing]);
 
   /**
-   * Whether the table is marking up your playable cards. Your first game can
-   * come with the guardrails on if you asked for them on the way in; after that
-   * they're something you ask for, one turn at a time. Being caught out having
-   * a play you didn't make is the whole subject of the Sunny Rule, and an app
-   * that points at the answer never lets anyone be caught.
+   * Whether the table is marking up your playable cards.
    *
-   * Making the play you skipped is the exception: you've already been caught,
-   * the move is forced, and there is nothing left to fumble.
+   * Three sources, and #187 changed exactly one of them. `hints` is your own
+   * standing preference, read live, set from the rules screen or your own cog
+   * and changeable at any time — it used to be `finishedGames === 0 &&
+   * wantedHints`, a countdown nobody set which expired after one game.
+   *
+   * The other two are untouched. `sunnyPlay` is the play you owe after a call
+   * has landed on you: you have already been caught, the move is forced, and
+   * there is nothing left to fumble. And `helpedTurn` is a single turn bought
+   * with `want help?`, out loud, in front of everybody.
+   *
+   * Being caught out having a play you didn't make is the whole subject of the
+   * Sunny Rule, and an app that points at the answer never lets anyone be
+   * caught — which is why turning this on is public. See `SeatView.hinted`.
    */
-  const learning = finishedGames === 0 && wantedHints;
   const assist =
-    game.phase.kind === "sunnyPlay" || learning || helpedTurn === game.turnNumber;
+    game.phase.kind === "sunnyPlay" || hints || helpedTurn === game.turnNumber;
+
+  /**
+   * Telling the room what this browser wants, so the table can see it.
+   *
+   * The preference is the browser's and the mark is the room's, and this is the
+   * one line that keeps them in step: on arrival, on a reconnect, and on every
+   * change from either screen that sets it. Only ever sent when the two
+   * disagree — the server announces a *change* to on, so a re-assertion is
+   * silent, but an unconditional send would be a message on every render.
+   *
+   * A watcher has no seat and nothing to mark, so nothing is sent for them.
+   */
+  const seatHinted = room.seats.find((seat) => seat.id === game.you)?.hinted;
+  useEffect(() => {
+    if (seatHinted === undefined || seatHinted === hints) return;
+    send({ t: "setHints", on: hints });
+  }, [seatHinted, hints, send]);
 
   /**
    * One count per game this browser has seen through to the end.
@@ -309,10 +335,17 @@ export function Table({
    * moves the bookmark and is credited nothing — they finished no games — so
    * taking a seat afterwards starts from where they sat down.
    *
-   * A layout effect rather than an ordinary one: this corrects what is about to
-   * be drawn. The count seeds `learning`, and on an ordinary effect a phone
-   * coming back to its second game would paint one frame with the highlights
-   * on before turning them off.
+   * **What the count decides changed in #187.** It used to seed `learning` —
+   * the highlights were on until your first game was over and then off for
+   * good — so it had to be state, and it had to be corrected in a layout effect
+   * before anything was drawn. The highlights are a preference now, read live,
+   * so the count decides one thing and decides it once: whether to *ask*, after
+   * your first finished game, if you want to keep them. Nothing renders off it,
+   * which is why it is no longer held in state.
+   *
+   * It stays a layout effect anyway. The bookkeeping is about what has already
+   * happened by the time this screen exists, and running it before paint is
+   * what keeps the question and the frame it is asked over in step.
    */
   const played = room.gamesPlayed;
   useLayoutEffect(() => {
@@ -321,10 +354,10 @@ export function Table({
     if (credit === 0 || game.you === null) return;
     const before = gamesFinished();
     const total = recordGamesFinished(credit);
-    setFinishedGames(total);
-    // Only worth announcing to somebody who had the highlights to lose.
-    if (before === 0 && total > 0 && wantedHints) setGraduating(true);
-  }, [room.code, played, game.you, wantedHints]);
+    // Only worth asking somebody who has the highlights to keep. Nothing is
+    // being offered back to a player who never took them.
+    if (before === 0 && total > 0 && hints) setGraduating(true);
+  }, [room.code, played, game.you, hints]);
 
   // A while on a turn you haven't moved on, and the app offers a hand. Every
   // fresh draw restarts the clock: you're deciding again.
@@ -335,6 +368,18 @@ export function Table({
     const timer = setTimeout(() => setStalled(true), STALL_MS);
     return () => clearTimeout(timer);
   }, [couldUseHelp, game.turnNumber, game.drawsThisTurn]);
+
+  /**
+   * The one question the first finished game asks, answered.
+   *
+   * It offers rather than announces (#187), so both answers are real: keeping
+   * the help is a no-op on the preference and giving it up sets it, and neither
+   * happens until one of them is pressed.
+   */
+  const answerGraduation = (keep: boolean): void => {
+    setGraduating(false);
+    if (!keep) onChooseHints(false);
+  };
 
   const askForHelp = (): void => {
     setHelpedTurn(game.turnNumber);
@@ -348,7 +393,8 @@ export function Table({
     saveHandSort(next);
   };
 
-  const shoutingHere = shouts.some((shout) => shout.playerId === game.you);
+  /** Your own shout, if you have one up — and which of the two it is. */
+  const shoutingHere = shouts.findLast((shout) => shout.playerId === game.you) ?? null;
 
   /**
    * Whose reach is on offer, if anybody's — the one seat a call could be made
@@ -530,7 +576,7 @@ export function Table({
             }}
           />
         ) : null}
-        {graduating ? <Graduation onDone={() => setGraduating(false)} /> : null}
+        {graduating ? <Graduation onChoose={answerGraduation} /> : null}
       </>
     );
   }
@@ -561,8 +607,10 @@ export function Table({
           onAskForHelp={askForHelp}
           onShowInvite={() => setInviting(true)}
           onShowRules={onShowRules}
-          shouting={shoutingHere}
-          helpFrom={helpFrom ? nameOf(helpFrom.playerId) : null}
+          hints={hints}
+          onChooseHints={onChooseHints}
+          shouting={shoutingHere?.kind ?? null}
+          helpFrom={helpFrom ? { name: nameOf(helpFrom.playerId), kind: helpFrom.kind } : null}
           accusing={accusing}
           stillAccusable={stillAccusable}
           sunnyTarget={sunnyTarget}
@@ -611,7 +659,18 @@ export function Table({
         ].join(" ")}
       >
         <header className="flex items-center gap-2 text-xs text-white/50">
-          {/* Leading the row, before the code, because it is the host's way
+          {/* Yours first, the host's second, and the two are legible as
+              different things: a person and a gear, an inch apart, one of which
+              changes the game for everybody (#188). A watcher gets neither —
+              the only thing in this drawer is about your own cards. */}
+          {seated ? (
+            <PlayerSettingsCog
+              hints={hints}
+              onHints={onChooseHints}
+              className="-ml-2"
+            />
+          ) : null}
+          {/* Beside the player's, not in place of it, because it is the host's way
               back to everything the lobby held and the rest of this line is
               facts about the room rather than things to press. What used to sit
               at the far end was a lone `in person: on` button — the only host
@@ -626,12 +685,12 @@ export function Table({
               onRules={(rules) => send({ t: "setHouseRules", rules })}
               onIrl={(on) => send({ t: "setIrl", on })}
               onDealerMode={(dealer) => send({ t: "setDealerMode", mode: dealer })}
-              // Pulled back over the column's own padding so the 44px box sits
-              // the glyph roughly on the margin the rest of the header keeps.
-              // The row was already this tall — `rules` and `leave` are
-              // `Button`s, and every `Button` is `min-h-11` — so the bigger
-              // target costs the header nothing.
-              className="-ml-2"
+              // Pulled back over the column's own padding only when it leads
+              // the row. With the player's cog before it there is nothing to
+              // pull back over. The row was already this tall — `rules` and
+              // `leave` are `Button`s, and every `Button` is `min-h-11` — so
+              // neither target costs the header anything.
+              className={seated ? "" : "-ml-2"}
             />
           ) : null}
           {/* The code was four characters saying what the room was called and
@@ -807,7 +866,7 @@ export function Table({
             </div>
 
             {/* Your own shout, over your own cards, same as everyone else sees. */}
-            {shoutingHere ? <HelpShout /> : null}
+            {shoutingHere ? <HelpShout kind={shoutingHere.kind} /> : null}
 
             {/* The same frame every other seat gets when the table is waiting on
                 it. Your own cards aren't in the strip, so the one seat that most
@@ -893,7 +952,7 @@ export function Table({
           />
         ) : null}
 
-        {graduating ? <Graduation onDone={() => setGraduating(false)} /> : null}
+        {graduating ? <Graduation onChoose={answerGraduation} /> : null}
       </div>
     </TableMotion>
   );

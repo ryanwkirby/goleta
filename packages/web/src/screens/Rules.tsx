@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { HintsToggle } from "../components/Help.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 
 /**
@@ -124,15 +125,20 @@ function Rule({ headline, detail }: { headline: ReactNode; detail: ReactNode }) 
  * the first you have heard of the idea. It stays unexpanded and unnamed for the
  * same reason: there is nothing under it to open.
  *
- * First time through, this is also where you say whether you want the training
- * wheels for that game. Asking is the point: being given help you didn't ask
- * for is how a game teaches you it thinks you need it.
+ * **The hints offer is a toggle, and it is here every time** (#187). It used to
+ * be two buttons shown once, on the way in — a fork in the road, taken before
+ * you had seen a card, that then quietly expired after one game. It reads as a
+ * setting you set now, because that is what it is, and it sits at the bottom
+ * where the last decision before the first hand belongs.
  *
- * That offer is a question and two named answers, and says nothing about the
- * mechanism. What the help does, how long it lasts and what happens after are
- * three things you learn by playing one game with it — and a paragraph
- * explaining all three is a paragraph read by somebody who hasn't seen a card
- * yet.
+ * It is still shown with the continue button beside it on the way in, and it is
+ * still there when the rules are reopened mid-hand — which is exactly the
+ * moment somebody who is struggling has gone looking for them.
+ *
+ * The toggle itself says nothing about the mechanism and says the one thing
+ * that matters: that switching it on is something the table can see. What the
+ * help *does* is a thing you learn by playing one hand with it, and a paragraph
+ * explaining that is a paragraph read by somebody who hasn't seen a card yet.
  *
  * **The panel scrolls inside itself rather than scrolling the page**, with the
  * last decision pinned under it. This screen is opened mid-hand from a phone
@@ -144,12 +150,14 @@ function Rule({ headline, detail }: { headline: ReactNode; detail: ReactNode }) 
 export function Rules({
   onDone,
   ctaLabel = "Got it",
+  hints,
   onChooseHints,
 }: {
   onDone: () => void;
   ctaLabel?: string;
-  /** Present only on the way in. Absent when the rules are simply reopened. */
-  onChooseHints?: (wanted: boolean) => void;
+  /** Whether the table is marking up your playable cards right now. */
+  hints: boolean;
+  onChooseHints: (wanted: boolean) => void;
 }) {
   return (
     <Panel
@@ -181,25 +189,15 @@ export function Rules({
       </div>
 
       {/* The last thing on the screen and the last decision before the first
-          hand, so it is the thing that must never be below the fold. */}
-      <div className="shrink-0 pt-4">
-        {onChooseHints ? (
-          <div className="border-t border-white/10 pt-4">
-            <p className="text-sm text-white/70">Want some help your first game?</p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <Button variant="primary" className="flex-1" onClick={() => onChooseHints(true)}>
-                Yes, guide me
-              </Button>
-              <Button variant="secondary" className="flex-1" onClick={() => onChooseHints(false)}>
-                No, I've got it
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Button variant="primary" full onClick={onDone}>
-            {ctaLabel}
-          </Button>
-        )}
+          hand, so it is the thing that must never be below the fold — with the
+          way out under it rather than instead of it. The toggle used to replace
+          the continue button on the way in and be absent every other time,
+          which is what made it read as a fork rather than a setting (#187). */}
+      <div className="shrink-0 border-t border-white/10 pt-4">
+        <HintsToggle on={hints} onChange={onChooseHints} />
+        <Button variant="primary" full className="mt-4" onClick={onDone}>
+          {ctaLabel}
+        </Button>
       </div>
     </Panel>
   );

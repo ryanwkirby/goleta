@@ -1,4 +1,4 @@
-import type { ClientMessage, GameView, RoomView } from "@goleta/engine";
+import type { ClientMessage, GameView, RoomView, ShoutKind } from "@goleta/engine";
 
 import { useFullscreen } from "../lib/fullscreen.ts";
 import { pileSuit } from "../lib/pile.ts";
@@ -7,6 +7,7 @@ import { useMotion } from "../motion/TableMotion.tsx";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
 import { HostSettingsCog } from "./HostSettings.tsx";
+import { PlayerSettingsCog } from "./PlayerSettings.tsx";
 import { QrGlyph } from "./QrCode.tsx";
 
 /**
@@ -86,6 +87,9 @@ export function PeekStrip({
   mine,
   onShowInvite,
   onShowRules,
+  hints,
+  onChooseHints,
+  seated,
   send,
 }: {
   room: RoomView;
@@ -93,8 +97,8 @@ export function PeekStrip({
   canDraw: boolean;
   onDraw: () => void;
   offline: boolean;
-  /** Somebody else asking for a hand, by name. Your own goes over your cards. */
-  helpFrom: string | null;
+  /** Somebody else's shout, by name. Your own goes over your cards. */
+  helpFrom: { name: string; kind: ShoutKind } | null;
   /** What the table is waiting for, in the words the full table uses. */
   prompt: string;
   /** Whether it is waiting for you — the prompt is drawn up when it is. */
@@ -103,6 +107,10 @@ export function PeekStrip({
   onShowInvite: () => void;
   /** The way back to the rules, which this view had none of before #195. */
   onShowRules: () => void;
+  /** Your own settings (#188). A watcher has no cards, so no cog. */
+  hints: boolean;
+  onChooseHints: (on: boolean) => void;
+  seated: boolean;
   /** Only the host's cog reaches this, and only to set what the cog holds. */
   send: (message: ClientMessage) => void;
 }) {
@@ -168,6 +176,13 @@ export function PeekStrip({
             held. #188 puts a *player's* cog top-left as well; it goes beside
             this one rather than in place of it, and the two have to stay legible
             as different things — this one changes the table for everybody. */}
+        {/* Yours first and the host's second, the same order and the same two
+            glyphs as the upright header, so the pair means the same thing
+            whichever way the phone is held (#188). */}
+        {seated ? (
+          <PlayerSettingsCog hints={hints} onHints={onChooseHints} className="-my-1" />
+        ) : null}
+
         {room.hostId === game.you ? (
           <HostSettingsCog
             rules={room.houseRules}
@@ -276,7 +291,9 @@ export function PeekStrip({
       {/* Before the turn indicator rather than after it: the sun keeps the end
           of the strip, and a shout is the one thing here that isn't a standing
           fact — it arrives, it is read, it goes. */}
-      {helpFrom ? <HelpAsk name={helpFrom} className="ml-auto text-xs" /> : null}
+      {helpFrom ? (
+        <HelpAsk name={helpFrom.name} kind={helpFrom.kind} className="ml-auto text-xs" />
+      ) : null}
 
       <span
         className={[

@@ -36,6 +36,22 @@ export interface SeatView {
   bot: boolean;
   connected: boolean;
   isHost: boolean;
+  /**
+   * Whether this seat is playing with its playable cards marked up (#187).
+   *
+   * **Presentation, never a rule.** `packages/engine` does not learn it exists;
+   * it sits here beside `connected` for the same reason `irl` sits on
+   * `RoomView` — every hand is already face up, and nothing about this changes
+   * what is legal.
+   *
+   * It goes to the whole table on purpose, and that is the entire bargain of
+   * #33: help is always available and taking it is never quiet. A silent,
+   * permanent toggle would let one player stop being catchable without anybody
+   * else being able to tell — which is the Sunny Rule quietly switched off for
+   * one seat. Switching it **on** is also announced as a shout; switching it
+   * off is not, because giving up an advantage is nobody else's business.
+   */
+  hinted: boolean;
 }
 
 /**
@@ -43,6 +59,16 @@ export interface SeatView {
  * timed on the server, so everyone watches the same pace.
  */
 export type BotSpeed = "human" | "lightning";
+
+/**
+ * Something a seat says out loud to the whole table.
+ *
+ * `help` is one turn's worth, asked for and gone. `hints` is a standing state
+ * being switched on — announced once, and then visible on the seat for as long
+ * as it lasts (`SeatView.hinted`). There is deliberately no shout for switching
+ * them off: taking an advantage is public, giving one up is not.
+ */
+export type ShoutKind = "help" | "hints";
 
 /**
  * How a table picks who deals (#198).
@@ -170,6 +196,14 @@ export type ClientMessage =
   | { t: "composingCall"; open: boolean }
   /** "I'm stuck." Turns your own highlights back on, and tells the table. */
   | { t: "help" }
+  /**
+   * "Mark up my playable cards", and then "stop".
+   *
+   * Yours alone to send, host or not — it changes your own screen and nothing
+   * about the room. The seat carries the answer so the rest of the table can
+   * see it, and turning it *on* is announced; see `SeatView.hinted`.
+   */
+  | { t: "setHints"; on: boolean }
   | { t: "ping" };
 
 export type ServerMessage =
@@ -181,7 +215,7 @@ export type ServerMessage =
    * position changes, it isn't replayed, and it isn't in the log — it happens
    * and it's gone, like speaking.
    */
-  | { t: "shout"; playerId: PlayerId; kind: "help" }
+  | { t: "shout"; playerId: PlayerId; kind: ShoutKind }
   | { t: "error"; message: string; code?: ErrorCode; kind?: ErrorKind }
   | { t: "pong" };
 

@@ -7,7 +7,7 @@ import {
   type RefCallback,
 } from "react";
 
-import type { GameView, PlayerView, RoomView } from "@goleta/engine";
+import type { GameView, PlayerView, RoomView, ShoutKind } from "@goleta/engine";
 
 import { fanTable, inRows, type SeatHand } from "../lib/fan.ts";
 import { inTurnOrder, nextStillIn } from "../lib/seating.ts";
@@ -15,7 +15,7 @@ import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
 import { useMotion } from "../motion/TableMotion.tsx";
 import type { Shout } from "../net/useGoleta.ts";
 import { CARD_WIDTH_PX, PlayingCard } from "./Card.tsx";
-import { HelpShout } from "./Help.tsx";
+import { HelpShout, HintedMark, shoutingNow } from "./Help.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>
   room.seats.find((seat) => seat.id === id)?.name ?? "Player";
@@ -85,13 +85,15 @@ function Seat({
   player: PlayerView;
   room: RoomView;
   game: GameView;
-  shouting: boolean;
+  /** What this seat is saying out loud right now, if anything. */
+  shouting: ShoutKind | undefined;
   /** How many rows this hand takes at the strip's shared sliver. */
   rows: number;
 }) {
   const { anchor, isArriving } = useMotion();
   const onClock = game.waitingOn === player.id;
   const out = player.eliminated;
+  const hinted = room.seats.find((seat) => seat.id === player.id)?.hinted ?? false;
 
   // Kept even for a seat with nothing left to fly to it: the anchor is how the
   // motion layer knows where this seat is, and a `data-seat` is how the strip
@@ -111,8 +113,9 @@ function Seat({
         onClock ? "bg-amber-400/15 ring-amber-300/60" : "bg-black/20 ring-white/10",
       ].join(" ")}
     >
-      {/* Somebody asking for a hand, said out loud over their own cards. */}
-      {shouting ? <HelpShout name={nameFor(room, player.id)} /> : null}
+      {/* Somebody asking for a hand — or saying they have switched the
+          highlights on — said out loud over their own cards. */}
+      {shouting ? <HelpShout name={nameFor(room, player.id)} kind={shouting} /> : null}
 
       <div className="flex items-baseline gap-2">
         {/* No `truncate`: at ten characters the longest name anybody can have
@@ -121,6 +124,11 @@ function Seat({
             fitting a table on a phone. Clipping a name to save a few pixels of
             scroll was the wrong side of that trade (#161). */}
         <span className="text-sm font-semibold text-white">{nameFor(room, player.id)}</span>
+        {/* The standing half of the #33 bargain: taking help is never quiet, so
+            for as long as somebody is playing with their cards marked up, the
+            table can see that they are. Not a verdict and not a tell — it says
+            nothing about their hand, only about their screen. */}
+        {hinted ? <HintedMark name={nameFor(room, player.id)} className="self-center text-xs" /> : null}
         <span
           className={[
             "ml-auto font-mono text-sm tabular-nums",
@@ -173,7 +181,7 @@ export function Seats({
   shouts: Shout[];
 }) {
   const others = inTurnOrder(game);
-  const shouting = new Set(shouts.map((shout) => shout.playerId));
+  const shouting = shoutingNow(shouts);
   const strip = useRef<HTMLUListElement>(null);
   const { reduced } = useMotion();
 
@@ -323,7 +331,7 @@ export function Seats({
           player={player}
           room={room}
           game={game}
-          shouting={shouting.has(player.id)}
+          shouting={shouting.get(player.id)}
           rows={fan.rows[seat] ?? 1}
         />
       ))}

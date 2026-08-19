@@ -115,6 +115,7 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `setDealerMode` | host | **Any time, including mid-game**, for the same reason as `setHouseRules`. `rotate` or `random`; carried back to everyone on `RoomView`. |
 | `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
+| `setHints` | seated | "Mark up my playable cards" / "stop". Yours alone, host or not, mid-game included. Sets `SeatView.hinted` for everyone; shouted only when it turns *on*. |
 | `ping` | anyone | Answered with `pong`. |
 
 **The `playerId` inside an `intent` is ignored.** The server stamps the seat the
@@ -219,6 +220,37 @@ cannot be reached from a browser.
 With `sunny` off, the three challenge-window fields above are inert for
 everyone — `sunnyCallable` false, `sunnyReach` null, `sunnyLockedDraws` zero —
 because no challenge window is ever opened in the first place.
+
+## Playing with the highlights on
+
+`SeatView.hinted` says a seat is having its playable cards marked up. The seat
+sets it with `{ t: "setHints", on }` — its own message, host or not, mid-game
+included, because it changes one screen and nothing about the room.
+
+**Presentation, never a rule.** `packages/engine` does not learn it exists, it
+is not on `GameOptions` or `HouseRules`, and it sits beside `irl` in spirit.
+Every hand is already face up; nothing about this changes what is legal.
+
+It goes to the whole table on purpose, and that is the whole bargain of #33:
+help is always available and taking it is never quiet. A silent permanent toggle
+would let one player stop being catchable without anybody else being able to
+tell, which is the Sunny Rule switched off for one seat. So:
+
+- **Switching it on is announced**, as `{ t: "shout", kind: "hints" }`, the same
+  way `help` is.
+- **The seat carries a standing mark** for as long as it lasts — in the phone's
+  seat strip and on the shared table screen.
+- **Switching it off is silent.** Giving up an advantage is not something the
+  table has to be told.
+
+`setHints` returns whether it turned the mark *on*, and only that case is
+shouted. A browser re-asserting its own preference after a reconnect is
+therefore silent, which is what makes the client safe to sync whenever the two
+disagree. The durable copy of the preference is the browser's `localStorage` —
+there are still no accounts anywhere — and the seat flag is the room's copy, so
+that the table can see it.
+
+The room snapshot gained the field, so `SNAPSHOT_VERSION` went up again.
 
 ## Who deals
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
@@ -29,11 +29,14 @@ import { PEEK_TABLE } from "../motion/plan.ts";
 import { TableMotion, useMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
+  gamesSeen,
+  gamesToCredit,
   hasSeenSunny,
   loadHandSort,
   loadName,
+  markGamesSeen,
   markSunnySeen,
-  recordGameFinished,
+  recordGamesFinished,
   saveHandSort,
   wantsFirstGameHints,
 } from "../net/identity.ts";
@@ -259,16 +262,41 @@ export function Table({
   const assist =
     game.phase.kind === "sunnyPlay" || learning || helpedTurn === game.turnNumber;
 
-  // One count per game actually watched to the end. Keyed off the event rather
-  // than the status so that coming back to a finished room doesn't count again.
-  const lastGameOverId = log.find((entry) => entry.event.type === "gameOver")?.id;
-  useEffect(() => {
-    if (lastGameOverId === undefined || game.you === null) return;
-    const played = recordGameFinished();
-    setFinishedGames(played);
+  /**
+   * One count per game this browser has seen through to the end.
+   *
+   * Off `room.gamesPlayed` rather than off the `gameOver` event, for the same
+   * reason `rotatedFor` is: the server owns that number, every `RoomView`
+   * carries it, and it survives a reload, a reconnect and a redeploy — which
+   * the event log, which starts empty on every page load, does not. Keyed off
+   * the event, the count only moved if this browser happened to be connected,
+   * seated and rendering this screen at the instant the event arrived, so a
+   * first game that ended while the phone was away was never counted and the
+   * training wheels stayed on for the second (#184).
+   *
+   * The bookmark in `localStorage` is what keeps each game counted once: it is
+   * written on the way past whether or not anything is credited, so coming back
+   * to a room whose game has already finished credits it exactly once, and
+   * arriving at a table three games in credits none of them. A **watcher**
+   * moves the bookmark and is credited nothing — they finished no games — so
+   * taking a seat afterwards starts from where they sat down.
+   *
+   * A layout effect rather than an ordinary one: this corrects what is about to
+   * be drawn. The count seeds `learning`, and on an ordinary effect a phone
+   * coming back to its second game would paint one frame with the highlights
+   * on before turning them off.
+   */
+  const played = room.gamesPlayed;
+  useLayoutEffect(() => {
+    const credit = gamesToCredit(gamesSeen(room.code), played);
+    markGamesSeen(room.code, played);
+    if (credit === 0 || game.you === null) return;
+    const before = gamesFinished();
+    const total = recordGamesFinished(credit);
+    setFinishedGames(total);
     // Only worth announcing to somebody who had the highlights to lose.
-    if (played === 1 && wantedHints) setGraduating(true);
-  }, [lastGameOverId, game.you, wantedHints]);
+    if (before === 0 && total > 0 && wantedHints) setGraduating(true);
+  }, [room.code, played, game.you, wantedHints]);
 
   // A while on a turn you haven't moved on, and the app offers a hand. Every
   // fresh draw restarts the clock: you're deciding again.

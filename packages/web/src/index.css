@@ -72,6 +72,29 @@
     );
 }
 
+/* The table is waiting on you, said without words.
+
+   Two inset shadows on one viewport-sized overlay: a tight bright band hugging
+   the four edges and a broad dim wash behind it, in the same amber the hand's
+   turn ring and the prompt already use. Same light, more of it, and far enough
+   from the middle of the screen that it never competes with the cards.
+
+   **It does not move, and that is the design rather than a shortcut.** A glow
+   that ramped would be a timer, and a timer is pressure on exactly the decision
+   the Sunny Rule wants people to take their time over. It also means there is
+   nothing for `prefers-reduced-motion` to reduce, which is the simplest way to
+   honour it.
+
+   The two shadows differ in spread as well as blur. A positive spread on an
+   inset shadow contracts the rectangle the light falls from, so the wash reaches
+   further in than its blur alone would — which is what stops the pair reading as
+   a border with a halo instead of as an edge of light. */
+@utility turn-glow {
+  box-shadow:
+    inset 0 0 1rem 0 color-mix(in oklab, var(--color-amber-300) 42%, transparent),
+    inset 0 0 3.5rem 0.5rem color-mix(in oklab, var(--color-amber-300) 18%, transparent);
+}
+
 /* "help!", rising off the hand that asked for it. */
 @keyframes help-shout {
   0% {

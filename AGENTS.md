@@ -117,6 +117,26 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   back, one turn at a time, and everyone at the table hears you ask (#33).
   Restoring the highlights unconditionally removes the chance to make the
   mistake the Sunny Rule feeds on.
+- **The edges of the screen glow when the table is waiting on you, and that is
+  the only thing they say (#190).** Knowing it was your turn used to require
+  reading — a prompt and a one-pixel ring — and at a table of six with the
+  phone flat on the felt, the commonest thing anybody said out loud was "it's
+  you". `TurnGlow` answers *is it me*, in the amber the ring and the prompt
+  already use, at the physical edge of the display where the felt already
+  bleeds (#124).
+
+  Three things it must never become. **It says nothing about your cards** —
+  same glow whether you hold a play, are stuck, or are about to be caught; the
+  bullet above is why. **It is not a timer**: no ramp, no pulse, no
+  intensifying, because that would be pressure on exactly the decision the
+  Sunny Rule wants people to take their time over — and a thing that never
+  moves is also the whole of what `prefers-reduced-motion` needs here. **And it
+  does not replace the prompt**, which still says what is being asked for.
+
+  It follows `waitingOn` rather than whose turn it is, which is what makes it
+  cover naming a suit under Power of Eights and the card owed after a landed
+  call. A watcher never gets it and the shared screen has none — that screen
+  has no "you", and it already turns to face whoever is up next (#160).
 - **Whether a draw was illegal never leaves the server.** No field carries it,
   and nothing on screen — no glow, no ramp, no ordering, no wording — separates
   a legal draw from an illegal one. The sun has exactly one appearance and it

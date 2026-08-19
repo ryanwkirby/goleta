@@ -172,8 +172,10 @@ export function PeekStrip({
           <HostSettingsCog
             rules={room.houseRules}
             irl={room.irl}
+            dealerMode={room.dealerMode}
             onRules={(rules) => send({ t: "setHouseRules", rules })}
             onIrl={(on) => send({ t: "setIrl", on })}
+            onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
             // 44px of target painted out of 36px of row. The strip's height is
             // the pile card's 56px, and the cluster is allowed to wrap within
             // itself precisely because two lines of small print still come to

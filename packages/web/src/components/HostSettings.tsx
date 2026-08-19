@@ -16,7 +16,7 @@
 
 import { useState } from "react";
 
-import type { HouseRules } from "@goleta/engine";
+import type { DealerMode, HouseRules } from "@goleta/engine";
 
 import { Button, Panel } from "./ui.tsx";
 
@@ -32,6 +32,66 @@ export const describeRules = (rules: HouseRules): string => {
   if (on.length === 0) return "Playing the standard rules.";
   return `House rules: ${on.join(", ")}.`;
 };
+
+
+/**
+ * How this table picks who deals, for everyone who isn't the host (#198).
+ *
+ * Silent when the deal rotates, which is both the default and the convention —
+ * a table that has not chosen anything is not being told about a choice.
+ */
+export const describeDealing = (mode: DealerMode): string =>
+  mode === "random" ? "The dealer is drawn at random each game." : "";
+
+/**
+ * The two answers, named — the same shape as `IrlToggle`, and for the same
+ * reason: a question with two real answers should say both out loud rather than
+ * state one and leave the other to be inferred from an Off.
+ *
+ * **What the dealer actually decides is two real things**, which is why this is
+ * worth a control at all. Who opens: the player to the dealer's left goes
+ * first, and in a game where playing is compulsory going first is not nothing.
+ * And the seeded 8 under Dealer's Choice, which is the one advantage dealing
+ * carries.
+ *
+ * A random dealer may land on the same seat twice running. That is the honest
+ * answer for a random pick, and a table that finds it annoying is describing
+ * the other option.
+ */
+const DEALERS: { key: DealerMode; label: string; blurb: string }[] = [
+  { key: "rotate", label: "Pass it along", blurb: "The deal moves one seat each game." },
+  { key: "random", label: "Draw for it", blurb: "A seat is picked at random each game." },
+];
+
+export function DealerPicker({
+  mode,
+  onChange,
+}: {
+  mode: DealerMode;
+  onChange: (mode: DealerMode) => void;
+}) {
+  const chosen = DEALERS.find((option) => option.key === mode);
+
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Who deals</p>
+      <div className="mt-2 flex gap-2">
+        {DEALERS.map((option) => (
+          <Button
+            key={option.key}
+            variant={option.key === mode ? "primary" : "secondary"}
+            className="flex-1"
+            aria-pressed={option.key === mode}
+            onClick={() => onChange(option.key)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-white/40">{chosen?.blurb}</p>
+    </div>
+  );
+}
 
 
 /**
@@ -243,14 +303,18 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
 export function HostSettingsCog({
   rules,
   irl,
+  dealerMode,
   onRules,
   onIrl,
+  onDealerMode,
   className = "",
 }: {
   rules: HouseRules;
   irl: boolean;
+  dealerMode: DealerMode;
   onRules: (rules: HouseRules) => void;
   onIrl: (on: boolean) => void;
+  onDealerMode: (mode: DealerMode) => void;
   /** Where the caller wants it sat in its row. The size is not the caller's. */
   className?: string;
 }) {
@@ -292,12 +356,17 @@ export function HostSettingsCog({
           >
             <IrlToggle on={irl} onChange={onIrl} />
 
-            <div className="border-t border-white/10 pt-4">
+            <div className="flex flex-col gap-4 border-t border-white/10 pt-4">
               <HouseRulesPicker rules={rules} onChange={onRules} />
-              {/* Said once, under the switches, rather than against each of
-                  them: it is true of all three and the same sentence three
-                  times is a warning, not a note. */}
-              <p className="mt-3 text-xs text-white/40">
+              {/* Not a house rule, and in here because of when it answers
+                  rather than what it is: it is read once, at the deal, exactly
+                  like the switches above it, so the one note below covers
+                  both. */}
+              <DealerPicker mode={dealerMode} onChange={onDealerMode} />
+              {/* Said once, under everything it is true of, rather than against
+                  each of them: the same sentence four times is a warning, not a
+                  note. */}
+              <p className="text-xs text-white/40">
                 These apply at the next deal. This hand keeps the rules it was dealt under.
               </p>
             </div>

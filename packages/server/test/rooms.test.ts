@@ -22,6 +22,7 @@ import {
   nextBotMove,
   roomView,
   setBotSpeed,
+  setDealerMode,
   setHouseRules,
   setIrl,
   type Room,
@@ -135,6 +136,82 @@ describe("passing the deal", () => {
 
     expect(dealAgain(room)).toBe(room.seats[1]?.id);
     expect(room.dealerId).toBe(room.seats[0]?.id);
+  });
+});
+
+describe("drawing for the deal", () => {
+  it("rotates by default, so a table that never opens the setting is untouched", () => {
+    const room = seatedRoom();
+    expect(room.dealerMode).toBe("rotate");
+    expect(roomView(room).dealerMode).toBe("rotate");
+
+    beginGame(room, room.hostId);
+    expect(room.dealerId).toBe(room.seats[0]?.id);
+    expect(dealAgain(room)).toBe(room.seats[2]?.id ?? room.seats[0]?.id);
+  });
+
+  it("is the host's to set", () => {
+    const room = seatedRoom();
+    const guest = room.seats[1]?.id ?? "";
+
+    expect(() => setDealerMode(room, guest, "random")).toThrow(/Only the host/);
+    expect(room.dealerMode).toBe("rotate");
+  });
+
+  it("refuses a mode it does not have", () => {
+    const room = seatedRoom();
+    expect(() => setDealerMode(room, room.hostId, "whatever" as never)).toThrow(/No such dealer/);
+  });
+
+  it("always lands on a seat that is actually at the table", () => {
+    const room = seatedRoom(4);
+    setDealerMode(room, room.hostId, "random");
+    beginGame(room, room.hostId);
+
+    const ids = new Set(room.seats.map((seat) => seat.id));
+    for (let round = 0; round < 60; round++) {
+      expect(ids.has(room.dealerId ?? "")).toBe(true);
+      dealAgain(room);
+    }
+  });
+
+  it("stops being predictable, which is the whole point of it", () => {
+    const room = seatedRoom(4);
+    setDealerMode(room, room.hostId, "random");
+    beginGame(room, room.hostId);
+
+    const dealers = new Set([room.dealerId]);
+    for (let round = 0; round < 60; round++) {
+      dealAgain(room);
+      dealers.add(room.dealerId);
+    }
+    // Rotation would give a strict cycle; sixty random draws across four seats
+    // landing on one is about 4 × (1/4)^60.
+    expect(dealers.size).toBeGreaterThan(1);
+  });
+
+  it("applies at the next deal and never to the hand on the table", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    const before = JSON.stringify(room.game);
+
+    // Not frozen mid-game, for `setHouseRules`'s reason rather than
+    // `setBotSpeed`'s: it is read once, at the deal.
+    setDealerMode(room, room.hostId, "random");
+    expect(roomView(room).dealerMode).toBe("random");
+    expect(JSON.stringify(room.game)).toBe(before);
+    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/Wait for this game/);
+  });
+
+  it("goes back to rotating from wherever the random draw left the deal", () => {
+    const room = seatedRoom(4);
+    setDealerMode(room, room.hostId, "random");
+    beginGame(room, room.hostId);
+
+    setDealerMode(room, room.hostId, "rotate");
+    const landed = room.seats.findIndex((seat) => seat.id === room.dealerId);
+    dealAgain(room);
+    expect(room.dealerId).toBe(room.seats[(landed + 1) % room.seats.length]?.id);
   });
 });
 

@@ -25,5 +25,15 @@ export const newToken = (): string => randomBytes(24).toString("base64url");
 
 export const newSeed = (): number => randomInt(1, 2 ** 31 - 1);
 
+/**
+ * A seat picked at random, for a table that has asked not to rotate the deal.
+ *
+ * The server's own randomness, from the same source as everything else here.
+ * `packages/engine` keeps its no-`Math.random()` rule untouched: nothing about
+ * choosing a dealer reaches it, and the index it is eventually handed is just a
+ * number (#198).
+ */
+export const randomIndex = (count: number): number => (count > 0 ? randomInt(count) : 0);
+
 /** Room codes are matched case-insensitively; people type them in lowercase. */
 export const normaliseCode = (code: string): string => code.trim().toUpperCase();

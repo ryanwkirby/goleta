@@ -347,6 +347,30 @@ The figures are picked against the server's 60s, not against the network: this
 end gives up first and reconnects rather than waiting to be terminated, and 25s
 is two and a half pings, so one lost answer never costs anybody a reconnect.
 
+### What survives a reconnect, and what does not
+
+Anything the client cannot deliver waits for the next socket — **except an
+`intent`, which is refused on the spot** (#152).
+
+`rejoin`, `watch` and the lobby messages say *who you are* and *what you want
+the room to be*. Neither goes stale; arriving a connection late, they still mean
+what they meant. An `intent` is the opposite: it is a move against the board as
+it stood when the finger came down, nothing on the wire carries that moment, and
+the server judges it against whatever is true when it lands.
+
+Most of a queue survives that because the engine refuses it — `Not your turn`,
+`Doesn't match`, `Nothing to call`. **A draw does not.** It is legal or illegal
+depending on what the board looked like at the instant it was taken, and the
+board moves while a seat is away: a landed Sunny call rewinds the whole state,
+the host can deal again. A draw that was the only move on the board when it was
+tapped can arrive as a Sunny violation its player never chose to commit, and
+they cannot see it happen.
+
+The drop is **said out loud**, in the same place and register as every other
+refused move. Swallowing it silently is the same failure wearing a hat: the hand
+doesn't move either way, so with nothing on screen a dropped tap and a tap that
+missed are one picture.
+
 If the host disconnects, host powers move to the first connected human so the
 table isn't stranded. A player returning to a room with no other connected human
 becomes the host, so an empty room can always be restarted.

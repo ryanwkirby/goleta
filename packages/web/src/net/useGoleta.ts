@@ -126,10 +126,49 @@ export const useGoleta = (): Goleta => {
   /** The room we're in, so a reconnect knows what to reclaim. */
   const codeRef = useRef<string | null>(null);
 
+  /**
+   * Anything that can't go out now waits for the next socket — except a move,
+   * which is refused on the spot.
+   *
+   * The queue is right for `rejoin`, `watch` and the lobby messages. They say
+   * *who you are* and *what you want the room to be*, neither of which goes
+   * stale: arriving a connection late, they still mean what they meant.
+   *
+   * An `intent` is the opposite. It is a decision taken against the board as it
+   * stood when the finger came down, and nothing on the wire carries that
+   * moment — so the server judges it against whatever is true when it lands.
+   * Most of the queue survives that because the engine refuses it (`Not your
+   * turn`, `Doesn't match`, `Nothing to call`). A **draw** does not: it is legal
+   * or illegal depending on what the board looked like at the instant it was
+   * taken, and the board moves while a seat is away — a landed Sunny call
+   * rewinds the whole state, the host can deal again. A draw that was the only
+   * move on the board when it was tapped can arrive as a Sunny violation its
+   * player never chose to commit, and they cannot see it happen (#152).
+   *
+   * So it is dropped, and **the drop is said out loud**. Swallowing it silently
+   * is the *tap it again* problem #150 is about, wearing a different hat — the
+   * hand it was aimed at doesn't move either way, so with nothing on screen the
+   * two are the same picture. The words are the app's own rather than the
+   * server's, which nothing else here does, and they land in the same place and
+   * the same register as every other refused move: three words against the
+   * cards, gone in a moment (`Refusal.tsx`).
+   *
+   * It leans on `status` being honest about a half-open socket, which is why
+   * #183 landed first. Before it, `readyState` said `OPEN` for a connection
+   * that had been gone for minutes and every tap went quietly into it.
+   */
   const send = useCallback((message: ClientMessage) => {
     const socket = socketRef.current;
-    if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
-    else queueRef.current.push(message);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+      return;
+    }
+    if (message.t === "intent") {
+      errorIdRef.current += 1;
+      setError({ id: errorIdRef.current, message: "Not connected", kind: "move" });
+      return;
+    }
+    queueRef.current.push(message);
   }, []);
 
   useEffect(() => {

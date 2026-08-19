@@ -3,8 +3,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
 
 import { EventLog } from "../components/EventLog.tsx";
-import { Hand, HandSortButton } from "../components/Hand.tsx";
-import { HandFrame, SunnyCallOffer } from "../components/HandFrame.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { RotatePanel } from "../components/RotatePanel.tsx";
 import { TakeYourSeat } from "../components/TakeYourSeat.tsx";
@@ -14,7 +12,6 @@ import {
   SunnyAccusePicker,
   SuitPicker,
 } from "../components/Sunny.tsx";
-import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { creditFinishedGames } from "../lib/graduation.ts";
@@ -45,6 +42,7 @@ import {
 } from "../net/identity.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../lib/feed.ts";
 import { GameOverPanel } from "./table/GameOverPanel.tsx";
+import { OwnHand } from "./table/OwnHand.tsx";
 import { TableHeader } from "./table/TableHeader.tsx";
 import { TableOverlays } from "./table/TableOverlays.tsx";
 import { HandOver } from "./HandOver.tsx";
@@ -719,79 +717,16 @@ export function Table({
         {/* Everything from here to the log belongs to a seat. A watcher is
             shown the table and nothing that implies they are at it. */}
         {seated ? (
-          <div className="relative flex flex-col">
-            {/*
-              The way into a call, over the felt just above your own cards —
-              where your eyes are during somebody else's turn, and which is the
-              whole reason it is here rather than back in the seat strip (#189).
-
-              Absolute, so it arrives with some presence without moving the
-              cards underneath it, and pinned to the left rather than the middle
-              because the middle above this box is where your own `HelpShout`
-              rises. It is nowhere near the draw pile, which is up in the
-              middle of the table: a fat target beside the deck is a mis-tap
-              into the exact violation it accuses.
-            */}
-            {offeredTarget ? (
-              <SunnyCallOffer
-                targetName={nameOf(offeredTarget)}
-                lockedDraws={game.sunnyLockedDraws}
-                onCall={() => startAccusing(offeredTarget)}
-                className="-top-12 left-0"
-              />
-            ) : null}
-
-            {/* Kept clear whether or not the offer is showing, so the hand
-                doesn't move under your fingers when it appears. */}
-            <div className="flex min-h-7 items-center gap-2 px-1">
-              {stalled ? <HelpLink onAsk={askForHelp} /> : null}
-              {/* Yours alone: the server sends this to nobody else, and a missed
-                  call is not something the table needs announcing. */}
-              {game.sunnyLockedDraws > 0 ? (
-                <span className="text-xs text-white/35" aria-live="polite">
-                  <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
-                  {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
-                </span>
-              ) : null}
-              {(you?.hand.length ?? 0) > 1 ? (
-                <HandSortButton sort={handSort} onCycle={cycleSort} className="ml-auto" />
-              ) : null}
-            </div>
-
-            {/* Your own shout, over your own cards, same as everyone else sees. */}
-            {shoutingHere ? <HelpShout kind={shoutingHere.kind} /> : null}
-
-            {/* The same frame every other seat gets when the table is waiting on
-                it. Your own cards aren't in the strip, so the one seat that most
-                wants the highlight was the only one without it.
-
-                On a wrapper rather than on `Hand` itself: that element scrolls
-                its own overflow, and a box that clips one axis clips both, so it
-                would trim its own ring. */}
-            {/* The box the fan is fitted against. It has no padding of its own
-                and `Hand` keeps none once it is fanning, so the width measured
-                here is the width the cards actually get — an inset here and an
-                inset in the arithmetic are two places to disagree. Its own
-                width comes from the column above rather than from the cards
-                inside it, so measuring it cannot feed back into what it
-                measures. */}
-            <HandFrame ref={handRow} mine={mine} refusal={refusal}>
-              <Hand
-                cards={handCards}
-                legalCardIds={game.legalCardIds}
-                mode={mode}
-                assist={assist}
-                onChoose={onChooseCard}
-                // Named rather than left to `Hand`'s default, because the step
-                // above is fitted against this rung's width and the two have to
-                // be the same rung.
-                size={FULL_TABLE.hand}
-                step={handFanStep}
-                fit
-                irl={room.irl}
-              />
-            </HandFrame>
-          </div>
+          <OwnHand
+            game={game}
+            nameOf={nameOf}
+            hand={handControls}
+            help={helpControls}
+            sunny={sunnyControls}
+            irl={room.irl}
+            step={handFanStep}
+            boxRef={handRow}
+          />
         ) : null}
 
         <EventLog log={log} nameOf={nameOf} />

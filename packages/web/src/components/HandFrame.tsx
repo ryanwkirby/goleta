@@ -2,7 +2,7 @@ import type { Ref, ReactNode } from "react";
 
 import type { GoletaError } from "../lib/feed.ts";
 import { MoveRefusal } from "./Refusal.tsx";
-import { SunnyCall } from "./Sunny.tsx";
+import { SunnyCall } from "./sunny/SunnyCall.tsx";
 
 /**
  * The frame around your own cards: the ring that says the table is waiting on

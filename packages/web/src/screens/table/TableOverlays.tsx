@@ -2,7 +2,9 @@ import type { Card } from "@goleta/engine";
 
 import { Graduation } from "../../components/Help.tsx";
 import { RoomInvite } from "../../components/RoomInvite.tsx";
-import { SunnyAnnounce, SunnyCaught, SunnyExplainer } from "../../components/Sunny.tsx";
+import { SunnyAnnounce } from "../../components/sunny/SunnyAnnounce.tsx";
+import { SunnyCaught } from "../../components/sunny/SunnyCaught.tsx";
+import { SunnyExplainer } from "../../components/sunny/SunnyExplainer.tsx";
 import { ANNOUNCE_MS } from "../../lib/beats.ts";
 import type { SunnyCalled } from "../../lib/judgedCall.ts";
 

@@ -30,6 +30,7 @@ import { handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
 import { CARD_WIDTH_PX } from "../components/Card.tsx";
 import { ANNOUNCE_MS, useJudgedCall } from "../lib/judgedCall.ts";
+import { useReshuffle } from "../lib/reshuffle.ts";
 import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { FULL_TABLE, PEEK_TABLE } from "../motion/plan.ts";
@@ -72,10 +73,13 @@ function TurnPrompt({
   game,
   nameOf,
   assist,
+  reshuffling,
 }: {
   game: GameView;
   nameOf: NameOf;
   assist: boolean;
+  /** Cards to draw, while the deck running out is being watched (#209). */
+  reshuffling: number | null;
 }) {
   const { dealing } = useMotion();
   const mine = game.waitingOn === game.you;
@@ -83,11 +87,16 @@ function TurnPrompt({
     <p
       className={[
         "text-center text-sm",
-        mine && game.status !== "over" ? "font-semibold text-amber-300" : "text-white/60",
+        // The reshuffle line takes the emphasis whoever the table is waiting on:
+        // for those five seconds it is the more important of the two, and on
+        // most screens it is the only one being read.
+        reshuffling !== null || (mine && game.status !== "over")
+          ? "font-semibold text-amber-300"
+          : "text-white/60",
       ].join(" ")}
       aria-live="polite"
     >
-      {turnPrompt(game, nameOf, assist, dealing)}
+      {turnPrompt(game, nameOf, assist, dealing, reshuffling)}
     </p>
   );
 }
@@ -214,6 +223,16 @@ export function Table({
   // The first two are the same beat wherever a call is watched, so the timing
   // lives in `useJudgedCall` and the table screen (#14) gets it too.
   const { call, id: lastCallId, peeling, announcing, endAnnouncement } = useJudgedCall(log);
+
+  /**
+   * The deck running out, given five seconds to be noticed in (#209).
+   *
+   * Same shape as the call above and for the same reason: it is a moment the
+   * whole table is in, so the timing is a hook read off the log rather than a
+   * decision either layout makes. It gates nothing — not the draw pile, not the
+   * bots, not a turn — it only decides what the prompt says.
+   */
+  const { drawPileSize: reshuffling } = useReshuffle(log);
 
   /**
    * A phone at a table where nobody is looking at their phone (#81).
@@ -642,6 +661,7 @@ export function Table({
           onAskForHelp={askForHelp}
           onShowInvite={() => setInviting(true)}
           onShowRules={onShowRules}
+          reshuffling={reshuffling}
           hints={hints}
           onChooseHints={onChooseHints}
           shouting={shoutingHere?.kind ?? null}
@@ -788,7 +808,7 @@ export function Table({
             }
           />
 
-          <TurnPrompt game={game} nameOf={nameOf} assist={assist} />
+          <TurnPrompt game={game} nameOf={nameOf} assist={assist} reshuffling={reshuffling} />
         </div>
 
         {finished ? (

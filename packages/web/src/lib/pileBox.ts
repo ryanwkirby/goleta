@@ -77,3 +77,19 @@ export const deckPoint = (room: Box, centre: Point, size: CardSize): Point => {
     y: centre.y - (CAPTION / 2) * scale,
   };
 };
+
+/**
+ * The other half of the pair: where the card in play sits.
+ *
+ * The same arithmetic mirrored, because the two cards and their gap are centred
+ * inside the box — so the pile is as far right of centre as the deck is left of
+ * it. Read by the reshuffle, which is the one thing on this screen that travels
+ * pile → deck rather than deck → somewhere (#209).
+ */
+export const pilePoint = (room: Box, centre: Point, size: CardSize): Point => {
+  const scale = fitScale(room, pileBox(size));
+  return {
+    x: centre.x + ((CARD_WIDTH_PX[size] + BETWEEN) / 2) * scale,
+    y: centre.y - (CAPTION / 2) * scale,
+  };
+};

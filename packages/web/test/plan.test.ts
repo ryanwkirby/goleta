@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import type { Card, GameEvent, GameView } from "@goleta/engine";
 
 import { DECK, seatAnchor } from "../src/motion/anchors.ts";
-import { PEEL_MS, planFlights, settlesAt } from "../src/motion/plan.ts";
+import {
+  PEEL_MS,
+  RESHUFFLE_CARDS,
+  RESHUFFLE_MS,
+  planFlights,
+  settlesAt,
+} from "../src/motion/plan.ts";
+import { DECK as DECK_KEY, PILE } from "../src/motion/anchors.ts";
 
 const card = (id: string, rank: Card["rank"] = "7", suit: Card["suit"] = "H"): Card => ({
   id,
@@ -242,5 +249,76 @@ describe("a batch", () => {
 
     expect(flights).toHaveLength(20);
     expect(settlesAt(flights)).toBeLessThanOrEqual(1200);
+  });
+});
+
+/**
+ * The deck running out, which used to pass in under half a second and now gets
+ * five (#209). The events always arrive together: the draw that emptied the
+ * deck, the recycle, and the card turned up off the fresh deck.
+ */
+const recycle = (): GameEvent => ({ type: "reshuffled", drawPileSize: 31 });
+const upcard = (): GameEvent => ({ type: "turnedUp", cards: [card("u1")], reason: "recycle" });
+
+describe("a reshuffle", () => {
+
+  it("sends a stack of cards back into the deck, not three", () => {
+    const { flights } = plan([recycle()]);
+
+    expect(flights).toHaveLength(RESHUFFLE_CARDS);
+    for (const flight of flights) {
+      expect(flight.from).toEqual([PILE]);
+      expect(flight.to).toEqual([DECK_KEY]);
+    }
+  });
+
+  it("keeps every one of them face down", () => {
+    // The recycled pile is shuffled and its order *is* deck order, which
+    // `redact.ts` guards. The only face this moment shows is the card turned up
+    // at the end of it.
+    const { flights } = plan([recycle(), upcard()]);
+    const recycled = flights.slice(0, RESHUFFLE_CARDS);
+
+    expect(recycled.every((flight) => flight.card === null)).toBe(true);
+    expect(flights.at(-1)?.card?.id).toBe("u1");
+  });
+
+  it("is visible for most of the beat rather than busy for all of it", () => {
+    const { flights } = plan([recycle()]);
+    const last = settlesAt(flights);
+
+    expect(last).toBeGreaterThan(RESHUFFLE_MS * 0.6);
+    expect(last).toBeLessThan(RESHUFFLE_MS);
+  });
+
+  it("holds everything else in the batch until it is over", () => {
+    // What made it unreadable: the card turned up off the fresh deck arrived in
+    // the same breath and chased the last card back into it.
+    const { flights } = plan([recycle(), upcard()]);
+
+    expect(flights.at(-1)?.delay).toBeGreaterThanOrEqual(RESHUFFLE_MS);
+  });
+
+  it("is not squeezed by the burst cap, wherever it sits in the batch", () => {
+    // The cap is about a queue nobody is watching any more; a hold is the
+    // opposite. It used to be measured from the earliest flight in the batch,
+    // which worked only because the one hold there was — the peel — opens its
+    // batch. A recycle sits in the middle of one.
+    const drew: GameEvent = { type: "drew", playerId: "them", card: card("d1") };
+    const { flights } = plan([drew, recycle(), upcard()]);
+
+    expect(settlesAt(flights)).toBeGreaterThan(RESHUFFLE_MS);
+    expect(flights.at(-1)?.delay).toBeGreaterThanOrEqual(RESHUFFLE_MS);
+  });
+
+  it("queues behind a judged call rather than racing one", () => {
+    // A recycle can land in the same breath as a call, and a landed call
+    // rewinds the recycle. The peel goes first, always.
+    const { flights } = plan([called({ returned: [card("r1")] }), recycle(), upcard()]);
+    const recycled = flights.filter((flight) => flight.to[0] === DECK_KEY && flight.card === null);
+
+    expect(recycled).toHaveLength(RESHUFFLE_CARDS);
+    for (const flight of recycled) expect(flight.delay).toBeGreaterThanOrEqual(PEEL_MS);
+    expect(flights.at(-1)?.delay).toBeGreaterThanOrEqual(PEEL_MS + RESHUFFLE_MS);
   });
 });

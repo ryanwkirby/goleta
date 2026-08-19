@@ -84,7 +84,7 @@ export function PeekStrip({
   offline,
   helpFrom,
   prompt,
-  mine,
+  loud,
   onShowInvite,
   onShowRules,
   hints,
@@ -101,8 +101,16 @@ export function PeekStrip({
   helpFrom: { name: string; kind: ShoutKind } | null;
   /** What the table is waiting for, in the words the full table uses. */
   prompt: string;
-  /** Whether it is waiting for you — the prompt is drawn up when it is. */
-  mine: boolean;
+  /**
+   * Whether the prompt is drawn up.
+   *
+   * It was `mine` until #209, and the rename is the point: the strip has one
+   * line for what is going on, and two different things want it read — the
+   * table waiting on *you*, and the deck running out, which is nobody's turn
+   * and is the most important thing on the screen for five seconds. The caller
+   * decides which; this only draws it.
+   */
+  loud: boolean;
   /** Tapping the room code: the invite, opened by whoever is holding the phone. */
   onShowInvite: () => void;
   /** The way back to the rules, which this view had none of before #195. */
@@ -301,7 +309,7 @@ export function PeekStrip({
         className={[
           helpFrom ? "" : "ml-auto",
           "min-w-0 truncate text-xs",
-          mine ? "font-semibold text-amber-300" : "text-white/60",
+          loud ? "font-semibold text-amber-300" : "text-white/60",
         ].join(" ")}
         aria-live="polite"
       >

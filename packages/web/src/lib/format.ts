@@ -102,8 +102,27 @@ export const turnPrompt = (
   assist: boolean,
   /** The cards are still going out; see `MotionApi.dealing`. */
   dealing = false,
+  /**
+   * How many cards there are to draw, while a reshuffle is being watched (#209).
+   *
+   * The words for the deck running out go here rather than into a notice of
+   * their own, because this line is the one thing all three screens already
+   * have: the upright table draws it under the piles, the landscape strip is
+   * the whole of that view's furniture, and the shared screen gives it the
+   * bottom band. The log says it too, and the log is drawn on exactly one of
+   * those three.
+   *
+   * It takes precedence over what the table is waiting for, and that is the
+   * point — for these five seconds the answer to "what is happening" is the
+   * reshuffle, not whose turn it is. The one thing it does not outrank is the
+   * game being over, which cannot coincide with it anyway.
+   */
+  reshuffling: number | null = null,
 ): string => {
   const mine = game.waitingOn === game.you;
+  if (reshuffling !== null && game.phase.kind !== "over") {
+    return `Deck ran out — shuffling the pile back in, ${reshuffling} to draw.`;
+  }
   switch (game.phase.kind) {
     case "over":
       return game.winnerId

@@ -20,7 +20,7 @@ import { HelpAsk, HintedMark, shoutingNow } from "../components/Help.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { QrCode, QrGlyph } from "../components/QrCode.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
-import { PlayingCard, SUIT_GLYPH } from "../components/Card.tsx";
+import { CardBack, PlayingCard, SUIT_GLYPH } from "../components/Card.tsx";
 import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
@@ -36,9 +36,11 @@ import {
   type Point,
 } from "../lib/fitScale.ts";
 import { ANNOUNCE_MS, useJudgedCall } from "../lib/judgedCall.ts";
-import { deckPoint, pileBox } from "../lib/pileBox.ts";
+import { useReshuffle } from "../lib/reshuffle.ts";
+import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
+import { RESHUFFLE_BEAT_MS, RESHUFFLE_CARDS } from "../motion/plan.ts";
 import { joinLink } from "../net/route.ts";
 import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
 
@@ -498,6 +500,15 @@ function Playing({
   const latest = log[0]?.event ?? null;
 
   /**
+   * The deck running out, given a beat this screen can join in with (#209).
+   *
+   * Off the same hook the phones read, so the five seconds are the same five
+   * seconds everywhere — which is the whole reason the timing is a hook rather
+   * than a constant in either screen.
+   */
+  const { drawPileSize: reshuffling } = useReshuffle(log);
+
+  /**
    * Which way up this board says things (#160).
    *
    * The seat names have read from outside their own edge since #141 and
@@ -548,6 +559,12 @@ function Playing({
         event={latest}
         room={room}
         from={deckPoint(pileRoom, pilesAt, "xl")}
+        scale={fitScale(pileRoom, pileBox("xl"))}
+      />
+      <TableRecycle
+        running={reshuffling !== null}
+        from={pilePoint(pileRoom, pilesAt, "xl")}
+        to={deckPoint(pileRoom, pilesAt, "xl")}
         scale={fitScale(pileRoom, pileBox("xl"))}
       />
 
@@ -659,6 +676,16 @@ function Playing({
               {nameOf(call.targetId)} — said the {call.card.rank}
               {SUIT_GLYPH[call.card.suit]}.{" "}
               <span className="text-white/70">{call.correct ? "Right." : "Wrong."}</span>
+            </span>
+          ) : reshuffling !== null ? (
+            // The deck running out, in the band the prompt and the ruling
+            // share. This screen has no log at all, so without it a reshuffle
+            // here was a number changing (#209). It comes after the ruling for
+            // the reason the peel comes first: a recycle can land in the same
+            // breath as a call, and the call is the thing that has to be
+            // watched.
+            <span className="text-amber-300">
+              {turnPrompt(game, nameOf, false, false, reshuffling)}
             </span>
           ) : finished ? (
             <span className="text-amber-300">{turnPrompt(game, nameOf, false)}</span>
@@ -808,6 +835,62 @@ function EdgeNames({
  * It is drawn at the size the deck is drawn at, for the same reason — a card
  * that comes off a pile should be the size of the cards in it.
  */
+/**
+ * The pile going back into the deck, on the one screen with no flight layer.
+ *
+ * `TableMotion` is deliberately absent here — the board is drawn through one
+ * transform and the flight layer portals to the body, where that transform
+ * cannot reach it — so this screen does its own arithmetic, exactly as
+ * `TableFlight` does for a draw. Nine face-down cards, staggered, pile → deck,
+ * over most of the five seconds the whole table is holding for (#209).
+ *
+ * **Face down, all of them.** The recycled pile is shuffled and its order *is*
+ * deck order, which `redact.ts` guards; the only face this moment shows is the
+ * card turned up at the end of it, which arrives by the ordinary route.
+ *
+ * Nothing here gates anything. The draw pile under it stays tappable — in an
+ * IRL room this screen's pile draws for the player on the clock — and the bots
+ * carry on to their own timing.
+ */
+function TableRecycle({
+  running,
+  from,
+  to,
+  scale,
+}: {
+  /** Whether the beat is on. Null when it is not, which draws nothing. */
+  running: boolean;
+  from: Point;
+  to: Point;
+  scale: number;
+}) {
+  if (!running) return null;
+
+  return (
+    <>
+      {Array.from({ length: RESHUFFLE_CARDS }, (_, index) => (
+        <div
+          key={index}
+          style={
+            {
+              left: from.x,
+              top: from.y,
+              "--dx": `${to.x - from.x}px`,
+              "--dy": `${to.y - from.y}px`,
+              "--delay": `${index * RESHUFFLE_BEAT_MS}ms`,
+            } as CSSProperties
+          }
+          className="table-screen-recycle pointer-events-none absolute z-30"
+        >
+          <div style={{ transform: `scale(${scale})` }}>
+            <CardBack size="xl" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function TableFlight({
   event,
   room,

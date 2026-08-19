@@ -1,7 +1,13 @@
-import { useState, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
+import { dropIndex, hopsBetween, type SeatDrag } from "../lib/seatDrag.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { QrCode } from "../components/QrCode.tsx";
 import {
@@ -264,13 +270,21 @@ function BotSpeedPicker({
 }
 
 /**
+ * Pointer events rather than HTML5 drag and drop, which does not exist on
+ * touch. `touch-action: none` on the handle is what keeps the gesture from
+ * scrolling the lobby instead, and pointer capture is what keeps it working
+ * once the finger has left the row it started on. The arithmetic — and the
+ * reasoning about why a drag is a run of `moveSeat` messages rather than a new
+ * one — is in `lib/seatDrag.ts`.
+ */
+
+/**
  * Move this seat one place along the table.
  *
- * Arrows rather than a drag: a hand-rolled drag on a phone fights the page
- * scroll for the same gesture, and two buttons are reachable from a keyboard
- * and a screen reader without any of that. The ends are disabled — the server
- * treats a move off either end as nothing happening, so a stale tap costs an
- * error banner nobody needed.
+ * **The arrows stay**, and they are not a fallback: they are the keyboard path
+ * and the precise one, and a drag handle is neither. The ends are disabled —
+ * the server treats a move off either end as nothing happening, so a stale tap
+ * costs an error banner nobody needed.
  */
 function MoveSeat({
   name,
@@ -306,6 +320,50 @@ function MoveSeat({
         ↓
       </Button>
     </span>
+  );
+}
+
+/**
+ * The grip a name is dragged by.
+ *
+ * Pointer-only, and `tabIndex={-1}` with `aria-hidden` because of it: the
+ * arrows beside it do the same job from a keyboard and a screen reader, and a
+ * focusable control that does nothing when you press Enter is worse than no
+ * control at all. This is the shortcut for a host reordering eight names with a
+ * thumb, not a second way of describing the list.
+ *
+ * `touch-none` is load-bearing. Without it a drag down the lobby is a scroll
+ * down the lobby, which is the objection that kept this to two arrows in the
+ * first place.
+ */
+function SeatGrip({
+  dragging,
+  onGrab,
+  onDrag,
+  onDrop,
+}: {
+  dragging: boolean;
+  onGrab: (event: ReactPointerEvent<HTMLElement>) => void;
+  onDrag: (event: ReactPointerEvent<HTMLElement>) => void;
+  onDrop: (event: ReactPointerEvent<HTMLElement>) => void;
+}) {
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      aria-hidden
+      onPointerDown={onGrab}
+      onPointerMove={onDrag}
+      onPointerUp={onDrop}
+      onPointerCancel={onDrop}
+      className={[
+        "-ml-1 flex size-8 shrink-0 touch-none select-none items-center justify-center",
+        "rounded-lg text-base leading-none transition-colors",
+        dragging ? "cursor-grabbing text-white/70" : "cursor-grab text-white/25 hover:text-white/60",
+      ].join(" ")}
+    >
+      ⠿
+    </button>
   );
 }
 
@@ -352,6 +410,56 @@ export function Lobby({
    * Both answers say which one they are — "No, I'll fix it" and "Yes, let's
    * play". A pair of bare verbs made the reader work out which button meant no.
    */
+  /**
+   * The name currently under a finger, if any.
+   *
+   * The ref is the drag; the state is only so the row can look lifted. Every
+   * hop is sent as it is crossed rather than held until the drop, which is what
+   * makes the list reorder under the finger with no local copy of the order to
+   * keep in step — the room's own `seats` is the only order there is.
+   */
+  const drag = useRef<SeatDrag | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
+
+  const endDrag = (event: ReactPointerEvent<HTMLElement>): void => {
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    drag.current = null;
+    setDragging(null);
+  };
+
+  const grabSeat = (event: ReactPointerEvent<HTMLElement>, id: string, index: number): void => {
+    if (!orderable) return;
+    // Stops the press becoming a text selection, and on touch stops it becoming
+    // the beginning of a scroll before `touch-action` has had its say.
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { id, startY: event.clientY, from: index, at: index };
+    setDragging(id);
+  };
+
+  const dragSeat = (event: ReactPointerEvent<HTMLElement>): void => {
+    const state = drag.current;
+    if (!state) return;
+    // The seat left the room mid-drag. Let go rather than post hops about
+    // somebody who is no longer at the table.
+    if (!room.seats.some((seat) => seat.id === state.id)) {
+      endDrag(event);
+      return;
+    }
+
+    const want = dropIndex(state.from, event.clientY - state.startY, room.seats.length);
+    const { direction, count } = hopsBetween(state.at, want);
+    if (count === 0) return;
+
+    // One message per place, exactly as the arrows send them.
+    for (let hop = count; hop > 0; hop -= 1) {
+      send({ t: "moveSeat", playerId: state.id, direction });
+    }
+    state.at = want;
+  };
+
   const [checkingOrder, setCheckingOrder] = useState(false);
   const [orderChecked, setOrderChecked] = useState(false);
   const [sharingScreen, setSharingScreen] = useState(false);
@@ -412,7 +520,9 @@ export function Lobby({
         </div>
 
         {orderable ? (
-          <p className="mt-1 text-xs text-white/40">Put these in the order you're sitting.</p>
+          <p className="mt-1 text-xs text-white/40">
+            Put these in the order you're sitting — drag a name, or use the arrows.
+          </p>
         ) : null}
 
         <ul className="mt-3 space-y-1.5">
@@ -428,8 +538,24 @@ export function Lobby({
             */
             <li
               key={seat.id}
-              className="flex min-h-16 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
+              className={[
+                "flex min-h-16 items-center gap-2 rounded-xl px-3 py-2.5 text-sm",
+                // Lifted rather than hidden: the row the finger is on is the
+                // one that has to stay readable, because it is the one whose
+                // number is changing.
+                dragging === seat.id
+                  ? "bg-white/15 ring-1 ring-amber-300/40"
+                  : "bg-white/5",
+              ].join(" ")}
             >
+              {orderable ? (
+                <SeatGrip
+                  dragging={dragging === seat.id}
+                  onGrab={(event) => grabSeat(event, seat.id, index)}
+                  onDrag={dragSeat}
+                  onDrop={endDrag}
+                />
+              ) : null}
               {numbered ? (
                 <span className="w-4 shrink-0 text-xs tabular-nums text-white/30">{index + 1}</span>
               ) : null}

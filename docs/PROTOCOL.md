@@ -108,7 +108,7 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `intent` | seated, plus shared table draw | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. A `table: true` watcher may send only `drawCard`, only in IRL mode, and the server stamps it as the current player. |
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round — or draws for it, if the table has asked for that. |
 | `addBot` / `removeSeat` | host | Between games only. |
-| `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order. Off either end does nothing rather than refusing. |
+| `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order. Off either end does nothing rather than refusing. The lobby's drag handle sends a run of these — one per place — rather than a whole order; see below. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
 | `setIrl` | host | **Any time, including mid-game.** "In person" rather than "remote play"; carried back to everyone on `RoomView`. |
@@ -281,6 +281,21 @@ arrows in is a presentation call and stays in the lobby — the wire refuses onl
 what it always refused, a non-host and a game in progress. Gating it on a flag
 the host can flip at any moment would throw an error at somebody mid-shuffle for
 changing an unrelated setting.
+
+**One place at a time, rather than a whole `order: PlayerId[]`.** An order
+posted from a browser can arrive after a seat has left, and a stale permutation
+is a worse thing to reconcile than a swap that no longer applies. The lobby's
+drag handle (#197) is built on top of that rather than around it: a drop three
+places up sends three `moveSeat` messages, each independently valid, each
+applied or refused on its own merits. Nothing about a drag reaches the wire that
+an arrow tap could not have sent.
+
+That is also what makes a list changing mid-drag safe. A hop is relative to
+wherever the server currently has that seat, so the worst a stale index can do
+is send the wrong *number* of hops — a name one place out, on screen, fixable
+with the arrows. It can never post an order built from a table that has moved
+on. `lib/seatDrag.ts` holds the arithmetic and `test/seatDrag.test.ts` holds the
+equivalence.
 
 ## Bots
 

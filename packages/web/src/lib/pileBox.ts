@@ -25,7 +25,7 @@
  * out; keep them in step by hand, the way `CARD_WIDTH_PX` tracks `SIZES`.
  */
 
-import { CARD_HEIGHT_PX, CARD_WIDTH_PX, type CardSize } from "../components/Card.tsx";
+import { CARD_HEIGHT_PX, CARD_WIDTH_PX, type CardSize } from "./cardShape.ts";
 import { fitScale, type Box, type Point } from "./fitScale.ts";
 
 /** `gap-6` between the draw pile and the card in play. */

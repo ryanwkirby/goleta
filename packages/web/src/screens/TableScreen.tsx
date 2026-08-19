@@ -20,7 +20,8 @@ import { HelpAsk, HintedMark, shoutingNow } from "../components/Help.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { QrCode, QrGlyph } from "../components/QrCode.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
-import { CardBack, PlayingCard, SUIT_GLYPH } from "../components/Card.tsx";
+import { CardBack, PlayingCard } from "../components/Card.tsx";
+import { SUIT_GLYPH } from "../lib/cardShape.ts";
 import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
@@ -35,14 +36,15 @@ import {
   type Box,
   type Point,
 } from "../lib/fitScale.ts";
-import { ANNOUNCE_MS, useJudgedCall } from "../lib/judgedCall.ts";
+import { ANNOUNCE_MS } from "../lib/beats.ts";
+import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { RESHUFFLE_BEAT_MS, RESHUFFLE_CARDS } from "../motion/plan.ts";
 import { joinLink } from "../net/route.ts";
-import type { LoggedEvent, Shout } from "../net/useGoleta.ts";
+import type { LoggedEvent, Shout } from "../lib/feed.ts";
 
 /**
  * The middle of the table, on a screen in the middle of the table.

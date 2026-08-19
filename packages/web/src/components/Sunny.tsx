@@ -4,14 +4,14 @@ import type { Card, SunnyEvidence, SunnyReach } from "@goleta/engine";
 
 import { handStep, PICKER_TIGHTEST } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
+import { PlayingCard } from "./Card.tsx";
 import {
   CARD_WIDTH_PX,
   isRed,
-  PlayingCard,
   SUIT_GLYPH,
   SUIT_LABEL,
   type CardSize,
-} from "./Card.tsx";
+} from "../lib/cardShape.ts";
 import { Button } from "./ui.tsx";
 
 /** A plain outline. It is furniture until it has something to say. */

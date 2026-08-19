@@ -10,11 +10,11 @@ import { SunnyAccusePicker, SunnyCall, SuitPicker } from "../components/Sunny.ts
 import { turnPrompt, type NameOf } from "../lib/format.ts";
 import { handHeight, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
-import { useMotion } from "../motion/TableMotion.tsx";
-import { cardWidthAt } from "../components/Card.tsx";
+import { useMotion } from "../lib/motion.ts";
+import { cardWidthAt } from "../lib/cardShape.ts";
 import type { HandMode } from "../components/Hand.tsx";
 import type { HandSort } from "../lib/sort.ts";
-import type { GoletaError } from "../net/useGoleta.ts";
+import type { GoletaError } from "../lib/feed.ts";
 import type { Card, ShoutKind } from "@goleta/engine";
 
 export interface HandViewProps {

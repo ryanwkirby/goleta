@@ -2,15 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { Card, GameEvent, GameView } from "@goleta/engine";
 
-import { DECK, seatAnchor } from "../src/motion/anchors.ts";
-import {
-  PEEL_MS,
-  RESHUFFLE_CARDS,
-  RESHUFFLE_MS,
-  planFlights,
-  settlesAt,
-} from "../src/motion/plan.ts";
-import { DECK as DECK_KEY, PILE } from "../src/motion/anchors.ts";
+import { DECK, seatAnchor } from "../src/lib/anchors.ts";
+import { PEEL_MS, RESHUFFLE_MS } from "../src/lib/beats.ts";
+import { RESHUFFLE_CARDS, planFlights, settlesAt } from "../src/motion/plan.ts";
+import { DECK as DECK_KEY, PILE } from "../src/lib/anchors.ts";
 
 const card = (id: string, rank: Card["rank"] = "7", suit: Card["suit"] = "H"): Card => ({
   id,

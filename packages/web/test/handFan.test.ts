@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CARD_WIDTH_PX, cardWidthAt } from "../src/components/Card.tsx";
+import { CARD_WIDTH_PX, cardWidthAt } from "../src/lib/cardShape.ts";
 import {
   FIT_TIGHTEST,
   PICKER_TIGHTEST,

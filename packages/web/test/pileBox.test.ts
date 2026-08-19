@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { CardSize } from "../src/components/Card.tsx";
+import type { CardSize } from "../src/lib/cardShape.ts";
 import { TABLE_DESIGN, fitScale } from "../src/lib/fitScale.ts";
 import { deckPoint, pileBox } from "../src/lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint } from "../src/lib/tableEdges.ts";

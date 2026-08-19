@@ -1,6 +1,6 @@
 import type { Card, GameEvent, GameView, RoomView, SurrenderReason } from "@goleta/engine";
 
-import { SUIT_GLYPH, SUIT_LABEL } from "../components/Card.tsx";
+import { SUIT_GLYPH, SUIT_LABEL } from "./cardShape.ts";
 
 export type NameOf = (playerId: string) => string;
 

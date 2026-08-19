@@ -12,9 +12,10 @@ import type { Card } from "@goleta/engine";
 
 import { TIGHTEST } from "../lib/handFan.ts";
 import { NEXT_SORT, SORT_LABELS, type HandSort } from "../lib/sort.ts";
-import { cardAnchor, HAND } from "../motion/anchors.ts";
-import { useMotion } from "../motion/TableMotion.tsx";
-import { CARD_WIDTH_PX, PlayingCard, cardWidthAt, type CardSize } from "./Card.tsx";
+import { cardAnchor, HAND } from "../lib/anchors.ts";
+import { useMotion } from "../lib/motion.ts";
+import { PlayingCard } from "./Card.tsx";
+import { CARD_WIDTH_PX, cardWidthAt, type CardSize } from "../lib/cardShape.ts";
 
 /**
  * `forced` is the play you owe after a Sunny call has landed on you. It plays a

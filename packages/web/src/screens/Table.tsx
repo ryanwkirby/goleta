@@ -28,13 +28,15 @@ import { namerFor, turnPrompt, type NameOf } from "../lib/format.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../lib/sort.ts";
 import { handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
-import { CARD_WIDTH_PX } from "../components/Card.tsx";
-import { ANNOUNCE_MS, useJudgedCall } from "../lib/judgedCall.ts";
+import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
+import { ANNOUNCE_MS } from "../lib/beats.ts";
+import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { FULL_TABLE, PEEK_TABLE } from "../motion/plan.ts";
-import { TableMotion, useMotion } from "../motion/TableMotion.tsx";
+import { useMotion } from "../lib/motion.ts";
+import { TableMotion } from "../motion/TableMotion.tsx";
 import {
   gamesFinished,
   gamesSeen,
@@ -47,7 +49,7 @@ import {
   recordGamesFinished,
   saveHandSort,
 } from "../net/identity.ts";
-import type { GoletaError, LoggedEvent, Shout } from "../net/useGoleta.ts";
+import type { GoletaError, LoggedEvent, Shout } from "../lib/feed.ts";
 import { HandOver } from "./HandOver.tsx";
 import { HandView } from "./HandView.tsx";
 

@@ -11,10 +11,11 @@ import type { GameView, PlayerView, RoomView, ShoutKind } from "@goleta/engine";
 
 import { fanTable, inRows, type SeatHand } from "../lib/fan.ts";
 import { inTurnOrder, nextStillIn } from "../lib/seating.ts";
-import { cardAnchor, seatAnchor } from "../motion/anchors.ts";
-import { useMotion } from "../motion/TableMotion.tsx";
-import type { Shout } from "../net/useGoleta.ts";
-import { CARD_WIDTH_PX, PlayingCard } from "./Card.tsx";
+import { cardAnchor, seatAnchor } from "../lib/anchors.ts";
+import { useMotion } from "../lib/motion.ts";
+import type { Shout } from "../lib/feed.ts";
+import { PlayingCard } from "./Card.tsx";
+import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
 import { HelpShout, HintedMark, shoutingNow } from "./Help.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>

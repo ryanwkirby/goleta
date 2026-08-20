@@ -1,14 +1,10 @@
 /**
- * A tiny xorshift32 PRNG.
+ * A tiny xorshift32 PRNG. The engine never touches `Math.random` — every shuffle
+ * comes from a seed in the game state, so a game replays exactly from its
+ * intents, which is what the simulations and crash recovery stand on.
  *
- * The engine never touches `Math.random` — every shuffle and every deal comes
- * from a seed that lives in the game state, so a game replays exactly from its
- * intents. That property is what the full-game simulations and the crash
- * recovery both stand on.
- *
- * xorshift32 is not a cryptographic generator and doesn't need to be. It is,
- * however, the *only* source of shuffle order, so it must not be seeded with
- * something a player could guess if the stakes ever change.
+ * Not cryptographic and doesn't need to be, but it is the *only* source of
+ * shuffle order, so it must not be seeded with something a player could guess.
  */
 
 /** Advances the seed. Never returns 0, which would be a fixed point. */
@@ -26,8 +22,7 @@ export const nextSeed = (seed: number): number => {
 export const randomInt = (seed: number, bound: number): [value: number, seed: number] => {
   if (bound <= 1) return [0, nextSeed(seed)];
   const next = nextSeed(seed);
-  // Rejection-free and biased by at most 2^-32 per draw, which is far below
-  // anything that matters for shuffling a deck of cards.
+  // Biased by at most 2^-32 per draw, far below anything that matters here.
   return [(next >>> 0) % bound, next];
 };
 

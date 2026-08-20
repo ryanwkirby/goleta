@@ -1,10 +1,6 @@
 /**
- * What a bot will and won't say about a draw, and how far ahead it looks when
- * it plays.
- *
- * The rules of the call itself live in `sunny.test.ts`; this is about judgment.
- * A bot accuses only somebody it has caught, and whether a caught player is
- * called at all is one decision taken by the table, not one per bot.
+ * What a bot will and won't say about a draw, and how far ahead it looks when it
+ * plays. The rules of the call itself live in `sunny.test.ts`.
  */
 
 import { describe, expect, it } from "vitest";
@@ -59,8 +55,8 @@ describe("a bot with a call on offer", () => {
 
   it("never accuses an honest draw, however keen the table is", () => {
     const view = redact(honestDraw(), "b");
-    // The button is there — it is there after every draw — and the bot leaves
-    // it alone, because working the reach out finds nothing legal in it.
+    // The button is there after every draw, and the bot leaves it alone because
+    // working the reach out finds nothing legal in it.
     expect(view.sunnyCallable).toBe(true);
     expect(view.sunnyReach?.hand.map((c) => c.id)).toEqual(["2C#1", "3C#1"]);
     expect(decideBotIntent(view, { callSunny: true })?.type).not.toBe("callSunny");
@@ -74,10 +70,9 @@ describe("a bot with a call on offer", () => {
 });
 
 /**
- * `a` must play on a 5S holding 9S and 5D, and the two cards leave very
- * different boards behind: 9S asks the next seat for a spade or a nine, 5D for
- * a diamond or a five. Nothing in `a`'s own hand separates them — one card of
- * each suit — so the old rule kept them in hand order and played the 9S.
+ * `a` must play on a 5S holding 9S and 5D, which leave very different boards
+ * behind. Nothing in `a`'s own hand separates them, so the old rule kept them in
+ * hand order and played the 9S.
  */
 const choiceOfTwo = (next: string[]): GameState =>
   table({
@@ -134,9 +129,9 @@ describe("a bot choosing which card to play", () => {
     );
     const view = redact(caught, "a");
     expect(view.phase).toEqual({ kind: "sunnyPlay" });
-    // KD answers the 5D and nothing about the 9S, so the reading rule would
-    // reach for it. There is nothing to read: the punishment card and every
-    // card `a` drew land on top of this one before `b` ever plays against it.
+    // KD answers the 5D and nothing about the 9S, so the reading rule would reach
+    // for it — but the punishment card and every card `a` drew land on top of
+    // this one before `b` ever plays against it.
     expect(decideBotIntent(view)).toEqual({
       type: "playCard",
       playerId: "a",
@@ -150,8 +145,8 @@ describe("a bot choosing which card to play", () => {
       top: "5S",
       drawPile: ["QD", "KD#2"],
     });
-    // The 8 is what stops a bot ever being stuck, so it goes regardless — and
-    // the suit call that follows is where the next seat gets read.
+    // The 8 is what stops a bot ever being stuck, so it goes regardless; the suit
+    // call that follows is where the next seat gets read.
     expect(decideBotIntent(redact(state, "a"))).toEqual({
       type: "playCard",
       playerId: "a",
@@ -175,17 +170,16 @@ const afterTheEight = (options = DEFAULT_OPTIONS): GameState =>
 
 describe("a bot naming a suit", () => {
   it("names one the next player is holding, so they have to spend a card", () => {
-    // Left to itself the bot would name hearts — it holds none, so nothing could
-    // force it next turn. But `b` holds two diamonds and no hearts.
+    // Left to itself the bot would name hearts, holding none. But `b` holds two
+    // diamonds and no hearts.
     const view = redact(afterTheEight(), "a");
     expect(view.phase).toEqual({ kind: "suit", playerId: "a" });
     expect(decideBotIntent(view)).toEqual({ type: "chooseSuit", playerId: "a", suit: "D" });
   });
 
   it("names its own scarcest under the Power of Eights, where it answers itself", () => {
-    // The call belongs to `b` here, and `b` is who then has to play against it.
-    // Naming a suit `b` holds would be naming one against itself, so the old
-    // rule stands: clubs, which `b` hasn't got, and a draw off the back of it.
+    // The call belongs to `b`, who then has to play against it, so naming a suit
+    // `b` holds would be naming one against itself. The old rule stands.
     const view = redact(afterTheEight({ ...DEFAULT_OPTIONS, eights: "nextPlayerNames" }), "b");
     expect(view.phase).toEqual({ kind: "suit", playerId: "b" });
     expect(decideBotIntent(view)).toEqual({ type: "chooseSuit", playerId: "b", suit: "C" });

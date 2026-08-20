@@ -15,13 +15,9 @@ const SPOKEN_GLYPH: Record<string, string> = {
 };
 
 /**
- * The same line with its pips spelled out, for a screen reader.
- *
- * A bare `♠` is announced inconsistently and often not at all — at the usual
- * punctuation settings it's simply dropped, which turns "played 7♠" into
- * "played 7". The glyph is what you want to see and the wrong thing to hear, so
- * the log shows one and says the other. Cards come out as "7 of spades", the
- * same phrasing `PlayingCard` already uses for its own label.
+ * The same line with its pips spelled out, for a screen reader. A bare `♠` is
+ * announced inconsistently and often dropped, turning "played 7♠" into "played
+ * 7" — so the log shows the glyph and says the words.
  */
 export const spellSuits = (line: string): string =>
   line.replace(/[♣♦♥♠]/g, (glyph) => SPOKEN_GLYPH[glyph] ?? glyph);
@@ -39,8 +35,8 @@ const surrenderPhrase: Record<SurrenderReason, string> = {
 export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
   switch (event.type) {
     case "gameStarted":
-      // The shuffle is said here as well as shown, because the log is what a
-      // table scrolls back through to work out why the order looks wrong.
+      // Said here as well as shown: the log is what a table scrolls back through to
+      // work out why the order looks wrong.
       return event.seatsShuffled
         ? `New game, seats shuffled. ${cardName(event.upcard)} turned up.`
         : `New game. ${cardName(event.upcard)} turned up.`;
@@ -59,8 +55,8 @@ export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
         : `${cards} turned up off the deck — the card they reached for. That's the card to match now.`;
     }
     case "sunnyCalled": {
-      // The named card is the substance of the call, so the log carries it —
-      // it is what makes a wrong call worth reading back afterwards.
+      // The named card is the substance of the call, and what makes a wrong one worth
+      // reading back afterwards.
       const named = `${event.card.rank}${event.card.suit}`;
       const call = `${nameOf(event.callerId)} called the Sunny Rule on ${nameOf(event.targetId)}, naming the ${named}`;
       return event.correct ? `${call} — and was right.` : `${call} — and was wrong.`;
@@ -84,17 +80,13 @@ export const isNoteworthy = (event: GameEvent): boolean =>
   event.type === "sunnyCalled" || event.type === "eliminated" || event.type === "gameOver";
 
 /**
- * What the table is waiting for, said plainly.
+ * What the table is waiting for, said plainly. The two steps of a landed Sunny
+ * call number themselves: "now the punishment card" on its own says nothing
+ * about what happened or how much is left (#66).
  *
- * The two steps of a landed Sunny call number themselves. Read on its own,
- * "now the punishment card" tells you nothing about what happened or how much
- * of it is left, which is exactly how a player ends up wondering what hit them
- * (#66). Step three isn't a prompt — nobody is asked for it — but it is counted
- * so the numbering matches what the dialog promised.
- *
- * Both layouts say this same line, and both compute it themselves rather than
- * being handed it, because `dealing` comes from the motion layer and `Table`
- * renders that provider rather than sitting under it.
+ * Both layouts compute this rather than being handed it, because `dealing` comes
+ * from the motion layer and `Table` renders that provider rather than sitting
+ * under it.
  */
 export const turnPrompt = (
   game: GameView,
@@ -104,18 +96,9 @@ export const turnPrompt = (
   dealing = false,
   /**
    * How many cards there are to draw, while a reshuffle is being watched (#209).
-   *
-   * The words for the deck running out go here rather than into a notice of
-   * their own, because this line is the one thing all three screens already
-   * have: the upright table draws it under the piles, the landscape strip is
-   * the whole of that view's furniture, and the shared screen gives it the
-   * bottom band. The log says it too, and the log is drawn on exactly one of
-   * those three.
-   *
-   * It takes precedence over what the table is waiting for, and that is the
-   * point — for these five seconds the answer to "what is happening" is the
-   * reshuffle, not whose turn it is. The one thing it does not outrank is the
-   * game being over, which cannot coincide with it anyway.
+   * The words go here because this line is the one surface all three screens
+   * have. It outranks what the table is waiting for — for those five seconds the
+   * answer to "what is happening" is the reshuffle.
    */
   reshuffling: number | null = null,
 ): string => {
@@ -136,16 +119,12 @@ export const turnPrompt = (
         : `${who} owes a punishment card — step 2 of 3.`;
     }
     case "suit":
-      // The one prompt that waits on the deal, because it is the one that can
-      // arrive before it. Under Dealer's Choice the game opens in this phase,
-      // so without this the dealer is asked to name a suit for an 8 that is
-      // still in the air, at a table still dealing itself (#75). Said for the
-      // whole table, not just the namer: everyone is watching the same cards
-      // land, and the line moves on for all of them at the same moment.
+      // The one prompt that waits on the deal, because it is the one that can arrive
+      // before it: under Dealer's Choice the game opens in this phase, so the
+      // dealer was asked to name a suit for an 8 still in the air (#75).
       if (dealing) return "Dealing…";
-      // The namer, not the player to move — under Power of Eights the suit is
-      // owed by the next seat, and under Dealer's Choice by the dealer before
-      // anyone has played at all.
+      // The namer, not the player to move — under Power of Eights the suit is owed by
+      // the next seat, and under Dealer's Choice by the dealer.
       return mine ? "Name a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
     case "sunnyPlay":
       return mine
@@ -153,8 +132,8 @@ export const turnPrompt = (
         : `${nameOf(game.turnPlayerId)} has to make the play they skipped — step 1 of 3.`;
     case "action":
       if (!mine) return `${nameOf(game.turnPlayerId)} to play.`;
-      // Both of these give the answer away — being told you *must* play is
-      // being told a card matches — so neither is said unless help is on.
+      // Both give the answer away — being told you *must* play is being told a card
+      // matches — so neither is said unless help is on.
       if (!assist) return "Your turn.";
       return game.youMustPlay
         ? "Your turn — you have a card that matches, so you have to play it."

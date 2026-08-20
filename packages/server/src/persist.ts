@@ -1,16 +1,9 @@
 /**
- * Room snapshots on disk.
+ * Room snapshots on disk. Writes go to a temp file and are renamed into place, so
+ * a crash mid-write leaves the previous snapshot intact.
  *
- * `docker compose up -d --build` is this repo's normal deploy path, and a
- * routine restart shouldn't cost anyone their game. Rooms are few and small,
- * and the access pattern is "write on change, read everything once at boot",
- * which is what a file is for.
- *
- * This is a convenience, not a guarantee. A snapshot written by an older shape
- * is discarded rather than migrated — see AGENTS.md.
- *
- * Writes go to a temp file and are renamed into place, so a crash mid-write
- * leaves the previous snapshot intact rather than a truncated one.
+ * A convenience, not a guarantee: a snapshot written by an older shape is
+ * discarded rather than migrated — see AGENTS.md.
  */
 
 import fs from "node:fs";
@@ -43,9 +36,7 @@ export const loadRooms = (dataDir: string, maxIdleMs: number): RoomStore => {
   try {
     const snapshot = JSON.parse(fs.readFileSync(file, "utf8")) as Snapshot;
     if (snapshot.version !== SNAPSHOT_VERSION) {
-      // An older shape is dropped, not migrated. Serving a half-understood
-      // game is worse than dealing a new one, and losing rooms across a shape
-      // change is an accepted cost — see AGENTS.md.
+      // Serving a half-understood game is worse than dealing a new one.
       console.warn(
         `[persist] ignoring snapshot version ${snapshot.version}, expected ${SNAPSHOT_VERSION}`,
       );

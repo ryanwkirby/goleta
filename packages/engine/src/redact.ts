@@ -1,28 +1,15 @@
 /**
- * The one place that decides what a client is allowed to see.
+ * The one place that decides what a client is allowed to see. Nothing else may
+ * send game state to a browser.
  *
- * Nothing else in the codebase may send game state to a browser. Hands are not
- * secret — every hand is face up, always — but two things must never leave this
- * file:
+ * Hands are not secret, but two things must never leave this file:
+ * `state.challenge`, which carries a full snapshot of every hand a moment ago,
+ * and `state.sunny`, which names cards still in the deck. The one thing derived
+ * from the challenge that does go out is `sunnyReach`, and only to a viewer who
+ * could call.
  *
- *   - `state.challenge` itself, which carries a full snapshot of the game and
- *     therefore of every hand as it stood a moment ago. One thing derived from
- *     it does go out, to whoever is eligible to call: `sunnyReach`, the
- *     offender's pre-draw hand and the board they faced at that moment. It
- *     doesn't say which of those cards was legal — that is for the viewer to
- *     work out, same as it always was. The object itself, and in particular
- *     `violation`, stays here regardless: nothing ever says whether a call
- *     *would* land.
- *   - `state.sunny`, which names the cards a caught player is about to have
- *     turned up. Those are still in the deck, and which cards are coming off
- *     the deck is not something the table gets told in advance.
- *
- * A new field on `GameState` is invisible to clients until someone adds it
- * here, which is the intended default.
- *
- * `GameEvent`s need no redaction and are broadcast whole: every one of them
- * describes something that has already happened in the open. A new event that
- * would not be is a bug in the event, not something to filter on the way out.
+ * A new field on `GameState` is invisible to clients until someone adds it here.
+ * `GameEvent`s need no redaction: every one describes something already public.
  */
 
 import { legalCards, mustPlay, playerById, sunnyLockedDraws, topCard } from "./rules.ts";
@@ -46,7 +33,7 @@ export interface PlayerView {
 
 export type PhaseView =
   | { kind: "action" }
-  /** `playerId` is whose call the suit is, which need not be whose turn it is. */
+  /** Whose call the suit is, which need not be whose turn it is. */
   | { kind: "suit"; playerId: PlayerId }
   | { kind: "sunnyPlay" }
   | { kind: "surrender"; playerId: PlayerId; reason: SurrenderReason }
@@ -57,16 +44,13 @@ export interface GameView {
   you: PlayerId | null;
   players: PlayerView[];
   turnPlayerId: PlayerId;
-  /** Whoever the game is waiting on — usually, but not always, the turn. */
   waitingOn: PlayerId | null;
   phase: PhaseView;
   topCard: Card;
   activeSuit: Suit;
   /**
-   * The suit somebody named for the card in play, or null when nobody did.
-   * Public the moment it is chosen — naming a suit is done out loud at a real
-   * table, and `suitChosen` already goes out to everyone. It is here because
-   * `activeSuit` cannot answer it: a name that matches the 8's own suit is
+   * Public the moment it is chosen — naming a suit is done out loud. Here
+   * because `activeSuit` cannot answer it: a name matching the 8's own suit is
    * indistinguishable from no name at all (#114).
    */
   namedSuit: Suit | null;
@@ -74,34 +58,26 @@ export interface GameView {
   discardPileSize: number;
   drawsThisTurn: number;
   /**
-   * Whether *you* could call the Sunny Rule this instant. True after any draw
-   * by someone else, whether or not that draw was legal — offering the button
-   * only when a call would succeed would hand over the answer.
+   * Whether *you* could call this instant. True after any draw by someone else,
+   * legal or not — offering the button only when a call would succeed would hand
+   * over the answer.
    */
   sunnyCallable: boolean;
   sunnyTargetId: PlayerId | null;
   /**
-   * The offender's hand and the board they faced, exactly as they stood before
-   * the draw a call would be judged against. This is what a call must name a
-   * card from — nothing they drew afterwards is ever offered — and it is the
-   * only material a viewer gets to work out whether a card was actually legal.
-   * The server never says that part; it only ever hands over what was already
-   * public a moment ago.
+   * The offender's hand and board as they stood before the draw. A call must name
+   * a card from this, and it is the only material a viewer gets to work out
+   * whether a card was legal — the server never says that part.
    *
-   * Sent only to viewers who could call this instant. The drawer never learns
-   * they've been caught, and a spectator — who can't call at all — is told
-   * nothing either.
+   * Sent only to viewers who could call. The drawer never learns they've been
+   * caught, and a spectator is told nothing either.
    */
   sunnyReach: SunnyReach | null;
-  /**
-   * Draws left before *you* may call again, after a wrong accusation. Zero
-   * means free to call. Visible only to the locked-out player themselves —
-   * nobody else at the table is told.
-   */
+  /** Draws left before *you* may call again. Visible only to the locked-out
+   * player; nobody else at the table is told. */
   sunnyLockedDraws: number;
   /** Your own playable cards. Never computed for anyone else's hand. */
   legalCardIds: CardId[];
-  /** Whether you are currently forbidden from drawing. */
   youMustPlay: boolean;
   status: "playing" | "over";
   winnerId: PlayerId | null;
@@ -118,10 +94,9 @@ const phaseView = (state: GameState): PhaseView => {
 };
 
 /**
- * Whoever the game is actually waiting on. Usually the player to move, but a
- * suit and a punishment card are both owed by a named player who may be sitting
- * somewhere else entirely — under Power of Eights the suit is owed by the next
- * seat, and under Dealer's Choice by the dealer before play has begun.
+ * Usually the player to move, but a suit and a punishment card are owed by a
+ * named player who may be sitting elsewhere — the next seat under Power of
+ * Eights, the dealer under Dealer's Choice.
  */
 const waitingOn = (state: GameState): PlayerId | null => {
   if (state.phase.kind === "over") return null;

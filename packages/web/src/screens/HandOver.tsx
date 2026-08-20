@@ -6,27 +6,16 @@ import type { NameOf } from "../lib/format.ts";
 /**
  * The end of a hand, on a phone still held sideways.
  *
- * `HandView` is the landscape layout and it is about your cards, so it steps
- * aside the moment there are no more turns to take. What it used to step aside
- * *to* was the upright table — a `max-w-3xl` column on a viewport a little over
- * three hundred pixels tall — which put "Deal again" somewhere below the fold,
- * under the seat strip and the piles, at the end of every single game (#158).
+ * `HandView` steps aside the moment there are no more turns to take, and what it
+ * used to step aside *to* was the upright table — a `max-w-3xl` column on a
+ * viewport three hundred pixels tall, which put "Deal again" below the fold at
+ * the end of every game (#158). Nothing prompts a turn of the phone there
+ * either: `RotatePanel` hangs off `irlPhone`, which is false once the game is
+ * over.
  *
- * Nothing prompts a turn of the phone there either: `RotatePanel` hangs off
- * `irlPhone`, which is false once the game is over, so the one mechanism this
- * app has for saying *turn the phone* is switched off at exactly the moment the
- * layout needs turning.
- *
- * So this is the third landscape screen, and it is deliberately the smallest of
- * them: who won, and the one thing there is to do about it. It fits without
- * scrolling because a phone at a table gets put down between hands, and the
- * button has to be on the screen it was put down on.
- *
- * **`leave` is here and nowhere else in landscape.** During a hand there is
- * nothing to leave in the middle of, and every other room-level control is a
- * turn of the phone away. The end of a session is the one moment somebody
- * actually wants out, and asking them to rediscover the upright table to find
- * it is the same "below the fold" problem wearing a different hat.
+ * Deliberately the smallest of the three landscape screens: who won, and the one
+ * thing there is to do about it. **`leave` is here and nowhere else in
+ * landscape** — during a hand there is nothing to leave in the middle of.
  */
 export function HandOver({
   room,
@@ -75,9 +64,9 @@ export function HandOver({
         </p>
       )}
 
-      {/* A watcher is offered the next game, exactly as upright — and this is
-          the more useful place for it, since the same offer upright sits under
-          a whole table they have to scroll past to reach. */}
+      {/* A watcher is offered the next game, exactly as upright — and this is the
+          more useful place for it, since upright the same offer sits under a
+          whole table they have to scroll past. */}
       {!host && !seated ? (
         <Button variant="primary" onClick={onJoinNext} disabled={full}>
           {full ? "Table is full" : "Join next game"}

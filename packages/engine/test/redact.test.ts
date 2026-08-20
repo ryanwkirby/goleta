@@ -27,8 +27,8 @@ describe("what never leaves the server", () => {
     expect(wire).not.toContain("snapshot");
     expect(wire).not.toContain("violation");
     expect(wire).not.toContain("challenge");
-    // The pre-draw hand to accuse from is not part of what's withheld — it's
-    // the one thing about the challenge a caller is actually shown.
+    // The pre-draw hand to accuse from is the one thing about the challenge a caller
+    // is actually shown.
     expect(wire).toContain("5H#1");
   });
 });
@@ -43,9 +43,8 @@ describe("the Sunny reach", () => {
       table({ hands: { a: ["2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
       "a",
     );
-    // The call is available either way — you may always accuse — and both
-    // hand back exactly the hand and board a caller needs to work legality
-    // out for themselves, never the drawn card itself. Nothing else
+    // The call is available either way — you may always accuse — and both hand back
+    // the hand and board a caller needs, never the drawn card. Nothing else
     // distinguishes the two views.
     expect(redact(guilty, "b").sunnyCallable).toBe(true);
     expect(redact(guilty, "b").sunnyTargetId).toBe("a");
@@ -69,8 +68,8 @@ describe("the Sunny reach", () => {
       table({ hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD"] }),
       "a",
     );
-    // A caught player watching their own screen learns nothing, and neither
-    // does a spectator, who has no call to make.
+    // A caught player learns nothing from their own screen, and neither does a
+    // spectator, who has no call to make.
     expect(redact(guilty, "a").sunnyReach).toBeNull();
     expect(redact(guilty, null).sunnyReach).toBeNull();
   });
@@ -127,8 +126,7 @@ describe("what the table can always see", () => {
   });
 
   it("never names the cards a caught player is about to have turned up", () => {
-    // They are still in the deck. Which cards are coming off it is not
-    // something the table gets told in advance.
+    // Still in the deck. Which cards are coming off it is not told in advance.
     const state: GameState = {
       ...table({ hands: { a: ["5H"], b: ["9H"], c: ["4D"] }, top: "5S", drawPile: ["KD", "QD"] }),
       sunny: { offenderId: "a", touchedIds: ["KD#1", "QD#1"] },

@@ -1,32 +1,13 @@
 /**
- * The room code, and the two things a code is for.
+ * The room code, and the two things a code is for. Once the cards are out there
+ * is no lobby to go back to, and the code used to shrink to four characters that
+ * did nothing — so somebody arriving mid-game got "read this out and have them
+ * type it" (#135).
  *
- * In the lobby the invite is the screen — a code, a link and, at an in-person
- * table, a QR sitting under the switch that asked for it. Once the cards are
- * out there is no lobby to go back to, and the code shrank to four characters
- * in the corner that said what the room was called and did nothing. Somebody
- * arriving at a table mid-game is the ordinary case at a real one, and the
- * answer was "read this out and have them type it" (#135).
- *
- * Tapping it opens both invites behind one toggle, because a code is the
- * address of the room and the two arrivals it can bring are a **person** and a
- * **screen**. They are the same four characters and different links, which is
- * exactly the sort of thing a QR should be hiding.
- *
- * **A player is offered first**, and is what the dialog opens on: it is the
- * common arrival, and a shared screen is a thing a table sets up once. The
- * order is not about which is selected — it is what somebody holding the phone
- * out to a newcomer reaches for.
- *
- * **The code is on the panel in full, above the QR.** A camera is the fast path
- * and not the only one — a laptop across the room has no camera pointed
- * anywhere useful, and reading four characters out loud is how this actually
- * goes at a table. The QR is the convenience; the code is the invite.
- *
- * Anybody at the table can open it, not just the host. Handing somebody the way
- * in is not a host power at a real table, and nothing behind here changes the
- * room — it is two links and the code, all three of which every player can
- * already see or say out loud.
+ * Tapping it opens both invites behind one toggle: the two arrivals a code can
+ * bring are a **person** and a **screen**, same characters, different links. A
+ * player is offered first, and the code is on the panel in full above the QR.
+ * Anybody at the table can open it.
  */
 
 import { useState } from "react";
@@ -62,10 +43,9 @@ const INVITES: {
 export function RoomInvite({
   code,
   /**
-   * Whether a game is running, which decides what a scan can get you rather
-   * than what is on offer. A seat is refused for the length of a hand — the
-   * Join screen offers a watch instead — and a person held out a QR deserves to
-   * know that before they scan it rather than after.
+   * Whether a game is running, which decides what a scan can get you. A seat is
+   * refused for the length of a hand, and a person held out a QR deserves to
+   * know that before they scan it.
    */
   underWay,
   screens,
@@ -83,9 +63,9 @@ export function RoomInvite({
   const invite = INVITES.find((option) => option.key === kind) ?? INVITES[0]!;
   const link = joinLink(code, kind === "screen" ? "table" : "play");
 
-  // Same rule as the lobby's dialog: the shared-screen code takes itself away
-  // once a shared screen arrives — but only while it is the code on screen. A
-  // screen joining is no reason to shut a panel being held out to a newcomer.
+  // The shared-screen code takes itself away once a shared screen arrives, but
+  // only while it is the code on screen: a screen joining is no reason to shut a
+  // panel being held out to a newcomer.
   useDismissOnScreenJoin(screens, kind === "screen", onClose);
 
   const copy = async (): Promise<void> => {
@@ -127,8 +107,7 @@ export function RoomInvite({
           ))}
         </div>
 
-        {/* Above the QR, at the size it is read out at. The camera is the fast
-            path; the code is the one that works across a room. */}
+        {/* Above the QR, at the size it is read out at. */}
         <p className="mt-4 font-mono text-2xl tracking-[0.3em] text-white">{code}</p>
 
         <div className="mt-3 flex justify-center">
@@ -145,15 +124,13 @@ export function RoomInvite({
 
         <p className="mt-3 text-xs text-white/40">{invite.blurb}</p>
 
-        {/* Only against the player invite: a shared screen joins as a watcher,
-            which is what it is for, so a game already running is no obstacle to
-            it and saying so would be a warning about nothing.
+        {/* Only against the player invite: a shared screen joins as a watcher, so a
+            running game is no obstacle to it.
 
-            Careful about what it promises. A seat is refused for the length of
-            a hand and the Join screen offers a watch instead — but a watcher is
-            not dealt in when the next game starts, so "they'll be in the next
-            one" would be the app saying something it does not do. What is true
-            is that the code keeps working. */}
+            Careful about what it promises — a watcher is *not* dealt in when the
+            next game starts, so "they'll be in the next one" would be the app
+            saying something it does not do. What is true is that the code keeps
+            working. */}
         {underWay && kind === "player" ? (
           <p className="mt-1 text-xs text-amber-300/70">
             This hand is under way, so they can watch it — they'll be asked to join when it ends.

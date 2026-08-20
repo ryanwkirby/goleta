@@ -47,15 +47,9 @@ const caughtInTheAct = (): GameState =>
   );
 
 /**
- * A reach that was an offence, then a recycle, then a reach that wasn't.
- *
- * A recycle mid-turn is the one thing that moves the board while a window is
- * open, so it is the one thing that can pull the reach an accusation is judged
- * against away from the reach that was actually the offence. (#74)
- *
- * a holds the 5H against a 3H, so their first reach is an offence. The deck
- * empties, the recycle turns up a spade, and their next reach — with nothing
- * playable against that — is honest.
+ * A reach that was an offence, then a recycle, then a reach that wasn't. A
+ * recycle mid-turn is the one thing that can pull the reach an accusation is
+ * judged against away from the reach that was the offence (#74).
  */
 const acrossARecycle = (): GameState => {
   let state = table({
@@ -77,8 +71,7 @@ describe("a correct call", () => {
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1", "KD#1"]);
 
     state = call(state, "b", "5H");
-    // The rewind puts the drawn card back, so the hand is as it was and the
-    // play they were dodging is the first thing they owe.
+    // The rewind puts the drawn card back, so the play they dodged is owed first.
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1"]);
     expect(state.phase.kind).toBe("sunnyPlay");
     expect(reject(state, { type: "drawCard", playerId: "a" })).toMatch(/Can't draw/);
@@ -111,7 +104,6 @@ describe("a correct call", () => {
     if (!result.ok) throw new Error(result.error);
     const called = result.events.find((event) => event.type === "sunnyCalled");
     expect(called).toMatchObject({ callerId: "b", targetId: "a", correct: true });
-    // Read off the hand before the rewind moved it back onto the deck.
     expect(called?.type === "sunnyCalled" && called.returned.map((c) => c.id)).toEqual(["KD#1"]);
   });
 
@@ -120,9 +112,8 @@ describe("a correct call", () => {
     state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
-    // They started the turn on two cards and finish it on none: the skipped
-    // play and the punishment, same as ever. Nothing is added for the caller
-    // having had to name the card correctly.
+    // Two cards at the start of the turn and none at the end: the skipped play and
+    // the punishment. Naming the card correctly adds nothing.
     expect(handOf(state, "a")).toEqual([]);
   });
 
@@ -138,8 +129,8 @@ describe("a correct call", () => {
   });
 
   it("turns up the second card only, when the first draw was honest", () => {
-    // 2C can't be played on 5S, so the first draw is fine. It turns up a 7S,
-    // which can be — and drawing again is the offence.
+    // 2C can't be played on 5S, so the first draw is fine. It turns up a 7S, which
+    // can be — and drawing again is the offence.
     let state = table({
       hands: { a: ["2C"], b: ["9C"], c: ["4D"] },
       top: "5S",
@@ -151,7 +142,6 @@ describe("a correct call", () => {
 
     // The 7S they drew honestly is what they're now accused of skipping.
     state = call(state, "b", "7S");
-    // The honestly drawn 7S stays, and is now the card they're made to play.
     expect(handOf(state, "a")).toEqual(["2C#1", "7S#1"]);
     state = play(state, "a", "7S");
     state = surrender(state, "a", "2C");
@@ -170,8 +160,7 @@ describe("a correct call", () => {
     state = draw(state, "a");
     expect(state.challenge?.violation?.touchedIds).toEqual(["3H#1", "KD#1"]);
 
-    // 5H is the card they were dodging throughout — still nameable, even
-    // though their hand has since picked up two more cards that aren't legal.
+    // Still nameable, even though their hand has since picked up cards that aren't.
     state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
@@ -200,8 +189,7 @@ describe("a correct call", () => {
   });
 
   it("does not stop to name a suit for an 8 played during the resolution", () => {
-    // The touched card lands on top a moment later, so anything named would be
-    // erased before the next player saw it.
+    // The touched card lands on top a moment later, erasing anything named.
     let state = draw(
       table({
         hands: { a: ["8C", "2C"], b: ["9C"], c: ["4D"] },
@@ -210,8 +198,7 @@ describe("a correct call", () => {
       }),
       "a",
     );
-    // A wild is always legal, wherever it was reached from — accusing it is
-    // always a correct call.
+    // A wild is always legal, so accusing it is always a correct call.
     state = call(state, "b", "8C");
     state = play(state, "a", "8C");
     expect(state.phase).toMatchObject({ kind: "surrender", reason: "sunnyPunishment" });
@@ -231,10 +218,8 @@ describe("naming the card", () => {
   });
 
   it("cannot be any card the offence itself put in their hand", () => {
-    // a is caught on the first draw (KD) and reaches again before anyone calls
-    // it. Neither drawn card is ever an option: the window is judged against
-    // the reach that was the offence, and both of these arrived after it. Only
-    // the hand a actually had a choice from is on the list.
+    // a is caught on the first draw and reaches again before anyone calls it.
+    // Neither drawn card is ever an option: both arrived after the offence.
     let state = caughtInTheAct();
     const firstDrawId = handOf(state, "a").at(-1) as string;
     state = draw(state, "a");
@@ -254,8 +239,7 @@ describe("naming the card", () => {
   });
 
   it("counts any legal card as correct, leaving the choice of which to play to the offender", () => {
-    // Both 5H and 4S are legal against 5S; naming either lands the call, and
-    // the offender still picks which one to actually play.
+    // Both 5H and 4S are legal against 5S, and naming either lands the call.
     let state = draw(
       table({
         hands: { a: ["5H", "4S"], b: ["9C"], c: ["4D"] },
@@ -290,7 +274,6 @@ describe("a wrong call", () => {
     });
     if (!result.ok) throw new Error(result.error);
     const called = result.events.find((event) => event.type === "sunnyCalled");
-    // Nothing is rewound, so there is nothing to fly back to the deck.
     expect(called?.type === "sunnyCalled" && called.returned).toEqual([]);
 
     state = call(state, "b", "2C");
@@ -299,7 +282,6 @@ describe("a wrong call", () => {
     expect(handOf(state, "b")).toEqual(["9C#1", "10C#1"]);
     expect(topCard(state).id).toBe("5S#1");
     expect(state.activeSuit).toBe("S");
-    // a's turn carries on untouched.
     expect(currentPlayer(state).id).toBe("a");
     expect(handOf(state, "a")).toEqual(["2C#1", "4H#1", "KD#1"]);
     expect(state.phase.kind).toBe("action");
@@ -318,10 +300,9 @@ describe("a wrong call", () => {
       targetId: "a",
       card: card("2C"),
       correct: false,
-      // A miss rewinds nothing, so it takes nothing back.
       returned: [],
-      // It still shows its working: the same evidence a landed call shows, so
-      // the table reads the verdict off the two cards rather than the wording.
+      // The same evidence a landed call shows: the table reads the verdict off the
+      // two cards rather than off the wording.
       evidence: { inPlay: card("5S"), activeSuit: "S", since: [] },
     });
   });
@@ -334,13 +315,11 @@ describe("a wrong call", () => {
     state = call(state, "b", "2C");
     expect(state.sunnyLockouts.b).toBe(state.totalDraws + SUNNY_LOCKOUT_DRAWS);
 
-    // A fresh draw reopens the window, but b is still shut out of it — the
-    // lockout counts draws at the table, not whether the window is open.
+    // The lockout counts draws at the table, not whether the window is open.
     state = draw(state, "a");
     expect(reject(state, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
       /Locked out/,
     );
-    // Someone else at the table is untouched by b's lockout.
     const result = applyIntent(state, { type: "callSunny", playerId: "c", cardId: card("2C").id });
     expect(result.ok).toBe(true);
   });
@@ -377,9 +356,7 @@ describe("a wrong call", () => {
   it("survives the rewind a later correct call performs", () => {
     // The rewind restores a whole cloned `GameState`, and lockouts live on it.
     // Restoring them wholesale would refund a wrong call made *before* the
-    // snapshot was taken — b would walk away from a miss because somebody else
-    // later got it right. `handleCallSunny` carries the two counters across the
-    // `Object.assign` by hand; this is what would break if that were dropped.
+    // snapshot — `handleCallSunny` carries the two counters across by hand.
     let state = draw(
       table({
         hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
@@ -392,8 +369,7 @@ describe("a wrong call", () => {
     state = call(state, "b", "2C");
     expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_DRAWS + 1);
 
-    // a reaches again, reopening the window, and c names the 5H — which really
-    // was playable. That call lands and rewinds the game past b's miss.
+    // c names the 5H, which really was playable, rewinding past b's miss.
     state = draw(state, "a");
     state = call(state, "c", "5H");
     expect(state.phase.kind).toBe("sunnyPlay");
@@ -421,7 +397,6 @@ describe("a call that lands after the fact", () => {
     expect(currentPlayer(state).id).toBe("b");
 
     state = call(state, "b", "5H");
-    // The play is undone: 5H is back in hand and the 5S is showing again.
     expect(topCard(state).id).toBe("5S#1");
     expect(state.activeSuit).toBe("S");
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1"]);
@@ -539,7 +514,6 @@ describe("a resolution that finishes a player", () => {
     state = play(state, "a", "5H");
 
     expect(state.players.find((p) => p.id === "a")?.eliminated).toBe(true);
-    // Nothing left to punish, but the card they touched still comes up.
     expect(topCard(state).id).toBe("KD#1");
     expect(currentPlayer(state).id).toBe("b");
     expect(state.status).toBe("playing");
@@ -571,9 +545,8 @@ describe("a resolution that finishes a player", () => {
 
 describe("a call that spans a recycle", () => {
   it("finds the touched cards wherever the rewind put them", () => {
-    // The offending draw empties the deck. The next tap recycles the pile
-    // rather than drawing, and the tap after that takes a card that was in the
-    // face-up pile at the moment the rewind snapshot was taken.
+    // The offending draw empties the deck; the tap after the recycle takes a card
+    // that was in the face-up pile when the rewind snapshot was taken.
     let state = table({
       hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
       top: "5S",
@@ -593,8 +566,6 @@ describe("a call that spans a recycle", () => {
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
 
-    // Both touched cards end up face up, and nothing has gone missing or been
-    // duplicated along the way.
     expect(pileFromTop(state).slice(0, 2).toSorted()).toEqual(drawn.toSorted());
     expect(allCardIds(state)).toHaveLength(total);
     expect(new Set(allCardIds(state)).size).toBe(total);
@@ -608,8 +579,6 @@ describe("a call that spans a recycle", () => {
     expect(state.challenge?.reach.activeSuit).toBe("H");
     expect(state.challenge?.reach.topRank).toBe("3");
 
-    // So the call lands, rather than every possible accusation being wrong
-    // while the violation stood.
     const called = call(state, "b", "5H");
     expect(called.phase.kind).toBe("sunnyPlay");
     expect(called.sunnyLockouts["b"] ?? 0).toBe(0);
@@ -624,8 +593,7 @@ describe("a call that spans a recycle", () => {
   });
 
   it("still locks out a caller who was genuinely wrong", () => {
-    // Same shape, but a had nothing playable against the 3H to begin with, so
-    // there was never an offence and naming their one card is simply wrong.
+    // a had nothing playable against the 3H, so there was never an offence.
     let state = table({
       hands: { a: ["5C"], b: ["2C"], c: ["3D"] },
       top: "3H",
@@ -644,11 +612,8 @@ describe("a call that spans a recycle", () => {
 
 describe("the challenge window", () => {
   it("never tells the caller whether a submitted accusation would land", () => {
-    // Both games look identical from the outside: someone drew a card, and a
-    // call naming the one card both hands have in common is available either
-    // way. Only the outcome differs — 2C is dead against the 5S in both, so
-    // this particular accusation is wrong in both, but the *acceptance* of the
-    // intent itself never depends on the hidden verdict.
+    // Both games look identical from the outside, and 2C is dead against the 5S in
+    // both. Acceptance of the intent never depends on the hidden verdict.
     const guilty = caughtInTheAct();
     const innocent = draw(
       table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD"] }),
@@ -666,8 +631,7 @@ describe("the challenge window", () => {
 
 describe("reaching for an empty deck", () => {
   it("is callable even though nothing was drawn", () => {
-    // 5H plays on the 5S, so a is not allowed to touch the deck — and the deck
-    // being empty is no excuse. The recycle happens; so does the offence.
+    // 5H plays on the 5S, and the deck being empty is no excuse.
     let state = table({
       hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
       top: "5S",
@@ -682,35 +646,29 @@ describe("reaching for an empty deck", () => {
     expect(state.challenge?.violation?.touchedIds).toEqual([]);
 
     state = call(state, "b", "5H");
-    // The rewind undoes the recycle too, so the 5S is showing again and the
-    // play they were dodging is the one they now owe.
     expect(topCard(state).id).toBe("5S#1");
     expect(state.phase.kind).toBe("sunnyPlay");
 
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
 
-    // Nothing they touched to turn up, so the deck is answered the way an empty
-    // deck always is: the pile is shuffled back and a fresh card comes off it.
-    // Crucially the punishment card is *not* left showing — that would let the
-    // offender choose what the whole table matches next, which is the opposite
-    // of what reaching is supposed to cost them.
+    // Nothing touched to turn up, so the deck is answered the way an empty deck
+    // always is. The punishment card is *not* left showing — that would let the
+    // offender choose what the whole table matches next.
     expect(topCard(state).id).not.toBe("2C#1");
-    // Whatever came up, it is genuinely the card in play: suit and card agree.
     expect(state.activeSuit).toBe(topCard(state).suit);
     expect(state.drawPile.length).toBeGreaterThan(0);
 
     expect(currentPlayer(state).id).toBe("b");
-    // The recycle assigns the draw pile outright, so this is the check that it
-    // never does so over cards that were still in it.
+    // The recycle assigns the draw pile outright; this checks it never does so over
+    // cards that were still in it.
     expect(allCardIds(state)).toHaveLength(total);
     expect(new Set(allCardIds(state)).size).toBe(total);
   });
 
   it("turns up a card nobody chose, rather than one the offender picked", () => {
-    // The offensive shape of this: `a` is holding a card that would strand the
-    // table and would love to place it. Reaching at an empty deck and inviting
-    // the call must not be a way to do that.
+    // `a` holds a card that would strand the table. Reaching at an empty deck must
+    // not be a way to place it.
     let state = table({
       hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
       top: "5S",
@@ -734,8 +692,7 @@ describe("reaching for an empty deck", () => {
       buriedDiscards: ["KH", "QH"],
     });
     state = draw(state, "a");
-    // Same shape of window as the guilty case above: someone reached, and a
-    // call is available. Only the verdict differs.
+    // Same shape of window as the guilty case; only the verdict differs.
     expect(state.challenge?.drawerId).toBe("a");
     expect(state.challenge?.violation).toBeNull();
 
@@ -746,9 +703,8 @@ describe("reaching for an empty deck", () => {
   });
 
   it("counts as a reach only when something actually came of it", () => {
-    // Every card is in a hand, so there is nothing to draw and nothing to
-    // recycle either. No card moves and no window opens, so there is no beat
-    // here for anyone's lockout to count down against. (#74)
+    // Every card is in a hand, so nothing moves and no window opens — no beat for
+    // anyone's lockout to count down against (#74).
     let state = table({
       hands: { a: ["5H"], b: ["9C"], c: ["4D"] },
       top: "5S",
@@ -758,8 +714,7 @@ describe("reaching for an empty deck", () => {
     expect(state.challenge).toBeNull();
     expect(state.totalDraws).toBe(0);
 
-    // A reach that recycles the pile is a reach, even though nothing reached a
-    // hand: the window opens on it, so the count has to move with it.
+    // A reach that recycles the pile is still a reach: the window opens on it.
     let recycling = table({
       hands: { a: ["5H", "2C"], b: ["9C"], c: ["4D"] },
       top: "5S",
@@ -773,10 +728,9 @@ describe("reaching for an empty deck", () => {
 });
 
 /**
- * What a judged call hands the table so it can read the ruling for itself: the
- * card that was in play when the offender reached, and whatever has landed on
- * top of it since. Set the named card beside it and the verdict is legible
- * without anybody being told it. (#63)
+ * What a judged call hands the table: the card in play at the reach, and
+ * whatever landed on top since. Set the named card beside it and the verdict is
+ * legible without anybody being told it (#63).
  */
 describe("the evidence a judged call sends", () => {
   it("names the card that was in play when they reached, on a call that lands", () => {
@@ -788,9 +742,8 @@ describe("the evidence a judged call sends", () => {
   });
 
   it("sends the same shape for a call that missed", () => {
-    // 2C and 4H are both dead against the 5S, so the draw was honest and the
-    // call is wrong — and the table still gets the pair, because the difference
-    // it is meant to see is that the two cards don't match.
+    // Both cards are dead against the 5S, so the call is wrong — and the table
+    // still gets the pair, because what it should see is that they don't match.
     const honest = draw(
       table({
         hands: { a: ["2C", "4H"], b: ["9C", "10C"], c: ["4D"] },
@@ -807,9 +760,8 @@ describe("the evidence a judged call sends", () => {
   });
 
   it("peels back past what the offender played after the offence", () => {
-    // a reaches while holding the playable 5H, then plays it anyway. The card
-    // the accusation names is now in the pile rather than in their hand, and
-    // the evidence has to say where.
+    // The accused card is now in the pile rather than the hand, and the evidence
+    // has to say where.
     let state = caughtInTheAct();
     state = play(state, "a", "5H");
     expect(topCard(state).id).toBe("5H#1");
@@ -820,9 +772,8 @@ describe("the evidence a judged call sends", () => {
   });
 
   it("describes the board as it was, not as a wild 8 has since left it", () => {
-    // The offence, then an 8 played on top of it that renames the suit. The
-    // evidence is the position the accusation is judged against, so it is the
-    // spade that was in play — a diamond here would rule the pair unreadable.
+    // An 8 played over the offence renames the suit. The evidence is the position
+    // the accusation is judged against, so it is the spade that was in play.
     let state = draw(
       table({
         hands: { a: ["5H", "8C"], b: ["9C"], c: ["4D"] },
@@ -853,17 +804,14 @@ describe("the evidence a judged call sends", () => {
       "a",
     );
     const wire = JSON.stringify(evidenceOf(state, "b", "5H"));
-    // Only the card in play, never the pile it is sitting on: the peel is a
-    // slice off the top, not the archaeology of the whole game.
+    // Only the card in play, never the pile under it.
     expect(wire).not.toMatch(/KC#1|QC#1/);
-    // And nothing from the deck, which is the one thing the table never learns
-    // early. `KD#1` is the card the offender drew and `QD#1` the next one down.
+    // And nothing from the deck: `KD#1` is what the offender drew, `QD#1` the next.
     expect(wire).not.toMatch(/KD#1|QD#1/);
   });
 
   it("is built fresh for each call rather than kept on the state", () => {
-    // The challenge carries what it needs to build one — the pile at the reach,
-    // frozen with the reach itself — and nothing shaped like an answer.
+    // The pile at the reach, frozen with the reach, and nothing shaped like an answer.
     const state = caughtInTheAct();
     expect(state.challenge?.reachPile).toEqual({ inPlay: card("5S"), ids: ["5S#1"] });
     expect(JSON.stringify(state.challenge)).not.toContain("evidence");

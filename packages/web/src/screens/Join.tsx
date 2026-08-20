@@ -10,12 +10,8 @@ import { codeFromHash, hashFor } from "../net/route.ts";
 export function Join({
   send,
   connecting,
-  /**
-   * Whether the last refusal was "that game is already under way". True for
-   * that one refusal and no other — a wrong code is a wrong code, and offering
-   * to watch a room that doesn't exist is a second dead end rather than a way
-   * out of the first.
-   */
+  /** True for that one refusal and no other: a wrong code is a wrong code, and
+   * offering to watch a room that doesn't exist is a second dead end. */
   underWay = false,
 }: {
   send: (message: ClientMessage) => void;
@@ -25,21 +21,16 @@ export function Join({
   const [name, setName] = useState(loadName);
   const [code, setCode] = useState(() => codeFromHash() ?? "");
   /**
-   * What you came here to do, asked as a question rather than inferred from
-   * whether a field is empty. The code box belongs to one of the two answers
-   * and is hidden until it is the one given.
-   *
-   * A link with a code in it has already answered it — that is what the invite
-   * links and the QR are for — so those arrive on the code box with the code in
-   * it, rather than on a button that reveals what they were already sent.
+   * What you came here to do, asked as a question rather than inferred from an
+   * empty field. A link with a code in it has already answered it, so those
+   * arrive on the code box rather than on a button that reveals it.
    */
   const [joining, setJoining] = useState(() => codeFromHash() !== null);
   const codeRef = useRef<HTMLInputElement>(null);
   /**
-   * The room that turned us away, latched here rather than read off the live
-   * error: the banner expires after a few seconds, and an offer that vanishes
-   * while somebody is still reading it is worse than not making it. Cleared
-   * when the code changes, so it can never point at a different table.
+   * The room that turned us away, latched rather than read off the live error:
+   * the banner expires, and an offer that vanishes while somebody is reading it
+   * is worse than not making it. Cleared when the code changes.
    */
   const [refused, setRefused] = useState<string | null>(null);
 
@@ -47,11 +38,10 @@ export function Join({
   const trimmedCode = code.trim().toUpperCase();
   const canCreate = trimmedName.length > 0;
   const canJoin = canCreate && trimmedCode.length === 4;
-  // A refusal is always remembered against a whole code, so a box that has been
-  // cleared or half-typed since can never become the thing it points at.
+  // Always remembered against a whole code, so a box cleared or half-typed since
+  // can never become the thing it points at.
   if (underWay && canJoin && refused !== trimmedCode) setRefused(trimmedCode);
-  // Tied to the code in the box, so editing it takes the offer away with it —
-  // and drawn only where that box is, for the same reason.
+  // Tied to the code in the box, so editing it takes the offer away with it.
   const offerWatch = joining && refused !== null && refused === trimmedCode;
 
   // The reveal puts the cursor where it just made room, and only there: a screen
@@ -66,14 +56,9 @@ export function Join({
   };
 
   /**
-   * The way out of the one refusal this form can't work its way past.
-   *
-   * A seat is refused for the length of a game, and until now the answer was an
-   * error banner over a form that would keep failing however many times it was
-   * submitted — which is exactly what somebody who has just pointed a camera at
-   * a table mid-hand gets. Watching is a different connection with a different
-   * URL, so it is a reload rather than a message: the hash is how a screen says
-   * what it came to do, and `useGoleta` reads it once on the way up.
+   * The way out of the one refusal this form can't work its way past. Watching is
+   * a different connection with a different URL, so it is a reload rather than a
+   * message: the hash is how a screen says what it came to do.
    */
   const watchInstead = (): void => {
     saveName(trimmedName);

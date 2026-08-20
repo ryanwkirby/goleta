@@ -4,17 +4,13 @@ import { Button, Panel } from "../../components/ui.tsx";
 import type { NameOf } from "../../lib/format.ts";
 
 /**
- * Who won, and what happens next.
+ * Who won, and what happens next. The winning line states the reversal out loud
+ * — *you kept your cards* — because every intuition from an ordinary card game
+ * says the opposite. A stalemate gets its own sentence: "nobody could move" is a
+ * real outcome here, not an error.
  *
- * The winning line is the reversal stated out loud — *you kept your cards* —
- * because every intuition from an ordinary card game says the opposite and the
- * end of the hand is the moment that lands. A stalemate gets its own sentence
- * rather than a blank: "nobody could move" is a real outcome here, not an error.
- *
- * The host gets the deal; everybody else is told who they are waiting for. A
- * watcher additionally gets the one offer they are here for, and it is careful
- * about what it promises — it says *join next game*, and the button goes dead
- * when the table is full rather than failing on the tap.
+ * A watcher gets the one offer they are here for, careful about what it
+ * promises: the button goes dead when the table is full rather than failing.
  */
 export function GameOverPanel({
   room,

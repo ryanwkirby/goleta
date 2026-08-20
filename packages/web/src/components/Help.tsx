@@ -1,10 +1,6 @@
 /**
- * Asking for a hand, and being seen to ask.
- *
- * The table stops marking up your playable cards once you've finished a game.
- * From then on the highlights are something you request — for one turn, out
- * loud, in front of everybody. That's the deal: help is always there, and
- * taking it is never quiet.
+ * Asking for a hand, and being seen to ask. Help is always there, and taking it
+ * is never quiet.
  */
 
 import type { ShoutKind } from "@goleta/engine";
@@ -12,34 +8,20 @@ import type { ShoutKind } from "@goleta/engine";
 import { Button } from "./ui.tsx";
 
 /**
- * Appears a few seconds into a turn you haven't moved on. Deliberately quiet:
- * it should read as an offer you can ignore, not a prompt you owe an answer.
- *
- * Quiet is not the same as silent, and until #193 this was the second one. It
- * arrived the way a `null` becomes an element — instantly, fully formed, in
- * small grey type at the edge of a screen somebody is already staring at — at
- * the exact moment they have stopped knowing what to do. So it fades in and
- * rises a quarter of a rem into the place it was always going to occupy:
- * enough to be caught in the corner of an eye that is on the cards, not enough
- * to ask for one.
- *
- * Three things the animation is careful about, all of them in `index.css`.
- * **Nothing around it moves** — the rise is a transform inside its own box, and
- * both rows it sits in reserve their room whether or not it is showing.
- * **It does not re-run**: the element is mounted when the offer opens and
- * unmounted when it closes, so the animation has exactly one life per offer.
- * And **it leaves without one** — the offer expires because you moved, and an
- * app that animated that would be commenting on your turn.
+ * Appears a few seconds into a turn you haven't moved on. Deliberately quiet: an
+ * offer you can ignore, not a prompt you owe an answer. Quiet is not silent, and
+ * until #193 this was the second one — it fades in and rises a quarter of a rem
+ * into the place it was always going to occupy, mounted per offer so it cannot
+ * re-run, and leaves without an animation.
  */
 export function HelpLink({ onAsk }: { onAsk: () => void }) {
   return (
     <button
       type="button"
       onClick={onAsk}
-      // `shrink-0` rather than `self-start`: both rows it sits in centre their
-      // items, and one of them is the peek strip, where an offer that gave up
-      // its own width to a long prompt would be a tap target squeezed to a
-      // sliver of itself.
+      // `shrink-0` rather than `self-start`: one of the rows it sits in is the peek
+      // strip, where an offer that gave up width to a long prompt would be a tap
+      // target squeezed to a sliver.
       className={[
         "animate-help-offer shrink-0 rounded-lg px-2 py-1 text-xs text-white/35",
         "transition-colors hover:bg-white/5 hover:text-white/70",
@@ -51,13 +33,8 @@ export function HelpLink({ onAsk }: { onAsk: () => void }) {
   );
 }
 
-/**
- * What a shout says, which depends on which kind it is.
- *
- * `help` is one turn's worth, asked for and gone. `hints` is the standing state
- * being switched on, announced once — after which the seat carries a mark for
- * as long as it lasts, so the shout does not have to keep saying it.
- */
+/** `help` is one turn's worth, asked for and gone. `hints` is the standing state
+ * being switched on, announced once — after which the seat carries the mark. */
 const SHOUTED: Record<ShoutKind, string> = {
   help: "help!",
   hints: "hints on",
@@ -66,24 +43,17 @@ const SHOUTED: Record<ShoutKind, string> = {
 const shoutText = (kind: ShoutKind, name?: string): string =>
   name ? `${name}: ${SHOUTED[kind]}` : SHOUTED[kind];
 
-/**
- * Who is shouting what, for the three surfaces that draw somebody else's.
- *
- * A map rather than a set, which it was until #187 added a second kind of
- * shout: a seat strip that knew *that* somebody had said something but not
- * *what* would have to pick one wording and be wrong half the time.
- */
+/** A map rather than a set, which it was until #187 added a second kind: a strip
+ * that knew *that* somebody had spoken but not *what* would pick one wording and
+ * be wrong half the time. */
 export const shoutingNow = (shouts: readonly { playerId: string; kind: ShoutKind }[]) =>
   new Map(shouts.map((shout) => [shout.playerId, shout.kind]));
 
 /**
  * The standing mark a seat carries while its cards are marked up (#187).
- *
- * Not the same thing as a shout and deliberately quieter: the shout is the
- * moment it was switched on, and this is the state, which lasts. It has to be
- * legible on a seat strip, on a shared screen across a room, and beside a name
- * at every size — so it is one glyph and a label nothing has to read aloud
- * twice.
+ * Deliberately quieter than the shout: that is the moment it was switched on,
+ * this is the state. It has to be legible on a seat strip, on a shared screen
+ * across a room, and beside a name at every size.
  */
 export function HintedMark({ name, className = "" }: { name?: string; className?: string }) {
   const label = name ? `${name} is playing with hints on` : "Playing with hints on";
@@ -119,20 +89,9 @@ export function HelpShout({ name, kind = "help" }: { name?: string; kind?: Shout
 }
 
 /**
- * The same shout, in a line of furniture rather than over a hand.
- *
- * Taking help is never quiet — that is the whole deal — but the two screens
- * that draw nobody else's cards had nothing for somebody else's ask to rise
- * off, so it landed nowhere and an IRL table full of landscape phones was the
- * one place where help was silent. It goes in the peek strip and on the shared
- * table screen instead, which is where each of those views keeps the facts that
- * belong to the whole table.
- *
- * It takes a name where it is drawn on its own — a shout with no name is no use
- * in a strip that isn't next to anybody's seat — and goes without one where it
- * is already sat beside the person who made it. Same amber as the seat's, and
- * no rise: there is nothing here to rise off, and a pill sliding around a 40px
- * strip is motion describing nothing.
+ * The same shout, in a line of furniture rather than over a hand. The two screens
+ * that draw nobody else's cards had nothing for somebody else's ask to rise off,
+ * so an IRL table full of landscape phones was the one place help was silent.
  */
 export function HelpAsk({
   name,
@@ -159,20 +118,9 @@ export function HelpAsk({
 
 /**
  * Whether the table marks up your playable cards, as a switch you can find.
- *
- * Two named answers rather than an On/Off beside a sentence — the shape
- * `IrlToggle` and `DealerPicker` already use, and for the same reason: a
- * question with two real answers should say both out loud.
- *
- * **The copy says it is public, because it is** (#187). Switching it on is
- * announced to the table and marks your seat for as long as it lasts, and a
- * player deciding here is entitled to know that before they decide rather than
- * to discover it when everybody looks up. Switching it off is silent and the
- * copy does not promise otherwise: giving up an advantage is nobody else's
- * business.
- *
- * It says nothing about *how long* it lasts, because the answer is now "until
- * you change it" — which is the whole of #187 and does not need a sentence.
+ * **The copy says it is public, because it is** (#187): switching it on is
+ * announced and marks your seat, and a player deciding here is entitled to know
+ * that first. It says nothing about how long it lasts — "until you change it".
  */
 export function HintsToggle({
   on,

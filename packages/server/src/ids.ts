@@ -26,12 +26,9 @@ export const newToken = (): string => randomBytes(24).toString("base64url");
 export const newSeed = (): number => randomInt(1, 2 ** 31 - 1);
 
 /**
- * A seat picked at random, for a table that has asked not to rotate the deal.
- *
- * The server's own randomness, from the same source as everything else here.
- * `packages/engine` keeps its no-`Math.random()` rule untouched: nothing about
- * choosing a dealer reaches it, and the index it is eventually handed is just a
- * number (#198).
+ * A seat picked at random, for a table that has asked not to rotate the deal
+ * (#198). The server's own randomness: nothing about choosing a dealer reaches
+ * the engine, and the index it is handed is just a number.
  */
 export const randomIndex = (count: number): number => (count > 0 ? randomInt(count) : 0);
 

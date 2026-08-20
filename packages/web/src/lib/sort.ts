@@ -1,11 +1,7 @@
 /**
- * Arranging your own hand.
- *
- * Cosmetic and yours alone: this reorders the cards on your screen and nothing
- * else. Nobody else's view of your hand moves, and no other player's hand is
- * ever sorted for you — grouping somebody else's cards by suit would hand you
- * their missed plays for free, which is the one thing the table won't do (see
- * `AGENTS.md`).
+ * Arranging your own hand. Cosmetic and yours alone — no other player's hand is
+ * ever sorted for you, since grouping somebody else's cards by suit would hand
+ * you their missed plays for free.
  */
 
 import { RANKS, SUITS, type Card } from "@goleta/engine";
@@ -28,10 +24,7 @@ export const SORT_LABELS: Record<HandSort, string> = {
 const rankOrder = (card: Card): number => RANKS.indexOf(card.rank);
 const suitOrder = (card: Card): number => SUITS.indexOf(card.suit);
 
-/**
- * `dealt` is the order the cards actually reached you — oldest first — which is
- * the order the hand arrives in and the one it keeps until you say otherwise.
- */
+/** `dealt` is the order the cards actually reached you, oldest first. */
 export const sortHand = (cards: readonly Card[], sort: HandSort): Card[] => {
   switch (sort) {
     case "dealt":

@@ -1,12 +1,8 @@
 /**
- * Turns a batch of events into the card flights that describe them.
- *
- * Pure on purpose: it decides *what* moves where and in what order, never how
- * it is drawn. Nothing here touches the DOM, so the sequencing a table sees is
- * covered by tests rather than by squinting at the screen.
- *
- * The engine emits no per-card deal event and shouldn't — a deal is not a rule.
- * `gameStarted` is expanded here, from the hands the state already carries.
+ * Turns a batch of events into the card flights that describe them. Pure: it
+ * decides *what* moves where and in what order, never how it is drawn. The
+ * engine emits no per-card deal event and shouldn't — a deal is not a rule — so
+ * `gameStarted` is expanded here from the hands the state already carries.
  */
 
 import type { Card, GameEvent, GameView, PlayerId } from "@goleta/engine";
@@ -23,25 +19,14 @@ const BEAT_MS = 110;
 const TURN_UP_BEAT_MS = 95;
 /** A held pause either side of a Sunny rewind, so it reads as its own moment. */
 const CALL_BEAT_MS = 260;
-/** Cards fan out of the deck this fast, squeezed to fit `DEAL_WINDOW_MS`. */
 const DEAL_BEAT_MS = 38;
 const DEAL_WINDOW_MS = 820;
 /** A burst that would run longer than this is compressed rather than queued. */
 const BATCH_CAP_MS = 900;
 
-
-/**
- * The pile going back into the deck, slowly enough to watch.
- *
- * Nine rather than three, at more than twice the duration and six times the
- * stagger. The last card lands around 3.7s into a 4.8s beat, which leaves a
- * held second at the end for the words to be read before the new card turns
- * up — "visible for most of it" is the ask, not "busy for all of it".
- *
- * Every one of them is face down and must stay that way. The recycled pile is
- * shuffled and its order *is* deck order, which `redact.ts` guards; the only
- * face this moment shows is the card `turnedUp` flies at the end of it.
- */
+/** Slowly enough to watch: the last card lands around 3.7s into a 4.8s beat,
+ * leaving a held second for the words. Every one is face down and must stay that
+ * way — the recycled pile's order *is* deck order, which `redact.ts` guards. */
 export const RESHUFFLE_CARDS = 9;
 export const RESHUFFLE_BEAT_MS = 380;
 const RESHUFFLE_FLIGHT_MS = 620;
@@ -50,18 +35,15 @@ export interface FlightPlan {
   id: string;
   /** Null flies face down — a deal, which nobody watches card by card. */
   card: Card | null;
-  /** Candidate origins, most specific first. */
   from: AnchorKey[];
   to: AnchorKey[];
   /** Rendered at the destination's size — that's where it comes to rest. */
   size: CardSize;
-  /** The size it leaves at, so it grows or shrinks over the trip. */
   fromSize: CardSize;
   delay: number;
   duration: number;
   /** A card kept invisible in the hand it is joining until this lands. */
   hides: string | null;
-  /** Landing here hands the pile a new face to show. */
   toPile: boolean;
 }
 
@@ -69,51 +51,26 @@ export interface Planned {
   flights: FlightPlan[];
   /** The pile is empty until the upcard lands, so it must stop drawing a card. */
   emptiesPile: boolean;
-  /**
-   * These flights are a deal going out, so the table is still setting itself up
-   * rather than waiting on anybody.
-   *
-   * Reported because one prompt has to wait for it: under Dealer's Choice the
-   * game opens in `phase: "suit"` and the dealer was asked to name one while the
-   * cards were still in the air (#75). It is a fact about the batch, not about
-   * the individual flights — a `gameStarted` batch is the deal and nothing else,
-   * since every other event at that moment plans no flights at all.
-   */
+  /** Reported because one prompt has to wait for it: under Dealer's Choice the
+   * game opens in `phase: "suit"` and the dealer was asked to name a suit while
+   * the cards were still in the air (#75). */
   deals: boolean;
 }
 
-/**
- * How big the cards are where they come to rest, which is not the same on every
- * screen the table has.
- *
- * A flight is drawn at its destination's size and scaled from its origin's, so
- * these numbers are the difference between a card that lands and one that lands
- * and then pops. The layout owns them; this module only has to be told.
- */
+/** A flight is drawn at its destination's size and scaled from its origin's, so
+ * these are the difference between a card that lands and one that lands and
+ * then pops. */
 export interface TableScale {
-  /** Your own cards. */
   hand: CardSize;
-  /** The draw pile and the card in play — one size, they sit side by side. */
   pile: CardSize;
-  /** Somebody else's hand in the seat strip. */
   seat: CardSize;
 }
 
-/** The whole table on one screen: your hand under a strip of everyone else's. */
 export const FULL_TABLE: TableScale = { hand: "md", pile: "lg", seat: "sm" };
 
-/**
- * A phone in landscape (#78): your hand takes the screen, and the piles shrink
- * into the peek strip. No seats are drawn at all, so `seat` is only what a
- * flight to one *would* have been — those flights find no anchor and are
- * dropped, which `TableMotion` already handles.
- *
- * `hand` is the size the row settles on when it has the height for it, which is
- * every landscape phone. On a shorter box `handFan.ts` drops the cards a rung
- * and a card in flight lands one size large — a shrink of a few pixels on a
- * viewport nobody is playing at, and not worth threading a measurement through
- * the motion layer for.
- */
+/** A phone in landscape (#78): the hand takes the screen and the piles shrink
+ * into the peek strip. No seats are drawn, so a flight to one finds no anchor
+ * and is dropped. */
 export const PEEK_TABLE: TableScale = { hand: "2xl", pile: "sm", seat: "sm" };
 
 const isYou = (game: GameView, playerId: PlayerId): boolean => game.you === playerId;
@@ -139,17 +96,13 @@ export const planFlights = (
   let emptiesPile = false;
   let deals = false;
   /**
-   * Where the compressible part of this batch begins.
-   *
-   * The peel and the reshuffle are deliberate holds, and a hold may not be
-   * squeezed to fit `BATCH_CAP_MS` — the cap exists to stop the table narrating
-   * a queue of bot moves it has already left behind, which is the opposite
-   * problem. Everything the table is still *waiting* for, on the far side of
-   * the last hold, is fair game. See `compress`.
+   * Where the compressible part of this batch begins. The peel and the reshuffle
+   * are deliberate holds and may not be squeezed to fit `BATCH_CAP_MS` — that
+   * cap exists to stop the table narrating a queue of bot moves it has already
+   * left behind, which is the opposite problem. See `compress`.
    */
   let floor = 0;
-  // Events in a batch happened in order and should read that way, so each one
-  // starts a beat after the last rather than all at once.
+  // Events in a batch happened in order and should read that way.
   let cursor = 0;
 
   const add = (plan: Omit<FlightPlan, "id" | "delay"> & { delay?: number }): void => {
@@ -215,9 +168,8 @@ export const planFlights = (
       }
 
       case "surrendered": {
-        // The punishment card is played face up like any other card. There is
-        // no longer any way for a card to leave a hand and *not* land on the
-        // pile — the bad-call burial went with the wrong-call forfeit.
+        // The punishment card is played face up like any other card: there is no
+        // longer any way for a card to leave a hand and not land on the pile.
         add({
           card: event.card,
           from: isYou(game, event.playerId)
@@ -235,20 +187,15 @@ export const planFlights = (
       }
 
       /**
-       * The deck running out, given a beat of its own (#209).
+       * The deck running out, given a beat of its own (#209). The flights are the
+       * smaller half of it — what makes it readable is that **nothing else in
+       * the batch moves until it is over**, so `cursor` jumps the full
+       * `RESHUFFLE_MS` and the card turned up afterwards lands on the far side
+       * of the hold rather than chasing the last card back into the deck.
        *
-       * The flights are the smaller half of it: what makes this readable is
-       * that **nothing else in the batch moves until it is over**. `cursor`
-       * jumps the full `RESHUFFLE_MS` rather than to the end of the last
-       * flight, so the card turned up afterwards — which always arrives in the
-       * same breath — lands on the far side of the hold instead of chasing the
-       * last card back into the deck.
-       *
-       * That hold is also why `held` is set: `compress` must not squeeze a
-       * pause somebody is meant to sit through, which is the same rule the peel
-       * has and the same rule this beat needs for a different reason. The peel
-       * gets it for free by being first in its batch; a recycle is in the
-       * middle of one.
+       * That is also why `held` is set: `compress` must not squeeze a pause
+       * somebody is meant to sit through. The peel gets that for free by being
+       * first in its batch; a recycle is in the middle of one.
        */
       case "reshuffled": {
         const start = cursor;
@@ -271,18 +218,15 @@ export const planFlights = (
       }
 
       /**
-       * The rewind, which is the only part of a landed call the table can't
-       * simply read off the cards afterwards. Every card the offender drew
-       * illegally goes back where it came from, and it has to be *seen* going
-       * back: the punishment that follows only makes sense if you watched the
-       * game step backwards first (#66).
+       * The rewind, which is the only part of a landed call the table can't read
+       * off the cards afterwards: the punishment only makes sense if you watched
+       * the game step backwards first (#66).
        *
        * The peel runs first and nothing may move underneath it, so the whole
-       * sequence starts on the far side of it — including anything else that
-       * arrived in the same batch. A beat then opens the rewind so the ruling
-       * lands before the cards move, and another closes it so the forced play
-       * doesn't tread on it. A call that missed moves nothing at all, but it
-       * peels just the same, and the hold is what the table is watching.
+       * sequence starts on the far side of it. A beat opens the rewind so the
+       * ruling lands before the cards move, and another closes it so the forced
+       * play doesn't tread on it. A call that missed moves nothing but peels
+       * just the same.
        */
       case "sunnyCalled": {
         cursor += PEEL_MS;
@@ -292,8 +236,8 @@ export const planFlights = (
         for (const card of event.returned) {
           add({
             card,
-            // By now the rewind has already taken it out of the hand, so the
-            // card's own anchor is gone and the hand as a whole is the origin.
+            // The rewind has already taken it out of the hand, so the card's own
+            // anchor is gone and the hand as a whole is the origin.
             from: [cardAnchor(card.id), handOf(game, event.targetId)],
             to: [DECK],
             size: scale.pile,
@@ -320,12 +264,8 @@ export const planFlights = (
   return { flights: compress(flights, floor), emptiesPile, deals };
 };
 
-/**
- * A deal, invented from the dealt hands.
- *
- * Round-robin, one card at a time, the way it would go round a real table —
- * every card face down, including yours. Yours turn over as they land.
- */
+/** A deal, invented from the dealt hands: round-robin, one card at a time, every
+ * card face down including yours. Yours turn over as they land. */
 const dealFlights = (
   upcard: Card,
   game: GameView,
@@ -376,23 +316,15 @@ const dealFlights = (
 };
 
 /**
- * Keep a burst inside its window.
+ * Keep a burst inside its window. Bots move on a timer and a resolved call can
+ * land half a dozen events at once, so rather than narrate a queue it has
+ * already left behind, the table squeezes the delays.
  *
- * Bots move on a timer, and a resolved Sunny call can land half a dozen events
- * at once. Rather than let the table narrate a queue it has already left
- * behind, squeeze the delays so the whole batch still finishes promptly.
- *
- * The cap is on how long the burst takes, not on how long the table waits
- * before it starts. `floor` is where the waiting ends: the cursor on the far
- * side of the last deliberate hold in the batch. Nothing before it is touched,
- * and everything after it is measured from there.
- *
- * That used to be `Math.min(...delays)`, which worked only because the one hold
- * there was — the peel — opens its batch. A recycle lands in the *middle* of
- * one, between the draw that emptied the deck and the card turned up after it,
- * so the earliest flight is a reshuffle card at delay zero and the span
- * measured from there would have squeezed five seconds into 900ms (#209). The
- * hold's own flights sit below the floor and are left exactly where they were.
+ * The cap is on how long the burst takes, not how long the table waits before
+ * it starts. `floor` is where the waiting ends — the cursor past the last
+ * deliberate hold. It used to be `Math.min(...delays)`, which worked only
+ * because the peel opens its batch; a recycle lands in the *middle* of one, so
+ * measuring from the earliest flight squeezed five seconds into 900ms (#209).
  */
 const compress = (flights: FlightPlan[], floor: number): FlightPlan[] => {
   if (flights.length === 0) return flights;

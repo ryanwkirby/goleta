@@ -6,12 +6,10 @@ import { QrGlyph } from "../../components/QrCode.tsx";
 import { Button } from "../../components/ui.tsx";
 
 /**
- * The row of small grey print across the top of the upright table.
- *
- * Two cogs, the way in, whether the socket is up, and the two ways out. It is
- * the upright view's only header — `HandView` has none at all, which is why the
- * cog and the rules link have to be reachable from the peek strip as well
- * (#194, #195).
+ * The row of small grey print across the top of the upright table: two cogs, the
+ * way in, whether the socket is up, and the two ways out. It is the upright
+ * view's only header — `HandView` has none, which is why the cog and the rules
+ * link have to be reachable from the peek strip as well (#194, #195).
  */
 export function TableHeader({
   room,
@@ -39,10 +37,9 @@ export function TableHeader({
 }) {
   return (
     <header className="flex items-center gap-2 text-xs text-white/50">
-      {/* Yours first, the host's second, and the two are legible as
-          different things: a person and a gear, an inch apart, one of which
-          changes the game for everybody (#188). A watcher gets neither —
-          the only thing in this drawer is about your own cards. */}
+      {/* Yours first, the host's second, and legible as different things: a
+          person and a gear, an inch apart, one of which changes the game for
+          everybody (#188). */}
       {seated ? (
         <PlayerSettingsCog
           hints={hints}
@@ -50,13 +47,11 @@ export function TableHeader({
           className="-ml-2"
         />
       ) : null}
-      {/* Beside the player's, not in place of it, because it is the host's way
-          back to everything the lobby held and the rest of this line is
-          facts about the room rather than things to press. What used to sit
-          at the far end was a lone `in person: on` button — the only host
-          control that survived the lobby, reading like a status somebody
-          had left switched on. It lives behind the cog now, with the rules
-          for the next deal beside it (#134). */}
+      {/* Beside the player's, not in place of it: it is the host's way back to
+          everything the lobby held, and the rest of this line is facts about the
+          room rather than things to press. What used to sit at the far end was a
+          lone `in person: on` button, reading like a status somebody had left
+          switched on (#134). */}
       {isHost ? (
         <HostSettingsCog
           rules={room.houseRules}
@@ -67,25 +62,17 @@ export function TableHeader({
           onIrl={(on) => send({ t: "setIrl", on })}
           onDealerMode={(dealer) => send({ t: "setDealerMode", mode: dealer })}
         onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
-          // Pulled back over the column's own padding only when it leads
-          // the row. With the player's cog before it there is nothing to
-          // pull back over. The row was already this tall — `rules` and
-          // `leave` are `Button`s, and every `Button` is `min-h-11` — so
+          // Pulled back over the column's own padding only when it leads the row.
+          // The row was already this tall — every `Button` is `min-h-11` — so
           // neither target costs the header anything.
           className={seated ? "" : "-ml-2"}
         />
       ) : null}
-      {/* The code was four characters saying what the room was called and
-          doing nothing, which is the whole of what a code is for when
-          there is no lobby left to go back to. Tapping it is the invite —
-          a person or a shared screen, same room, different link (#135).
-          Anybody may open it: handing somebody the way in is not a host
-          power, and nothing behind it changes the room.
-
-          It is a glyph rather than the four characters since #162. The
-          panel leads with the code at reading-out size, so during a hand
-          the characters were furniture: this says *there is a way in here*
-          and the way in says the rest. */}
+      {/* The code was four characters saying what the room was called and doing
+          nothing. Tapping it is the invite — a person or a shared screen, same
+          room, different link (#135) — and anybody may open it. A glyph rather
+          than the characters since #162: the panel leads with the code at
+          reading-out size, so this says *there is a way in here*. */}
       <button
         type="button"
         aria-label={`Invite to room ${room.code}`}
@@ -101,10 +88,8 @@ export function TableHeader({
         <QrGlyph />
       </button>
       {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
-      {/* No way back to the hand here, and none needed: at an IRL table the
-          phone is the toggle. Turning it sideways is the hand view and
-          turning it upright is this one — a gesture the table can see you
-          make, which two words in a corner never were. */}
+      {/* No way back to the hand here, and none needed: at an IRL table the phone
+          is the toggle, and turning it is a gesture the table can see you make. */}
       <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
         rules
       </Button>

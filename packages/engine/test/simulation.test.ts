@@ -26,11 +26,8 @@ interface RunOptions {
   seed: number;
   /** Chance in a hundred that a bot draws on purpose while holding a play. */
   mischief?: number;
-  /**
-   * Chance in a hundred that somebody accuses on spec. Bots only ever call a
-   * violation they have actually caught, so a wrong call — and the resolution
-   * that follows one — has to be made deliberately.
-   */
+  /** Chance in a hundred of an accusation on spec. Bots only call violations they
+   * have caught, so a wrong call has to be made deliberately. */
   slander?: number;
   stepCap?: number;
   /** The house rules to play under. Defaults to the game as written. */
@@ -51,16 +48,16 @@ interface RunResult {
 const waitingOn = (state: GameState): PlayerId | null => {
   if (state.phase.kind === "over") return null;
   if (state.phase.kind === "surrender") return state.phase.playerId;
-  // A suit is owed by a named player, who under Power of Eights is not the
-  // player to move. Kept in step with `redact.ts`'s copy of this.
+  // A suit is owed by a named player, who under Power of Eights is not the player
+  // to move. Kept in step with `redact.ts`'s copy.
   if (state.phase.kind === "suit") return state.phase.playerId;
   return state.players[state.turnIndex]?.id ?? null;
 };
 
 /**
- * Plays a whole game out with bots, checking the invariants after every intent
- * rather than only at the end — a rule broken three hundred moves in is
- * otherwise indistinguishable from one broken on move one.
+ * Checks the invariants after every intent rather than only at the end — a rule
+ * broken three hundred moves in is otherwise indistinguishable from one broken
+ * on move one.
  */
 const runGame = ({
   players,
@@ -81,10 +78,7 @@ const runGame = ({
   let botCalls = 0;
   let wrongBotCalls = 0;
 
-  /**
-   * The table's shared verdict on the violation in front of it, rolled once and
-   * remembered — the same bargain the server strikes in `rooms.ts`.
-   */
+  /** Rolled once and remembered, the same bargain the server strikes. */
   let verdict: { drawerId: PlayerId; firstDrawnId: CardId | null; call: boolean } | null = null;
   const tableCallsSunny = (): boolean => {
     const challenge = state.challenge;
@@ -119,9 +113,8 @@ const runGame = ({
       }
     }
 
-    // An accusation thrown without looking, which is the only way a wrong one
-    // ever gets made now. It names whatever card comes to hand rather than a
-    // legal one — that's what makes it slander rather than a real catch.
+    // An accusation thrown without looking, which is the only way a wrong one gets
+    // made now: it names whatever card comes to hand rather than a legal one.
     const challenge = state.challenge;
     if (slander > 0 && challenge && !challenge.resolved) {
       const [roll, next] = randomInt(rng, 100);
@@ -179,8 +172,8 @@ const runGame = ({
     expect(present, `a card was lost or duplicated by ${move.intent.type}`).toHaveLength(total);
     expect(new Set(present).size).toBe(total);
 
-    // If you can play, you must: an honest draw is only ever made from a hand
-    // with nothing playable in it.
+    // If you can play, you must: an honest draw comes only from a hand with nothing
+    // playable in it.
     if (move.intent.type === "drawCard" && !move.deliberateFoul) {
       const player = playerById(before, move.intent.playerId);
       expect(player && legalCards(before, player), "a bot drew while holding a play").toHaveLength(
@@ -188,8 +181,7 @@ const runGame = ({
       );
     }
 
-    // A card turned up off the deck is natural, 8 or not: the suit to match is
-    // always the one printed on it, and nobody is ever asked to name another.
+    // A card turned up off the deck is natural, 8 or not.
     for (const event of result.events) {
       if (event.type !== "turnedUp") continue;
       const last = event.cards[event.cards.length - 1];
@@ -219,8 +211,8 @@ describe("full games", () => {
         expect(state.status, `${players} players, seed ${seed}: unfinished after ${steps}`).toBe(
           "over",
         );
-        // One 52-card deck puts fewer cards in circulation than two used to, so
-        // the deadlock safeguard is closer to reach. It should still never fire.
+        // One deck puts fewer cards in circulation than two, so the deadlock safeguard
+        // is closer to reach. It should still never fire.
         const over = events.findLast((event) => event.type === "gameOver");
         expect(over, `${players} players, seed ${seed}`).toMatchObject({ reason: "lastStanding" });
         const survivors = state.players.filter((p) => !p.eliminated);
@@ -252,8 +244,8 @@ describe("full games", () => {
     expect(calls).toBeGreaterThan(0);
     expect(correct).toBeGreaterThan(0);
     expect(calls - correct).toBeGreaterThan(0);
-    // But a bot is never the one who got it wrong: it accuses only somebody it
-    // has caught, so every call of its own lands.
+    // But a bot is never the one who got it wrong: it accuses only somebody it has
+    // caught, so every call of its own lands.
     expect(botCalls).toBeGreaterThan(0);
     expect(wrongBotCalls, "a bot accused an innocent player").toBe(0);
     // As do both ways a card comes off the deck.
@@ -269,14 +261,9 @@ describe("full games", () => {
   });
 
   /**
-   * Every combination of house rules, played out in full.
-   *
-   * This is the safety net the options system rests on. The three invariants
-   * checked after every event — card conservation, forced play never skipped,
-   * exactly one winner — say nothing about *which* rules are in play, so they
-   * hold a variant to the same standard as the game as written. A house rule
-   * that leaks a card, strands a turn or hangs the game fails here, seeded and
-   * reproducible, rather than at somebody's table.
+   * The safety net the options system rests on. The three invariants say nothing
+   * about *which* rules are in play, so they hold a variant to the same standard
+   * as the game as written.
    */
   it("finish under every combination of house rules", () => {
     const matrix: GameOptions[] = [];
@@ -292,9 +279,8 @@ describe("full games", () => {
     for (const options of matrix) {
       const label = `${options.eights}/${options.seedEight}/sunny=${options.sunny !== null}`;
       for (let seed = 1; seed <= 6; seed++) {
-        // Mischief on throughout: with the Sunny Rule off, an illegal draw is
-        // simply a legal one nobody can say anything about, and the game still
-        // has to terminate cleanly.
+        // Mischief on throughout: with the Sunny Rule off an illegal draw is just a
+        // legal one nobody can say anything about, and the game still has to end.
         const run = runGame({ players: 4, seed: seed * 31337, mischief: 25, slander: 4, options });
         expect(run.state.status, `${label}, seed ${seed}: unfinished`).toBe("over");
         const survivors = run.state.players.filter((p) => !p.eliminated);
@@ -311,8 +297,8 @@ describe("full games", () => {
   });
 
   it("are playable from the redacted view alone", () => {
-    // The bots see only what a browser sees. A game that plays out this way is
-    // a game whose view carries everything the client needs.
+    // The bots see only what a browser sees, so a game that plays out this way is a
+    // game whose view carries everything the client needs.
     const { state } = runGame({ players: 5, seed: 8675309, mischief: 15 });
     expect(state.status).toBe("over");
   });

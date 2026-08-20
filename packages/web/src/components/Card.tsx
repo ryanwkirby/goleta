@@ -2,9 +2,7 @@ import type { CSSProperties, RefCallback } from "react";
 
 import type { Card as CardModel } from "@goleta/engine";
 
-// Type-only, so it is erased and there is no runtime dependency in either
-// direction: `pile.ts` is the one place that decides whether a suit has been
-// named or is merely owed, and the mark below is how that answer is drawn.
+// Type-only, so it is erased and there is no runtime dependency either way.
 import type { PileSuit } from "../lib/pile.ts";
 import {
   CARD_SHAPE,
@@ -15,21 +13,10 @@ import {
   type CardSize,
 } from "../lib/cardShape.ts";
 
-/**
- * Re-exported, because this is where people look for them.
- *
- * They live in `lib/cardShape.ts` so that `lib` can use them without importing
- * a component (#224), and that is right — but a paired benchmark caught the
- * bill for it: two agents needed the same thing, "what does this app use to
- * draw a suit", and the one working after the move read *both* files where the
- * one working before read this one (`bench/results.md`).
- *
- * `components` may import from `lib`, so this reintroduces no cycle. Only the
- * three suit helpers are re-exported, not the size ladder — the ladder is
- * arithmetic that `handFan.ts` and `pileBox.ts` own and nobody goes hunting for
- * it in a card component, whereas the glyphs are the half people actually look
- * for next to the thing that draws them.
- */
+/** Re-exported because this is where people look for them. They live in
+ * `lib/cardShape.ts` so `lib` can use them without importing a component (#224),
+ * and a paired benchmark caught the bill: an agent asking "what does this app use
+ * to draw a suit" then read both files. Only the suit helpers, not the ladder. */
 export { isRed, SUIT_GLYPH, SUIT_LABEL } from "../lib/cardShape.ts";
 
 const SIZES: Record<CardSize, string> = {
@@ -37,20 +24,16 @@ const SIZES: Record<CardSize, string> = {
   md: "h-24 w-[4.25rem] text-xl rounded-lg p-1.5",
   lg: "h-32 w-24 text-2xl rounded-xl p-2",
   xl: "h-44 w-33 text-4xl rounded-2xl p-2.5",
-  // 52px of rank, and the two indices still clear each other: each is 1.94×
-  // its own font size once the suit under it is counted, so 101px apiece in a
-  // card 240 tall with 12 of padding at the top and 13 under the mirrored one.
+  // 52px of rank, and the two indices still clear each other: 1.94× its own font
+  // size apiece once the suit is counted, in a card 240 tall.
   "2xl": "h-60 w-45 text-[3.25rem] rounded-3xl p-3",
 };
-
 
 interface CardProps {
   card: CardModel;
   size?: CardSize;
-  /**
-   * Drawn at this height in pixels rather than at `size`. The landscape hand
-   * sets it; nothing else should.
-   */
+  /** Drawn at this height in pixels rather than at `size`. The landscape hand sets
+   * it; nothing else should. */
   height?: number;
   /** In-person cards need to be readable from both sides of the table. */
   mirrored?: boolean;
@@ -59,10 +42,8 @@ interface CardProps {
   selected?: boolean;
   onClick?: () => void;
   title?: string;
-  /**
-   * The card is still flying to this spot. It keeps its place in the layout and
-   * gives up only its ink, so nothing shifts when it lands.
-   */
+  /** Still flying to this spot. It keeps its place in the layout and gives up only
+   * its ink, so nothing shifts when it lands. */
   arriving?: boolean;
   /** Registers this card as a place a flight can start from or land on. */
   anchor?: RefCallback<HTMLElement>;
@@ -84,10 +65,9 @@ export function PlayingCard({
   const colour = isRed(card.suit) ? "text-rose-600" : "text-slate-900";
   const Tag = onClick ? "button" : "div";
 
-  // A height off the ladder replaces the rung's class outright rather than
-  // overriding half of it: the four numbers below are what `SIZES` is, and a
-  // card carrying both would be a card whose padding and type came from one
-  // size and whose box came from another.
+  // A height replaces the rung's class outright rather than overriding half of it:
+  // a card carrying both would have padding and type from one size and a box from
+  // another.
   const sized: CSSProperties | undefined = height
     ? {
         height,
@@ -109,8 +89,8 @@ export function PlayingCard({
       className={[
         height ? "" : SIZES[size],
         arriving ? "invisible" : "",
-        // `overflow-hidden` is the belt to the layout's braces: a rank like 10
-        // at a large text size must never spill past the card's edge.
+        // Belt to the layout's braces: a rank like 10 at a large text size must never
+        // spill past the card's edge.
         "relative flex shrink-0 flex-col items-start overflow-hidden bg-white font-semibold leading-none shadow-lg",
         "ring-1 ring-black/10 transition-transform duration-150",
         dimmed ? "opacity-45 saturate-50" : "",
@@ -125,13 +105,9 @@ export function PlayingCard({
         <span className="block text-[0.85em]">{glyph}</span>
       </span>
       {/* The big pip sits in whatever room is left rather than claiming its own
-          row, so the face can't grow taller than the card.
-
-          Not drawn on a mirrored card at all (#130). The corner it fades into
-          is the corner the second index sits in, so at an IRL table it is a
-          ghost suit under an upside-down rank — decoration in front of the one
-          thing these cards exist to be read for. Online rooms keep it, because
-          nothing is drawn over it there. */}
+          row, so the face can't grow taller than the card. Not drawn on a
+          mirrored card at all (#130): that corner holds the second index, so at
+          an IRL table it is decoration under an upside-down rank. */}
       {mirrored ? (
         <span className="absolute bottom-[0.25em] right-[0.25em] rotate-180 text-right leading-[1.05]">
           {card.rank}
@@ -173,18 +149,10 @@ export function CardBack({
 }
 
 /**
- * A suit, as a mark rather than a word.
- *
- * It used to be the glyph *and* the suit's name, and the pile drew it inside a
- * 48px circle: at `text-2xl` that measures 75px across, so fourteen pixels hung
- * out of each side with nothing behind them — multiplied by whatever the shared
- * table screen was scaling the piles by, which made it about fifty pixels of
- * unbacked text lying across the card in play (#159).
- *
- * The word was never carrying much. At the pile there is a caption under the
- * card saying whether a suit is being named or shown, and the peek strip has
- * always drawn the glyph alone. This is the same treatment in both places now,
- * with the name kept for whoever is listening rather than looking.
+ * A suit, as a mark rather than a word. It used to be the glyph *and* the name
+ * inside a 48px circle — 75px of text across, multiplied by whatever the shared
+ * screen was scaling the piles by, so about fifty pixels of it lay unbacked
+ * across the card in play (#159). The name is kept for whoever is listening.
  */
 export function SuitMark({
   mark,

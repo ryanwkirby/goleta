@@ -24,22 +24,11 @@ function CardChip({ card }: { card: Card }) {
 }
 
 /**
- * The sentence a landed call opens with, and the reason this dialog exists.
- *
- * A call rewinds the game, takes two cards off you and hands everyone a new
- * card to match, and until #66 the table narrated none of it: the announcement
- * expired on a timer at the top of the screen while the forced play sat one tap
- * away at the bottom, so the punishment could be half over before its victim
- * knew it had started. Being caught is the loudest thing that happens in this
- * game and it now reads that way — it stops the table, it says who and what and
- * what it will cost, and the hand stays dead until it is dismissed.
- *
- * Only the offender sees it. Everyone else has the announcement banner, which
- * is all a bystander needs.
- *
- * It gives nothing away. The play being named is one the offender has already
- * been caught not making, and the card being turned up is one the whole table
- * watched them draw.
+ * A call rewinds the game, takes two cards off you and hands everyone a new card
+ * to match, and until #66 the table narrated none of it: the announcement
+ * expired on a timer while the forced play sat one tap away. Only the offender
+ * sees it, and it gives nothing away — the play named is one they have already
+ * been caught not making.
  */
 export function SunnyCaught({
   callerName,
@@ -53,11 +42,8 @@ export function SunnyCaught({
   skipped: Card[];
   /** What the rewind took back, and what step three will turn up. */
   returned: Card[];
-  /**
-   * False when the skipped play is your last card. It eliminates you on the
-   * spot and there is nothing left to pay the punishment with, so promising a
-   * step that will never come would be its own small lie.
-   */
+  /** False when the skipped play is your last card: it eliminates you on the spot,
+   * so promising a step that will never come would be its own small lie. */
   owesPunishment: boolean;
   onDone: () => void;
 }) {

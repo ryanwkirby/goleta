@@ -1,27 +1,9 @@
 /**
- * Your own settings, as opposed to the table's (#188).
- *
- * The host has a cog behind the table (#134) and nobody else had anything.
- * Two things now need a home that belongs to *you* rather than to the room:
- * the hints toggle as a live switch (#187), and eventually playing on while you
- * are away from the table (#202).
- *
- * **The bar for putting something in here is that it belongs to one player and
- * changes nothing about the room.** That rules out everything on
- * `HostSettings.tsx` — the house rules, where everybody is, bot speed — which
- * change the game for everyone and have their own door an inch away. Two cogs
- * that close together want the difference to be legible, so this one is a
- * person rather than a gear and says *you* where the host's says *table*.
- *
- * It also rules out the sort control, which is already where it belongs, next
- * to the hand it arranges, in both layouts.
- *
- * **A watcher gets no cog.** The only thing in here is about your own cards and
- * a watcher has none, so the drawer would be empty. That is the answer the
- * issue asked to be decided rather than assumed.
- *
- * Opening it sends nothing. What is *inside* it does — the hints toggle is
- * public by design (#187) — but that is the toggle's doing, not the drawer's.
+ * Your own settings, as opposed to the table's (#188). **The bar for putting
+ * something in here is that it belongs to one player and changes nothing about
+ * the room**, which rules out everything on `HostSettings.tsx`. Two cogs this
+ * close together want the difference legible, so this one is a person rather
+ * than a gear. **A watcher gets none**: the only thing in it is about cards.
  */
 
 import { useState } from "react";
@@ -68,9 +50,8 @@ export function PlayerSettingsCog({
         title="Your settings"
         onClick={() => setOpen(true)}
         className={[
-          // The same 44px square as the host's, because they are the same kind
-          // of thing and sit next to each other; the glyph is what separates
-          // them, not the size.
+          // The same 44px square as the host's, because they are the same kind of
+          // thing and sit next to each other; the glyph is what separates them.
           "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
           "leading-none text-white/60 transition-colors hover:bg-white/5 hover:text-white",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
@@ -92,10 +73,9 @@ export function PlayerSettingsCog({
             className="flex w-full max-w-sm flex-col gap-4"
             onClick={(event) => event.stopPropagation()}
           >
-            {/* Said here rather than on the toggle, because it is the thing
-                that makes this drawer different from the host's: nothing in
-                here reaches anybody else's game. What the table *can* see is
-                said by the toggle itself. */}
+            {/* Said here rather than on the toggle, because it is what makes this
+                drawer different from the host's: nothing in here reaches
+                anybody else's game. */}
             <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
               Yours, not the table's
             </p>

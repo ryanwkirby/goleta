@@ -4,11 +4,8 @@ import type { Card } from "@goleta/engine";
 
 import { SUIT_GLYPH } from "../../lib/cardShape.ts";
 
-/**
- * Who called it on whom, said out loud to the whole table before anybody gets
- * an explanation. The rule reads very differently once you've seen it land on
- * someone, so the news comes first and the lesson second.
- */
+/** Said out loud to the whole table before anybody gets an explanation: the rule
+ * reads very differently once you have seen it land on someone. */
 export function SunnyAnnounce({
   callerName,
   targetName,
@@ -19,7 +16,7 @@ export function SunnyAnnounce({
 }: {
   callerName: string;
   targetName: string;
-  /** The card they named. An accusation is specific, so the table hears which. */
+  /** An accusation is specific, so the table hears which. */
   card: Card;
   correct: boolean;
   onDone: () => void;
@@ -33,9 +30,8 @@ export function SunnyAnnounce({
   return (
     <div
       role="status"
-      // The one announcement nobody at this table may miss, so it clears the
-      // island at both ends as well as the top — a ruling clipped in landscape
-      // is the worst thing here to lose a word off.
+      // The one announcement nobody may miss, so it clears the island at both ends as
+      // well as the top.
       className={[
         "pointer-events-none fixed inset-x-0 top-0 z-30 flex justify-center p-4",
         "pt-[max(1rem,env(safe-area-inset-top))]",

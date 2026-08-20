@@ -24,11 +24,9 @@ import { useTableState } from "./table/useTableState.ts";
 
 /**
  * The line that says what the table is waiting for, and the picker it asks for.
- *
- * Both are components rather than inline JSX because both have to read the
- * motion layer — the suit ask waits for the deal to finish (#75) — and `Table`
- * renders `TableMotion` rather than sitting underneath it. `HandView` is already
- * a child of the provider and reads the same two things for itself.
+ * Components rather than inline JSX because both read the motion layer — the
+ * suit ask waits for the deal (#75) — and `Table` renders `TableMotion` rather
+ * than sitting underneath it.
  */
 function TurnPrompt({
   game,
@@ -48,9 +46,8 @@ function TurnPrompt({
     <p
       className={[
         "text-center text-sm",
-        // The reshuffle line takes the emphasis whoever the table is waiting on:
-        // for those five seconds it is the more important of the two, and on
-        // most screens it is the only one being read.
+        // The reshuffle line takes the emphasis whoever the table is waiting on: for
+        // those five seconds it is the more important of the two.
         reshuffling !== null || (mine && game.status !== "over")
           ? "font-semibold text-amber-300"
           : "text-white/60",
@@ -63,12 +60,10 @@ function TurnPrompt({
 }
 
 /**
- * The suit picker, held back until the cards are down.
- *
- * Under Dealer's Choice the game opens in `phase: "suit"`, so without this the
- * picker was up before the deal had finished — asking for a suit for an 8 that
- * had not landed yet (#75). Reduced motion plans no flights, so `dealing` is
- * never true there and the picker appears at once, with nothing waited for.
+ * The suit picker, held back until the cards are down. Under Dealer's Choice the
+ * game opens in `phase: "suit"`, so without this it asked for a suit for an 8
+ * that had not landed (#75). Reduced motion plans no flights, so `dealing` is
+ * never true there and nothing is waited for.
  */
 function DockedSuitPicker({ onPick }: { onPick: (suit: Suit) => void }) {
   const { dealing } = useMotion();
@@ -79,16 +74,10 @@ function DockedSuitPicker({ onPick }: { onPick: (suit: Suit) => void }) {
 /**
  * The table, in whichever of five forms this screen is currently owed.
  *
- * A shuffled deal wants everybody on their feet; a phone held the wrong way up
- * at an IRL table wants turning; a finished hand on a sideways phone gets its
- * own screen; a sideways phone mid-hand gets the hand view; and everything else
- * gets the whole table, which is drawn here.
- *
- * **It decides nothing.** `useTableState` works out what is true — every flag,
- * every handler, the four bundles the layouts are handed — and `lib/tableRoute`
- * decides which screen that adds up to. What is left here is the answer to
- * *what does the table show*, which is the question this file should be opened
- * to answer (#226).
+ * **It decides nothing.** `useTableState` works out what is true and
+ * `lib/tableRoute` decides which screen that adds up to. What is left here is
+ * the answer to *what does the table show*, which is the question this file
+ * should be opened to answer (#226).
  */
 export function Table({
   room,
@@ -107,7 +96,7 @@ export function Table({
   game: GameView;
   log: LoggedEvent[];
   shouts: Shout[];
-  /** A refused move, to be shown against the hand it was refused from. */
+  /** A refused move, shown against the hand it was refused from. */
   refusal: GoletaError | null;
   send: (message: ClientMessage) => void;
   onLeave: () => void;
@@ -190,10 +179,9 @@ export function Table({
           onLeave={onLeave}
         />
 
-        {/* Both of these are armed by the event that just ended the game, so
-            they have to be reachable from the screen that event lands on. The
-            graduation especially: it is shown once, after your first finished
-            game, and in landscape it had nowhere at all to appear. */}
+        {/* Both are armed by the event that just ended the game, so they have to
+            be reachable from the screen that event lands on. The graduation
+            especially: in landscape it had nowhere at all to appear. */}
         <TableOverlays
           nameOf={nameOf}
           explaining={explainSunny}
@@ -208,8 +196,8 @@ export function Table({
   if (route.kind === "compact") {
     return (
       <TableMotion game={game} log={log} scale={PEEK_TABLE}>
-        {/* Both layouts, and deliberately the same thing in both: this is the
-            one cue that should not depend on which way the phone is held. */}
+        {/* Deliberately the same thing in both layouts: this is the one cue that
+            should not depend on which way the phone is held. */}
         {glowing ? <TurnGlow /> : null}
         <HandView
           table={tableContext}
@@ -232,11 +220,9 @@ export function Table({
   return (
     <TableMotion game={game} log={log}>
       {glowing ? <TurnGlow /> : null}
-      {/* All four, not just the bottom. The top costs nothing in Safari, where
-          the browser's own chrome covers the island — and stops costing nothing
-          the moment this runs standalone. The sides are for the landscape look
-          at the full table, which an online room gets whenever a phone is
-          turned. */}
+      {/* All four, not just the bottom. The top costs nothing in Safari, where the
+          browser's chrome covers the island — and stops costing nothing the
+          moment this runs standalone. */}
       <div
         className={[
           "mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-3",

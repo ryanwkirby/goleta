@@ -31,11 +31,8 @@ export interface TableSpec {
   top: string;
   /** Defaults to the top card's suit, as it would be outside a wild. */
   activeSuit?: Suit;
-  /**
-   * A suit somebody named for the card on top, if this position is meant to
-   * have arrived at one. Presentation only — no rule reads it — so positions
-   * that aren't about it leave it null and nothing changes.
-   */
+  /** A suit somebody named for the card on top, if this position is meant to have
+   * arrived at one. No rule reads it. */
   namedSuit?: Suit;
   drawPile?: string[];
   /** Cards under the top of the face-up pile, for recycle tests. */

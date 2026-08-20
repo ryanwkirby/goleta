@@ -1,23 +1,10 @@
 /**
- * The sun: the way an accusation starts.
- *
- * **Rules converge here.** In brief, so nobody trips one without knowing it was
- * there. `AGENTS.md` § "Rules that look like bugs and are not" carries the
- * argument for each and is the authority: if a line here and the document ever
- * disagree, the document is right and this is stale.
- *
- * - **One look, and a bigger sun must never become a brighter one when a call
- *   would land** (#50, #189). Nothing on the client knows whether it would, and
- *   nothing ever will. No ramp, no glow, no ordering and no wording separates a
- *   legal draw from an illegal one.
- * - **The disabled variant is the only second look**, and it is not about the
- *   draw: it is your own missed call still being served. The server sends
- *   `lockedDraws` to nobody else, so a locked-out caller is indistinguishable
- *   from any other on every screen but their own.
- * - **44px, and nowhere near the draw pile** in either layout (#189). A fat
- *   target beside the deck is a mis-tap into the exact violation it accuses.
- * - **Tapping it opens the picker and does not call.** An accusation names a
- *   card, so the tap that starts one cannot be the tap that commits it.
+ * The sun: the way an accusation starts. **Rules converge here**; `AGENTS.md` is
+ * the authority. **One look, and a bigger sun must never become a brighter one
+ * when a call would land** (#50, #189) — nothing on the client knows whether it
+ * would. **The disabled variant is your own missed call still being served**,
+ * sent to nobody else. **44px, and nowhere near the draw pile** in either
+ * layout. **Tapping it opens the picker and does not call.**
  */
 
 /** A plain outline. It is furniture until it has something to say. */
@@ -39,26 +26,13 @@ function SunGlyph() {
 }
 
 /**
- * The way you start an accusation, and the most time-critical control here.
- *
- * It used to be a 20px circle wedged between somebody's name and their card
- * count, in a strip that scrolls sideways — half a thumb, aimed at by eye,
- * for the one thing in this app whose window closes when the next player takes
- * their first action. A missed tap was usually a missed call (#189). So: the
- * same sun, at the 44px everything here is designed to, somewhere a thumb can
- * find without aiming.
+ * It used to be a 20px circle wedged between a name and a card count, in a strip
+ * that scrolls sideways, for the one control whose window closes when the next
+ * player acts — a missed tap was usually a missed call (#189).
  *
  * **Leaving the seat is what makes it say who.** There is only ever one
- * `sunnyTargetId`, so the control can name them — *call it on Angela* — which
- * is more legible than a glyph beside a name in a scrolling strip ever was, and
- * it stops the call being a thing you do *to a name in a list*.
- *
- * It appears when a draw is standing and you are free to call, and it means
- * only that: somebody reached for the deck. Whether they were allowed to is on
- * the table in front of you, in their hand, and working it out is the game.
- *
- * Opening the picker also sends `composingCall`, which holds the bots (#73), so
- * the bigger target buys time twice over.
+ * `sunnyTargetId`, so the control names them, which stops the call being a thing
+ * you do *to a name in a list*. Opening the picker also holds the bots (#73).
  */
 export function SunnyCall({
   targetName,
@@ -84,13 +58,12 @@ export function SunnyCall({
       title={label}
       aria-label={label}
       className={[
-        // `min-h-11` rather than a fixed height: 44px is a floor here, exactly
-        // as it is in `handFan.ts`, and for the same reason.
+        // `min-h-11` rather than a fixed height: 44px is a floor here, as in
+        // `handFan.ts` and for the same reason.
         "flex min-h-11 shrink-0 items-center gap-2 rounded-full px-3.5 py-2",
         "text-sm font-semibold shadow-lg ring-1 backdrop-blur-sm transition-colors",
-        // Near-black with an amber edge, not a flood of amber: this is a thing
-        // to notice, not a verdict, and the table's amber already means *the
-        // game is waiting on you* at the edges of the screen (#190).
+        // Near-black with an amber edge rather than a flood: a thing to notice, not a
+        // verdict, and the table's amber already means *waiting on you* (#190).
         locked
           ? "cursor-not-allowed bg-black/50 text-white/25 ring-white/10"
           : "bg-black/65 text-amber-200 ring-amber-300/50 hover:bg-black/80 hover:text-amber-100",

@@ -1,42 +1,17 @@
 /**
- * Offering the propped-up screen a way out of the browser chrome. **A pilot.**
+ * Offering the propped-up screen a way out of the browser chrome. **A pilot**,
+ * built to be ripped out: the identity model is *no accounts, scan a code,
+ * play*, and this is the first thing here that sounds like a signup. Nothing may
+ * start depending on it.
  *
- * The shared screen is the one device in the room that gets opened once and
- * left alone for an evening, the one giving up the most to chrome because
- * nobody is going to pick it up and tidy it, and the only device here where
- * asking somebody to install something is sane: it happens once, by the host,
- * before anything is running.
+ * **Which offer you get is four capability questions, never a user agent**:
+ * already standalone, `beforeinstallprompt`, `"standalone" in navigator` (iOS,
+ * so words and the Share sheet — and why an iPad gets this rather than
+ * fullscreen, which leaves a permanent overlay button), then plain fullscreen.
  *
- * **Built to be ripped out.** The open question is whether an install prompt
- * belongs in this app at all — the whole identity model is *no accounts, scan a
- * code, play*, and "add this to your home screen" is the first thing here that
- * sounds like a signup even though it isn't one. So it goes on exactly one
- * surface and nothing is allowed to start depending on it, in the same way
- * nothing depends on a shared screen existing at all. Removing it is deleting
- * this file, the manifest and its `<link>`, and one paragraph of `AGENTS.md`.
- *
- * **Which offer you get is decided by what the device can do, never by a user
- * agent.** Four capability questions, in order:
- *
- *   1. Already standalone — nothing to offer, and nothing is drawn.
- *   2. `beforeinstallprompt` fired — this browser will install on request, so
- *      ask it to. Android, and desktop Chrome and Edge.
- *   3. `"standalone" in navigator` — the browser has iOS's home-screen app
- *      model, which is the capability, so the offer is words and the Share
- *      sheet. There is no event to hook on iOS and nothing to call. This is why
- *      an iPad gets the install rather than the fullscreen: fullscreen there
- *      leaves a **non-dismissible overlay button**, which on a screen propped
- *      for a whole evening is a permanent artifact in the corner of the one
- *      display everybody is looking at.
- *   4. Fullscreen exists — a laptop or a TV browser, where an install means
- *      little and `requestFullscreen` is simply the better answer.
- *
- * **Why this is safe here and would not be on a phone.** An installed web app
- * gets its own storage container, separate from Safari's. A phone that
- * installed after joining would come back as a *new player* with no `playerId`
- * and no rejoin token, and its seat would be orphaned. The shared screen holds
- * neither — it is a watcher (#16) with no identity at all — so it has nothing
- * to lose crossing that boundary.
+ * **Safe here and not on a phone**: an installed web app gets its own storage,
+ * so a phone would come back a new player with an orphaned seat. A shared screen
+ * holds no identity at all (#16).
  */
 
 import { useEffect, useState } from "react";
@@ -44,14 +19,9 @@ import { useEffect, useState } from "react";
 import { useFullscreen } from "../lib/fullscreen.ts";
 import { Button } from "./ui.tsx";
 
-/**
- * That this screen has said no. Remembered, because a nudge that came back
- * every time the host walked past would be the thing the pilot is checking for.
- *
- * A decision, not a device state — which is what separates it from the
- * fullscreen offer, where nothing is persisted because the browser already
- * reports whether it is held.
- */
+/** Remembered, because a nudge that came back every time the host walked past
+ * would be the thing the pilot is checking for. A decision, not a device state —
+ * which is what separates it from the fullscreen offer. */
 const DISMISSED = "goleta:table-install-dismissed";
 
 /** Chrome's deferred install prompt, which is not in `lib.dom`. */
@@ -82,8 +52,8 @@ export function TableInstall() {
 
   useEffect(() => {
     const capture = (event: Event): void => {
-      // Chrome fires this instead of showing its own bar, and expects the page
-      // to hold it and call `prompt()` off a gesture.
+      // Chrome fires this instead of showing its own bar, and expects the page to
+      // hold it and call `prompt()` off a gesture.
       event.preventDefault();
       setPrompt(event as InstallPrompt);
     };
@@ -136,14 +106,11 @@ export function TableInstall() {
   if (!offer) return null;
 
   return (
-    // Quiet, and out of the way of the code and the QR that are the actual job
-    // of this screen. It says what it buys, because "install" on its own reads
-    // like an account request in an app that has gone to some trouble not to
-    // have accounts.
-    //
-    // Down in the bottom band with the seat names, which leave the middle of
-    // that edge free (`tableEdges.ts`) — and capped, because an uncapped pill
-    // grew across the board and sat on the QR it is meant to be quieter than.
+    // Quiet, and out of the way of the code and the QR that are this screen's
+    // actual job. It says what it buys, because "install" alone reads like an
+    // account request. Down in the bottom band, which the seat names leave free
+    // in the middle (`tableEdges.ts`), and capped — an uncapped pill grew across
+    // the board and sat on the QR it is meant to be quieter than.
     <div className="absolute bottom-2 left-1/2 flex max-w-136 -translate-x-1/2 items-center gap-4 rounded-2xl bg-black/30 px-5 py-2.5 text-base text-white/50 ring-1 ring-white/10">
       <p className="text-balance">{offer.blurb}</p>
       {offer.action}

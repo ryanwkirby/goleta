@@ -47,37 +47,18 @@ import { joinLink } from "../net/route.ts";
 import type { LoggedEvent, Shout } from "../lib/feed.ts";
 
 /**
- * The middle of the table, on a screen in the middle of the table.
+ * The middle of the table, on an optional extra device propped where everyone
+ * can see it. **Nothing anywhere depends on this existing** — the phone view
+ * carries its own peek strip.
  *
- * An optional extra device — a spare tablet, a laptop, a television — propped
- * where everyone can see it. It is the one screen the whole room is looking at,
- * so it holds the thing that is genuinely shared: the piles.
+ * It joins as a watcher (#16) with a `table` bit, which buys one narrow
+ * auxiliary action: tapping the draw pile in an IRL room draws for the current
+ * player. It cannot play, name a suit or call Sunny, and it is drawn without
+ * `TableMotion` — the flight layer portals to the body, where this screen's
+ * transform cannot reach it.
  *
- * Most tables won't have one, which is why the phone view carries its own peek
- * strip and why nothing anywhere depends on this existing.
- *
- * The default is the shared centre: edge names, the piles, the current prompt
- * and table-wide asks. A toggle can show the same hand strip a watcher sees,
- * mainly for bot-heavy rooms. The piles stay large in both views because this
- * screen is the best surface in the room for the board.
- *
- * It joins as a watcher (#16) on a URL of its own, plus a `table` bit on the
- * watch message so the server can accept one narrow auxiliary action: tapping
- * the draw pile in an IRL room draws for the current player. It still has no
- * identity, cannot play cards, cannot name suits and cannot call Sunny.
- *
- * Deliberately drawn without `TableMotion`. The shared screen uses its own
- * scaled coordinate system, so the table motion layer would land cards at body
- * coordinates. Draws get a local flight toward the player's edge; the peel is
- * still CSS on the pile and runs regardless.
- *
- * **Every piece of it is placed against the design box rather than stacked in a
- * column** (#141). The board used to be a `flex-col` whose children came to
- * more than the height it had, and `justify-center` pushed the surplus out of
- * both ends and straight through the names pinned to the edges — the counts
- * landing on the bottom names, the prompt hanging off the bottom, worse with
- * every seat. Bands are reserved for the names on all four sides and nothing is
- * drawn into them, so no arrangement of seats can collide with anything.
+ * **Every piece is placed against the design box rather than stacked in a
+ * column** (#141), inside bands reserved for the seat names on all four sides.
  */
 export function TableScreen({
   room,
@@ -90,11 +71,7 @@ export function TableScreen({
   room: RoomView;
   game: GameView | null;
   log: LoggedEvent[];
-  /**
-   * Asking for help is meant to be public, and this is the most public surface
-   * in the room. It is a name and a word — no cards, nothing about whose turn
-   * it is going well.
-   */
+  /** A name and a word — no cards, and nothing about whose turn it is going well. */
   shouts: Shout[];
   offline: boolean;
   send: (message: ClientMessage) => void;
@@ -103,19 +80,10 @@ export function TableScreen({
   const { call, peeling, announcing, endAnnouncement } = useJudgedCall(log);
 
   /**
-   * The ruling's own clock.
-   *
-   * A judged call gets the same beat wherever it is watched — peel, ruling,
-   * back to the game — and this screen was taking the first half and ignoring
-   * the second. It rendered on `call && !peeling`, and `call` is simply the
-   * most recent `sunnyCalled` in the log, so once the peel was over the ruling
-   * was true forever: in practice until the *next* call, which at a quiet
-   * table is the rest of the game (#185).
-   *
-   * The phone's copy of this hangs off `SunnyAnnounce`, which has something to
-   * dismiss it early — the offender's dialog. Nobody dismisses anything on a
-   * propped-up screen, so here it is the timer alone, off the duration both
-   * screens now read from `useJudgedCall`.
+   * The ruling's own clock. This rendered on `call && !peeling`, and `call` is
+   * just the last `sunnyCalled` in the log, so the ruling stood until the next
+   * one — at a quiet table, the rest of the game (#185). Nobody dismisses
+   * anything on a propped-up screen, so here it is the timer alone.
    */
   useEffect(() => {
     if (!announcing) return;
@@ -123,32 +91,15 @@ export function TableScreen({
     return () => clearTimeout(timer);
   }, [announcing, endAnnouncement]);
   const [view, setView] = useState<"center" | "hands">("center");
-  /**
-   * The invite, opened off the glyph in the top-left corner (#162).
-   *
-   * The one surface in the app where the code was not tappable, so a table
-   * wanting to add a player mid-hand had to go and find somebody's phone. It
-   * needs no socket — the panel is two links and the code, all of which
-   * `RoomView` already carries.
-   */
+  /** Off the glyph in the corner (#162). This was the one surface where the code
+   * was not tappable, so adding a player mid-hand meant finding somebody's phone. */
   const [inviting, setInviting] = useState(false);
 
-  // Nobody touches this screen, so nothing else will keep it awake. Held the
-  // whole time it is showing a room, in the lobby and in a game alike (#81).
+  /** Nobody touches this screen, so nothing else will keep it awake (#81). */
   useWakeLock(true);
 
-  /**
-   * One design, scaled to whatever it has been given — see `fitScale.ts`. This
-   * runs at anything from a tablet at arm's length to a television across a
-   * room, and every one of them should get the same picture rather than a
-   * different composition.
-   *
-   * The box is kept rather than the scale, because two things are read off it:
-   * how much to scale by, and whether the board fits better turned a quarter
-   * (#141). A phone standing in for a spare tablet is the case that needs the
-   * second one, and it needs no code of its own — `shouldTurn` is arithmetic on
-   * the same rectangle.
-   */
+  /** The box is kept rather than the scale, because two things are read off it:
+   * how much to scale by, and whether the board fits better turned (#141). */
   const frame = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<Box>({ width: 0, height: 0 });
   useLayoutEffect(() => {
@@ -164,16 +115,10 @@ export function TableScreen({
   const quarter = shouldTurn(box);
   const scale = fitScale(quarter ? turned(box) : box);
 
-  // The inset goes on the frame, so `fitScale` fits the design into the *safe*
-  // box without learning that hardware exists: the observer reads
-  // `contentRect`, which padding is already out of. It stays right through the
-  // quarter turn for the same reason — the padding is on the physical edges,
-  // where the hardware is, and the design is fitted into whatever that leaves.
-  //
-  // It matters more here than anywhere else since #120 put the seat names on
-  // the very edges of the design box, which is exactly where a notch or a
-  // rounded corner takes its cut. A propped tablet would lose a name rather
-  // than a margin.
+  // The inset goes on the frame, so `fitScale` fits the design into the *safe* box
+  // without learning that hardware exists. It matters most here: the seat names
+  // sit on the very edges of the design box, so a propped tablet would lose a
+  // name rather than a margin.
   return (
     <div
       ref={frame}
@@ -188,16 +133,12 @@ export function TableScreen({
           {
             width: TABLE_DESIGN.width,
             height: TABLE_DESIGN.height,
-            // Read right to left: sized first, then turned. A transform changes
-            // nothing about layout, so the box stays centred in the frame either
-            // way and the turn costs no arithmetic anywhere else on this screen.
+            // Read right to left: sized first, then turned.
             transform: `${quarter ? "rotate(90deg) " : ""}scale(${scale})`,
-            // How much bigger than its design size everything in here is being
-            // painted. Nothing inside an element can see a transform on an
-            // ancestor, so the one place that knows the number publishes it —
-            // and `bee-back` divides its thread back down to the width it has
-            // on every other screen in the app (#169). The quarter turn is not
-            // in it: turning changes nothing about how large a pixel is.
+            // Nothing inside an element can see a transform on an ancestor, so the place
+            // that knows publishes it and `bee-back` divides its thread back down
+            // (#169). The quarter turn is not in it — turning changes nothing
+            // about how large a pixel is.
             "--paint-scale": scale,
           } as CSSProperties
         }
@@ -228,9 +169,8 @@ export function TableScreen({
           <Waiting room={room} />
         )}
 
-        {/* The one thing that isn't the game: a screen showing a table it has
-            lost touch with should say so rather than showing a still life. In
-            the top band's spare middle, which nothing else claims. */}
+        {/* A screen that has lost touch with its table should say so rather than
+            show a still life. */}
         {offline ? (
           <p
             className="absolute left-1/2 top-1.5 -translate-x-1/2 text-xl text-amber-300"
@@ -241,12 +181,8 @@ export function TableScreen({
         ) : null}
       </div>
 
-      {/* Outside the design box on purpose: it is about the device, not the
-          board, so it must not be turned along with the picture it is asking
-          you to turn. The invite is out here for the same reason and a
-          stronger one — inside, it would be scaled by `fitScale` and stood on
-          its side by the quarter turn, and it is a panel somebody is holding a
-          camera up to. */}
+      {/* Outside the design box on purpose: both are about the device rather than
+          the board, and the invite is a panel somebody holds a camera up to. */}
       <TableRotateNudge />
 
       {inviting ? (
@@ -261,21 +197,10 @@ export function TableScreen({
   );
 }
 
-/**
- * What the two views leave the piles, in design pixels.
- *
- * The centre view is everything inside the bands. The hands view is the `h-60`
- * slot it keeps above the seat strip, across the width its own container has.
- * Both are stated here rather than measured because the design box is a fixed
- * rectangle — the whole point of `fitScale.ts` — so this is arithmetic a test
- * can hold rather than a layout somebody has to look at.
- */
-/**
- * Air between the piles and the bands. A name fills very nearly the whole of
- * its own band — `text-3xl` and its padding come to 46 of the 48 — so piles
- * fitted to the band edge exactly are piles that touch the names, which reads
- * as the collision this was fixing rather than the absence of one.
- */
+/** Stated rather than measured, because the design box is a fixed rectangle —
+ * the whole point of `fitScale.ts` — so this is arithmetic a test can hold. */
+/** A name fills 46 of its 48-pixel band, so piles fitted flush touch the names,
+ * which across a room reads as the collision this was fixing. */
 const GUTTER = 10;
 
 const CENTRE_PILE_ROOM = {
@@ -284,15 +209,8 @@ const CENTRE_PILE_ROOM = {
 };
 const HANDS_PILE_ROOM = { width: TABLE_DESIGN.width - 40, height: 240 };
 
-/**
- * The point each view centres its piles on, which is the other half of knowing
- * where the deck is.
- *
- * Both are derived rather than written down. The centre view's container is
- * symmetric — the same band top and bottom, the same inset either side — so it
- * is the middle of the room between the bands. The hands view keeps its slot
- * directly under the top band, with the seat strip below.
- */
+/** Derived rather than written down: the centre view's container is symmetric,
+ * and the hands view keeps its slot directly under the top band. */
 const CENTRE_PILES_AT = {
   x: TABLE_DESIGN.width / 2,
   y: (BAND.top + (TABLE_DESIGN.height - BAND.bottom)) / 2,
@@ -303,19 +221,10 @@ const HANDS_PILES_AT = {
 };
 
 /**
- * The piles at whatever size the room they were given will take.
- *
- * The scale used to be `scale-[2.5]`, and a paint transform is invisible to the
- * layout around it: the piles were laid out at their unscaled 198px, centred in
- * the full height of the design, and then painted about their own middle — into
- * the band the seat names live in, which is how a name came to be drawn on top
- * of the draw pile (#159).
- *
- * Two halves fix it and both are needed. The scale is **asked for** rather than
- * chosen, so it can never be more than the room allows; and the wrapper reserves
- * the size that will actually be painted, so the box the layout sees and the
- * ink on the screen are the same rectangle. `pileBox` is what makes the second
- * one true — including the twelve pixels the suit circle hangs off the corner.
+ * The piles at whatever size the room they were given will take. `scale-[2.5]`
+ * was a paint transform and therefore invisible to the layout, so the ink grew
+ * about its own middle into the band the seat names live in (#159). The scale is
+ * **asked for** now, and the wrapper reserves what will actually be painted.
  */
 function ScaledPiles({ room, outer, children }: { room: Box; outer: number; children: ReactNode }) {
   const box = pileBox("xl");
@@ -329,11 +238,8 @@ function ScaledPiles({ room, outer, children }: { room: Box; outer: number; chil
         style={
           {
             transform: `scale(${scale})`,
-            // Multiplied by hand rather than compounded in CSS: a custom
-            // property that referred to itself would be a cycle and resolve to
-            // nothing at all. This is the scale the board is already applying
-            // times the one applied here, which together is what the ink on the
-            // draw pile is multiplied by (#169).
+            // Multiplied by hand: a custom property referring to itself would be a cycle
+            // and resolve to nothing (#169).
             "--paint-scale": outer * scale,
           } as CSSProperties
         }
@@ -345,14 +251,8 @@ function ScaledPiles({ room, outer, children }: { room: Box; outer: number; chil
   );
 }
 
-/**
- * The two views, drawn as the thing each one shows (#168).
- *
- * Both are cards, because that is what this screen is made of: the middle of
- * the table is the two piles side by side, and every hand is a fan. Sized in
- * `em` so the pair scale with whatever the button is set at, and stroked in
- * `currentColor` so they take the button's own hover.
- */
+/** Both views drawn as the thing each one shows (#168). Sized in `em` and
+ * stroked in `currentColor`, so the pair take the button's own size and hover. */
 function CentreIcon() {
   return (
     <svg
@@ -380,13 +280,8 @@ function HandsIcon() {
       strokeWidth="1.8"
       strokeLinejoin="round"
     >
-      {/*
-        Filled and faded first, which was unreadable: three translucent shapes
-        overlapping at this size come out as one grey smudge, and the ghost
-        button is already drawing at 70%. Outlines keep each card a card, and
-        the near ones paint over the far ones — so the fan needs no opacity to
-        read as a fan.
-      */}
+      {/* Filled and faded first, which came out as one grey smudge at this size.
+        Outlines keep each card a card. */}
       <rect
         x="4.8"
         y="6"
@@ -418,9 +313,8 @@ function Waiting({ room }: { room: RoomView }) {
     <>
       <EdgeNames room={room} />
 
-      {/* Side by side rather than stacked. Stacked, the code at a size worth
-          crossing a room for plus the room code under it came to more than the
-          board is tall, and the bottom of it landed on the names. */}
+      {/* Stacked, a code worth crossing a room for plus the room code under it came
+          to more than the board is tall. */}
       <div
         style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
         className="absolute flex items-center justify-center gap-10"
@@ -431,10 +325,8 @@ function Waiting({ room }: { room: RoomView }) {
           className="w-80 shrink-0 p-5"
         />
         <div className="min-w-0">
-          {/* What this device now is, said on the device itself. Whoever
-              scanned the code is across the table watching this screen light
-              up, and "shared screen" is the confirmation that the scan landed
-              on the right one of the two codes in the lobby (#138). */}
+          {/* Whoever scanned is across the table watching this light up, and this
+              confirms it landed on the right one of the two codes (#138). */}
           <p className="text-xl uppercase tracking-[0.3em] text-white/35">Shared screen</p>
           <p className="mt-2 font-mono text-7xl font-semibold tracking-[0.18em] text-amber-300">
             {room.code}
@@ -446,10 +338,7 @@ function Waiting({ room }: { room: RoomView }) {
         </div>
       </div>
 
-      {/* Waiting state only, never over a game: a propped screen is set up
-          before the cards come out, which is also when the host is standing at
-          it — and #119's invite flow is the moment it gets put there. A pilot;
-          see `TableInstall`. */}
+      {/* Waiting state only, never over a game. */}
       <TableInstall />
     </>
   );
@@ -472,13 +361,13 @@ function Playing({
   onDraw,
 }: {
   room: RoomView;
-  /** What the board is being scaled by, for anything that has to divide it out. */
+  /** What the board is scaled by, for anything that has to divide it out. */
   boardScale: number;
   game: GameView;
   nameOf: (playerId: string) => string;
   call: ReturnType<typeof useJudgedCall>["call"];
   peeling: boolean;
-  /** The evidence has gone and the ruling is up. It has a life; see above. */
+  /** The evidence has gone and the ruling is up. */
   announcing: boolean;
   shouts: Shout[];
   log: LoggedEvent[];
@@ -489,9 +378,9 @@ function Playing({
 }) {
   const finished = game.status === "over";
   const asking = shoutingNow(shouts);
-  // The same conditions the server checks, so the pile is only offered when the
-  // tap will land — including the bot one: a bot's turn passes under a finger
-  // already on its way down, and nothing off this screen moves a bot.
+  // The same conditions the server checks, the bot one included: a bot's turn
+  // passes under a finger already on its way down, and nothing off this screen
+  // moves a bot.
   const seatOnClock = room.seats.find((seat) => seat.id === game.waitingOn);
   const canDraw =
     room.irl &&
@@ -501,31 +390,14 @@ function Playing({
     !seatOnClock.bot;
   const latest = log[0]?.event ?? null;
 
-  /**
-   * The deck running out, given a beat this screen can join in with (#209).
-   *
-   * Off the same hook the phones read, so the five seconds are the same five
-   * seconds everywhere — which is the whole reason the timing is a hook rather
-   * than a constant in either screen.
-   */
+  /** Off the same hook the phones read, so it is the same five seconds (#209). */
   const { drawPileSize: reshuffling } = useReshuffle(log);
 
-  /**
-   * Which way up this board says things (#160).
-   *
-   * The seat names have read from outside their own edge since #141 and
-   * everything said in *words* was still drawn upright, so a player at the top
-   * read their own name the right way up and the sentence about their own turn
-   * upside down. Four pieces turn together: the prompt, the deck count, the
-   * view toggle and the suit at the pile.
-   *
-   * Two positions rather than four — see `facing.ts` for why the prompt cannot
-   * be stood on its end, and #163 for the hands view taking the same answer.
-   */
+  /** Which way up the board says things (#160). Two positions rather than four —
+   * see `facing.ts` for why the prompt cannot be stood on its end. */
   const turn = facingTurn(room, game);
 
-  // Which view is up decides where the deck is, and a card in the air has to
-  // leave the deck that is actually on screen.
+  // A card in the air has to leave the deck that is actually on screen.
   const pileRoom = view === "hands" ? HANDS_PILE_ROOM : CENTRE_PILE_ROOM;
   const pilesAt = view === "hands" ? HANDS_PILES_AT : CENTRE_PILES_AT;
 
@@ -552,8 +424,7 @@ function Playing({
 
   return (
     <>
-      {/* The hand strip names everybody itself, so the edges would be saying it
-          twice — and the strip is wide enough to reach them. */}
+      {/* The hand strip names everybody itself. */}
       {view === "center" ? (
         <EdgeNames room={room} game={game} asking={asking} />
       ) : null}
@@ -570,15 +441,11 @@ function Playing({
         scale={fitScale(pileRoom, pileBox("xl"))}
       />
 
-      {/* Both in the top band's corners, which no name reaches: the ends of
-          each edge are left free (`tableEdges.ts`), and the board is composed
-          around the piles, so anything sat above them is the first thing the
-          peel — which fans well outside the pile it hangs off — would land on. */}
+      {/* No name reaches the top corners, and the board is composed around the
+          piles, so anything above them is the first thing the peel lands on. */}
 
-      {/* This was four grey characters in a `<p>`, and the only surface in the
-          app where the code was not tappable: a table wanting to add a player
-          mid-hand had to go to somebody's phone. Now it is the same invite the
-          phones open, off the same glyph (#162). */}
+      {/* Four grey characters in a `<p>` until #162, and the only surface in the
+          app where the code was not tappable. */}
       <button
         type="button"
         aria-label={`Invite to room ${room.code}`}
@@ -593,11 +460,8 @@ function Playing({
         <QrGlyph />
       </button>
 
-      {/* Two icons rather than two words (#168). Everything else up here is a
-          glyph or a number, and a word in a corner of a board propped in the
-          middle of a table reads as a heading for the view you are in about as
-          readily as a way out of it. It shows where it goes, and the label says
-          so for anyone not reading pictures. */}
+      {/* Two icons rather than two words (#168): a word in a corner reads as a
+          heading for the view you are in about as readily as a way out of it. */}
       <Button
         variant="ghost"
         className="absolute right-2 top-1 p-2 text-3xl"
@@ -618,29 +482,14 @@ function Playing({
               {piles}
             </ScaledPiles>
           </div>
-          {/*
-            The strip flips, and only the strip (#163).
-
-            Turning the whole panel was the first thing tried and it is wrong
-            twice: 180° swaps top for bottom, so the piles land at the foot of
-            the board and under the prompt pinned there — and the piles inside
-            it would be turned by the panel *and* by their own `turn`, which
-            comes to no turn at all. The strip is the part that has to be
-            readable from the other side of the table; the piles have `turn`
-            for their two bits of writing, and a card is already double-headed.
-
-            One transform on the container, so `Seats` — the phone's own
-            component — never learns this happened, and its scrolling and fan
-            arithmetic are untouched.
-          */}
+          {/* The strip flips, and only the strip (#163). 180° swaps top for bottom, so
+            a turned panel puts the piles under the prompt pinned to the bottom
+            band — and the piles inside would be turned twice, which is no turn
+            at all. */}
           <div className="min-h-0 w-full flex-1">
-            {/*
-              The turn goes on a box the size of the strip, not on the box that
-              *holds* it. `flex-1` fills the height that is left and the strip
-              sits at the top of it, so turning that box about its centre swings
-              the strip to the bottom — into the prompt pinned there. Turned
-              about its own middle, it stays where it was drawn.
-            */}
+            {/* On a box the size of the strip, not the box that *holds* it: `flex-1`
+              fills the height that is left, so turning that swings the strip to
+              the bottom. */}
             <div style={{ transform: `rotate(${turn}deg)` }}>
               <Seats room={room} game={game} shouts={shouts} />
             </div>
@@ -657,10 +506,8 @@ function Playing({
         </div>
       )}
 
-      {/* The prompt, a floating pill over the bottom of the table so it costs
-          the board no height — and the piece that decided this turns rather
-          than spins. It stays in its band and reads from whichever end of the
-          table is playing (#160). */}
+      {/* A floating pill, so it costs the board no height, and it reads from
+          whichever end of the table is playing (#160). */}
       <div className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex max-w-128 justify-center">
         <p
           style={{ transform: `rotate(${turn}deg)` }}
@@ -668,11 +515,8 @@ function Playing({
           role="status"
         >
           {announcing && call ? (
-            // The ruling, once the evidence has been and gone. The whole table
-            // watched the peel; this is what it came to. It holds the band for
-            // the announce beat and then gives it back — a game can end on the
-            // play a landed call forced, so this comes before `finished` and
-            // the news waits its turn.
+            // It holds the band for the announce beat and then gives it back. A game can
+            // end on the play a landed call forced, so this comes before `finished`.
             <span className="text-amber-300">
               <span aria-hidden>☀️</span> {nameOf(call.callerId)} called it on{" "}
               {nameOf(call.targetId)} — said the {call.card.rank}
@@ -680,12 +524,8 @@ function Playing({
               <span className="text-white/70">{call.correct ? "Right." : "Wrong."}</span>
             </span>
           ) : reshuffling !== null ? (
-            // The deck running out, in the band the prompt and the ruling
-            // share. This screen has no log at all, so without it a reshuffle
-            // here was a number changing (#209). It comes after the ruling for
-            // the reason the peel comes first: a recycle can land in the same
-            // breath as a call, and the call is the thing that has to be
-            // watched.
+            // This screen has no log, so without it a reshuffle was a number changing
+            // (#209). After the ruling, for the reason the peel comes first.
             <span className="text-amber-300">
               {turnPrompt(game, nameOf, false, false, reshuffling)}
             </span>
@@ -706,15 +546,10 @@ function Playing({
 }
 
 /**
- * The names round the edge, each one turned to be read by whoever is sitting
- * there — and each one carrying that seat's count, which is what took the
- * separate list of counts off the board. Two lists of the same players, one of
- * them stacked under the piles, was most of what used to overflow.
- *
- * Placed by their own centre point so the turn happens about the middle of the
- * label: positioned by an edge and then rotated, a long name on the left swung
- * a third of the way into the board. The wrapper is the anchor, the inner box
- * does the turning, and the band each one sits in is reserved by `BAND`.
+ * The names round the edge, each turned to be read from that seat and each
+ * carrying its own count — two lists of the same players was most of what used
+ * to overflow. Placed by their own centre point, so the turn happens about the
+ * middle of the label rather than swinging it into the board.
  */
 function EdgeNames({
   room,
@@ -734,39 +569,21 @@ function EdgeNames({
         if (!spot) return null;
         const player = game?.players.find((candidate) => candidate.id === seat.id);
         const onClock = game?.waitingOn === seat.id;
-        // The same point a card drawn by this seat is thrown at (#164), which
-        // is the reason it is worked out in `tableEdges.ts` rather than here:
-        // two things aiming at a seat should not each have their own idea of
-        // where it is. Placed as plain `left`/`top` now that it is a point
-        // rather than an inset — the label still centres itself on it below.
+        // The same point a card drawn by this seat is thrown at (#164): two things
+        // aiming at a seat should not each have their own idea of where it is.
         const at = seatPoint(spot, TABLE_DESIGN);
         const anchor: CSSProperties = { left: at.x, top: at.y };
 
         return (
-          /*
-            The anchor has no size of its own, and that is the load-bearing bit.
-            Sized by its label, a `right`/`bottom` anchor pins the far edge of
-            the *label* rather than the point, and the whole thing lands a label
-            short of where it was asked for — which put the right-hand names a
-            third of the way into the board and the bottom ones a line high.
-            Zero-sized, every edge means the same thing, and the label centres
-            itself on it.
-          */
+          /* The anchor has no size of its own, which is load-bearing: sized by its
+            label, a `right`/`bottom` anchor pins the far edge of the *label*
+            rather than the point. */
           <div key={seat.id} style={anchor} className="absolute h-0 w-0">
-            {/*
-              Every seat is a pill, and the seat on the clock is a brighter one.
-              It used to be that only the active seat had a shape at all, so the
-              highlight was a background *appearing* rather than a change of
-              emphasis — three names and a badge, instead of four names one of
-              which is lit (#165).
-
-              One size per thing, too. Name, count and the ask were three type
-              sizes sharing one baseline, which is most of what made the row
-              look thrown together; they are a hierarchy now, aligned on their
-              centres. The name coming down to `text-2xl` is also what lets a
-              ten-character one fit whole — see `LABEL` — and it puts a name at
-              the same size as the sentence about the game rather than above it.
-            */}
+            {/* Every seat is a pill and the seat on the clock is a brighter one; only
+              the active seat used to have a shape at all, so the highlight was a
+              background appearing rather than a change of emphasis (#165). Name,
+              count and ask were three type sizes on one baseline — coming down
+              to `text-2xl` is also what lets a ten-character name fit whole. */}
             <div
               style={{ transform: `translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)` }}
               className={[
@@ -782,20 +599,15 @@ function EdgeNames({
               <span className="min-w-0 truncate">{seat.name}</span>
               {player ? (
                 player.eliminated ? (
-                  /* A word, not a number in a number's slot. Being out is a
-                     state rather than a very small hand, and the two used to be
-                     three mono characters apart. */
+                  /* Being out is a state rather than a very small hand. */
                   <span className="shrink-0 text-sm uppercase tracking-widest">out</span>
                 ) : (
                   <span
                     className={[
                       "shrink-0 font-mono text-xl tabular-nums",
-                      /* Down to a couple of cards is marked whether or not it
-                         is their turn. It used to carry `!onClock`, so the seat
-                         about to play the turn that could finish them — the
-                         most interesting fact on the board — was the one seat
-                         whose count was drawn as ordinary text (#170). The
-                         phone's seat strip never had that clause. */
+                      /* Marked whether or not it is their turn: it used to carry `!onClock`,
+                         so the seat about to play the turn that could finish
+                         them was drawn as ordinary text (#170). */
                       player.cardCount <= 2 ? "text-rose-300" : "opacity-60",
                     ].join(" ")}
                   >
@@ -803,10 +615,8 @@ function EdgeNames({
                   </span>
                 )
               ) : null}
-              {/* The standing mark, and then whatever is being said this
-                  second. Both, because they answer different questions: one is
-                  *this seat is playing with hints on* and lasts, the other is
-                  *they just said something* and does not. */}
+              {/* Both, because they answer different questions: one lasts, the other
+                  is *they just said something*. */}
               {seat.hinted ? <HintedMark name={seat.name} className="text-lg" /> : null}
               {asking.get(seat.id) ? (
                 <HelpAsk kind={asking.get(seat.id)} className="shrink-0 text-lg" />
@@ -820,39 +630,17 @@ function EdgeNames({
 }
 
 /**
- * A card leaving the deck for whoever drew it.
- *
- * It used to be one of four fixed vectors — `dy: -330` for anybody at the top,
- * and so on — thrown from `left-1/2 top-1/2`, the middle of the design box. Two
- * things were wrong with that and both show at a real table. The middle of the
- * board is not where the deck is, so the card appeared out of empty felt beside
- * it. And an edge holds two seats on any table of five or more, which meant the
- * card was thrown at the midpoint between two people, towards neither (#164).
- *
- * Both ends are worked out from the same arithmetic that draws the board:
- * `deckPoint` off the fitting that placed the piles, `seatPoint` off the
- * placement that drew the names. So the card leaves the deck it came from and
- * arrives at the name of the person who drew it, at every seat count.
- *
- * It is drawn at the size the deck is drawn at, for the same reason — a card
- * that comes off a pile should be the size of the cards in it.
+ * A card leaving the deck for whoever drew it. It used to be one of four fixed
+ * vectors from the middle of the design box — which is not where the deck is,
+ * and an edge holds two seats on any table of five or more, so it was thrown at
+ * the midpoint between two people (#164). Both ends come from the same
+ * arithmetic that draws the board.
  */
 /**
- * The pile going back into the deck, on the one screen with no flight layer.
- *
- * `TableMotion` is deliberately absent here — the board is drawn through one
- * transform and the flight layer portals to the body, where that transform
- * cannot reach it — so this screen does its own arithmetic, exactly as
- * `TableFlight` does for a draw. Nine face-down cards, staggered, pile → deck,
- * over most of the five seconds the whole table is holding for (#209).
- *
- * **Face down, all of them.** The recycled pile is shuffled and its order *is*
- * deck order, which `redact.ts` guards; the only face this moment shows is the
- * card turned up at the end of it, which arrives by the ordinary route.
- *
- * Nothing here gates anything. The draw pile under it stays tappable — in an
- * IRL room this screen's pile draws for the player on the clock — and the bots
- * carry on to their own timing.
+ * The pile going back into the deck, on the one screen with no flight layer, so
+ * it does its own arithmetic (#209). **Face down, all of them**: the recycled
+ * pile is shuffled and its order *is* deck order, which `redact.ts` guards. It
+ * gates nothing — the draw pile under it stays tappable.
  */
 function TableRecycle({
   running,
@@ -860,7 +648,7 @@ function TableRecycle({
   to,
   scale,
 }: {
-  /** Whether the beat is on. Null when it is not, which draws nothing. */
+  /** Whether the beat is on. */
   running: boolean;
   from: Point;
   to: Point;

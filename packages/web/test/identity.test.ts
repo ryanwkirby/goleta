@@ -22,27 +22,17 @@ import {
 
 /**
  * What this browser remembers, and what it does when it is not allowed to
- * remember anything.
+ * remember anything. There is no login anywhere in this app, so `localStorage`
+ * is the whole of identity.
  *
- * There is no login anywhere in this app and there is not going to be one, so
- * `localStorage` is the whole of identity: a seat is a player id plus a secret
- * token, and everything else here is a preference. That makes two things worth
- * pinning that nothing pinned before.
+ * **The keys** are the contract with every browser that already has a value
+ * under one: renaming one silently unseats everybody mid-game, so they are
+ * asserted literally. **The failure** is that private browsing and a full quota
+ * *throw* rather than returning null — seventeen guards, and not one was covered
+ * before this file.
  *
- * **The keys.** They are the contract with every browser that already has a
- * value under one. Renaming one is not a refactor — it is silently unseating
- * everybody mid-game and throwing away every preference they have set, with no
- * error anywhere to say so. They are asserted literally, on purpose.
- *
- * **The failure.** Private browsing and a full quota both *throw* rather than
- * returning null, and every accessor in the module carries a `try/catch` for
- * exactly that. Seventeen of them, and not one was covered: the guards were
- * load-bearing and untested at the same time. The `refuses` block below is the
- * reason this file exists.
- *
- * The suite runs under `environment: "node"`, so there is no real
- * `localStorage` to use and none is wanted — a plain object is a better fake
- * than a real one here, because it can be made hostile on demand.
+ * The suite runs under `environment: "node"`, so the fake is a plain object,
+ * which is better than a real one here: it can be made hostile on demand.
  */
 
 const REAL = Object.getOwnPropertyDescriptor(globalThis, "localStorage");

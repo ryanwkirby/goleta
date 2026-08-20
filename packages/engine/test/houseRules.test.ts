@@ -1,12 +1,8 @@
 /**
  * The alternate rules, and the switch that turns the Sunny Rule off.
- *
- * Every rule here is one the game already had written down. `simulation.test.ts`
- * proves each combination of them terminates cleanly and conserves its cards;
- * this file is about whether each one does the specific thing it promises.
- *
- * The standard-rules half of each pair matters as much as the variant: a table
- * that hasn't touched the lobby must play exactly the game it played before.
+ * `simulation.test.ts` proves each combination terminates and conserves cards;
+ * this is about whether each one does the specific thing it promises. The
+ * standard-rules half of each pair matters as much as the variant.
  */
 
 import { describe, expect, it } from "vitest";
@@ -79,8 +75,8 @@ describe("the Power of Eights", () => {
   });
 
   it("passes the call on when the 8 was the player's last card", () => {
-    // Under the standard rule you name the suit on your way out of the game.
-    // Here the call was never yours, so being eliminated changes nothing.
+    // Under the standard rule you name the suit on your way out. Here the call was
+    // never yours, so being eliminated changes nothing.
     let state = table({
       hands: { a: ["8C"], b: ["9H"], c: ["4D"] },
       top: "5S",
@@ -118,7 +114,7 @@ describe("the Power of Eights", () => {
 
   it("still names nothing for an 8 played during a Sunny resolution", () => {
     // The touched card lands on top a moment later, so there is no suit worth
-    // naming — and that holds however the table has configured eights.
+    // naming, however the table has configured eights.
     let state = draw(
       table({
         hands: { a: ["8C", "2C"], b: ["9C"], c: ["4D"] },
@@ -212,8 +208,8 @@ describe("a table playing without the Sunny Rule", () => {
   it("opens no challenge window, and takes no snapshot", () => {
     const state = illegalDraw(noSunny);
     expect(state.challenge).toBeNull();
-    // The counter the lockout is measured on never starts, because the
-    // expensive per-draw bookkeeping never happens at all.
+    // The counter the lockout is measured on never starts: the per-draw bookkeeping
+    // never happens at all.
     expect(state.totalDraws).toBe(0);
     // The draw itself is perfectly ordinary.
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1", "KD#1"]);
@@ -247,8 +243,8 @@ describe("a table playing without the Sunny Rule", () => {
   });
 
   it("reads the lockout length from the table's own rules", () => {
-    // Not a lobby control this pass, but the engine takes it from options
-    // rather than a constant, so a table could be given a different one.
+    // Not a lobby control this pass, but the engine takes it from options rather
+    // than a constant.
     let state = draw(
       table({
         hands: { a: ["2C"], b: ["9C"], c: ["4D"] },

@@ -10,12 +10,9 @@ import type { HandControls, HelpControls, SunnyControls } from "../../lib/tableP
 
 /**
  * Your own cards at the foot of the upright table, and the small print that
- * belongs to them.
- *
- * **Everything in here belongs to a seat.** A watcher is shown the table and
- * nothing that implies they are at it: no hand frame over no cards, no sort
- * control over nothing, no offer of help nobody can take, no turn ring that
- * will never light. The caller decides that by not rendering this at all.
+ * belongs to them. **Everything in here belongs to a seat**: a watcher is shown
+ * nothing that implies they are at the table, which the caller decides by not
+ * rendering this at all.
  */
 export function OwnHand({
   game,
@@ -41,14 +38,10 @@ export function OwnHand({
   return (
     <div className="relative flex flex-col">
       {/*
-        The way into a call, over the felt just above your own cards — where
-        your eyes are during somebody else's turn, and which is the whole
-        reason it is here rather than back in the seat strip (#189).
-
-        Pinned to the left rather than the middle because the middle above this
-        box is where your own `HelpShout` rises. It is nowhere near the draw
-        pile, which is up in the middle of the table: a fat target beside the
-        deck is a mis-tap into the exact violation it accuses.
+        The way into a call, over the felt just above your own cards — where your
+        eyes are during somebody else's turn (#189). Pinned to the left because
+        the middle above this box is where your own `HelpShout` rises, and
+        nowhere near the draw pile up in the middle of the table.
       */}
       {sunny.target ? (
         <SunnyCallOffer
@@ -59,12 +52,11 @@ export function OwnHand({
         />
       ) : null}
 
-      {/* Kept clear whether or not the offer is showing, so the hand doesn't
-          move under your fingers when it appears. */}
+      {/* Kept clear whether or not the offer is showing, so the hand doesn't move
+          under your fingers when it appears. */}
       <div className="flex min-h-7 items-center gap-2 px-1">
         {help.stalled ? <HelpLink onAsk={help.onAskForHelp} /> : null}
-        {/* Yours alone: the server sends this to nobody else, and a missed call
-            is not something the table needs announcing. */}
+        {/* Yours alone: the server sends this to nobody else. */}
         {game.sunnyLockedDraws > 0 ? (
           <span className="text-xs text-white/35" aria-live="polite">
             <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
@@ -79,16 +71,13 @@ export function OwnHand({
       {/* Your own shout, over your own cards, same as everyone else sees. */}
       {help.shouting ? <HelpShout kind={help.shouting} /> : null}
 
-      {/* The same frame every other seat gets when the table is waiting on it.
-          Your own cards aren't in the strip, so the one seat that most wants
-          the highlight was the only one without it.
+      {/* The same frame every other seat gets when the table is waiting on it:
+          your own cards aren't in the strip, so the one seat that most wants the
+          highlight was the only one without it.
 
-          It is also the box the fan is fitted against. It has no padding of its
-          own and `Hand` keeps none once it is fanning, so the width measured
-          here is the width the cards actually get — an inset here and an inset
-          in the arithmetic are two places to disagree. Its own width comes from
-          the column above rather than from the cards inside it, so measuring it
-          cannot feed back into what it measures. */}
+          It is also the box the fan is fitted against — no padding of its own,
+          and its width comes from the column above rather than from the cards
+          inside it, so measuring it cannot feed back into what it measures. */}
       <HandFrame ref={boxRef} mine={hand.mine} refusal={hand.refusal}>
         <Hand
           cards={hand.cards}
@@ -96,9 +85,8 @@ export function OwnHand({
           mode={hand.mode}
           assist={hand.assist}
           onChoose={hand.onChooseCard}
-          // Named rather than left to `Hand`'s default, because the step above
-          // is fitted against this rung's width and the two have to be the
-          // same rung.
+          // Named rather than left to `Hand`'s default: the step above is fitted
+          // against this rung's width, and the two have to be the same rung.
           size={FULL_TABLE.hand}
           step={step}
           fit

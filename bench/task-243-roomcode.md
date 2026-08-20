@@ -3,12 +3,16 @@
 **The prompt below is verbatim and must not be edited.** Substitute the worktree
 path on the first line and change nothing else.
 
-Written as the **low-constraint arm** of round three, which measures the comment
-diet (#264 / PR #265). Round three's pair is deliberately mismatched in shape:
+Written as the **low-constraint arm** of round six, which measures the comment
+diet (#264 / PR #265). Round six's pair is deliberately mismatched in shape:
 this task is two components, crisp acceptance criteria, and almost nothing in
-`AGENTS.md` bearing on it, while `task-259-piles.md` is one shared component with
-a dense constraint set. If a subtraction of comments helps or hurts, the two
-should not move together.
+`AGENTS.md` bearing on it, while its partner — `task-259-pile-side.md`, which
+already had three arms behind it — is one shared component with a dense
+constraint set. If a subtraction of comments helps or hurts, the two should not
+move together.
+
+It behaved like a control: +4.3%, inside noise, with the after arm doing more
+work than the before arm. The interesting half of round six is all on #259.
 
 Chosen on merit from the backlog filed on 2026-08-20, before any arm was run.
 

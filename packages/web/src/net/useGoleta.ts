@@ -35,17 +35,13 @@ const SHOUT_MS = 2600;
 
 /**
  * How often this browser says something, and how long it sits in silence before
- * deciding the socket it is holding is not a connection any more.
+ * deciding the socket it holds is not a connection any more. A socket that
+ * *closes* announces itself; one that **half-opens** does not, and `readyState`
+ * stays `OPEN` for as long as anybody cares to look (#183).
  *
- * A socket that *closes* announces itself. A socket that **half-opens** does
- * not: the screen locks, wifi hands over to cellular, and `readyState` stays
- * `OPEN` for as long as anybody cares to look. From here the table simply goes
- * quiet, and quiet is what a table between turns looks like too (#183).
- *
- * So the client speaks first. `ping`/`pong` were already on the wire, and the
- * budget is measured against *anything* arriving. The server allows 60s, so 25s
- * gives up first and reconnects rather than waiting to be terminated — and it is
- * two and a half pings, so one lost answer never costs a reconnect.
+ * So the client speaks first, on `ping`/`pong` that were already on the wire.
+ * The server allows 60s, so 25s gives up first and reconnects rather than
+ * waiting to be terminated — and it is two and a half pings.
  */
 const PING_MS = 10_000;
 const SILENCE_MS = 25_000;
@@ -80,21 +76,15 @@ export const useGoleta = (): Goleta => {
 
   /**
    * Anything that can't go out now waits for the next socket — except a move,
-   * which is refused on the spot.
-   *
-   * The queue is right for `rejoin`, `watch` and the lobby messages: they say
-   * *who you are* and *what you want the room to be*, and neither goes stale. An
-   * `intent` is the opposite — a decision taken against the board as it stood
-   * when the finger came down. Most of the queue survives because the engine
-   * refuses it; a **draw** does not, because it is legal or illegal depending on
-   * what the board looked like at that instant, and the board moves while a seat
-   * is away. A draw that was the only move on the board can arrive as a Sunny
-   * violation its player never chose (#152).
+   * which is refused on the spot. The queue is right for `rejoin`, `watch` and
+   * the lobby messages, which do not go stale. An `intent` is a decision taken
+   * against the board as it stood when the finger came down: most of the queue
+   * survives because the engine refuses it, but a **draw** is legal or illegal
+   * depending on that instant, and it can arrive as a Sunny violation its player
+   * never chose (#152).
    *
    * So it is dropped, and **the drop is said out loud** — swallowing it silently
-   * is the *tap it again* problem #150 is about, wearing a different hat. It
-   * leans on `status` being honest about a half-open socket, which is why #183
-   * landed first.
+   * is the *tap it again* problem #150 is about, wearing a different hat.
    */
   const send = useCallback((message: ClientMessage) => {
     const socket = socketRef.current;
@@ -142,19 +132,14 @@ export const useGoleta = (): Goleta => {
 
       /**
        * Say something, and give up on a socket that has said nothing back. Run on
-       * a timer and again the moment this tab is looked at or the machine says
-       * it is online.
+       * a timer and again the moment this tab is looked at or the machine says it
+       * is online.
        *
-       * **Nothing is judged while the tab is hidden**, which is what makes the
-       * budget safe to act on: a hidden tab has its timers throttled, so silence
-       * there is the browser's doing rather than the network's, and a socket
-       * condemned on it would reconnect a backgrounded tab once a minute.
-       *
-       * Which leaves the guarantee where it belongs: **any board somebody can
-       * see has been verified inside the budget.** Coming back from a lock
-       * screen is judged the hard way — the cost of being wrong that way is one
-       * `rejoin` round trip, and the other way is a player shown a board that
-       * has moved.
+       * **Nothing is judged while the tab is hidden**: its timers are throttled,
+       * so silence there is the browser's doing rather than the network's, and a
+       * socket condemned on it would reconnect a backgrounded tab once a minute.
+       * Which leaves the guarantee where it belongs — **any board somebody can
+       * see has been verified inside the budget**.
        */
       check = (): void => {
         if (mine !== generation || socket.readyState !== WebSocket.OPEN) return;

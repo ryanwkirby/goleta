@@ -1,17 +1,9 @@
 /**
- * Your own settings, as opposed to the table's (#188). The host has a cog behind
- * the table (#134) and nobody else had anything.
- *
- * **The bar for putting something in here is that it belongs to one player and
- * changes nothing about the room.** That rules out everything on
- * `HostSettings.tsx`. Two cogs this close together want the difference to be
- * legible, so this one is a person rather than a gear and says *you* where the
- * host's says *table*. It also rules out the sort control, which is already next
- * to the hand it arranges.
- *
- * **A watcher gets no cog**: the only thing in here is about your own cards.
- * Opening it sends nothing — the hints toggle inside is public (#187), but that
- * is the toggle's doing.
+ * Your own settings, as opposed to the table's (#188). **The bar for putting
+ * something in here is that it belongs to one player and changes nothing about
+ * the room**, which rules out everything on `HostSettings.tsx`. Two cogs this
+ * close together want the difference legible, so this one is a person rather
+ * than a gear. **A watcher gets none**: the only thing in it is about cards.
  */
 
 import { useState } from "react";

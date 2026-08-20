@@ -41,14 +41,10 @@ function NoSign({ className = "" }: { className?: string }) {
 }
 
 /**
- * The answer to a mis-tap. Placed immediately above the top edge of your own
- * cards (#99) — it answers a tap you just made, so it belongs against the thing
- * you tapped rather than pinned to the furniture.
- *
- * It must never drift to the *top* of the screen: that belongs to the Sunny
- * announcement, which is the one thing nobody may miss. `pointer-events-none`
- * throughout, so the hand under it stays tappable — most of all by somebody
- * trying the *right* card immediately afterwards.
+ * The answer to a mis-tap, placed immediately above the top edge of your own
+ * cards (#99): it answers a tap you just made. It must never drift to the *top*
+ * of the screen, which belongs to the Sunny announcement.
+ * `pointer-events-none` throughout, so the hand under it stays tappable.
  */
 export function MoveRefusal({ error }: { error: GoletaError }) {
   return (

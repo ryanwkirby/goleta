@@ -1,10 +1,8 @@
 /**
- * Turns a batch of events into the card flights that describe them.
- *
- * Pure on purpose: it decides *what* moves where and in what order, never how it
- * is drawn. The engine emits no per-card deal event and shouldn't — a deal is
- * not a rule — so `gameStarted` is expanded here from the hands the state
- * already carries.
+ * Turns a batch of events into the card flights that describe them. Pure: it
+ * decides *what* moves where and in what order, never how it is drawn. The
+ * engine emits no per-card deal event and shouldn't — a deal is not a rule — so
+ * `gameStarted` is expanded here from the hands the state already carries.
  */
 
 import type { Card, GameEvent, GameView, PlayerId } from "@goleta/engine";
@@ -21,20 +19,14 @@ const BEAT_MS = 110;
 const TURN_UP_BEAT_MS = 95;
 /** A held pause either side of a Sunny rewind, so it reads as its own moment. */
 const CALL_BEAT_MS = 260;
-/** Cards fan out of the deck this fast, squeezed to fit `DEAL_WINDOW_MS`. */
 const DEAL_BEAT_MS = 38;
 const DEAL_WINDOW_MS = 820;
 /** A burst that would run longer than this is compressed rather than queued. */
 const BATCH_CAP_MS = 900;
 
-
-/**
- * The pile going back into the deck, slowly enough to watch. The last card lands
- * around 3.7s into a 4.8s beat, leaving a held second for the words to be read.
- *
- * Every one of them is face down and must stay that way: the recycled pile is
- * shuffled and its order *is* deck order, which `redact.ts` guards.
- */
+/** Slowly enough to watch: the last card lands around 3.7s into a 4.8s beat,
+ * leaving a held second for the words. Every one is face down and must stay that
+ * way — the recycled pile's order *is* deck order, which `redact.ts` guards. */
 export const RESHUFFLE_CARDS = 9;
 export const RESHUFFLE_BEAT_MS = 380;
 const RESHUFFLE_FLIGHT_MS = 620;
@@ -43,18 +35,15 @@ export interface FlightPlan {
   id: string;
   /** Null flies face down — a deal, which nobody watches card by card. */
   card: Card | null;
-  /** Candidate origins, most specific first. */
   from: AnchorKey[];
   to: AnchorKey[];
   /** Rendered at the destination's size — that's where it comes to rest. */
   size: CardSize;
-  /** The size it leaves at, so it grows or shrinks over the trip. */
   fromSize: CardSize;
   delay: number;
   duration: number;
   /** A card kept invisible in the hand it is joining until this lands. */
   hides: string | null;
-  /** Landing here hands the pile a new face to show. */
   toPile: boolean;
 }
 
@@ -62,42 +51,26 @@ export interface Planned {
   flights: FlightPlan[];
   /** The pile is empty until the upcard lands, so it must stop drawing a card. */
   emptiesPile: boolean;
-  /**
-   * These flights are a deal going out, so the table is still setting itself up.
-   * Reported because one prompt has to wait for it: under Dealer's Choice the
-   * game opens in `phase: "suit"` and the dealer was asked to name one while the
-   * cards were still in the air (#75).
-   */
+  /** Reported because one prompt has to wait for it: under Dealer's Choice the
+   * game opens in `phase: "suit"` and the dealer was asked to name a suit while
+   * the cards were still in the air (#75). */
   deals: boolean;
 }
 
-/**
- * How big the cards are where they come to rest, which is not the same on every
- * screen. A flight is drawn at its destination's size and scaled from its
- * origin's, so these are the difference between a card that lands and one that
- * lands and then pops.
- */
+/** A flight is drawn at its destination's size and scaled from its origin's, so
+ * these are the difference between a card that lands and one that lands and
+ * then pops. */
 export interface TableScale {
-  /** Your own cards. */
   hand: CardSize;
-  /** The draw pile and the card in play — one size, they sit side by side. */
   pile: CardSize;
-  /** Somebody else's hand in the seat strip. */
   seat: CardSize;
 }
 
-/** The whole table on one screen: your hand under a strip of everyone else's. */
 export const FULL_TABLE: TableScale = { hand: "md", pile: "lg", seat: "sm" };
 
-/**
- * A phone in landscape (#78): your hand takes the screen and the piles shrink
- * into the peek strip. No seats are drawn, so `seat` is only what a flight to
- * one *would* have been — those find no anchor and are dropped.
- *
- * `hand` is the size the row settles on when it has the height, which is every
- * landscape phone. On a shorter box a card in flight lands one size large,
- * which is not worth threading a measurement through the motion layer for.
- */
+/** A phone in landscape (#78): the hand takes the screen and the piles shrink
+ * into the peek strip. No seats are drawn, so a flight to one finds no anchor
+ * and is dropped. */
 export const PEEK_TABLE: TableScale = { hand: "2xl", pile: "sm", seat: "sm" };
 
 const isYou = (game: GameView, playerId: PlayerId): boolean => game.you === playerId;

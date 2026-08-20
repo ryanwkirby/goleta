@@ -1,20 +1,15 @@
 /**
  * A phone held upright at a table it can't draw, asked to turn.
  *
- * **The prompt is the mechanism, not a fallback for one.** Landscape cannot be
- * forced from a web page: `screen.orientation.lock()` needs fullscreen and iOS
- * Safari has no implementation.
+ * **The prompt is the mechanism, not a fallback for one**: landscape cannot be
+ * forced from a web page. **And nothing here reaches for the orientation lock
+ * even where it exists** — it used to, and that froze the app's only view
+ * switch, so a player could not reach the full table for the rest of the
+ * session (#125).
  *
- * **And nothing here reaches for that lock even where it exists.** It used to,
- * behind a "keep it landscape" button, and that froze the app's only view
- * switch — locked, turning the phone upright did nothing and the player could
- * not reach the full table for the rest of the session. Fullscreen survives a
- * rotation on its own and is offered in the peek strip instead (#125).
- *
- * There is no way past this: a portrait phone showing half a landscape layout
- * would be worse than one asking to be turned. **Nothing pauses behind it** —
- * which is why the connection state is on here, so a blocked player can tell
- * "turn your phone" from "this app has stopped talking to anyone".
+ * There is no way past this, and **nothing pauses behind it** — which is why the
+ * connection state is on here, so a blocked player can tell "turn your phone"
+ * from "this app has stopped talking to anyone".
  */
 export function RotatePanel({ offline }: { offline: boolean }) {
   return (

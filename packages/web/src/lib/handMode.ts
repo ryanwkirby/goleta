@@ -7,7 +7,6 @@
 
 import type { GameView } from "@goleta/engine";
 
-/** `idle` means the hand is not asking for anything. */
 export type HandMode = "play" | "forced" | "surrender" | "idle";
 
 /**
@@ -24,7 +23,6 @@ export type HandMode = "play" | "forced" | "surrender" | "idle";
 export const assisting = (
   game: GameView,
   hints: boolean,
-  /** The turn a single `want help?` was bought for, if any. */
   helpedTurn: number | null,
 ): boolean => game.phase.kind === "sunnyPlay" || hints || helpedTurn === game.turnNumber;
 
@@ -36,9 +34,7 @@ export const assisting = (
  */
 export const handMode = (
   game: GameView,
-  /** `waitingOn`, not whose turn it is. */
   mine: boolean,
-  /** A call has landed on you and the dialog is still up. */
   caughtHold: boolean,
 ): HandMode => {
   if (caughtHold) return "idle";

@@ -5,41 +5,30 @@
  * once it has to: no hand should ever need scrolling to be read (#59).
  */
 
-
-
-/** The air between two cards when there is room for air. */
 const GAP = 6;
 
 /** A **tap** floor, not a legibility one, which binds first and binds harder. An
  * absolute number: a thumb is the same width whatever size the cards are. */
 export const TIGHTEST = 44;
 
-/** The same floor for the accusation picker, which fans at `sm`. Lower because a
- * `sm` card is 40px wide, so 44 would be no overlap and the picker would wrap or
- * scroll — the thing it exists not to do. */
+/** The same floor for the picker, which fans at `sm`. Lower because a `sm` card
+ * is 40px wide, so 44 would be no overlap and the picker would wrap or scroll —
+ * the thing it exists not to do. */
 export const PICKER_TIGHTEST = 28;
 
 /**
- * The floor for a hand that has been told to fit rather than scroll (#117).
+ * The floor for a hand told to fit rather than scroll (#117). Below `TIGHTEST`,
+ * which is still absolute *as a tap floor* — but a hand fitted past this point
+ * stops committing on the first tap, so what is left to protect is reading.
  *
- * Below `TIGHTEST`, which the comment above calls absolute — and it still is,
- * *as a tap floor*. What changes here is that there is no longer a tap to
- * protect: a hand fitted past this point stops committing on the first tap, so
- * the first one only has to land on the right card to raise it, and the second
- * is aimed at a whole card lifted clear of its neighbours. The floor left is
- * the reading one `fan.ts` uses for the seat strip, and this sits above it.
- *
- * It binds far later than it looks. A landscape phone holds fifteen `2xl` cards
+ * It binds far later than it looks: a landscape phone holds fifteen `2xl` cards
  * at `TIGHTEST` and the simulation's worst hand across three hundred games is
- * twelve, so the squeeze is for small phones and freak endgames, not for the
- * ordinary turn.
+ * twelve.
  */
 export const FIT_TIGHTEST = 18;
 
-/** No overlap at all: a whole card and its gap. Nothing is ever looser. */
 export const loosest = (cardWidth: number): number => cardWidth + GAP;
 
-/** How wide `cards` sit at this step, the last one showing whole. */
 export const handWidth = (cards: number, step: number, cardWidth: number): number =>
   cards > 0 ? (cards - 1) * step + cardWidth : 0;
 
@@ -55,8 +44,6 @@ export const TALLEST = 300;
 export const SHORTEST = 96;
 
 /**
- * How tall the cards are drawn, from the room the row actually has.
- *
  * Answered from the *height*, never the card count: cards that grew as a hand
  * shrank would tell the table how many you hold. A number rather than a rung
  * since #166, so a docked picker shrinks the cards by exactly what it took.
@@ -71,7 +58,7 @@ export const handStep = (
   cards: number,
   /** A rung's width, or a height off `cardWidthAt`. */
   cardWidth: number,
-  /** Where tightening stops. The picker fans smaller cards, so it sets its own. */
+  /** The picker fans smaller cards, so it sets its own. */
   tightest: number = TIGHTEST,
   /** Landscape IRL hands prefer a tighter fan over any local scrolling. */
   fit = false,

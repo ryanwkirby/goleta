@@ -1,17 +1,10 @@
 /**
- * The sun: the way an accusation starts.
- *
- * **Rules converge here.** `AGENTS.md` § "Rules that look like bugs and are not"
- * is the authority; in brief:
- *
- * - **One look, and a bigger sun must never become a brighter one when a call
- *   would land** (#50, #189). Nothing on the client knows whether it would.
- * - **The disabled variant is the only second look**, and it is your own missed
- *   call still being served — sent to nobody else, so a locked-out caller is
- *   indistinguishable from any other on every screen but their own.
- * - **44px, and nowhere near the draw pile** in either layout (#189).
- * - **Tapping it opens the picker and does not call.** An accusation names a
- *   card, so the tap that starts one cannot be the tap that commits it.
+ * The sun: the way an accusation starts. **Rules converge here**; `AGENTS.md` is
+ * the authority. **One look, and a bigger sun must never become a brighter one
+ * when a call would land** (#50, #189) — nothing on the client knows whether it
+ * would. **The disabled variant is your own missed call still being served**,
+ * sent to nobody else. **44px, and nowhere near the draw pile** in either
+ * layout. **Tapping it opens the picker and does not call.**
  */
 
 /** A plain outline. It is furniture until it has something to say. */
@@ -39,10 +32,7 @@ function SunGlyph() {
  *
  * **Leaving the seat is what makes it say who.** There is only ever one
  * `sunnyTargetId`, so the control names them, which stops the call being a thing
- * you do *to a name in a list*. It means only that somebody reached for the
- * deck; whether they were allowed to is on the table in front of you.
- *
- * Opening the picker also sends `composingCall`, which holds the bots (#73).
+ * you do *to a name in a list*. Opening the picker also holds the bots (#73).
  */
 export function SunnyCall({
   targetName,

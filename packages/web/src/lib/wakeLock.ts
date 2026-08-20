@@ -1,14 +1,12 @@
 /**
  * Keeping a screen awake at a table where nobody is touching it. A phone locks
  * itself in thirty seconds, and a challenge window is over as soon as the next
- * player moves — not something you catch through a lock screen.
+ * player moves.
  *
- * Three things are easy to get wrong. **The lock is dropped when the tab is
- * hidden and is not given back**, so it has to be re-requested on
- * `visibilitychange` or it survives exactly one lock screen. **The request can
- * reject** — battery saver, old browser, insecure origin — and fails silently,
- * because a wake lock is a nicety nobody asked for. And **nothing is held in an
- * online room**: a laptop has an OS that knows what it is doing.
+ * **The lock is dropped when the tab is hidden and is not given back**, so it
+ * has to be re-requested on `visibilitychange`. **The request can reject** and
+ * fails silently — a wake lock is a nicety nobody asked for. And **nothing is
+ * held in an online room**: a laptop has an OS that knows what it is doing.
  */
 
 import { useEffect } from "react";

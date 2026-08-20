@@ -1,24 +1,17 @@
 /**
- * Offering the propped-up screen a way out of the browser chrome. **A pilot.**
+ * Offering the propped-up screen a way out of the browser chrome. **A pilot**,
+ * built to be ripped out: the identity model is *no accounts, scan a code,
+ * play*, and this is the first thing here that sounds like a signup. Nothing may
+ * start depending on it.
  *
- * The shared screen is opened once and left alone for an evening, gives up the
- * most to chrome, and is the only device here where asking somebody to install
- * something is sane.
+ * **Which offer you get is four capability questions, never a user agent**:
+ * already standalone, `beforeinstallprompt`, `"standalone" in navigator` (iOS,
+ * so words and the Share sheet — and why an iPad gets this rather than
+ * fullscreen, which leaves a permanent overlay button), then plain fullscreen.
  *
- * **Built to be ripped out.** The open question is whether an install prompt
- * belongs in this app at all — the identity model is *no accounts, scan a code,
- * play*. Nothing may start depending on it; removing it is deleting this file,
- * the manifest and its `<link>`, and one paragraph of `AGENTS.md`.
- *
- * **Which offer you get is four capability questions, never a user agent:**
- * already standalone (nothing), `beforeinstallprompt` (ask it to install),
- * `"standalone" in navigator` (iOS's model, so words and the Share sheet — and
- * why an iPad gets this rather than fullscreen, which leaves a non-dismissible
- * overlay button on a screen nobody will tidy), then plain fullscreen.
- *
- * **Safe here and not on a phone:** an installed web app gets its own storage
- * container, so a phone that installed after joining would come back as a new
- * player with an orphaned seat. A shared screen holds no identity at all (#16).
+ * **Safe here and not on a phone**: an installed web app gets its own storage,
+ * so a phone would come back a new player with an orphaned seat. A shared screen
+ * holds no identity at all (#16).
  */
 
 import { useEffect, useState } from "react";

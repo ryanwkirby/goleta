@@ -2,16 +2,14 @@
  * The one place that decides what a client is allowed to see. Nothing else may
  * send game state to a browser.
  *
- * Hands are not secret — every hand is face up — but two things must never leave
- * this file. `state.challenge` carries a full snapshot of the game and therefore
- * of every hand a moment ago; the one thing derived from it that does go out is
- * `sunnyReach`, and only to a viewer who could call. `state.sunny` names cards
- * still in the deck, and which cards are coming off the deck is not something
- * the table gets told in advance.
+ * Hands are not secret, but two things must never leave this file:
+ * `state.challenge`, which carries a full snapshot of every hand a moment ago,
+ * and `state.sunny`, which names cards still in the deck. The one thing derived
+ * from the challenge that does go out is `sunnyReach`, and only to a viewer who
+ * could call.
  *
- * A new field on `GameState` is invisible to clients until someone adds it here,
- * which is the intended default. `GameEvent`s need no redaction and go out
- * whole: every one describes something that already happened in the open.
+ * A new field on `GameState` is invisible to clients until someone adds it here.
+ * `GameEvent`s need no redaction: every one describes something already public.
  */
 
 import { legalCards, mustPlay, playerById, sunnyLockedDraws, topCard } from "./rules.ts";

@@ -26,8 +26,8 @@ export interface HandViewProps {
   help: HelpControls;
   sunny: SunnyControls;
   onShowInvite: () => void;
-  /** The way back to the rules (#195). This view has no header, so the answer to
-   * "what happens if I can't play anything?" was to turn the phone over. */
+  /** This view has no header, so the answer to "what happens if I can't play
+   * anything?" was to turn the phone over (#195). */
   onShowRules: () => void;
 }
 
@@ -36,18 +36,13 @@ export interface HandViewProps {
  *
  * The upright table is one screen showing everything, which is right for a
  * browser tab and wrong for a phone lying between six people, where your own
- * cards got a fifth of the display. Here they get most of it, and the table
- * centre peeks over the top (#78). Since #131 they get the rest as well: there
- * is a strip and there is the hand, and nothing under it — a line of small print
- * at the foot cost a card size.
+ * cards got a fifth of the display (#78). Since #131 there is a strip and there
+ * is the hand, and nothing under it — a line of small print at the foot cost a
+ * card size.
  *
  * Everything that used to live down the side of the table docks over the hand
- * rather than covering it. The picker especially: it asks you to compare a hand
- * against a board, and a scrim over the cards at that moment is the wrong trade.
- *
- * What is *not* here is anybody else's hand, at any size. A sliver too small to
- * read a rank off is worse than nothing (`fan.ts` has a floor), so the full
- * table is one turn of the phone away the whole time a game is running.
+ * rather than covering it. What is *not* here is anybody else's hand, at any
+ * size: a sliver too small to read a rank off is worse than nothing.
  */
 export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }: HandViewProps) {
   const { room, game, nameOf, send, offline, reshuffling } = table;
@@ -56,35 +51,28 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
   const { stalled, onAskForHelp, hints, onChooseHints, shouting, helpFrom } = help;
   const { accusing, stillAccusable, onStartAccusing, onStopAccusing, onAccuse } = sunny;
   const sunnyTarget = sunny.target;
-  /**
-   * The room the hand has to spend, measured rather than assumed. Both axes,
-   * because they answer different questions: the height decides the card size,
-   * the width decides the overlap.
-   */
+  /** Both axes: the height decides the card size, the width decides the overlap. */
   const row = useRef<HTMLDivElement>(null);
   const box = useBox(row);
 
   /**
-   * The strip's line, and whether the picker is allowed up yet. Worked out here
-   * because both need `dealing` and `Table` renders the motion provider rather
-   * than sitting under it. Under Dealer's Choice the game opens in
-   * `phase: "suit"`, so without this the picker took its room out of the column
-   * while the cards were still going out (#75).
+   * Worked out here because both need `dealing` and `Table` renders the motion
+   * provider rather than sitting under it. Under Dealer's Choice the game opens
+   * in `phase: "suit"`, so without this the picker took its room out of the
+   * column while the cards were still going out (#75).
    */
   const { dealing } = useMotion();
   const prompt = turnPrompt(game, nameOf, assist, dealing, reshuffling);
 
-  // Measured against the row's *content* box, and the row is the only thing with
-  // padding, so this is the width the cards actually get.
+  // The row is the only thing with padding, so this is the width the cards get.
   const height = handHeight(box.height);
   const step = handStep(box.width, cards.length, cardWidthAt(height), undefined, true);
   const me = game.you ?? "";
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">
-      {/* Everything that isn't your cards, in one line across the top. The row of
-          furniture that used to sit under them is gone: it cost the hand a card
-          size, and none of what was on it is worth one (#131). */}
+      {/* The row of furniture that used to sit under the cards is gone: it cost
+          the hand a card size, and none of it was worth one (#131). */}
       <PeekStrip
         room={room}
         game={game}
@@ -105,13 +93,10 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
       />
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {/*
-          The way into a call, hung under the strip at the end furthest from the
-          deck (#189). The sun used to sit *in* the strip, immediately before the
-          draw pile, so a bigger version could only grow towards the deck — and a
-          fat target beside the deck is a mis-tap into the exact violation it
-          accuses. Absolute, so it never moves the cards underneath it.
-        */}
+        {/* Hung under the strip at the end furthest from the deck (#189): the sun
+          used to sit *in* the strip, immediately before the draw pile, and a fat
+          target beside the deck is a mis-tap into the exact violation it
+          accuses. Absolute, so it never moves the cards underneath it. */}
         {sunnyTarget ? (
           <SunnyCallOffer
             targetName={nameOf(sunnyTarget)}
@@ -121,16 +106,13 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
           />
         ) : null}
 
-        {/*
-          Both pickers **dock**: they take their room out of the column rather
-          than being laid over it. Overlaying covers the cards the picker is
-          asking you to compare against — the trade the full table already
-          refused. The row below measures what is left, so the hand steps down a
-          size while a picker is up and steps back when it goes.
-        */}
-        {/* One row of cards however many the offender holds, so its height is
-            known and the hand below simply steps down. It used to be capped at a
-            fraction of the column, which left both halves short — see #96. */}
+        {/* Both pickers **dock** rather than being laid over the column: overlaying
+          covers the cards the picker is asking you to compare against. The row
+          below measures what is left, so the hand steps down a size while a
+          picker is up and back when it goes. */}
+        {/* One row however many the offender holds, so its height is known. It used
+            to be capped at a fraction of the column, which left both halves
+            short — see #96. */}
         {accusing !== null && stillAccusable && game.sunnyReach ? (
           <div className="shrink-0 px-2 pt-1">
             <SunnyAccusePicker

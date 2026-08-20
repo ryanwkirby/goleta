@@ -6,17 +6,12 @@ import { SunnyCall } from "./sunny/SunnyCall.tsx";
 
 /**
  * The frame around your own cards: the ring that says the table is waiting on
- * you, and the answer to a move it just refused.
+ * you, and the answer to a move it just refused. A refusal hangs off the top
+ * edge of the hand in **both** orientations (#99) — that used to be true because
+ * two blocks of JSX matched.
  *
- * Both layouts drew this from their own copy of the same markup, and a refusal
- * hangs off the top edge of the hand in **both** orientations (#99) — that was
- * true because two blocks of JSX happened to match; now it is true because there
- * is one of them.
- *
- * On a wrapper rather than on `Hand` itself: that element scrolls its own
- * overflow, and a box that clips one axis clips both, so it would trim its own
- * ring. The refusal is keyed on the error's id, so a second refusal in the same
- * words is a second answer rather than a pill that never moved.
+ * On a wrapper rather than on `Hand` itself, which scrolls its own overflow and
+ * would trim its own ring.
  */
 export function HandFrame({
   mine,
@@ -46,22 +41,14 @@ export function HandFrame({
 }
 
 /**
- * The way into a Sunny call, over the felt near your own cards.
+ * The way into a Sunny call, over the felt near your own cards. It named a seat
+ * in a scrolling strip until #189 — 20px, half a thumb, for the one control
+ * whose window shuts when the next player moves. There is only ever one
+ * `sunnyTargetId`, so the control names them. 44px, and nowhere near the deck.
  *
- * It named a seat in a scrolling strip until #189 — a 20px circle half a thumb
- * wide, for the one control whose window shuts when the next player moves. There
- * is only ever one `sunnyTargetId`, so the control names them, which stops a
- * call being a thing you do to a name in a list. 44px in both layouts, and
- * nowhere near the draw pile in either.
- *
- * **Absolute in both**, so it arrives with some presence without moving the
- * cards underneath it; with a wide fan it sits over a corner of the outermost
- * card, which is the cost the two bottom corners already pay (#167).
- *
- * Where it is pinned is the one thing the two callers disagree about: upright it
- * sits above the hand and left of centre, because the middle of that box is
- * where your own `HelpShout` rises; in landscape it hangs under the strip at the
- * far end from the deck.
+ * **Absolute in both layouts**, so it arrives with some presence without moving
+ * the cards underneath it. Where it is pinned is the one thing the two callers
+ * disagree about: upright, the middle of that box is where `HelpShout` rises.
  */
 export function SunnyCallOffer({
   targetName,

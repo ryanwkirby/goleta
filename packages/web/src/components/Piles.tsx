@@ -1,18 +1,14 @@
 /**
  * The draw pile and the card in play — and the one control in this app that is
- * deliberately unsafe.
- *
- * **Rules converge here.** `AGENTS.md` § "Rules that look like bugs and are not"
- * carries the argument and is the authority.
+ * deliberately unsafe. **Rules converge here**; `AGENTS.md` § "Rules that look
+ * like bugs and are not" is the authority.
  *
  * - **The draw pile stays tappable while you hold a legal play, with no
- *   warning.** No disabled state, no confirmation, no hint. Drawing when you
- *   could have played is the violation the Sunny Rule exists to punish, so the
- *   UI has to permit it silently.
+ *   warning.** No disabled state, no confirmation, no hint. That violation is
+ *   what the Sunny Rule exists to punish, so the UI has to permit it silently.
  * - **Nothing here says whether a call would land** (#50), and the peel runs
  *   identically for a wrong call and a right one (#63).
- * - **The badge names a suit only when somebody chose one**, and otherwise says
- *   only that one is *owed* (#76, #150).
+ * - **The badge names a suit only when somebody chose one** (#76, #150).
  * - **A five-second reshuffle gates nothing**, least of all this pile (#209).
  */
 

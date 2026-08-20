@@ -101,24 +101,19 @@ function Rule({ headline, detail }: { headline: ReactNode; detail: ReactNode }) 
 }
 
 /**
- * What a new player is told on their way in.
+ * What a new player is told on their way in. **Five headlines, collapsed**
+ * (#196) — it used to be a wall of text on the first screen anybody sees, and a
+ * screen that opened with one rule expanded would say which one matters most.
  *
- * **Five headlines, collapsed** (#196). It used to be a wall of text on the
- * first screen anybody sees. All-collapsed is the right default: a screen that
- * opened with one rule expanded would be saying which one matters most.
+ * The Sunny Rule gets an allusion and nothing more: you meet it by having it
+ * called on you, and `SunnyExplainer` teaches it when it will stick.
  *
- * The Sunny Rule gets an allusion and nothing more — not its name, not the
- * window, not the penalty. You meet it by having it called on you, and
- * `SunnyExplainer` teaches it at the moment it will stick.
+ * **The hints offer is a toggle, and it is here every time** (#187). It says
+ * nothing about the mechanism and says the one thing that matters: switching it
+ * on is something the table can see.
  *
- * **The hints offer is a toggle, and it is here every time** (#187). It used to
- * be two buttons shown once on the way in, a fork taken before you had seen a
- * card. It says nothing about the mechanism and says the one thing that
- * matters: switching it on is something the table can see.
- *
- * **The panel scrolls inside itself**, with the last decision pinned under it:
- * this is opened mid-hand from a sideways phone now (#195), where a footer that
- * scrolled away would put the way out below the fold.
+ * **The panel scrolls inside itself**, with the last decision pinned under it —
+ * this is opened mid-hand from a sideways phone now (#195).
  */
 export function Rules({
   onDone,

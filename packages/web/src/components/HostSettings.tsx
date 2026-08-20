@@ -1,12 +1,8 @@
 /**
  * The host's controls over the table, in one place so the lobby and the table
- * show the same switches rather than two drifting copies.
- *
- * Two kinds, and they are not alike. **Where everybody is** changes how every
- * phone draws the game and takes effect on the tap. **The house rules** change
- * what is played and take effect at the next deal — the game keeps its own copy
- * from the moment it is dealt, which is what lets a host reach them mid-game at
- * all (#134). Neither knows where it is being shown.
+ * show the same switches rather than two drifting copies. **Where everybody is**
+ * takes effect on the tap; **the house rules** take effect at the next deal,
+ * because the game keeps its own copy from the moment it is dealt (#134).
  */
 
 import { useState } from "react";
@@ -15,8 +11,7 @@ import type { DealerMode, HouseRules } from "@goleta/engine";
 
 import { Button, Panel } from "./ui.tsx";
 
-/** What a table is playing, for everyone who isn't the host. Silent when the
- * table plays the game as written. */
+/** Silent when the table plays the game as written. */
 export const describeRules = (rules: HouseRules): string => {
   const on: string[] = [];
   if (!rules.sunny) on.push("no Sunny Rule");
@@ -25,7 +20,6 @@ export const describeRules = (rules: HouseRules): string => {
   if (on.length === 0) return "Playing the standard rules.";
   return `House rules: ${on.join(", ")}.`;
 };
-
 
 /** Silent when the deal rotates, which is the default: a table that has not
  * chosen anything is not being told about a choice (#198). */
@@ -37,27 +31,19 @@ export const describeDealing = (mode: DealerMode): string =>
 export const describeSeating = (shuffled: boolean): string =>
   shuffled ? "The seats are shuffled each game." : "";
 
-/**
- * Two named answers rather than a switch, for `IrlToggle`'s reason: a question
- * with two real answers should say both out loud.
- *
- * What the dealer decides is who opens — going first is not nothing when playing
- * is compulsory — and the seeded 8 under Dealer's Choice. A random dealer may
- * land on the same seat twice; a table that finds that annoying wants rotation.
- */
+/** Two named answers rather than a switch, for `IrlToggle`'s reason. What the
+ * dealer decides is who opens, and the seeded 8 under Dealer's Choice. A random
+ * dealer may land on the same seat twice; a table that objects wants rotation. */
 const DEALERS: { key: DealerMode; label: string; blurb: string }[] = [
   { key: "rotate", label: "Pass it along", blurb: "The deal moves one seat each game." },
   { key: "random", label: "Draw for it", blurb: "A seat is picked at random each game." },
 ];
 
 /**
- * A switch rather than two named answers, unlike the dealer beside it: *pass it
- * along* and *draw for it* are two conventions, whereas this is a thing a table
- * either does or does not do.
- *
- * The copy says what it costs an IRL table, because that is what somebody has to
- * agree to: turn order is where you are sitting, so shuffling it means getting
- * up. The screen that says where to go is the other half of the feature.
+ * A switch rather than two named answers, unlike the dealer beside it: this is a
+ * thing a table either does or does not do. The copy says what it costs an IRL
+ * table, because that is what somebody has to agree to — turn order is where you
+ * are sitting, so shuffling it means getting up.
  */
 export function ShuffleSeatsToggle({
   on,
@@ -65,7 +51,6 @@ export function ShuffleSeatsToggle({
   onChange,
 }: {
   on: boolean;
-  /** Whether this table is in one room, which changes what it costs. */
   irl: boolean;
   onChange: (on: boolean) => void;
 }) {
@@ -123,20 +108,12 @@ export function DealerPicker({
   );
 }
 
-
 /**
  * Every one of these is a rule the game already had written down, and the
- * defaults are the game as written.
- *
- * **A row's description doesn't change when the row is switched.** It used to
- * rewrite itself between "what this rule does" and "Off. what happens instead",
- * so the sentence a host was reading to decide moved the moment they decided.
- *
- * Two things the wording is careful about. **The Sunny line offers the draw
- * before it names the cost**, because stating the violation as a condition reads
- * as though the app is about to stop you, and it never will. And **Dealer's
- * Choice on Eight carries its condition in its name**, since the rule does
- * nothing unless the card turned up happens to be an 8.
+ * defaults are the game as written. **A row's description doesn't change when the
+ * row is switched**, or the sentence a host is reading moves as they decide.
+ * **The Sunny line offers the draw before it names the cost**, because stating
+ * the violation as a condition reads as though the app will stop you.
  */
 export function HouseRulesPicker({
   rules,
@@ -202,28 +179,18 @@ export function HouseRulesPicker({
   );
 }
 
-
 /** In person leads, because it is the answer that changes the most. Remote play
- * is still what a new room *is* — see `createRoom` — and the order of the
- * buttons has nothing to do with which is selected. */
+ * is still what a new room *is* — see `createRoom`. */
 const PLACES: { key: string; label: string; irl: boolean }[] = [
   { key: "irl", label: "In person", irl: true },
   { key: "remote", label: "Remote play", irl: false },
 ];
 
-
 /**
  * Where everybody is. Not a house rule and not next to them: it changes nothing
- * about the game, only how each phone draws it. The copy says what it is for
- * rather than naming a layout.
- *
- * **Both answers are named**, as two halves of a switch: the old shape stated
- * one and left the host to infer that Off meant the rest of the world. Naming
- * both is also what made the explanatory line under them redundant.
- *
- * The one host control with no "between games only" on it, and the one left
- * outside the settings drawer. It comes before the seats because everything
- * below it hangs off the answer.
+ * about the game, only how each phone draws it. **Both answers are named** — the
+ * old shape stated one and left the host to infer that Off meant the rest of the
+ * world. It comes before the seats because everything below hangs off it.
  */
 export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -250,23 +217,11 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
 
 /**
  * The host's way back to the table's settings once the cards are out (#134).
- * Host only, and only while a game is running: in the lobby every one of these
- * switches is already on the page.
- *
  * **The two settings inside answer at different times, and the panel says
- * which.** Where everybody is takes effect on the tap; the house rules take
- * effect at the next deal and cannot reach this hand. Being told that is the
- * difference between a control that looks broken and one that isn't.
- *
- * **Bot pace is deliberately not in here**: it reads live, every time a bot is
- * scheduled, so changing it mid-game moves a challenge window somebody is
- * watching. The lobby is where it stays.
- *
- * **44px in both layouts, and it exists in both** (#194). It was a 16px glyph in
- * a 24px box in a header of small grey print, and hosts did not find it — and it
- * rendered only in the upright header, which `HandView` does not have, so a host
- * at an IRL table could not reach their own settings at all. One size and one
- * look in both places: it is the same door.
+ * which.** **Bot pace is deliberately not in here**: it reads live, so changing
+ * it mid-game moves a challenge window somebody is watching. **44px in both
+ * layouts, and it exists in both** (#194) — hosts did not find the 16px glyph,
+ * and it rendered only in a header `HandView` does not have.
  */
 export function HostSettingsCog({
   rules,

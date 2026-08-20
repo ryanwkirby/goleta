@@ -11,31 +11,19 @@ import { PlayerSettingsCog } from "./PlayerSettings.tsx";
 import { QrGlyph } from "./QrCode.tsx";
 
 /**
- * The middle of the table, as much of it as a phone in landscape can spare —
- * and, since #131, the whole of this view's furniture as well.
+ * The middle of the table, as much of it as a phone in landscape can spare — and,
+ * since #131, the whole of this view's furniture as well.
  *
- * **Of the table it carries the centre and nothing more:** the room code, the
- * piles, the suit over a live 8, what the table is waiting for, and somebody
- * asking for help. The omission that matters is the hands — nobody else's cards
- * appear here at any size. It can be that thin because `sunnyReach` already
- * feeds the picker the evidence a call is made from; seeing every hand is what
- * *noticing* a reach is easier with, and turning the phone upright answers that.
- *
- * The sun was on that list until #189: it was drawn immediately before the draw
- * pile, so a bigger version could only grow *towards* the deck, and a fat target
- * beside the deck is a mis-tap into the exact violation it accuses. It hangs
- * under the strip now, at the far end from the pile.
+ * **Of the table it carries the centre and nothing more.** No hands, at any
+ * size: `sunnyReach` already feeds the picker the evidence a call is made from,
+ * and turning the phone upright is the answer to *noticing* a reach. The sun
+ * left the strip in #189 — it was drawn immediately before the draw pile, and a
+ * fat target beside the deck is a mis-tap into the violation it accuses.
  *
  * Everything else here is not a table fact, and is here because the alternative
- * was a row under the cards — `handHeight` reads the room the row is left, so a
- * line of small print at the foot is a card size (#131). The offer of the screen
- * has a second reason: `RotatePanel` is only shown to a phone held upright, so
- * an offer living there was unreachable from the orientation it is about (#125).
- * The host's cog (#194) and the way back to the rules (#195) have a third —
- * `HandView` has no header, so both were simply nowhere.
+ * was a row under the cards, which costs a card size (#131).
  *
- * Nothing in here says anything about legality: not the wording, not the
- * ordering, not the sun.
+ * Nothing in here says anything about legality.
  */
 export function PeekStrip({
   room,
@@ -60,30 +48,23 @@ export function PeekStrip({
   offline: boolean;
   /** Somebody else's shout, by name. Your own goes over your cards. */
   helpFrom: { name: string; kind: ShoutKind } | null;
-  /** What the table is waiting for, in the words the full table uses. */
   prompt: string;
-  /**
-   * Whether the prompt is drawn up. It was `mine` until #209, and the rename is
-   * the point: two different things want this line read — the table waiting on
-   * *you*, and the deck running out, which is nobody's turn.
-   */
+  /** It was `mine` until #209, and the rename is the point: two different things
+   * want this line read — the table waiting on *you*, and the deck running out,
+   * which is nobody's turn. */
   loud: boolean;
-  /** Tapping the room code: the invite, opened by whoever holds the phone. */
   onShowInvite: () => void;
-  /** The way back to the rules, which this view had none of before #195. */
   onShowRules: () => void;
   /** Your own settings (#188). A watcher has no cards, so no cog. */
   hints: boolean;
   onChooseHints: (on: boolean) => void;
   seated: boolean;
-  /** Only the host's cog reaches this. */
   send: (message: ClientMessage) => void;
 }) {
   const { anchor, pileFace } = useMotion();
   const fullscreen = useFullscreen();
   const face = pileFace(game.topCard);
-  // The same question the full table's pile asks, answered the same way. Null only
-  // while a flight is still landing — see `pileSuit`.
+  // Null only while a flight is still landing — see `pileSuit`.
   const suit = pileSuit(game, face);
 
   // The side insets are why this strip has ends worth protecting: the room code is
@@ -101,22 +82,18 @@ export function PeekStrip({
       {/*
         ANYTHING NEW ON THIS STRIP GOES IN THIS CLUSTER.
 
-        The strip is one line and must stay one line. A row that wraps wraps
+        The strip is one line and must stay one line: a row that wraps wraps
         whatever no longer fits, and at the right-hand end that is the draw pile
-        — the one thing here that has to be reachable, and a card's height to
-        push onto a second row, straight off the hand.
+        — a card's height pushed onto a second row, straight off the hand.
 
-        This cluster is the release valve: all small print, so it wraps *within
-        itself*, and two wrapped lines still come to less than the 56px pile card
-        beside them. So the right-hand end belongs to the prompt, the sun and the
-        deck, and this is the only part of the row a new control may take its
-        width from. It is also the correct end on its own merits — the right is
-        the draw reach (#117).
+        This cluster is the release valve, being all small print, so it wraps
+        *within itself*. It is also the correct end on its own merits: the right
+        is the draw reach (#117).
       */}
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
         {/* Yours first and the host's second, the same order and glyphs as the
-            upright header. They must stay legible as different things: a person
-            and a gear, one of which changes the game for everybody (#188). */}
+          upright header. They must stay legible as different things: a person
+          and a gear, one of which changes the game for everybody (#188). */}
         {seated ? (
           <PlayerSettingsCog hints={hints} onHints={onChooseHints} className="-my-1" />
         ) : null}
@@ -131,16 +108,15 @@ export function PeekStrip({
             onIrl={(on) => send({ t: "setIrl", on })}
             onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
             onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
-            // 44px of target painted out of 36px of row: a full-height line would
-            // spend the cluster's slack, and it spends it out of the hand.
+            // 44px of target painted out of 36px of row: a full-height line would spend
+            // the cluster's slack, and it spends it out of the hand.
             className="-my-1"
           />
         ) : null}
 
-        {/* An IRL table is every phone in this view, so the way in somebody
-            actually holds out to a newcomer is this one (#135). Four characters
-            became one glyph in #162 — the code leads the panel behind it, so
-            what went was the width, not the code. */}
+        {/* An IRL table is every phone in this view, so the way in somebody actually
+            holds out to a newcomer is this one (#135). Four characters became one
+            glyph in #162 — the code leads the panel behind it. */}
         <button
           type="button"
           aria-label={`Invite to room ${room.code}`}
@@ -156,10 +132,8 @@ export function PeekStrip({
           <QrGlyph />
         </button>
 
-        {/* The same screen the upright header opens, without the first-run hints
-            question: that belongs to the first time through, not a mid-hand
-            look-up. Nothing pauses behind it — a challenge window can close
-            while you read, exactly as upright. */}
+        {/* Without the first-run hints question: that belongs to the first time
+            through, not a mid-hand look-up. Nothing pauses behind it. */}
         <button
           type="button"
           onClick={onShowRules}
@@ -195,7 +169,7 @@ export function PeekStrip({
         ) : null}
       </div>
 
-      {/* Same size as the deck, so the two read as the pair they are upright. */}
+      {}
       <div className="flex items-center gap-1.5">
         {face ? (
           <PlayingCard card={face} size="sm" anchor={anchor(PILE)} mirrored={room.irl} />
@@ -206,9 +180,8 @@ export function PeekStrip({
             className="h-14 w-10 rounded-md border border-dashed border-white/15"
           />
         )}
-        {/* The suit somebody named, or the mark for one owed and not given. Same
-            pill either way, so an answer arriving changes the glyph rather than
-            adding something to the strip (#150). */}
+        {/* Same pill whether a suit was named or is merely owed, so an answer
+            arriving changes the glyph rather than adding something (#150). */}
         {suit ? (
           <span className="rounded-full bg-white/10 px-1.5 py-0.5">
             <SuitMark mark={suit} className="text-sm" />
@@ -216,8 +189,7 @@ export function PeekStrip({
         ) : null}
       </div>
 
-      {/* Before the turn indicator: the sun keeps the end of the strip, and a
-          shout is the one thing here that isn't a standing fact. */}
+      {/* Before the turn indicator: the sun keeps the end of the strip. */}
       {helpFrom ? (
         <HelpAsk name={helpFrom.name} kind={helpFrom.kind} className="ml-auto text-xs" />
       ) : null}
@@ -233,13 +205,11 @@ export function PeekStrip({
         {prompt}
       </span>
 
-      {/* The one thing here that isn't a game fact: a player blocked on a dead
-          socket needs to know that's what it is. */}
+      {/* A player blocked on a dead socket needs to know that's what it is. */}
       {offline ? <span className="shrink-0 text-xs text-amber-300">reconnecting…</span> : null}
 
-      {/* Tappable whenever it's your turn, including when you hold a card you
-        could play — no disabled state and no warning, see AGENTS.md. On the
-        right edge, where a right-handed reach covers least. */}
+      {/* Tappable whenever it's your turn, including when you hold a card you could
+        play — no disabled state and no warning, see AGENTS.md. */}
       <button
         type="button"
         onClick={onDraw}

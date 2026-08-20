@@ -1,16 +1,13 @@
 /**
- * The size of a box, as the browser actually laid it out. Every fan here is
- * arithmetic on a real width rather than a guess at a phone.
- *
- * Content box, not border box, so nothing has to subtract an inset by hand. Zero
- * until the first observation, which every caller reads as "not measured yet".
+ * The size of a box, as the browser actually laid it out. Content box, not
+ * border box, so nothing has to subtract an inset by hand; zero until the first
+ * observation, which every caller reads as "not measured yet".
  *
  * **It picks the element up whenever it arrives**, not only on the mount holding
  * it: a ref's `current` is a mutation rather than a dependency, so an effect
- * keyed on the ref runs once, with whatever was there at the time. That was
- * survivable until the upright table started measuring a row (#191) — `Table` is
- * the same component instance either side of a rotation, so a phone turned from
- * the hand view mounted a row nothing was watching and fanned against zero.
+ * keyed on it runs once with whatever was there at the time. `Table` is the same
+ * component instance either side of a rotation, so a phone turned from the hand
+ * view mounted a row nothing was watching and fanned against zero (#191).
  */
 
 import { useLayoutEffect, useState, type RefObject } from "react";

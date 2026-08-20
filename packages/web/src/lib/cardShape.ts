@@ -25,7 +25,6 @@ export const isRed = (suit: Suit): boolean => suit === "D" || suit === "H";
  */
 export type CardSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
-
 /** In pixels at the default root font size. Read as a *ratio* between a pair,
  * and by `handFan.ts`; browser zoom skews neither. Keep in step with `SIZES`. */
 export const CARD_WIDTH_PX: Record<CardSize, number> = {
@@ -36,7 +35,6 @@ export const CARD_WIDTH_PX: Record<CardSize, number> = {
   "2xl": 180,
 };
 
-/** The heights, same rule. Read by `pileBox.ts` (#159). */
 export const CARD_HEIGHT_PX: Record<CardSize, number> = {
   sm: 56,
   md: 96,
@@ -53,5 +51,4 @@ export const CARD_HEIGHT_PX: Record<CardSize, number> = {
  */
 export const CARD_SHAPE = { width: 0.75, text: 0.2167, pad: 0.05, radius: 0.1 } as const;
 
-/** How wide a card of this height is; the fan needs it to know what it fits. */
 export const cardWidthAt = (height: number): number => Math.round(height * CARD_SHAPE.width);

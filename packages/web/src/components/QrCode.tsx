@@ -3,29 +3,19 @@ import { useMemo, useState } from "react";
 import { qrSymbol } from "../lib/qr.ts";
 
 /**
- * The room, as something you hold up.
+ * The room, as something you hold up. SVG rather than canvas: it scales to a
+ * phone across a table or half a television and needs no paint timing. White
+ * ground and felt-dark modules, because a scanner wants light behind dark, and
+ * `crispEdges` keeps the grid off the half-pixel.
  *
- * SVG rather than canvas: it scales to a phone across a table or half a
- * television, takes the table's own colours, and needs no paint timing. White
- * ground and felt-dark modules, because a scanner wants light behind dark and a
- * quiet zone, and the felt is neither. `crispEdges` keeps the grid off the
- * half-pixel — antialiased edges turn a small symbol into one you hunt for.
- *
- * **Tapping it copies the link it encodes** (#140). A QR is a link you cannot
- * select, and the camera is not always the route. Every code copies its *own*
- * value, so no caller has to keep the two in step. Failure is silent — an
- * insecure origin has no clipboard, and the code is still there to be scanned.
+ * **Tapping it copies the link it encodes** (#140) — a QR is a link you cannot
+ * select, and every code copies its *own* value. Failure is silent.
  */
 /**
- * A QR, at the size of a character. The four-character room code sat on every
- * screen for the whole of every game; #135 gave it a job and #162 gave back the
- * space — the code leads the panel behind it at reading-out size, so it goes
- * from permanently on screen to one tap away.
- *
- * Drawn rather than typed: a Unicode square is a gamble on the device's font,
- * and this has to read as *a QR* at three type sizes and again on a television.
- * `1em` and `currentColor`, so it sits on the line like the characters it
- * replaced.
+ * A QR, at the size of a character. The room code sat on every screen for the
+ * whole of every game; #135 gave it a job and #162 gave back the space. Drawn
+ * rather than typed — a Unicode square is a gamble on the device's font, and
+ * this has to read as *a QR* at three type sizes and again on a television.
  */
 export function QrGlyph({ className = "" }: { className?: string }) {
   return (

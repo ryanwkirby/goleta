@@ -23,12 +23,8 @@ import { Button, Panel } from "../components/ui.tsx";
 import { loadName } from "../net/identity.ts";
 import { joinLink } from "../net/route.ts";
 
-/**
- * How everyone else gets in: read it out, or text it. Nothing in here has a
- * height that depends on a switch further down the screen — the QR used to grow
- * out of the middle of it and push the copy button down the moment the host said
- * the table was in person. See `JoinQr`.
- */
+/** The QR used to grow out of the middle of this and push the copy button down
+ * the moment the host said the table was in person. See `JoinQr`. */
 function RoomCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
   const link = joinLink(code);
@@ -57,13 +53,10 @@ function RoomCode({ code }: { code: string }) {
 }
 
 /**
- * The thing you hold up across a table. Not a replacement for the code — a
- * faster path to the same place — and anyone seated can show it, host or not.
- *
- * **Only up at an in-person table**: for players somewhere else it is a picture
- * of a link they cannot point a camera at, taking the top third of the lobby. It
- * sits directly under the switch that turns it on, so a host who has just said
- * "in person" sees it appear below the tap rather than above it.
+ * The thing you hold up across a table — not a replacement for the code, and
+ * anyone seated can show it. **Only up at an in-person table**: for players
+ * somewhere else it is a picture of a link they cannot point a camera at. It
+ * sits directly under the switch that turns it on.
  */
 function JoinQr({ code }: { code: string }) {
   return (
@@ -83,13 +76,10 @@ function JoinQr({ code }: { code: string }) {
 }
 
 /**
- * The code for the screen in the middle of the table.
- *
- * **It says out loud that this one is for a different device**, because the
- * obvious move is the wrong one: scanning it with your own phone lands you on a
- * board with no cards and takes you off your seat. **And it takes itself away
- * once one arrives** — `useDismissOnScreenJoin`, which the in-game invite uses
- * too, so the two behave the same.
+ * The code for the screen in the middle of the table. **It says out loud that
+ * this one is for a different device**, because the obvious move is the wrong
+ * one: scanning it with your own phone lands you on a board with no cards and
+ * takes you off your seat. It takes itself away once a screen arrives.
  */
 function SharedScreenInvite({
   code,
@@ -97,7 +87,6 @@ function SharedScreenInvite({
   onClose,
 }: {
   code: string;
-  /** How many shared screens are connected right now. */
   screens: number;
   onClose: () => void;
 }) {
@@ -140,8 +129,6 @@ const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
   { key: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
 ];
 
-/** The same sentence for the host, on the front of a drawer that is shut, plus
- * the bot pace. */
 const describeTable = (room: RoomView, anyBots: boolean): string => {
   const said = [
     describeRules(room.houseRules),
@@ -156,17 +143,12 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
 
 /**
  * The settings drawer, shut on arrival. Most tables play the game as written and
- * never open it; shut, it is one line saying what the table is playing, which
- * used to be four rows of switches a host had to read to work out.
+ * never open it; shut, it is one line saying what the table is playing. The
+ * state lives here, so every arrival starts collapsed.
  *
- * The state lives here, so every arrival starts collapsed — a host who opened it
- * last game was changing something last game.
- *
- * The triangle is deliberately much larger than its label: it is the only thing
- * on the row saying there is anything behind it, and at body-text size it read
- * as punctuation. It is a **disclosure** triangle — `◂` shut, `▾` open — not the
- * `▾`/`▴` scroll pair it started as. Shut it points **left**, because everything
- * it is about is to its left (#137).
+ * The triangle is deliberately much larger than its label — at body-text size it
+ * read as punctuation. It is a **disclosure** triangle, `◂` shut and `▾` open,
+ * pointing left because everything it is about is to its left (#137).
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -198,8 +180,8 @@ function TableSettings({ summary, children }: { summary: string; children: React
   );
 }
 
-/** Only worth showing once there's a bot to pace. A table setting rather than a
- * personal one — the bots are timed on the server. */
+/** Only worth showing once there's a bot to pace. A table setting: the bots are
+ * timed on the server. */
 function BotSpeedPicker({
   speed,
   onPick,
@@ -230,19 +212,12 @@ function BotSpeedPicker({
   );
 }
 
-/**
- * Pointer events rather than HTML5 drag and drop, which does not exist on touch.
- * `touch-action: none` keeps the gesture from scrolling the lobby instead, and
- * pointer capture keeps it working once the finger has left the row it started
- * on. The arithmetic is in `lib/seatDrag.ts`.
- */
+/** Pointer events rather than HTML5 drag and drop, which does not exist on
+ * touch. `touch-action: none` keeps the gesture from scrolling the lobby, and
+ * pointer capture keeps it working once the finger has left its row. */
 
-/**
- * **The arrows stay**, and they are not a fallback: they are the keyboard path
- * and the precise one. The ends are disabled — the server treats a move off
- * either end as nothing happening, so a stale tap costs an error banner nobody
- * needed.
- */
+/** **The arrows stay**: they are the keyboard path and the precise one. The ends
+ * are disabled — the server treats a move off either end as nothing happening. */
 function MoveSeat({
   name,
   first,
@@ -281,12 +256,10 @@ function MoveSeat({
 }
 
 /**
- * The grip a name is dragged by. Pointer-only, and `tabIndex={-1}` with
- * `aria-hidden` because of it: the arrows do the same job from a keyboard, and a
- * focusable control that does nothing on Enter is worse than none.
- *
- * `touch-none` is load-bearing — without it a drag down the lobby is a scroll
- * down the lobby, which is the objection that kept this to two arrows.
+ * Pointer-only, and `tabIndex={-1}` with `aria-hidden` because of it: the arrows
+ * do the same job from a keyboard. `touch-none` is load-bearing — without it a
+ * drag down the lobby is a scroll down the lobby, which is the objection that
+ * kept this to two arrows.
  */
 function SeatGrip({
   dragging,
@@ -340,27 +313,17 @@ export function Lobby({
     ? room.seats.find((seat) => seat.id === room.lastWinnerId)
     : undefined;
 
-  /**
-   * Seat order is turn order in every room; only a table sitting in one has a
-   * real order for it to disagree with. The numbers go out to everyone there,
-   * host or not — the person sitting in the wrong place spots it first.
-   */
+  /** Seat order is turn order in every room; only a table sitting in one has a
+   * real order for it to disagree with. The numbers go to everyone there — the
+   * person sitting in the wrong place spots it first. */
   const numbered = room.irl;
   const orderable = isHost && room.irl && room.seats.length > 1;
 
-  /**
-   * "Does the seat order look correct?", asked once, on the first deal into an
-   * IRL room. A confirmation rather than a block: getting it wrong is
-   * recoverable and getting it right is a glance. Both answers say which one
-   * they are, because a pair of bare verbs made the reader work out which meant
-   * no.
-   */
-  /**
-   * The ref is the drag; the state is only so the row can look lifted. Every hop
-   * is sent as it is crossed rather than held until the drop, which is what lets
-   * the list reorder under the finger with no local copy of the order to keep in
-   * step.
-   */
+  /** A confirmation rather than a block: getting it wrong is recoverable and
+   * getting it right is a glance. Both answers say which one they are. */
+  /** The ref is the drag; the state is only so the row can look lifted. Every hop
+   * is sent as it is crossed, which is what lets the list reorder under the
+   * finger with no local copy of the order to keep in step. */
   const drag = useRef<SeatDrag | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
 
@@ -374,8 +337,8 @@ export function Lobby({
 
   const grabSeat = (event: ReactPointerEvent<HTMLElement>, id: string, index: number): void => {
     if (!orderable) return;
-    // Stops the press becoming a text selection, and on touch stops it becoming the
-    // beginning of a scroll before `touch-action` has had its say.
+    // Stops the press becoming a text selection, and on touch the beginning of a
+    // scroll before `touch-action` has had its say.
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { id, startY: event.clientY, from: index, at: index };
@@ -385,8 +348,8 @@ export function Lobby({
   const dragSeat = (event: ReactPointerEvent<HTMLElement>): void => {
     const state = drag.current;
     if (!state) return;
-    // The seat left the room mid-drag. Let go rather than post hops about somebody
-    // who is no longer at the table.
+    // The seat left mid-drag. Let go rather than post hops about somebody who is no
+    // longer at the table.
     if (!room.seats.some((seat) => seat.id === state.id)) {
       endDrag(event);
       return;
@@ -444,8 +407,8 @@ export function Lobby({
         </Panel>
       ) : null}
 
-      {/* Directly under the switch that turns it on, and shown to everyone
-          seated: the phone nearest the newcomer isn't always the host's. */}
+      {/* Shown to everyone seated: the phone nearest the newcomer isn't always
+          the host's. */}
       {room.irl ? <JoinQr code={room.code} /> : null}
 
       <Panel>
@@ -482,8 +445,8 @@ export function Lobby({
               key={seat.id}
               className={[
                 "flex min-h-16 items-center gap-2 rounded-xl px-3 py-2.5 text-sm",
-                // Lifted rather than hidden: the row under the finger is the one whose
-                // number is changing, so it has to stay readable.
+                // Lifted rather than hidden: the row under the finger is the one whose number
+                // is changing, so it has to stay readable.
                 dragging === seat.id
                   ? "bg-white/15 ring-1 ring-amber-300/40"
                   : "bg-white/5",
@@ -500,8 +463,8 @@ export function Lobby({
               {numbered ? (
                 <span className="w-4 shrink-0 text-xs tabular-nums text-white/30">{index + 1}</span>
               ) : null}
-              {/* Shrinks before the controls do: a long name in an IRL room shares
-                  the row with a remove button and two arrows. */}
+              {/* Shrinks before the controls do: a long name in an IRL room shares the
+                  row with a remove button and two arrows. */}
               <span className="min-w-0 truncate font-medium text-white">{seat.name}</span>
               {seat.isHost ? (
                 <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-300">
@@ -539,8 +502,7 @@ export function Lobby({
             </li>
           ))}
 
-          {/* Last in the list, because the end of the list is where the bot it
-              adds turns up. */}
+          {/* The end of the list is where the bot it adds turns up. */}
           {isHost ? (
             <li>
               <Button
@@ -554,10 +516,9 @@ export function Lobby({
               </Button>
             </li>
           ) : null}
-          {/* A row per screen that is actually connected, above the button that
-              invites the next one. Rows rather than a tally because a screen
-              arriving should be something appearing in the room, and a long
-              table may want one at each end (#138). */}
+          {/* Rows rather than a tally, because a screen arriving should be something
+              appearing in the room — and a long table may want one at each end
+              (#138). */}
           {room.irl
             ? Array.from({ length: room.tableScreens }, (_, index) => (
                 <li
@@ -565,9 +526,8 @@ export function Lobby({
                   className="flex min-h-16 items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm"
                 >
                   {numbered ? (
-                    // Sits in the seats' number column and stays empty: a shared screen
-                    // holds no seat, so it must not look like it takes a place
-                    // in the turn order.
+                    // A shared screen holds no seat, so it must not look like it takes a
+                    // place in the turn order.
                     <span aria-hidden className="w-4 shrink-0" />
                   ) : null}
                   <span className="min-w-0 truncate font-medium text-white">Shared screen</span>
@@ -603,9 +563,9 @@ export function Lobby({
 
       {isHost ? (
         <>
-          {/* On its own, under the names it needs four of. It shared a row with
-              "Add a bot", which gave equal weight to the button a table presses
-              once and the one it presses never. */}
+          {/* On its own, under the names it needs four of: sharing a row with "Add a
+              bot" gave equal weight to the button a table presses once and the
+              one it presses never. */}
           {confirming ? (
             <Panel>
               <p className="text-sm font-semibold text-white">
@@ -638,18 +598,16 @@ export function Lobby({
                 rules={room.houseRules}
                 onChange={(rules) => send({ t: "setHouseRules", rules })}
               />
-              {/* A room setting rather than a house rule, but read at the same
-                  moment as the switches above — so it belongs beside them rather
-                  than beside bot speed, which is read live and really is
-                  between-games-only. */}
+              {/* A room setting rather than a house rule, but read at the same moment as
+                  the switches above — so it belongs beside them rather than
+                  beside bot speed, which really is between-games-only. */}
               <div className="flex flex-col gap-3 border-t border-white/10 pt-3">
                 <DealerPicker
                   mode={room.dealerMode}
                   onChange={(mode) => send({ t: "setDealerMode", mode })}
                 />
-                {/* Independent of the dealer: that one changes who deals, this one
-                    changes who follows whom. In an IRL room it is also what puts
-                    the "take your seat" screen up (#199). */}
+                {/* Independent of the dealer. In an IRL room it is also what puts the
+                    "take your seat" screen up (#199). */}
                 <ShuffleSeatsToggle
                   on={room.shuffleSeats}
                   irl={room.irl}

@@ -226,7 +226,6 @@ const drive = async (client: TestClient): Promise<void> => {
   }
 };
 
-
 describe("a room over the wire", () => {
   it("seats people, deals them in, and plays a whole game with bots", async () => {
     const server = await startServer(tempDir());

@@ -1,18 +1,12 @@
 /**
- * The beat the deck running out gets, wherever it is being watched (#209).
+ * The beat the deck running out gets, wherever it is being watched (#209). It
+ * used to be very nearly nothing on screen and people read it as the game
+ * skipping ahead. The timing lives here for `useJudgedCall`'s reason: it is a
+ * moment the whole table is in, and neither screen gets to decide it. It reads
+ * the log rather than the state, because a reshuffle *is* an event.
  *
- * It used to be very nearly nothing on screen — the deck count jumped, the pile
- * dropped to a card, play carried on — and people read it as the game skipping
- * ahead. The timing lives here for `useJudgedCall`'s reason: it is the length of
- * a moment the whole table is in, and neither screen gets to decide it.
- *
- * It reads the log rather than the state, because a reshuffle *is* an event and
- * `GameView` carries no trace of one having just happened.
- *
- * **Presentation, never rules.** Nothing on the server changes and bot pacing is
- * untouched. In particular it is **not a gate on the draw pile**, which stays
- * tappable throughout — five seconds of animation is a tempting place to quietly
- * break the first rule in `AGENTS.md`'s "Rules that look like bugs".
+ * **Presentation, never rules**, and in particular **not a gate on the draw
+ * pile**, which stays tappable throughout.
  */
 
 import { useEffect, useState } from "react";

@@ -27,12 +27,8 @@ export const stillAccusable = (game: GameView, accusing: string | null): boolean
   game.sunnyCallable && game.sunnyTargetId === accusing;
 
 export interface CaughtState {
-  /** A call landed, it was right, and you are the one it was about. */
   caughtYou: boolean;
-  /** The peel is running, or the dialog is up and unacknowledged. The hand is dead
-   * for this whole span. */
   caughtHold: boolean;
-  /** The evidence has been watched; the dialog itself is up. */
   showCaught: boolean;
 }
 
@@ -44,9 +40,7 @@ export interface CaughtState {
  */
 export const caughtState = (
   call: SunnyCalled | null,
-  /** The log id of that call, so a new call restarts the beat. */
   lastCallId: number | undefined,
-  /** The call this screen has already dismissed the dialog for. */
   ackedCall: number | null,
   peeling: boolean,
   you: string | null,

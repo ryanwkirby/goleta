@@ -26,12 +26,9 @@ function CardChip({ card }: { card: Card }) {
 /**
  * A call rewinds the game, takes two cards off you and hands everyone a new card
  * to match, and until #66 the table narrated none of it: the announcement
- * expired on a timer while the forced play sat one tap away, so the punishment
- * could be half over before its victim knew it had started.
- *
- * Only the offender sees it; everyone else has the banner. It gives nothing
- * away — the play named is one they have already been caught not making, and the
- * card turned up is one the whole table watched them draw.
+ * expired on a timer while the forced play sat one tap away. Only the offender
+ * sees it, and it gives nothing away — the play named is one they have already
+ * been caught not making.
  */
 export function SunnyCaught({
   callerName,

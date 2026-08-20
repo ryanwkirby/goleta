@@ -59,15 +59,12 @@ export interface Seat {
  */
 interface SunnyVerdict {
   drawerId: PlayerId;
-  /** The first card of the window, which is what tells two windows apart. */
   firstDrawnId: CardId | null;
   call: boolean;
 }
 
 interface CallHold {
-  /** The window it was taken out on, so it can't outlive it. */
   window: string;
-  /** When the table stops waiting, whatever the picker is still showing. */
   until: number;
   /** A closed hold is kept, still carrying its deadline: it is the record of this
    * player having had their go, and it is what makes reopening free. */
@@ -78,7 +75,6 @@ export interface Room {
   code: string;
   hostId: PlayerId;
   seats: Seat[];
-  /** Who dealt last; null until the room has dealt at all. */
   dealerId: PlayerId | null;
   /** Human by default: a bot that answers instantly leaves no room to notice a
    * Sunny call, let alone make one. */
@@ -95,9 +91,8 @@ export interface Room {
   /** Held on the room rather than the game, so a table keeps its rules between
    * games and can change them while none is running. */
   options: GameOptions;
-  /** Seeds the table-wide rolls its bots make. One table, one thread of luck. */
+  /** One table, one thread of luck. */
   botSeed: number;
-  /** Who currently has the table waiting on them to name a card, by player. */
   callHolds: Record<PlayerId, CallHold>;
   sunnyVerdict: SunnyVerdict | null;
   game: GameState | null;
@@ -114,7 +109,6 @@ export const createStore = (): RoomStore => new Map();
 /** Enforced here because anything can arrive over a socket; agreed in the
  *  protocol so the field that stops you typing an eleventh cannot drift. */
 const MAX_NAME_LENGTH = NAME_LIMIT;
-/** One per seat, so a table of eight bots has eight distinct names. */
 const BOT_NAMES = [
   "Robot",
   "Automaton",
@@ -143,7 +137,6 @@ const fail: (message: string, code?: ErrorCode) => never = (message, code) => {
   throw new RoomError(message, code);
 };
 
-/** Names are shown to everyone at the table, so they get cleaned on the way in. */
 export const cleanName = (raw: string): string => {
   const stripped = raw.replace(/[\p{Cc}\p{Cf}]/gu, "").trim();
   return stripped.slice(0, MAX_NAME_LENGTH) || "Player";
@@ -160,7 +153,6 @@ export const roomStatus = (room: Room): RoomView["status"] => {
   if (!room.game) return "lobby";
   return room.game.status === "over" ? "finished" : "playing";
 };
-
 
 const newSeatFor = (name: string, bot: boolean): Seat => ({
   id: newPlayerId(),
@@ -243,7 +235,6 @@ export const markDisconnected = (room: Room, playerId: PlayerId): void => {
   const seat = seatOf(room, playerId);
   if (!seat) return;
   seat.connected = false;
-  // The rest of the table shouldn't sit waiting on a closed tab.
   delete room.callHolds[playerId];
 
   // The host's powers move on so the table isn't stranded mid-session.
@@ -253,7 +244,6 @@ export const markDisconnected = (room: Room, playerId: PlayerId): void => {
   }
   touch(room);
 };
-
 
 const requireHost = (room: Room, playerId: PlayerId): void => {
   if (room.hostId !== playerId) fail("Only the host can do that");
@@ -327,13 +317,9 @@ export const setHints = (room: Room, byPlayerId: PlayerId, on: boolean): boolean
 
 /**
  * Set by the host during a game as well as between them, because what they
- * choose is what the *next* deal plays: these are read once at `beginGame` and
- * the game keeps its own copy from then on (#134). That copy is taken
- * deliberately there rather than relied on here, and this replaces
- * `room.options` wholesale rather than mutating it. Keep it that way.
- *
- * Every field is checked rather than trusted: this arrives from a browser, and
- * `GameOptions` also carries a deck count and hand size no client may set.
+ * choose is what the *next* deal plays: read once at `beginGame`, and the game
+ * keeps its own copy (#134). This replaces `room.options` wholesale rather than
+ * mutating it; keep it that way. Every field is checked rather than trusted.
  */
 export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRules): void => {
   requireHost(room, byPlayerId);
@@ -354,7 +340,6 @@ export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRule
   touch(room);
 };
 
-/** The room's options as the lobby talks about them. */
 export const houseRulesOf = (room: Room): HouseRules => ({
   eights: room.options.eights,
   seedEight: room.options.seedEight,
@@ -362,10 +347,7 @@ export const houseRulesOf = (room: Room): HouseRules => ({
 });
 
 /**
- * Move a seat one place along the table order, which is also the turn order. A
- * game that deals across an IRL table and back is noticed three turns in, too
- * late to fix.
- *
+ * Move a seat one place along the table order, which is also the turn order.
  * `irl` is deliberately not checked: the order is real in every room, and gating
  * the wire on a flag the host can flip would error at somebody mid-shuffle.
  */
@@ -444,7 +426,6 @@ export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
   return [{ type: "gameStarted", upcard: topCard(room.game), seatsShuffled: shuffled }];
 };
 
-
 export interface IntentOutcome {
   ok: boolean;
   error?: string;
@@ -486,9 +467,9 @@ const challengeKey = (room: Room): string | null => {
 };
 
 /**
- * A call is three decisions since #50 and the bots' turn rhythm has no room for
- * them, so opening the picker stops them. Unlike the grace period #56 deleted,
- * this hangs off something a person actually did.
+ * Opening the picker stops the bots, which is what makes three decisions (#50)
+ * fit in a window paced for one tap. Unlike the grace period #56 deleted, this
+ * hangs off something a person actually did.
  *
  * Only somebody who could really call may hold, and the deadline is set once per
  * window — otherwise reopening the picker is a stall button.
@@ -588,7 +569,6 @@ export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null =
   return null;
 };
 
-
 /**
  * `tableScreens` is passed in rather than read off the room: a shared screen is
  * an open socket that said what it was, and connections belong to `socket.ts`.
@@ -621,7 +601,6 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
 
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>
   room.game ? redact(room.game, viewerId) : null;
-
 
 export const pruneRooms = (store: RoomStore, maxIdleMs: number, now = Date.now()): number => {
   let removed = 0;

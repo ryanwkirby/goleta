@@ -1,13 +1,11 @@
 /**
  * Which way up the shared table screen says things. The seat names have read
- * from outside their own edge since #141, while everything said in *words* was
- * still drawn upright — so a player at the top read their own name the right way
- * up and the sentence about their own turn upside down (#160).
+ * from outside their own edge since #141 while everything said in *words* was
+ * drawn upright, so a player at the top read their own name the right way up and
+ * the sentence about their own turn upside down (#160).
  *
- * **Two positions, not four.** A quarter turn is fine for a name; the turn
- * prompt carries a Sunny ruling, is 512 wide, and stood on its end would need
- * 512 of the 560 the board has. So the board flips rather than spins, which
- * buys the whole of what was wrong — nobody left reading upside down.
+ * **Two positions, not four.** The turn prompt carries a Sunny ruling and is 512
+ * wide, so stood on its end it would need 512 of the 560 the board has.
  */
 
 import type { GameView, RoomView } from "@goleta/engine";

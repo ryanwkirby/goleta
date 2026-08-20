@@ -1,12 +1,8 @@
 /**
  * A bot that plays by the rules, deciding from a `GameView` — the same redacted
- * picture a human gets. That keeps it honest and doubles as a standing check
- * that the view carries enough to actually play.
- *
- * It does read the seat ahead of it, which is neither cheating nor the view
- * leaking: every hand is face up. What it never does is take the answer from the
- * view — `legalCardIds` is its own hand, so anything it concludes about another
- * player it works out from `isPlayable` itself.
+ * picture a human gets, which keeps it honest and checks the view carries enough
+ * to play. It reads the seat ahead of it, which is neither cheating nor a leak:
+ * every hand is face up, and it works legality out from `isPlayable` itself.
  */
 
 import { randomInt } from "./rng.ts";
@@ -72,16 +68,10 @@ const canAnswer = (hand: readonly Card[], card: Card): boolean =>
   hand.some((held) => isPlayable(held, card.suit, card.rank));
 
 /**
- * Which card to play when you have no choice about playing.
- *
- * Wilds go first: an 8 in hand is what stops you drawing. Otherwise look one
- * seat along and prefer a card that seat can answer — the opposite of the
- * intuition, and the whole game: playing is compulsory, so leaving the next
- * player a match costs them a card while stranding them hands them the best turn
- * there is. The tiebreak underneath is to shed from the suit you hold least of.
- *
- * One seat and one question is the ceiling (#107): no counting the deck, no
- * reading further round, no modelling what comes back.
+ * Wilds go first: an 8 in hand is what stops you drawing. Otherwise look one seat
+ * along and prefer a card that seat can answer — the opposite of the intuition,
+ * and the whole game, since playing is compulsory. The tiebreak is to shed from
+ * the suit you hold least of. One seat and one question is the ceiling (#107).
  */
 const pickPlay = (view: GameView): Card | undefined => {
   const legal = ownHand(view).filter((card) => view.legalCardIds.includes(card.id));

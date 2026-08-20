@@ -15,10 +15,8 @@
 import { CARD_HEIGHT_PX, CARD_WIDTH_PX, type CardSize } from "./cardShape.ts";
 import { fitScale, type Box, type Point } from "./fitScale.ts";
 
-/** `gap-6` between the draw pile and the card in play. */
 const BETWEEN = 24;
 
-/** `gap-1.5` under each card, and the caption's own `h-4`. */
 const CAPTION = 6 + 16;
 
 /** The suit circle hangs twelve pixels past the card's right edge. Counted on
@@ -42,8 +40,7 @@ export const deckPoint = (room: Box, centre: Point, size: CardSize): Point => {
   };
 };
 
-/** The same arithmetic mirrored. Read by the reshuffle, the one thing here that
- * travels pile → deck (#209). */
+/** Read by the reshuffle, the one thing here that travels pile → deck (#209). */
 export const pilePoint = (room: Box, centre: Point, size: CardSize): Point => {
   const scale = fitScale(room, pileBox(size));
   return {

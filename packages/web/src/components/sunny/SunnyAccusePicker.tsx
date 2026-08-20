@@ -1,18 +1,10 @@
 /**
- * The offender's hand, offered as an accusation.
- *
- * **Five prohibitions converge on this one panel, and holding four is not
- * enough.** `AGENTS.md` § "Rules that look like bugs and are not" is the
- * authority; in brief:
- *
- * 1. **Nothing says which card was legal.** No highlight, at any strength.
- * 2. **No helpful sort** — the order `sunnyReach` sent, which is the order it
- *    was held in.
- * 3. **Nothing is dimmed or disabled.** Every card at equal weight.
- * 4. **Nothing indicates whether a call would land.** #31 shipped that answer
- *    and #50 took it back out: naming the card is the better brake.
- * 5. **`sunnyReach` is evidence, never a verdict.** Do not add a
- *    `legalCardIds` equivalent for it.
+ * The offender's hand, offered as an accusation. **Five prohibitions converge on
+ * this one panel, and holding four is not enough**; `AGENTS.md` is the
+ * authority. Nothing says which card was legal, there is no helpful sort,
+ * nothing is dimmed or disabled, nothing indicates whether a call would land
+ * (#31 shipped that answer and #50 took it back out), and `sunnyReach` is
+ * evidence rather than a verdict — do not add a `legalCardIds` for it.
  *
  * The first three are one idea from three directions: which card was legal is
  * exactly the question, so any weighting at all answers it.
@@ -46,18 +38,15 @@ export function SunnyAccusePicker({
   onPick: (cardId: string) => void;
   onCancel: () => void;
   /**
-   * Landscape, where the whole viewport is about 350px tall (#78).
-   *
-   * **Compact means docked, and a docked panel is paid for in card size.** The
-   * hand column below is *measured*: `handHeight` sizes the player's cards to
-   * what this leaves, continuously rather than by a rung (#166), so a row added
-   * here comes straight off their cards and nothing has to be capped to fit.
+   * Landscape, where the whole viewport is about 350px tall (#78). **Compact
+   * means docked, and a docked panel is paid for in card size**: `handHeight`
+   * sizes the player's cards to what this leaves (#166), so a row added here
+   * comes straight off their cards.
    *
    * The hand lays out in **one row, always**. A picker whose height came in
-   * card-row steps had to be capped at a fraction of the column, and then both
-   * halves scrolled — two nested scrolls, at the one moment nothing may be cut
-   * off. The overlap is a layout and not a hint: every card leaves the same
-   * sliver, so it still says nothing about which was legal (#96).
+   * card-row steps had to be capped, and then both halves scrolled — two nested
+   * scrolls, at the one moment nothing may be cut off. The overlap is a layout
+   * and not a hint: every card leaves the same sliver (#96).
    */
   compact?: boolean;
   irl?: boolean;

@@ -5,20 +5,15 @@ import { useIsPhone, useIsPortrait } from "../lib/viewport.ts";
 import { Button } from "./ui.tsx";
 
 /**
- * A phone standing in for a spare tablet, asked to stand upright instead.
- *
- * The shared screen lies flat with people round it, so which way up the *device*
- * is means nothing — the board is turned a quarter to suit (`fitScale.ts`). What
- * it does decide is how much of the screen the browser keeps: held sideways an
- * iPhone fits the board at ×0.57, upright-and-turned at ×0.66.
+ * A phone standing in for a spare tablet, asked to stand upright instead. Which
+ * way up the *device* is means nothing — the board turns a quarter to suit — but
+ * it decides how much of the screen the browser keeps: an iPhone fits the board
+ * at ×0.57 held sideways and ×0.66 upright-and-turned.
  *
  * **A nudge, not a block**, which is where this parts company with
  * `RotatePanel`: that guards a layout that cannot be drawn the other way up, on
- * the device somebody is playing their hand on. This is an optional extra screen
- * holding no cards, usually just propped by somebody walking back to their seat.
- *
- * **Only where the ask is worth making** — a phone-sized screen, held the long
- * way, with a browser bar to be rid of. None of it is a user agent.
+ * a device somebody is playing their hand on. Only asked where there is a
+ * browser bar to be rid of, and none of it is a user agent.
  */
 export function TableRotateNudge() {
   const phone = useIsPhone();

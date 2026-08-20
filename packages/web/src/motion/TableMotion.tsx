@@ -1,19 +1,14 @@
 /**
- * The table's sense of movement.
- *
- * Every state message arrives as a finished picture — the card is already on the
- * pile — which is correct and is also why the table used to jump. This layer
- * replays the difference: it flies a card from where the thing was to where the
- * state now says it is, and holds the destination back until it gets there. It
- * knows nothing the client wasn't already told; a draw nobody may see arrives as
- * `card: null` and flies face down.
+ * The table's sense of movement. Every state message arrives as a finished
+ * picture, which is correct and is also why the table used to jump; this layer
+ * flies a card from where the thing was to where the state says it is, and holds
+ * the destination back until it gets there. It knows nothing the client wasn't
+ * already told.
  *
  * Two layout effects run here and the order is load-bearing: `drive` reads the
- * DOM as it stands now against the geometry snapshot from the previous commit,
- * so a card that just left the hand still has a place to fly out of; `snapshot`
- * then overwrites that geometry for the next update. A child's layout effects
- * run before its parent's, so both land after the seats, piles and hand have
- * registered where they are.
+ * DOM as it stands now against the previous commit's geometry, so a card that
+ * just left the hand still has a place to fly out of, and `snapshot` then
+ * overwrites that geometry for the next update.
  */
 
 import {
@@ -50,7 +45,6 @@ interface LiveFlight extends Omit<FlightPlan, "from" | "to"> {
 
 /** What the pile draws while cards are still on their way to it. */
 type PileFace = { kind: "actual" } | { kind: "card"; card: Card } | { kind: "empty" };
-
 
 export function TableMotion({
   game,

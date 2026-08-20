@@ -1,16 +1,12 @@
 /**
- * Offering a phone the rest of its screen, in the view that wants it.
+ * Offering a phone the rest of its screen, in the view that wants it. It
+ * **cannot be asked for programmatically**, so there has to be something to tap
+ * where the orientation this is about can reach it; it **does not stay taken**,
+ * so the offer has to come back on its own; and **half the phones in the world
+ * do not have it**, so an iPhone gets no control rather than a dead one.
  *
- * Three things about the offer are easy to get wrong. It **cannot be asked for
- * programmatically** — `requestFullscreen()` needs a gesture, so there has to be
- * something to tap where the orientation this is about can reach it. It **does
- * not stay taken**: backgrounding and the exit gesture both drop it, so the
- * offer has to come back on its own. And **half the phones in the world do not
- * have it**, so an iPhone gets no control rather than a dead one.
- *
- * **Nothing here locks orientation.** `screen.orientation.lock()` would freeze
- * the app's only view switch and quietly delete half the app; fullscreen
- * survives a rotation on its own, which was all that was ever wanted (#125).
+ * **Nothing here locks orientation** — that would freeze the app's only view
+ * switch, and fullscreen survives a rotation on its own (#125).
  */
 
 import { useEffect, useState } from "react";

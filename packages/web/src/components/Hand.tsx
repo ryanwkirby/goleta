@@ -1,16 +1,9 @@
 /**
- * Your own cards, and the one control over them.
- *
- * **Rules converge here.** `AGENTS.md` § "Rules that look like bugs and are not"
- * carries the argument and is the authority.
- *
- * - **Nothing marks a playable card except under `assist`** (#33): seeing your
- *   own legal move at a glance is what stops you making the mistake the Sunny
- *   Rule exists to punish. The tooltip follows it too, being a highlight in slow
- *   motion.
- * - **`assist` is a setting you keep, and it is public** (#187). Presentation,
- *   never a rule: the engine never learns it exists and no bot may read it.
- * - **`legalCardIds` is your own hand and nobody else's**, by `redact.ts`.
+ * Your own cards, and the one control over them. **Rules converge here**;
+ * `AGENTS.md` § "Rules that look like bugs and are not" is the authority.
+ * Nothing marks a playable card except under `assist` (#33), the tooltip
+ * included; `assist` is a setting you keep and it is public (#187); and
+ * `legalCardIds` is your own hand and nobody else's, by `redact.ts`.
  */
 
 import {
@@ -33,18 +26,17 @@ import { PlayingCard } from "./Card.tsx";
 import type { HandMode } from "../lib/handMode.ts";
 import { CARD_WIDTH_PX, cardWidthAt, type CardSize } from "../lib/cardShape.ts";
 
-/** `forced` is the play you owe after a call lands on you: it plays a card like
- * `play`, but commits on the second tap like `surrender`, because a punishment
- * you can fire off with a stray thumb is one you never find out you served. */
+/** `forced` plays a card like `play` but commits on the second tap like
+ * `surrender`: a punishment you can fire off with a stray thumb is one you never
+ * find out you served. */
 
 /** The moves that ask twice, because you can't take them back. */
 const CONFIRMS: ReadonlySet<HandMode> = new Set<HandMode>(["forced", "surrender"]);
 
-/** How long the hand takes to close a gap, or open one. */
 const REFLOW_MS = 190;
 
-/** Tap to cycle how they're arranged. Quiet, and next to the offer of help
- * rather than near the table — it changes nothing about the game. */
+/** Quiet, and next to the offer of help rather than near the table — it changes
+ * nothing about the game. */
 export function HandSortButton({
   sort,
   onCycle,
@@ -90,26 +82,24 @@ export function Hand({
   assist: boolean;
   onChoose: (cardId: string) => void;
   size?: CardSize;
-  /** Drawn at this height instead of at `size`, so the landscape hand can fill
-   * the row it was given rather than fall back to a rung (#166). */
+  /** So the landscape hand can fill the row it was given rather than fall back to
+   * a rung (#166). */
   height?: number;
   /**
    * Left edge to left edge — see `handFan.ts`. Required, and it did not use to
    * be: the upright table passed nothing and got a plain row that overflowed and
    * scrolled sideways, the failure #59 abolished everywhere but the one view
-   * that never got the fix (#191). A hand with room to spare is handed
-   * `loosest`, which is what the old plain row already looked like.
+   * that never got the fix (#191).
    */
   step: number;
   /** IRL cards carry mirrored indices so the far side of the table can read them. */
   irl?: boolean;
   /** A fitted landscape hand closes up rather than scrolling, and may be squeezed
-   * past the tap floor to do it — past which one tap raises a card and the
-   * second commits, because the tap target is gone. See `choose`. */
+   * past the tap floor to do it — past which one tap raises a card and the second
+   * commits. See `choose`. */
   fit?: boolean;
 }) {
-  // One width for the fan and every card in it: off the height when this hand has
-  // been given one, off the ladder when it has not.
+  // One width for the fan and every card in it.
   const cardWidth = height ? cardWidthAt(height) : CARD_WIDTH_PX[size];
 
   const [selected, setSelected] = useState<string | null>(null);
@@ -131,8 +121,8 @@ export function Hand({
   const refs = useRef(new Map<string, RefCallback<HTMLElement>>());
   const previousCards = useRef<ReadonlySet<string>>(new Set(cards.map((card) => card.id)));
 
-  /** One stable ref per card doing two jobs: telling the motion layer where the
-   * card is, and keeping a handle for the reflow below. */
+  /** Two jobs: telling the motion layer where the card is, and keeping a handle
+   * for the reflow below. */
   const refFor = (cardId: string): RefCallback<HTMLElement> => {
     const cached = refs.current.get(cardId);
     if (cached) return cached;
@@ -151,9 +141,9 @@ export function Hand({
 
   /**
    * Cards close the gap when one leaves and make room when one joins — the same
-   * movement the flying card is describing, seen from the other end. Offsets,
-   * not bounding boxes: `offsetLeft` ignores transforms, so a card mid-slide
-   * can't poison the next measurement.
+   * movement the flying card describes, seen from the other end. Offsets, not
+   * bounding boxes: `offsetLeft` ignores transforms, so a card mid-slide can't
+   * poison the next measurement.
    */
   useLayoutEffect(() => {
     const before = places.current;
@@ -236,13 +226,12 @@ export function Hand({
     // 116px to aim at and there is nothing to disambiguate — asking twice there
     // is the confirm-on-every-card the comment below rules out, and a hand only
     // ever reaches about a dozen (the simulation's worst across 300 games), so
-    // Below `TIGHTEST` the sliver is genuinely thinner than a thumb, which is the
-    // condition #117 names and the only one worth a second tap.
+    // Below `TIGHTEST` the sliver is thinner than a thumb, which is the condition
+  // #117 names and the only one worth a second tap.
     const tight = step < TIGHTEST;
     const mustConfirm = CONFIRMS.has(mode) || (fit && tight);
     // The moves you can't take back ask twice, and so does a card too thin to be
-    // sure you hit. Ordinary play doesn't — a confirm on every card would wreck
-    // the rhythm of a turn.
+    // sure you hit. A confirm on every card would wreck the rhythm of a turn.
     if (mustConfirm && selected !== card.id) {
       setSelected(card.id);
       return;
@@ -254,21 +243,17 @@ export function Hand({
   return (
     <div
       ref={setHandRef}
-      // Cards slide left by `--fan`, exactly as the seat strip does it.
-      // `justify-center` is what keeps a short hand in the middle of a wide
-      // landscape screen; `overflow-x-auto` only overrides it once there is
-      // genuinely too much.
+      // `justify-center` keeps a short hand in the middle of a wide landscape screen;
+      // `overflow-x-auto` only overrides it once there is genuinely too much.
       style={{ "--fan": `${step - cardWidth}px` } as CSSProperties}
       className={[
-        // Same air above the cards as below. The top has to clear the 14px a selected
+        // Same air above the cards as below: the top has to clear the 14px a selected
         // card lifts, since this row sets `overflow-x` and the vertical axis
-        // scrolls with it; the bottom never needed it until the turn ring was
-        // drawn around them and the hand sat visibly low in its own frame.
+        // scrolls with it.
         "flex items-end py-4",
         // The row's width *is* the width the fan was fitted to, so it keeps no padding
-        // of its own — an inset here and one in the arithmetic are two places to
-        // disagree, and they did. `auto` rather than `hidden`: `fit` has a floor,
-        // and past it clipping the ends silently would hide cards the turn needs.
+        // of its own. `auto` rather than `hidden`: `fit` has a floor, and past it
+        // clipping the ends would hide cards the turn needs.
         "justify-center overflow-x-auto [&>*+*]:ml-[var(--fan)]",
       ].join(" ")}
       onClick={(event) => {
@@ -286,8 +271,8 @@ export function Hand({
             mirrored={irl}
             anchor={refFor(card.id)}
             arriving={isArriving(card.id)}
-            // With help on the unplayable cards are dimmed; without it they all look
-            // alike. Giving a card up, legality is irrelevant either way.
+            // With help on the unplayable cards are dimmed. Giving a card up, legality is
+            // irrelevant either way.
             dimmed={(mode === "play" || mode === "forced") && assist && !playable}
             selected={selected === card.id}
             onClick={mode === "idle" ? undefined : () => choose(card)}

@@ -58,16 +58,11 @@ export interface TableStateInput {
 }
 
 /**
- * Everything the table screen knows, worked out once.
+ * Everything the table screen knows, worked out once — `Table.tsx` both derived
+ * every fact *and* drew two layouts (#226). The decisions themselves live in
+ * `lib/`: `tableRoute`, `handMode`, `sunnyOffer`, `graduation`.
  *
- * `Table.tsx` both derived every fact about the table *and* drew two complete
- * layouts (#226); this is the first of those jobs. The decisions themselves are
- * not here either — `tableRoute`, `handMode`, `sunnyOffer` and `graduation` are
- * pure modules in `lib/` with tests of their own.
- *
- * **Hook order is the reason this is one function rather than several.** Every
- * `useState` and effect below runs in the order it is written, before the screen
- * picks which of its five layouts to return.
+ * **Hook order is why this is one function rather than several.**
  */
 export function useTableState({
   room,
@@ -91,10 +86,8 @@ export function useTableState({
   const [stalled, setStalled] = useState(false);
   const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
   /**
-   * Which deal this phone has already been turned sideways for. The deal rather
-   * than a bare flag: a boolean reset by an effect would put the rotate panel
-   * back up for a frame at the top of every hand. `gamesPlayed` survives a
-   * reconnect, which the log — empty on every page load — does not.
+   * The deal rather than a bare flag: a boolean reset by an effect would put the
+   * rotate panel back up for a frame at the top of every hand.
    */
   const [rotatedFor, setRotatedFor] = useState<number | null>(null);
   /**
@@ -105,13 +98,10 @@ export function useTableState({
    */
   const [seatedFor, setSeatedFor] = useState<number | null>(null);
   /**
-   * The room the upright hand has to spend, measured rather than assumed. The
-   * landscape view always did this, so upright was the one place left where a
-   * hand you could not read without scrolling was still possible (#191).
-   *
-   * **Width only.** `handHeight` exists because the landscape hand owns the
-   * whole column; this one is shared with the seat strip, the piles, the prompt
-   * and the log. The card stays on the ladder and only the *step* is measured.
+   * The room the upright hand has to spend (#191). **Width only** — the
+   * landscape hand owns its whole column, while this one is shared with the
+   * seat strip, the piles, the prompt and the log, so the card stays on the
+   * ladder and only the *step* is measured.
    */
   const handRow = useRef<HTMLDivElement>(null);
   const handBox = useBox(handRow);
@@ -135,10 +125,9 @@ export function useTableState({
    */
   const seated = game.you !== null;
 
-  // A call is evidence before it's news, and news before it's a lesson: the pile
-  // peels back to show what the ruling was made on, the banner says what it was,
-  // and the explanation waits until that has been and gone. The first two are the
-  // same beat wherever a call is watched, so the timing is in `useJudgedCall`.
+  // A call is evidence before it's news, and news before it's a lesson. The first
+  // two are the same beat wherever a call is watched, so the timing is in
+  // `useJudgedCall`.
   const { call, id: lastCallId, peeling, announcing, endAnnouncement } = useJudgedCall(log);
 
   /**
@@ -224,21 +213,14 @@ export function useTableState({
   }, [seatHinted, hints, send]);
 
   /**
-   * One count per game this browser has seen through to the end.
+   * One count per game this browser has seen through to the end, off
+   * `room.gamesPlayed` rather than the `gameOver` event — which the log, empty
+   * on every page load, could not survive (#184). The bookmark is written
+   * whether or not anything is credited, so arriving three games in credits
+   * none of them.
    *
-   * Off `room.gamesPlayed` rather than the `gameOver` event: the server owns
-   * that number and it survives a reload, a reconnect and a redeploy. Keyed off
-   * the event, a first game that ended while the phone was away was never
-   * counted and the training wheels stayed on for the second (#184).
-   *
-   * The bookmark in `localStorage` is what keeps each game counted once — it is
-   * written whether or not anything is credited, so arriving at a table three
-   * games in credits none of them. A watcher moves it and is credited nothing.
-   *
-   * Since #187 the count decides one thing: whether to *ask*, after your first
-   * finished game, if you want to keep the highlights. Nothing renders off it,
-   * which is why it is not held in state — but it stays a layout effect, so the
-   * question and the frame it is asked over are in step.
+   * Since #187 the count decides one thing: whether to *ask* about keeping the
+   * highlights. A layout effect, so the question and the frame are in step.
    */
   const played = room.gamesPlayed;
   useLayoutEffect(() => {
@@ -282,15 +264,10 @@ export function useTableState({
   const handCards = sortHand(you?.hand ?? [], handSort);
 
   /**
-   * Left edge to left edge for the upright hand — the same three stages, in the
-   * same order, with the same numbers as landscape (#191): whole cards with air
-   * between them, then overlapping down to the 44px tap floor, then `fit` down
-   * to 18px where one tap raises a card and the second commits it (#117), and
-   * only past that does anything scroll.
-   *
-   * Unmeasured is the loosest step, which is exactly the `gap-1.5` this row used
-   * to be laid out with — so the frame before the first measurement is the
-   * layout it always had.
+   * Left edge to left edge for the upright hand — the same three stages and the
+   * same numbers as landscape (#191), down through the tap floor to `fit`
+   * (#117), and only past that does anything scroll. Unmeasured is the loosest
+   * step, which is the `gap-1.5` this row used to be laid out with.
    */
   const handFanStep = handStep(
     handBox.width,
@@ -301,10 +278,9 @@ export function useTableState({
   );
 
   /**
-   * Somebody else's ask, for the landscape view to carry. Yours goes over your
-   * own cards there; everybody else's had no seat to rise off and was dropped,
-   * which made an IRL table the one place a public ask was private. The latest
-   * one only: two at once in a 40px strip is a queue, not a shout.
+   * Somebody else's ask, for the landscape view to carry. It had no seat to rise
+   * off there, which made an IRL table the one place a public ask was private.
+   * The latest one only: two at once in a 40px strip is a queue.
    */
   const helpFrom = shouts.findLast((shout) => shout.playerId !== game.you) ?? null;
 

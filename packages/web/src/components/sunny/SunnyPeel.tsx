@@ -50,18 +50,14 @@ function Marked({
 
 /**
  * The evidence, held up at the pile: what was in play when they reached, and the
- * card the caller says they should have played instead. Everything played on top
- * fans aside and drops to near-transparent.
- *
- * It runs identically for a call that landed and one that missed — what the
- * table is meant to see is whether the two marked cards match (#63). **Two cards
- * are marked and no others**: lighting up the one they *should* have named would
- * hand over the answer the ruling withholds and make the next call automatic.
+ * card the caller says they should have played. It runs identically for a call
+ * that landed and one that missed — what the table reads is whether the two
+ * marked cards match (#63). **Two cards are marked and no others**: lighting up
+ * the one they *should* have named would make the next call automatic.
  *
  * Drawn absolutely, out of the pile card it sits on, so the row underneath
- * neither moves nor gives up its anchor. Nothing here reads live state either —
- * it is all off the event — so a bot playing on into the peel can't pull the
- * presentation out from under itself.
+ * neither moves nor gives up its anchor, and it reads the event rather than live
+ * state, so a bot playing on into the peel can't pull it out from under itself.
  */
 export function SunnyPeel({
   evidence,

@@ -13,15 +13,10 @@ import {
   type CardSize,
 } from "../lib/cardShape.ts";
 
-/**
- * Re-exported, because this is where people look for them. They live in
- * `lib/cardShape.ts` so `lib` can use them without importing a component
- * (#224) — but a paired benchmark caught the bill: an agent asking "what does
- * this app use to draw a suit" then read both files (`bench/results.md`).
- *
- * Only the three suit helpers, not the size ladder: nobody goes hunting for
- * arithmetic in a card component.
- */
+/** Re-exported because this is where people look for them. They live in
+ * `lib/cardShape.ts` so `lib` can use them without importing a component (#224),
+ * and a paired benchmark caught the bill: an agent asking "what does this app use
+ * to draw a suit" then read both files. Only the suit helpers, not the ladder. */
 export { isRed, SUIT_GLYPH, SUIT_LABEL } from "../lib/cardShape.ts";
 
 const SIZES: Record<CardSize, string> = {
@@ -33,7 +28,6 @@ const SIZES: Record<CardSize, string> = {
   // size apiece once the suit is counted, in a card 240 tall.
   "2xl": "h-60 w-45 text-[3.25rem] rounded-3xl p-3",
 };
-
 
 interface CardProps {
   card: CardModel;

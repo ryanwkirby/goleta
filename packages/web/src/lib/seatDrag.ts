@@ -30,14 +30,12 @@ export const dropIndex = (from: number, deltaY: number, seats: number): number =
 export interface SeatDrag {
   id: string;
   startY: number;
-  /** The seat's place when the drag began. */
   from: number;
   at: number;
 }
 
 export interface Hops {
   direction: "up" | "down";
-  /** How many single-place messages this drag owes. */
   count: number;
 }
 

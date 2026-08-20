@@ -1,20 +1,13 @@
 /**
- * The room code, and the two things a code is for.
+ * The room code, and the two things a code is for. Once the cards are out there
+ * is no lobby to go back to, and the code used to shrink to four characters that
+ * did nothing — so somebody arriving mid-game got "read this out and have them
+ * type it" (#135).
  *
- * In the lobby the invite is the screen. Once the cards are out there is no
- * lobby to go back to, and the code used to shrink to four characters that said
- * what the room was called and did nothing — so somebody arriving mid-game, the
- * ordinary case at a real table, got "read this out and have them type it"
- * (#135).
- *
- * Tapping it opens both invites behind one toggle: a code is the address of the
- * room, and the two arrivals it can bring are a **person** and a **screen**.
- * Same four characters, different links. **A player is offered first** — a
- * shared screen is set up once, and a person turns up all evening.
- *
- * **The code is on the panel in full, above the QR.** A camera is the fast path
- * and not the only one. Anybody at the table can open it: handing somebody the
- * way in is not a host power, and nothing behind here changes the room.
+ * Tapping it opens both invites behind one toggle: the two arrivals a code can
+ * bring are a **person** and a **screen**, same characters, different links. A
+ * player is offered first, and the code is on the panel in full above the QR.
+ * Anybody at the table can open it.
  */
 
 import { useState } from "react";

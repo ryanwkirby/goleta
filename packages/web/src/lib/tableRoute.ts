@@ -10,7 +10,6 @@
 
 import type { LoggedEvent } from "./feed.ts";
 
-/** `full` is the ordinary upright table, and the fallback. */
 export type TableRoute =
   | { kind: "takeYourSeat"; shuffleId: number }
   | { kind: "rotate" }
@@ -19,23 +18,16 @@ export type TableRoute =
   | { kind: "full" };
 
 export interface TableSituation {
-  /** The room says this table is sitting together. Presentation, never a rule. */
   irl: boolean;
   /** Moves at *game over*, not at the next deal. Load-bearing — see below. */
   gamesPlayed: number;
   finished: boolean;
-  /** There is a seat behind this screen. A watcher has none. */
   seated: boolean;
-  /** The viewport says phone rather than tablet. Never a user agent. */
   phone: boolean;
   portrait: boolean;
-  /** A call is being peeled, announced, or held on the offender's own dialog. */
   judging: boolean;
-  /** The log id of the deal that shuffled the seats, if this one did. */
   shuffleId: number | null;
-  /** The shuffle this phone has already been shown the new order for. */
   seatedFor: number | null;
-  /** The deal this phone has already been seen sideways for. */
   rotatedFor: number | null;
 }
 
@@ -55,7 +47,6 @@ export const isIrlPhone = (at: TableSituation): boolean =>
   at.irl && at.phone && at.seated && !at.finished;
 
 export const tableRoute = (at: TableSituation): TableRoute => {
-  /** Only in an IRL room: online there is nobody to move (#199). */
   if (at.irl && !at.finished && at.shuffleId !== null && at.seatedFor !== at.shuffleId) {
     return { kind: "takeYourSeat", shuffleId: at.shuffleId };
   }
@@ -73,8 +64,7 @@ export const tableRoute = (at: TableSituation): TableRoute => {
     return { kind: "handOver" };
   }
 
-  /** A judged call takes the whole table back: the peel cannot play out in a 40px
-   * strip (#63). */
+  /** A judged call takes the whole table back: the peel cannot play out in a 40px strip (#63). */
   if (irlPhone && !at.portrait && !at.judging) return { kind: "compact" };
 
   return { kind: "full" };

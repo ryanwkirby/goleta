@@ -1,8 +1,6 @@
 /**
- * Room snapshots on disk. Rooms are few and small, and the access pattern is
- * "write on change, read everything once at boot", which is what a file is for.
- * Writes go to a temp file and are renamed into place, so a crash mid-write
- * leaves the previous snapshot intact.
+ * Room snapshots on disk. Writes go to a temp file and are renamed into place, so
+ * a crash mid-write leaves the previous snapshot intact.
  *
  * A convenience, not a guarantee: a snapshot written by an older shape is
  * discarded rather than migrated — see AGENTS.md.

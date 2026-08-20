@@ -9,13 +9,10 @@ import { Button } from "./ui.tsx";
 
 /**
  * Appears a few seconds into a turn you haven't moved on. Deliberately quiet: an
- * offer you can ignore, not a prompt you owe an answer.
- *
- * Quiet is not silent, and until #193 this was the second one — it arrived fully
- * formed at the exact moment somebody had stopped knowing what to do. It fades
- * in and rises a quarter of a rem into the place it was always going to occupy.
- * Nothing around it moves, it is mounted per offer so it cannot re-run, and it
- * leaves without an animation: the offer expires because you moved.
+ * offer you can ignore, not a prompt you owe an answer. Quiet is not silent, and
+ * until #193 this was the second one — it fades in and rises a quarter of a rem
+ * into the place it was always going to occupy, mounted per offer so it cannot
+ * re-run, and leaves without an animation.
  */
 export function HelpLink({ onAsk }: { onAsk: () => void }) {
   return (
@@ -95,10 +92,6 @@ export function HelpShout({ name, kind = "help" }: { name?: string; kind?: Shout
  * The same shout, in a line of furniture rather than over a hand. The two screens
  * that draw nobody else's cards had nothing for somebody else's ask to rise off,
  * so an IRL table full of landscape phones was the one place help was silent.
- *
- * It takes a name where it is drawn on its own and goes without one where it
- * already sits beside the person. No rise: a pill sliding around a 40px strip is
- * motion describing nothing.
  */
 export function HelpAsk({
   name,
@@ -124,14 +117,10 @@ export function HelpAsk({
 }
 
 /**
- * Whether the table marks up your playable cards, as a switch you can find. Two
- * named answers, the shape `IrlToggle` and `DealerPicker` already use.
- *
+ * Whether the table marks up your playable cards, as a switch you can find.
  * **The copy says it is public, because it is** (#187): switching it on is
  * announced and marks your seat, and a player deciding here is entitled to know
- * that first. Switching it off is silent and the copy does not promise
- * otherwise. It says nothing about how long it lasts, because the answer is
- * "until you change it".
+ * that first. It says nothing about how long it lasts — "until you change it".
  */
 export function HintsToggle({
   on,

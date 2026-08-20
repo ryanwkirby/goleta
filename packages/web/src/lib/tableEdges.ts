@@ -8,8 +8,6 @@ import type { Box, Point } from "./fitScale.ts";
 
 export type Edge = "top" | "right" | "bottom" | "left";
 
-/** Seat order is turn order, so this walks the table the way play does — which
- * is what makes a card fly in the direction that player is. */
 export const edgeFor = (index: number, count: number): Edge => {
   const t = count <= 1 ? 0 : index / count;
   if (t < 0.25) return "top";
@@ -18,8 +16,6 @@ export const edgeFor = (index: number, count: number): Edge => {
   return "left";
 };
 
-/** Bottom is upright; every other edge is a quarter turn away in the direction
- * you would walk round the table. */
 export const TURN_FOR: Record<Edge, number> = { bottom: 0, left: 90, top: 180, right: -90 };
 
 /** The strips round the edge that belong to the names. The bottom is deeper
@@ -34,7 +30,6 @@ export const LABEL = 216;
 
 export interface EdgeSeat {
   edge: Edge;
-  /** Percentage along that edge, left-to-right / top-to-bottom. */
   along: number;
 }
 
@@ -47,8 +42,6 @@ const TOP_ENDS = { lone: 24, pair: [24, 76] };
 const BOTTOM_ENDS = { lone: 12, pair: [12, 88] };
 const CENTRED = { lone: 50, pair: [30, 70] };
 
-/** Laid out per edge rather than by index arithmetic, so two seats on one edge
- * are spread across it and a lone seat is placed on its own terms. */
 /** Exported because the flight aims at these spots too: it used to have its own
  * vectors from the middle of the board, which threw a card at the midpoint
  * between two people (#164). */
@@ -59,8 +52,6 @@ export const ACROSS: Record<Edge, number> = {
   right: 28,
 };
 
-/** One answer, read both by what draws the names and by what throws cards at
- * them. */
 export const seatPoint = (spot: EdgeSeat, design: Box): Point => {
   const across = ACROSS[spot.edge];
   switch (spot.edge) {

@@ -15,7 +15,6 @@ import type { GameEvent } from "@goleta/engine";
 import { PEEL_MS } from "./beats.ts";
 import type { LoggedEvent } from "./feed.ts";
 
-
 /** The event itself, narrowed to the one variant this is about. */
 export type SunnyCalled = Extract<GameEvent, { type: "sunnyCalled" }>;
 

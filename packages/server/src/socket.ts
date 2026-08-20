@@ -49,7 +49,6 @@ import {
 const HEARTBEAT_MS = 30_000;
 
 export interface BotTiming {
-  /** A bot's first action on a turn: the pause that reads as thinking. */
   firstMove: number;
   /** The rest of the turn. A second draw, or the suit named after an 8, is a
    * decision it has effectively already made; sitting on it reads as lag. */
@@ -58,19 +57,15 @@ export interface BotTiming {
 }
 
 /**
- * Two paces, chosen by the host in the lobby. `human` is three seconds to look
- * at a fresh hand and a second for the rest of the turn; `lightning` is 700ms
- * throughout, which still clears a card's flight (`FLIGHT_MS`).
- *
- * Neither `call` figure is turn pacing: it is the window in which a person can
- * beat the bots to a call they can all see, which is why the human one is long.
+ * Two paces, chosen by the host in the lobby. Neither `call` figure is turn
+ * pacing: it is the window in which a person can beat the bots to a call they
+ * can all see, which is why the human one is long.
  */
 export const DEFAULT_BOT_TIMING: Record<BotSpeed, BotTiming> = {
   human: { firstMove: 3000, nextMove: 1000, call: 5000 },
   lightning: { firstMove: 700, nextMove: 700, call: 700 },
 };
 
-/** What a bot is about to do, as far as pacing is concerned. */
 export interface BotMoveShape {
   call: boolean;
   /** It has already acted this turn, so it isn't deciding from scratch. */
@@ -80,8 +75,7 @@ export interface BotMoveShape {
 /**
  * Turn rhythm and nothing else. Whether a challenge window is open — which,
  * since one opens on every draw, is most of the time — does not enter into it: a
- * bot sitting on a decision to leave room for a call against itself reads as
- * lag. `call` paces an action a bot is taking, not a wait on the chance of one.
+ * bot sitting on a decision to leave room for a call against itself reads as lag.
  */
 export const botPace = (timing: BotTiming, move: BotMoveShape): number => {
   if (move.call) return timing.call;
@@ -94,7 +88,6 @@ const SHOUT_COOLDOWN_MS = 2000;
 interface Client {
   socket: WebSocket;
   code: string | null;
-  /** Null for a table screen or spectator: they see the board and hold no cards. */
   playerId: PlayerId | null;
   /** True only for the auxiliary device at the middle of an IRL table. */
   table: boolean;
@@ -132,11 +125,9 @@ export const attachSockets = (
     }
   };
 
-  /**
-   * Counted off the open sockets when a view is built rather than kept on the
-   * room (#138), so there is no field to clear on load, nothing to leak on a
-   * dropped connection, and no way to disagree with the sockets actually open.
-   */
+  /** Counted off the open sockets when a view is built rather than kept on the
+   * room (#138), so there is no field to clear on load and no way to disagree
+   * with the sockets actually open. */
   const tableScreensAt = (room: Room): number => {
     let screens = 0;
     for (const client of clients) {
@@ -145,7 +136,6 @@ export const attachSockets = (
     return screens;
   };
 
-  /** Everyone in the room gets their own view of the same moment. */
   const broadcast = (room: Room, events: readonly GameEvent[] = []): void => {
     const screens = tableScreensAt(room);
     for (const client of clients) {
@@ -174,8 +164,8 @@ export const attachSockets = (
     if (botTimers.has(room.code)) return;
 
     // Somebody has the picker open, so the table waits rather than letting a bot
-    // shut the window they're deciding in. Re-checked when the wait is up rather
-    // than acted on then: the hold may have been lifted and replaced since.
+    // shut the window they're deciding in. Re-checked when the wait is up: the
+    // hold may have been lifted and replaced since.
     const heldUntil = callHeldUntil(room);
     if (heldUntil > 0) {
       const wait = setTimeout(() => {
@@ -213,11 +203,10 @@ export const attachSockets = (
   };
 
   /**
-   * Throw away the move on the clock and work the next one out from scratch.
-   *
-   * A hold going up has to pre-empt a bot already scheduled, or that bot shuts
-   * the very window the hold exists to keep open; coming down has to do the same
-   * in reverse, so the table moves again as soon as the caller is done.
+   * Throw away the move on the clock and work the next one out from scratch. A
+   * hold going up has to pre-empt a bot already scheduled, or that bot shuts the
+   * very window the hold exists to keep open; coming down has to do the same in
+   * reverse.
    */
   const restartBots = (room: Room): void => {
     const pending = botTimers.get(room.code);
@@ -259,16 +248,11 @@ export const attachSockets = (
     const room = findRoom(store, client.code);
     const playerId = client.playerId;
     /**
-     * The shared table screen's one auxiliary action: tapping its draw pile
-     * draws for whoever is on the clock (#120).
-     *
-     * The `table` bit is the client's own word for what it is, so this narrows
-     * rather than grants — what holds the line is the conditions around it:
-     * `drawCard` only, an IRL room only, and a seat with a person behind it.
-     *
-     * That last one is the point of `bot`. The pile is tappable to the whole
-     * room and a bot's turn goes past under a finger already reaching, so
-     * without it a bot is handed a Sunny violation it did not choose.
+     * The shared table screen's one auxiliary action (#120). The `table` bit is
+     * the client's own word for what it is, so this narrows rather than grants —
+     * what holds the line is the conditions: `drawCard` only, an IRL room only,
+     * and a seat with a person behind it. Without that last one a bot would be
+     * handed a Sunny violation it did not choose.
      */
     if (
       !playerId &&
@@ -294,7 +278,7 @@ export const attachSockets = (
         if (!outcome.ok) throw new RoomError(outcome.error ?? "That move isn't allowed");
         broadcast(room, outcome.events);
         // Restarted rather than scheduled: a call submitted from the picker shuts its
-        // own window, which lifts the hold, and the table should get going now.
+        // own window, which lifts the hold.
         return restartBots(room);
       }
       case "start": {
@@ -309,8 +293,7 @@ export const attachSockets = (
         setBotSpeed(room, playerId, message.speed);
         return broadcast(room);
       case "setIrl":
-        // No "wait for this game to finish", unlike bot speed above: this reaches
-        // nothing that is running.
+        // No "wait for this game to finish": this reaches nothing that is running.
         setIrl(room, playerId, message.on);
         return broadcast(room);
       case "setHouseRules":
@@ -387,7 +370,7 @@ export const attachSockets = (
           // A refused `intent` is a mis-tap, so it is the one refusal the client shows
           // and takes away again. Read off the message rather than carried on the
           // error, which would want a class hierarchy for a distinction this
-          // branch already has in front of it. Everything else is `session`.
+          // branch already has in front of it.
           ...(message.t === "intent" ? { kind: "move" as const } : {}),
         });
       }
@@ -400,8 +383,7 @@ export const attachSockets = (
       if (!room) return;
       if (!client.playerId) {
         // A watcher holds no seat, but a shared screen has a row in the lobby and the
-        // room has to be told it is gone. Already deleted from `clients`, so the
-        // count this sends is the new one.
+        // room has to be told it is gone.
         if (client.table) broadcast(room);
         return;
       }

@@ -1,19 +1,14 @@
 /**
  * "The seats have moved — here's where you're sitting now." (#199)
  *
- * In an online room a shuffle is the whole of it: the order changes and the
- * table deals. In a room where everybody is round one actual table, turn order
- * and physical order have to agree, and the lobby spends real effort making them
- * — numbered seats, arrows, a drag handle, and one "does this look right?".
+ * In an online room a shuffle is the whole of it. Where everybody is round one
+ * table, turn order and physical order have to agree, and the lobby spends real
+ * effort making them — so a setting that reshuffled every hand and said nothing
+ * would undo all of it. **The shuffle is what makes this screen necessary and
+ * this screen is what makes the shuffle usable.**
  *
- * A setting that reshuffled turn order every hand and said nothing would undo
- * all of it. **The shuffle is what makes this screen necessary and this screen
- * is what makes the shuffle usable**, so an IRL room never gets one without the
- * other.
- *
- * **Nothing pauses behind it**, the same deal `RotatePanel` has: the cards are
- * already dealt. Dismissed by hand rather than on a timer — people have to get
- * up and move, and a countdown is the wrong pressure for that.
+ * **Nothing pauses behind it**, and it is dismissed by hand rather than on a
+ * timer: people have to get up and move.
  */
 
 import type { RoomView } from "@goleta/engine";

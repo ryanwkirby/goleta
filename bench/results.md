@@ -567,7 +567,7 @@ scratch directory and was otherwise discarded, per rule 7.
 
 # Second task — the lockout's unit (#222), paired
 
-Round two's confirmation run, and the point of it is rule 10: `task-220-picker
+Round two's confirmation run, and the point of it is rule 11: `task-220-picker
 .md` had been run four times *before* round two was designed, and two of the
 three parts of that intervention were chosen because arms of that task
 complained about them. −19.2% on the task the work was shaped around is
@@ -707,3 +707,116 @@ with a canary rather than by reasoning: renaming an exported symbol in the
 worktree's engine now produces `packages/server/src/rooms.ts: Module
 '"@goleta/engine"' has no exported member`, which is exactly the error that
 failed to appear before. `README.md`'s setup block carries it now.
+
+---
+
+# VOID — the whole-programme comparison, and why it cannot be run
+
+An attempt at the end-to-end question both earlier series skipped: `e6a85b4`
+(before any of this) against `main` (after all of it), on two fresh M4 backlog
+items — #259, the upright draw pile's side, and #257, quieting the call offer.
+Both worded behaviourally, because the trees have different file layouts and a
+prompt naming `components/sunny/*` or `lib/anchors.ts` would be a different task
+on each arm.
+
+**The numbers below are not a measurement. Do not cite them.**
+
+| Task | Arm | Tree | Tokens | Tools | Secs | Ins |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| #259 | before | `e6a85b4` | 101,908 | 41 | 439 | 152 |
+| #259 | after | `main` | 85,094 | 32 | 274 | 119 |
+| #257 | before | `e6a85b4` | 104,670 | 38 | 431 | 139 |
+| #257 | after | `main` | — | — | — | — |
+
+#257's after arm died on a session limit partway through and produced nothing.
+
+## Why it is void: the harness feeds every arm the live repo's `AGENTS.md`
+
+A bench arm is a subagent of a session whose project directory is
+`/Users/ryan/git/goleta`, so Claude Code auto-loads **that** `CLAUDE.md` — a
+symlink to `AGENTS.md` — into the arm's context, regardless of which commit its
+worktree is at.
+
+`AGENTS.md` is 944 lines at `e6a85b4` and 1053 at `main`, and the difference
+includes the "Where a new control goes" placement map (#230) and the file-size
+entry (#237) — **two of the interventions under test**. So both before arms were
+handed the after tree's document while working in a tree that does not have it.
+
+The #257 before arm found this itself, and named it as its single biggest cost:
+
+> *"The expensive file was `AGENTS.md` — not to find the rule, but to find
+> **which** rules were still true of this checkout. The version in my system
+> prompt is from a later commit and includes a 'Where a new control goes' map
+> table plus a split `Sunny.tsx`; the worktree has neither. I had to re-derive
+> the placement map from prose spread across three widely separated bullets…
+> That reassembly was most of the work."*
+
+**The bias has no known direction.** Free access to the placement map should make
+a before arm *cheaper*, understating the refactor. Having to reconcile a document
+against a tree that contradicts it makes it *dearer*, overstating the refactor.
+The one arm that reported on it says the second dominated. Both are real, neither
+is recoverable after the fact, so no corrected figure is offered.
+
+**Re-running does not fix it.** Instructing the arm to prefer the worktree's copy
+does not remove the live document from its context — it cannot unsee the map —
+and there is no way to point a subagent's project root at an arbitrary worktree.
+
+## Arms one to five are unaffected, and this is exactly why
+
+Every one of them ran while `main` **equalled** the tree under test, so the
+auto-loaded document matched the checkout. That was luck rather than design: the
+protocol says "baseline first, then do the work", and following it happens to
+keep the document honest.
+
+The consequence is a hard limit rather than a bug to fix: **this harness can
+measure forwards and cannot measure backwards.** Recorded as rule 10.
+
+One correction to an earlier entry: the second-task comparison (#222,
+`9cffd68` vs `79c6619`) carries a smaller version of this. Its before tree's
+`AGENTS.md` was 1004 lines against the live 1053, a 49-line difference which is
+the #237 entry — about benchmarking, and irrelevant to a lockout rename. Minor,
+almost certainly immaterial to a −1.4% result, and it should be on the record
+rather than left standing.
+
+## What survives, because it does not depend on the token counts
+
+**A real defect in the cheaper #259 patch, verified independently of both
+agents.** The peel that runs when an accusation is judged draws the named card
+absolutely out of the pile card at `right-full mr-6` — a 68px `md` card plus
+24px, so 92px hanging off its left edge. That is safe only while the deck is the
+left column, because the named card then lands on the deck, which `aside` fades
+to 25% for exactly this reason. Swap the columns and those 92px hang off the row:
+the row is 216px (96 + 24 + 96) centred in the column, so on a 393px phone the
+named card starts at −8px and on a 360px phone at −24.5px. **One of the two
+deliberately marked cards is clipped, during the one moment the whole table
+watches.**
+
+The `e6a85b4` arm found it, did the arithmetic, and mirrored the peel as one
+piece with the animation properties sign-flipped — which is why its patch is 152
+lines against 119. The `main` arm read the same file, named `SunnyPeel.tsx` its
+costliest read, spotted the directionality, and cleared it on *layering* grounds
+(`z-10`, `pointer-events-none`, the fade) without checking the width. Right
+question, wrong answer.
+
+This is worth keeping whatever the harness was doing: **a smaller patch and a
+lower token count were, here, a worse result.** The protocol warns that an arm
+spending more may have done more; the inverse holds too, and neither shows up in
+a token count.
+
+**The coupling is undocumented in both trees.** Both #259 arms said so
+independently:
+
+> *"Nothing in it says 'this assumes the deck is on my left', and the one comment
+> that hints at the coupling is in `Piles.tsx`, on an unrelated-looking `aside`
+> variable."*
+
+Round two put a header on `Piles.tsx` naming four rules. This is not one of them.
+The thing that actually cost money on this task is a thing the intervention did
+not cover — which is the same shape as every other finding in this file.
+
+**If #259 is implemented for real**, the peel mirroring is the part to get right,
+and `e6a85b4`'s patch (kept as `task-259-before.patch`) has a working version of
+it. #257's before-arm patch is also kept; its placement reasoning — bottom-right,
+above the sort control, because #167 owns both bottom corners, #131 forbids a row
+under the cards and #189 forbids anything near the deck — is sound and worth
+reusing whatever the measurement was doing.

@@ -3,7 +3,7 @@
 **The prompt below is verbatim and must not be edited.** Substitute the worktree
 path on the first line and change nothing else.
 
-Written as the **second task** for round two, per rule 10: `task-220-picker.md`
+Written as the **second task** for round two, per rule 11: `task-220-picker.md`
 had been run four times before round two's intervention was designed, and two of
 that intervention's three parts were chosen because arms of that task complained
 about them. A number from a task the work was shaped around is evidence the

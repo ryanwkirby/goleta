@@ -49,7 +49,16 @@ thrown out.
    and by arm five that was the largest unfalsifiable threat to a result — a
    model change between arms would move a token count on its own and nothing in
    the record would show it. Date, model, and how the agent was dispatched.
-10. **Do not tune the intervention to the task, either.** Rule 2 stops the task
+10. **An arm is valid only when `main` equals the tree under test.** A bench arm
+    is a subagent of a session rooted at the live repo, so Claude Code
+    auto-loads *that* `CLAUDE.md` — a symlink to `AGENTS.md` — into the arm's
+    context whatever commit its worktree is at. Measure an old tree while `main`
+    has moved on and the arm is handed a document its checkout does not have,
+    which on one attempt was the very intervention under test. **This harness
+    measures forwards and cannot measure backwards.** Instructing the arm to
+    prefer the worktree's copy does not help; it cannot unsee what is already in
+    context. Take the baseline before doing the work, always.
+11. **Do not tune the intervention to the task, either.** Rule 2 stops the task
     being swapped after a number arrives; this is the same hazard from the other
     end. An intervention chosen because a previous arm of *this* task complained
     about it is being measured on the complaint that produced it, which is good
@@ -128,7 +137,7 @@ sequence of those names is what actually produced round one's conclusion.
 
 | File | Status |
 | --- | --- |
-| `task-220-picker.md` | **Current.** Five arms recorded. Keep using it — the series is only comparable if the task does not change. But see rule 10: round two's intervention was shaped by this task's own complaints, and its −19.2% did not reproduce on the second task. |
+| `task-220-picker.md` | **Current.** Five arms recorded. Keep using it — the series is only comparable if the task does not change. But see rule 11: round two's intervention was shaped by this task's own complaints, and its −19.2% did not reproduce on the second task. |
 | `task-222-lockout.md` | **Current, paired.** Two arms, `9cffd68` vs `79c6619`, flat (−1.4%). Written as round two's rule-10 control. A rename, so it needs little constraint-assembly, and it is centred on `packages/engine` which no round of this work has touched — read it as a weak test rather than a verdict. |
 | `task-you-are-next.md` | Superseded. Two arms. A synthetic feature, and it straddled the seam under test — see `results.md`. |
 

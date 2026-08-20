@@ -126,7 +126,14 @@ export function SunnyPeel({
       </span>
 
       {/* Still in their hand, so it is shown beside the card it was supposed to be
-          played on. The pairing is the whole message. */}
+          played on. The pairing is the whole message.
+
+          `right-full` puts it over the column to the left of the card in play,
+          which is the draw pile, which `Piles` fades to 25% for exactly this.
+          Swap those two columns and this hangs off the row instead: 68px plus
+          `mr-6` off a 216px group centred on a 393px phone lands at −3.5px, and
+          left overflow does not scroll — so the peel has to mirror with them
+          (#259). */}
       {buried ? null : (
         <span
           aria-hidden

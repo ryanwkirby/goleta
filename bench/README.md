@@ -15,6 +15,14 @@ a second task the intervention was not shaped around.** One strong positive that
 does not replicate. Read both write-ups in `results.md` before citing either
 number, and do not cite the −19.2% on its own.
 
+Round six measured the first *subtraction* — the comment diet, 44% of the source
+down to 28% — and found the same wash: +4.3% on the control task, and a −36% on
+the other that turned out to be the price of a bug rather than a saving. It did
+produce the programme's first concrete finding about a specific line: the diet
+deleted the one clause in `packages/web/src` that recorded a coupling, and both
+arms that ran without it shipped a broken patch. **Comment volume joins file size
+and rationale placement on the list of things that do not drive this cost.**
+
 ## The rules that make a measurement mean anything
 
 Learned the hard way; the first experiment broke three of them and had to be
@@ -119,10 +127,17 @@ arm that spends more and writes *less* is genuinely more expensive to work in.
 **Tool calls and wall time are the sanity check.** When tokens and tool calls
 disagree in direction, be suspicious of both.
 
-**One sample per arm resolves very little.** Treat anything under about 5% as
-noise. The conclusions in `results.md` rest on arms agreeing about *direction*
-and on what the agents said about *where* their time went, not on any single
-figure.
+**One sample per arm resolves very little, and the noise floor is far higher
+than this file used to claim.** It said "treat anything under about 5% as noise".
+Round six measured it directly: two arms of `task-259-pile-side.md`, on trees
+differing **only in `bench/results.md`**, with a byte-identical prompt and the
+same model, came out **85,094 and 109,694 — a 29% spread**. The variance is not
+in the reading; it is in the *outcome*, because one arm found a hidden coupling
+and the other shipped a bug. **Treat anything under about 25% on a single pair as
+noise, and do not report a delta without saying whether both arms produced a
+correct patch.** The conclusions in `results.md` rest on arms agreeing about
+*direction* and on what the agents said about *where* their time went, not on any
+single figure.
 
 **Agreement across metrics is worth more than any one of them.** The four
 structural arms had tokens and tool calls pointing different ways; arm five
@@ -139,7 +154,14 @@ sequence of those names is what actually produced round one's conclusion.
 | --- | --- |
 | `task-220-picker.md` | **Current.** Five arms recorded. Keep using it — the series is only comparable if the task does not change. But see rule 11: round two's intervention was shaped by this task's own complaints, and its −19.2% did not reproduce on the second task. |
 | `task-222-lockout.md` | **Current, paired.** Two arms, `9cffd68` vs `79c6619`, flat (−1.4%). Written as round two's rule-10 control. A rename, so it needs little constraint-assembly, and it is centred on `packages/engine` which no round of this work has touched — read it as a weak test rather than a verdict. |
+| `task-257-sun-quiet.md` | **Current, paired.** Two arms, `e6a85b4` vs `4b79b37` (+23.9%). A placement task, and the one that caught #230's placement map failing on its own ground. |
+| `task-259-pile-side.md` | **Current. Four arms**, across `e6a85b4`, `4b79b37`, `4628866` and `6a8c9d6` — the longest-running paired task here. **Read round six before quoting any of its numbers**: the arms separate cleanly by whether they found the `SunnyPeel` coupling and not at all by tree, and two arms on byte-identical code came out 29% apart. Deliberately worded without naming files, so it stays one task across trees with different layouts. Keep it that way. |
+| `task-243-roomcode.md` | **Current, paired.** Two arms, `4628866` vs `6a8c9d6` (+4.3%). Round six's low-constraint control, and it behaved like one. |
 | `task-you-are-next.md` | Superseded. Two arms. A synthetic feature, and it straddled the seam under test — see `results.md`. |
+
+**Before writing a new task file, `ls bench/`.** This table went stale once and a
+duplicate `task-259-*.md` was written against an issue that already had one — see
+round six. The directory is the authority; this table is a convenience.
 
 **Do not merge PR #233 while `task-220-picker.md` is the benchmark**: it fixes
 the very bug the task asks the agent to fix, and merging it destroys the series.

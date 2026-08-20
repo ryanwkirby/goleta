@@ -813,3 +813,191 @@ The thing that cost money is again the thing the intervention did not cover.
 `task-257-after.patch` both contain sound placement arguments (bottom-right above
 the sort, and mid-right-edge respectively). Worth reusing whenever those issues
 are done for real.
+
+---
+
+# Sixth measurement — the comment diet (#264 / PR #265), two tasks
+
+**2026-08-20. Model: Opus 5 (`claude-opus-5`), inherited by every arm. Harness:
+`general-purpose` subagents dispatched from a Claude Code session rooted at the
+live repo, one at a time, never in parallel.** (Rule 9.)
+
+The first intervention in this programme that *subtracts* rather than moves.
+#264 cut the source from 43.8% comment characters to 28.3% — 391,137 down to
+197,301, against a repo that shrank from 893,933 characters to 696,708. Every
+earlier round rearranged where a fact lived; this one deleted facts.
+
+| Tree | Comment chars | Share | `Piles.tsx` | `pileBox.ts` | `Lobby.tsx` |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| before `4628866` | 391,137 | 43.8% | 183 ln, 55% | 96 ln, 80% | 796 ln, 32% |
+| after `6a8c9d6` | 197,301 | 28.3% | 151 ln, 43% | 51 ln, 58% | 686 ln, 17% |
+
+## Rule 10 does not bind this range, and that was checked rather than assumed
+
+`git diff --quiet 4628866 6a8c9d6 -- AGENTS.md` is clean, and the diet touches no
+`.md` file anywhere. Both arms are handed the document their own checkout has, so
+the hazard that voided the whole-programme run — an old tree measured against a
+newer `AGENTS.md` — is absent here. This is the one backwards measurement the
+harness can take honestly, and only because the intervention is confined to code.
+
+## The numbers
+
+| Task | Arm | Tree | Tokens | Tools | Secs | Ins |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| #243 | before | `4628866` | 67,589 | 19 | 147 | 41 |
+| #243 | after | `6a8c9d6` | **70,470** | 20 | 212 | 73 |
+| | | | **+4.3%** | +5.3% | +44.2% | +78.0% |
+| #259 | before | `4628866` | 109,694 | 40 | 471 | 154 |
+| #259 | after | `6a8c9d6` | **70,065** | 22 | 189 | 28 |
+| | | | **−36.1%** | −45.0% | −59.9% | −81.8% |
+
+**Neither figure means what it looks like, and the reasons are different.**
+Nothing in this round should be quoted without the two sections below.
+
+## #243 is the honest wash, and the after arm bought something with its 4.3%
+
+`task-243-roomcode.md` — make the room code itself copy the invite link, in the
+lobby and the in-game panel. Two components, crisp acceptance criteria, almost
+nothing in `AGENTS.md` bearing on it. Chosen as the low-constraint half of the
+pair precisely so it would be boring.
+
+It came out +4.3%, which is inside the noise floor the README warns about — but
+the arms did not do the same work. The before arm inlined a `<button>` at both
+sites (+41). The after arm factored out a shared `RoomCodeButton.tsx` and used it
+twice (+73, of which 53 are the new file). That is the "spends more and writes
+more may simply have done more" confound, stated in the protocol and visible
+here.
+
+Both arms named `Lobby.tsx` costliest, and both for the same reason — it holds
+four unrelated things, so confirming the code is not drawn host-only means a jump
+350 lines away. The after arm added, unprompted:
+
+> *"`AGENTS.md`'s own note that splitting files did not pay off is consistent
+> with this: the cost was one extra jump, not comprehension."*
+
+That is corroboration of round one from an arm that had read round one's
+conclusion, so it is worth exactly as much as that makes it. Recorded because it
+is the same complaint round one's arms made about a different file.
+
+**One methodological note worth keeping.** The before arm called `Lobby.tsx`
+"500+ lines" when its tree has 796; the after arm called it "~800" when its tree
+has 686. Both estimates are wrong, in opposite directions, in the arm's own
+costliest-file finding. **Do not build anything on a line count an arm reports
+about itself** — measure the tree.
+
+## #259: the −36% is a correctness artefact, and this is the round's real result
+
+`task-259-pile-side.md` is not new. The whole-programme round already ran it at
+`e6a85b4` and at `4b79b37`, and recorded that a swap of the two piles silently
+breaks the judged-call peel: the named evidence card is `absolute right-full
+mr-6`, which places it to the **left** of the card in play. Deck-left, it lands
+on the deck, which `aside` fades to 25% for exactly that reason. Deck-right, it
+hangs off the row into the screen edge.
+
+Re-verified here from the trees rather than from either agent: phone piles are
+`lg` (96px) with `gap-6` (24px), so the row is 216px centred; the named card is
+`md` (68px) plus 24px. On a 393px phone the named card's left edge lands at
+**−3.5px**, on a 360px phone at **−20px**. One of the two deliberately marked
+cards is clipped, during the one moment the whole table watches.
+
+**Six arms have now run this task. They separate perfectly by whether they found
+that coupling, and not at all by which tree they were on.**
+
+| Arm | Tree | Tokens | Peel |
+| --- | --- | ---: | --- |
+| whole-programme before | `e6a85b4` | 101,908 | **mirrored ✓** |
+| this round, before | `4628866` | 109,694 | **mirrored ✓** |
+| whole-programme after | `4b79b37` | 85,094 | missed ✗ |
+| off-series before | `4628866` | 74,650 | missed ✗ |
+| this round, after | `6a8c9d6` | 70,065 | missed ✗ |
+| off-series after | `6a8c9d6` | 69,579 | missed ✗ |
+
+Two clean bands, no overlap: 101,908–109,694 for the arms that shipped a correct
+patch, 69,579–85,094 for the arms that shipped a clipped evidence card. **The
+`−36.1%` in the table above is the price of a bug, not a saving.**
+
+It also puts a number on this harness's noise floor that nobody should ignore.
+`4628866` and `4b79b37` differ **only in `bench/results.md`** — byte-identical
+code, byte-identical prompt, same model. They came out **85,094 and 109,694, a
+29% spread.** The README says treat anything under 5% as noise. On this task the
+honest figure is nearer 30%, because the outcome itself varies.
+
+## What the diet actually cost, verified in the diff
+
+The successful arm said, unprompted, how it found the coupling:
+
+> *"The only way to find it was to notice `Piles`' `aside` comment mentioning
+> that the evidence 'overhangs the deck', then work out the phone-width
+> arithmetic by hand. A naive swap passes all three checks and ships a clipped
+> evidence card on every phone narrower than 400px."*
+
+That comment is in the diet's diff. Before:
+
+```ts
+// Everything that isn't the evidence steps back while the peel is up. It also
+// keeps the fan legible where it overhangs the deck or the called suit —
+// nothing here moves or unmounts, so every anchor stays exactly where it was.
+```
+
+After:
+
+```ts
+// Everything that isn't the evidence steps back while the peel is up. Nothing
+// here moves or unmounts, so every anchor stays where it was.
+```
+
+The surviving half is the half that restates the line under it. The deleted
+clause is the only place in `packages/web/src` that said the peel's evidence
+overhangs the deck — i.e. that the peel's geometry depends on which side the deck
+is on. Post-diet, `git grep -i 'overhangs the deck'` returns nothing, and the
+only remaining statement of the assumption is the raw `left-full` / `right-full`
+classes in `SunnyPeel.tsx`, which say where the element goes and nothing about
+what that depends on.
+
+**Both arms that mirrored the peel had that clause. Both arms that ran without it
+missed the coupling.** Two of the four arms that *had* it missed it too, so the
+clause is plainly not sufficient — but it was the only thread, and the diet cut
+it while keeping the sentence beside it that carries no information.
+
+This is the first time in six rounds that a token measurement has produced a
+concrete, falsifiable claim about a specific line of a specific commit. It is
+worth more than the percentages.
+
+## What can and cannot be concluded
+
+**Can:** the diet did not make either task meaningfully cheaper. #243 is +4.3%
+with the after arm doing more work; the only #259 comparison where both arms did
+the same (wrong) work is the off-series pair at −6.8%. Six comparisons across
+three tasks now, and the total has never moved outside noise except on the one
+task round two's intervention was designed from. **Comment volume joins file
+size and rationale placement on the list of things that do not drive this cost.**
+
+**Cannot:** that the diet is harmful in general. One deleted clause on one task
+is one data point, and the same clause failed to save two arms that had it.
+
+**A real hazard in how this round was set up, stated plainly.** #259 was picked
+*because* it was constraint-dense in files the diet cut hard — a best-case test
+for detecting harm, not a random draw. That is the rule 11 hazard from the other
+end: the task was chosen knowing the intervention. #243 was picked as the
+control and behaved like one.
+
+**A duplicate task file was created and deleted before any arm shipped.** I wrote
+`task-259-piles.md` without checking `ls bench/`, because the README's task table
+is stale and does not list the whole-programme round's two files. The two arms
+run against that prompt are the "off-series" rows above — a valid paired
+measurement (identical prompts, same conditions, both arms missing the peel) that
+cannot be pooled with the canonical series because its prompt names files while
+the canonical one is deliberately file-agnostic. Kept, labelled, not merged in.
+**Read the directory, not the table.** The table is now fixed.
+
+**A discarded arm.** The first attempt at #243-before died on a session limit
+before its first edit. The worktree was verified clean and the arm re-run from
+scratch; all four headline arms then ran the same day under the same model.
+
+## Patches kept
+
+`259c-before.patch` is the one worth having: it mirrors the peel — fan to
+`right-full` with `flex-row-reverse`, `--peel-from` sign-flipped, named card to
+`left-full ml-6`, and `peel-mark`'s entry offset defaulted so the shared screen
+is untouched. It is the only correct #259 patch produced this round, and it
+should be the starting point whenever #259 is done for real.

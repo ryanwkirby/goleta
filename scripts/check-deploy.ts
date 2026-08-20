@@ -1,10 +1,8 @@
 /**
- * Proves a deployment actually works, rather than merely answering.
- *
- * `curl` against the public hostname is not a WebSocket client, and Cloudflare
- * will hand it the single-page app with a 200 instead of a 101 — which looks
- * exactly like a broken upgrade. The only honest check is to open a real
- * socket and play a little of a game through it.
+ * Proves a deployment actually works rather than merely answering. `curl` is not
+ * a WebSocket client and Cloudflare hands it the single-page app with a 200
+ * instead of a 101, which looks exactly like a broken upgrade — so this opens a
+ * real socket and plays a little of a game through it.
  *
  *   node scripts/check-deploy.ts                       # goleta.ryankirby.net
  *   node scripts/check-deploy.ts http://localhost:8063

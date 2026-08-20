@@ -37,11 +37,8 @@ const FLAT_OUT = {
   lightning: { firstMove: 2, nextMove: 2, call: 2 },
 };
 
-/**
- * Bots that sit on their hands, for the one test that needs to catch a table
- * mid-bot-turn. Flat out, the seat is a bot for microseconds and there is no
- * moment to send anything into; here the turn is simply parked.
- */
+/** Bots that sit on their hands, for the one test that needs to catch a table
+ * mid-bot-turn. Flat out there is no moment to send anything into. */
 const DAWDLING = {
   human: { firstMove: 30_000, nextMove: 30_000, call: 30_000 },
   lightning: { firstMove: 30_000, nextMove: 30_000, call: 30_000 },
@@ -284,9 +281,8 @@ describe("a room over the wire", () => {
     await host.until((c) => c.room?.status === "playing");
     await guest.until((c) => c.game !== null);
 
-    // Whoever is on the clock, the *other* human tries to move for them by
-    // putting their id in the intent. The server stamps the real seat on it,
-    // so it comes back as an out-of-turn attempt rather than a stolen move.
+    // The *other* human tries to move for whoever is on the clock by putting their
+    // id in the intent. The server stamps the real seat on it.
     const onClock = host.game?.waitingOn;
     const impostor = onClock === host.playerId ? guest : host;
     const before = impostor.game?.turnNumber;
@@ -320,8 +316,7 @@ describe("a room over the wire", () => {
     await host.until((c) => c.room?.status === "playing");
     await guest.until((c) => c.game !== null);
 
-    // A refused intent is a mis-tap, whatever the reason. Whoever isn't on the
-    // clock has one to hand: a card, out of turn.
+    // A refused intent is a mis-tap, whatever the reason.
     const waiting = guest.game?.waitingOn;
     const offTurn = waiting === guest.playerId ? host : guest;
     const before = offTurn.refusals.length;
@@ -389,8 +384,7 @@ describe("a room over the wire", () => {
     host.send({ t: "start" });
     await host.until((c) => c.room?.status === "playing");
 
-    // Bot speed would be refused here. This one isn't, because nothing that is
-    // running reads it — and it reaches everyone at the table.
+    // Bot speed would be refused here. This one isn't: nothing running reads it.
     host.send({ t: "setIrl", on: true });
     await guest.until((c) => c.room?.irl === true);
     expect(guest.room?.status).toBe("playing");
@@ -572,8 +566,7 @@ describe("what the wire carries", () => {
     first.send({ t: "watch", code, table: true });
     await host.until((c) => c.room?.tableScreens === 1);
 
-    // A table may have more than one — a screen at each end of a long table is
-    // the case this exists for, and nothing anywhere assumed a single one.
+    // A screen at each end of a long table is the case this exists for.
     const second = await openClient(server.port);
     second.send({ t: "watch", code, table: true });
     await host.until((c) => c.room?.tableScreens === 2);
@@ -604,10 +597,8 @@ describe("what the wire carries", () => {
     await host.until((c) => c.room?.tableScreens === 1);
     server.flush();
 
-    // A restarted process has nobody connected to it, so a room restored from
-    // disk comes back with no screens — the same reasoning that clears
-    // `seat.connected` on load. A count kept on the room would come back
-    // claiming a screen that is not there.
+    // A restarted process has nobody connected to it, so a restored room comes back
+    // with no screens — the same reasoning that clears `seat.connected` on load.
     const restarted = await startServer(dataDir);
     const rejoined = await openClient(restarted.port);
     rejoined.send({

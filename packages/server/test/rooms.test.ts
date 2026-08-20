@@ -30,11 +30,8 @@ import {
   type Room,
 } from "../src/rooms.ts";
 
-/**
- * The options the game was actually dealt under. Read through a call rather
- * than off `room.game` directly: the tests below clear the game and deal again,
- * and TypeScript narrows the field to `null` across a mutation it can't see.
- */
+/** Read through a call rather than off `room.game` directly: the tests below
+ * clear the game and deal again, and TypeScript can't narrow across that. */
 const dealtOptions = (room: Room) => room.game?.options;
 
 /** A room with the host in seat one and bots filling it out to `size`. */
@@ -66,10 +63,8 @@ const seedRolling = (call: boolean): number => {
   throw new Error(`no seed rolls ${call}`);
 };
 
-/**
- * Puts the human host plainly in the wrong: a card in their hand is made to
- * match what's showing, and then they reach for the deck anyway.
- */
+/** Puts the host plainly in the wrong: a card in their hand is made to match
+ * what's showing, and then they reach for the deck anyway. */
 const hostDrawsWithAPlay = (room: Room): void => {
   beginGame(room, room.hostId);
   const game = room.game;
@@ -82,15 +77,12 @@ const hostDrawsWithAPlay = (room: Room): void => {
   const outcome = applySeatIntent(room, room.hostId, { type: "drawCard", playerId: room.hostId });
   expect(outcome.ok).toBe(true);
   // Read back off the room: `applySeatIntent` swaps in a new state rather than
-  // mutating the one above, so `game` is the position before the reach.
+  // mutating the one above.
   expect(room.game?.challenge?.violation).not.toBeUndefined();
   expect(room.game?.challenge?.violation).not.toBeNull();
 };
 
-/**
- * The same, the other way round: a bot reaches with a play in hand, so the
- * human host is the one who could call it and has a picker to open.
- */
+/** The same the other way round, so the human host is the one who could call. */
 const botDrawsWithAPlay = (room: Room): string => {
   beginGame(room, room.hostId);
   const game = room.game;
@@ -197,8 +189,7 @@ describe("drawing for the deal", () => {
     beginGame(room, room.hostId);
     const before = JSON.stringify(room.game);
 
-    // Not frozen mid-game, for `setHouseRules`'s reason rather than
-    // `setBotSpeed`'s: it is read once, at the deal.
+    // Not frozen mid-game: it is read once, at the deal.
     setDealerMode(room, room.hostId, "random");
     expect(roomView(room).dealerMode).toBe("random");
     expect(JSON.stringify(room.game)).toBe(before);
@@ -353,8 +344,8 @@ describe("moving a seat", () => {
     const room = seatedRoom();
     const before = seatOrder(room);
 
-    // The arrow that would do this is disabled; a tap that arrives anyway means
-    // the table moved, and that is not worth an error banner.
+    // The arrow that would do this is disabled; a tap that arrives anyway means the
+    // table moved, and that is not worth an error banner.
     expect(() => moveSeat(room, room.hostId, room.seats[0]?.id ?? "", "up")).not.toThrow();
     expect(() =>
       moveSeat(room, room.hostId, room.seats[room.seats.length - 1]?.id ?? "", "down"),
@@ -380,9 +371,8 @@ describe("moving a seat", () => {
     const room = seatedRoom();
     expect(room.irl).toBe(false);
 
-    // Which rooms are worth *offering* this in is the lobby's call. Refusing it
-    // here would mean flipping an unrelated presentation flag mid-shuffle threw
-    // an error at the host.
+    // Which rooms are worth *offering* this in is the lobby's call. Refusing it here
+    // would throw at a host who flipped an unrelated setting mid-shuffle.
     moveSeat(room, room.hostId, room.seats[1]?.id ?? "", "up");
     expect(seatOrder(room)[0]).toBe("Robot");
   });
@@ -392,8 +382,8 @@ describe("moving a seat", () => {
     beginGame(room, room.hostId);
     expect(room.dealerId).toBe(room.seats[0]?.id);
 
-    // The deal follows the seat list, so a table rearranged between games gets
-    // the same rotation round the order it is now actually sitting in.
+    // The deal follows the seat list, so a table rearranged between games rotates
+    // round the order it is now actually sitting in.
     const third = room.seats[2]?.id ?? "";
     if (room.game) room.game.status = "over";
     moveSeat(room, room.hostId, third, "up");
@@ -433,8 +423,7 @@ describe("house rules", () => {
     expect(roomView(room).houseRules.sunny).toBe(true);
   });
 
-  // Unlike bot speed, which is read live every time a bot is scheduled. These
-  // are read once, at the deal, so what they describe is the next game (#134).
+  // Unlike bot speed, which is read live. These are read once, at the deal (#134).
   it("can be changed with a game already running", () => {
     const room = seatedRoom();
     beginGame(room, room.hostId);
@@ -557,8 +546,8 @@ describe("playing with the highlights on", () => {
     beginGame(room, room.hostId);
     const before = JSON.stringify(room.game);
 
-    // The whole point of #187 is that it is a thing you decide rather than a
-    // thing that expires, and mid-hand is when somebody works out they want it.
+    // The point of #187 is that it is a thing you decide rather than one that
+    // expires, and mid-hand is when somebody works out they want it.
     expect(setHints(room, room.hostId, true)).toBe(true);
     expect(roomView(room).seats[0]?.hinted).toBe(true);
     // And the engine never learns it happened.
@@ -615,8 +604,8 @@ describe("bots and the Sunny Rule", () => {
     room.botSeed = seedRolling(false);
     hostDrawsWithAPlay(room);
 
-    // The window lasts seconds and the bot schedule is worked out afresh on
-    // every broadcast. Re-rolling here would walk 70% up to a certainty.
+    // The window lasts seconds and the schedule is worked out afresh on every
+    // broadcast. Re-rolling here would walk 70% up to a certainty.
     for (let recompute = 0; recompute < 50; recompute += 1) {
       expect(nextBotMove(room)?.intent.type).not.toBe("callSunny");
     }

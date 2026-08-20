@@ -1,28 +1,19 @@
 /**
  * "The seats have moved — here's where you're sitting now." (#199)
  *
- * Shuffled seats are a room setting, and in an *online* room that is the whole
- * of it: the order changes, nobody has to do anything, and the table deals. In
- * a room where everybody is sitting round one actual table it is the opposite —
- * turn order and physical order have to agree, and the lobby spends real effort
- * making them agree: the seats are numbered, the host gets arrows and a drag
- * handle, and the first deal asks *"Does the seat order look correct?"* once.
+ * In an online room a shuffle is the whole of it: the order changes and the
+ * table deals. In a room where everybody is round one actual table, turn order
+ * and physical order have to agree, and the lobby spends real effort making them
+ * — numbered seats, arrows, a drag handle, and one "does this look right?".
  *
  * A setting that reshuffled turn order every hand and said nothing would undo
- * all of that. The app would deal across the table and back, and it would be
- * three turns before anybody worked out why. **The shuffle is what makes this
- * screen necessary, and this screen is what makes the shuffle usable** — so
- * they ship together, and an IRL room does not get one without the other.
+ * all of it. **The shuffle is what makes this screen necessary and this screen
+ * is what makes the shuffle usable**, so an IRL room never gets one without the
+ * other.
  *
- * It is numbered, and the numbers are the same ones the lobby uses, because
- * they are what the order is legible *as*. Your own seat is called out, since
- * the question everybody is actually asking is "where do I go".
- *
- * **Nothing pauses behind it**, which is the same deal `RotatePanel` has. The
- * game is on the server and the cards are already dealt — this cannot hold a
- * deal open, and pretending otherwise would be a lie about who is waiting. It
- * is dismissed by hand rather than on a timer: people have to get up and move,
- * and a countdown is exactly the wrong pressure for that.
+ * **Nothing pauses behind it**, the same deal `RotatePanel` has: the cards are
+ * already dealt. Dismissed by hand rather than on a timer — people have to get
+ * up and move, and a countdown is the wrong pressure for that.
  */
 
 import type { RoomView } from "@goleta/engine";
@@ -83,9 +74,9 @@ export function TakeYourSeat({
           </ol>
         </div>
 
-        {/* Dismissed by hand, and by each phone for itself: everybody is moving
-            at their own speed, and a shared dismissal would take the list away
-            from whoever is still standing up. */}
+        {/* Dismissed by each phone for itself: everybody moves at their own speed,
+            and a shared dismissal would take the list away from whoever is still
+            standing up. */}
         <div className="shrink-0 pt-4">
           <Button variant="primary" full onClick={onDone}>
             Sitting down

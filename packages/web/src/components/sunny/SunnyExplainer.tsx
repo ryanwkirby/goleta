@@ -1,12 +1,9 @@
 
 import { Button } from "../ui.tsx";
 
-/**
- * Shown the first time the rule touches you — which is how you're meant to
- * learn it. The joining explainer alludes to it and stops there, so this is
- * where every mechanic arrives, and it waits behind the announcement above so
- * you know what you're being taught about.
- */
+/** Shown the first time the rule touches you, which is how you are meant to
+ * learn it. It waits behind the announcement so you know what you are being
+ * taught about. */
 export function SunnyExplainer({ onDone }: { onDone: () => void }) {
   return (
     <div

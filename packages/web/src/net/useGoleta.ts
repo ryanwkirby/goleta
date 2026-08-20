@@ -34,28 +34,18 @@ const RETRY_MS = [500, 1000, 2000, 4000, 8000];
 const SHOUT_MS = 2600;
 
 /**
- * How often this browser says something, and how long it will sit in silence
- * before deciding the socket it is holding is not a connection any more.
+ * How often this browser says something, and how long it sits in silence before
+ * deciding the socket it is holding is not a connection any more.
  *
- * A socket that *closes* announces itself and the retry below picks it up. A
- * socket that **half-opens** does not: the screen locks, wifi hands over to
- * cellular, the tab is backgrounded — the connection is gone and the browser
- * was never told, so `readyState` stays `OPEN` for as long as anybody cares to
- * look. The server terminated its end a minute earlier and `terminate()` is
- * abrupt, so nothing about it reaches a phone that has left the network. From
- * here the table simply goes quiet, and quiet is what a table between turns
- * looks like too (#183).
+ * A socket that *closes* announces itself. A socket that **half-opens** does
+ * not: the screen locks, wifi hands over to cellular, and `readyState` stays
+ * `OPEN` for as long as anybody cares to look. From here the table simply goes
+ * quiet, and quiet is what a table between turns looks like too (#183).
  *
- * So the client has to speak first. `ping` and `pong` were already on the wire
- * — nothing new goes out — and the budget is measured against *anything*
- * arriving, not just the answer: a table mid-game is talking constantly.
- *
- * The two figures are picked so the table notices before a turn goes past,
- * rather than before the server does. The server allows 60s (a 30s ping and
- * one miss), and a turn at bot pace is a few seconds. 25s is comfortably under
- * half the server's budget, so this end gives up first and reconnects rather
- * than waiting to be terminated — and it is two and a half pings, so one lost
- * answer never costs anybody a reconnect.
+ * So the client speaks first. `ping`/`pong` were already on the wire, and the
+ * budget is measured against *anything* arriving. The server allows 60s, so 25s
+ * gives up first and reconnects rather than waiting to be terminated — and it is
+ * two and a half pings, so one lost answer never costs a reconnect.
  */
 const PING_MS = 10_000;
 const SILENCE_MS = 25_000;
@@ -92,32 +82,19 @@ export const useGoleta = (): Goleta => {
    * Anything that can't go out now waits for the next socket — except a move,
    * which is refused on the spot.
    *
-   * The queue is right for `rejoin`, `watch` and the lobby messages. They say
-   * *who you are* and *what you want the room to be*, neither of which goes
-   * stale: arriving a connection late, they still mean what they meant.
+   * The queue is right for `rejoin`, `watch` and the lobby messages: they say
+   * *who you are* and *what you want the room to be*, and neither goes stale. An
+   * `intent` is the opposite — a decision taken against the board as it stood
+   * when the finger came down. Most of the queue survives because the engine
+   * refuses it; a **draw** does not, because it is legal or illegal depending on
+   * what the board looked like at that instant, and the board moves while a seat
+   * is away. A draw that was the only move on the board can arrive as a Sunny
+   * violation its player never chose (#152).
    *
-   * An `intent` is the opposite. It is a decision taken against the board as it
-   * stood when the finger came down, and nothing on the wire carries that
-   * moment — so the server judges it against whatever is true when it lands.
-   * Most of the queue survives that because the engine refuses it (`Not your
-   * turn`, `Doesn't match`, `Nothing to call`). A **draw** does not: it is legal
-   * or illegal depending on what the board looked like at the instant it was
-   * taken, and the board moves while a seat is away — a landed Sunny call
-   * rewinds the whole state, the host can deal again. A draw that was the only
-   * move on the board when it was tapped can arrive as a Sunny violation its
-   * player never chose to commit, and they cannot see it happen (#152).
-   *
-   * So it is dropped, and **the drop is said out loud**. Swallowing it silently
-   * is the *tap it again* problem #150 is about, wearing a different hat — the
-   * hand it was aimed at doesn't move either way, so with nothing on screen the
-   * two are the same picture. The words are the app's own rather than the
-   * server's, which nothing else here does, and they land in the same place and
-   * the same register as every other refused move: three words against the
-   * cards, gone in a moment (`Refusal.tsx`).
-   *
-   * It leans on `status` being honest about a half-open socket, which is why
-   * #183 landed first. Before it, `readyState` said `OPEN` for a connection
-   * that had been gone for minutes and every tap went quietly into it.
+   * So it is dropped, and **the drop is said out loud** — swallowing it silently
+   * is the *tap it again* problem #150 is about, wearing a different hat. It
+   * leans on `status` being honest about a half-open socket, which is why #183
+   * landed first.
    */
   const send = useCallback((message: ClientMessage) => {
     const socket = socketRef.current;
@@ -135,19 +112,12 @@ export const useGoleta = (): Goleta => {
 
   useEffect(() => {
     let retryTimer: number | undefined;
-    /**
-     * When anything last arrived, and the check that judges it. Both outlive
-     * any one socket — the clock is the connection's, not the socket's — and
-     * `check` is what the interval and the two wake events below all call.
-     */
+    /** Both outlive any one socket — the clock is the connection's, not the
+     * socket's — and `check` is what the interval and the wake events all call. */
     let lastHeard = Date.now();
     let check = (): void => {};
-    /**
-     * Bumped whenever a socket is opened or given up on, so one that has
-     * already been written off cannot still fire a retry when its own `close`
-     * finally lands. Giving up on a half-open socket is precisely the case
-     * where that event arrives late, or never arrives at all.
-     */
+    /** Bumped whenever a socket is opened or given up on, so one already written
+     * off cannot still fire a retry when its own `close` finally lands. */
     let generation = 0;
 
     const connect = (): void => {
@@ -171,35 +141,28 @@ export const useGoleta = (): Goleta => {
       };
 
       /**
-       * Say something, and give up on a socket that has said nothing back.
+       * Say something, and give up on a socket that has said nothing back. Run on
+       * a timer and again the moment this tab is looked at or the machine says
+       * it is online.
        *
-       * Run on a timer and again the moment this tab is looked at or the
-       * machine says it is online — the three ways a connection comes back
-       * from the dead without anybody noticing it died.
-       *
-       * **Nothing is judged while the tab is hidden**, and that is the whole
-       * of what makes the budget safe to act on. A hidden tab has its timers
-       * throttled to a minute or stopped altogether, so silence there is the
-       * browser's doing rather than the network's — and a socket condemned on
-       * it would reconnect a backgrounded tab in a quiet room once a minute,
-       * for as long as it stayed backgrounded. Every one of those costs the
-       * table a seat blinking away and back and the bots a rescheduling, to
-       * protect a board nobody is looking at.
+       * **Nothing is judged while the tab is hidden**, which is what makes the
+       * budget safe to act on: a hidden tab has its timers throttled, so silence
+       * there is the browser's doing rather than the network's, and a socket
+       * condemned on it would reconnect a backgrounded tab once a minute.
        *
        * Which leaves the guarantee where it belongs: **any board somebody can
        * see has been verified inside the budget.** Coming back from a lock
-       * screen is the one moment the two rules meet, and it is judged the hard
-       * way — a socket nobody could vouch for is not a connection. The cost of
-       * being wrong that way is one `rejoin` round trip. The cost of being
-       * wrong the other way is a player shown a board that has moved.
+       * screen is judged the hard way — the cost of being wrong that way is one
+       * `rejoin` round trip, and the other way is a player shown a board that
+       * has moved.
        */
       check = (): void => {
         if (mine !== generation || socket.readyState !== WebSocket.OPEN) return;
         if (document.visibilityState === "hidden") return;
         if (Date.now() - lastHeard > SILENCE_MS) {
-          // Ask for it to be closed, then stop waiting to hear about it — on a
-          // network that has gone away the closing handshake is the same
-          // silence that got us here.
+          // Ask for it to be closed, then stop waiting to hear about it: on a network
+          // that has gone away the closing handshake is the same silence that
+          // got us here.
           socket.close();
           lost();
           return;
@@ -212,10 +175,9 @@ export const useGoleta = (): Goleta => {
         attemptRef.current = 0;
         setStatus("open");
 
-        // Say who is talking before anything queued goes out. A watcher says it
-        // on every connection rather than only the first: watching is stateless,
-        // so there is nothing to reclaim and nothing to check — a dropped socket
-        // or a redeploy just watches again.
+        // Say who is talking before anything queued goes out. A watcher says it on
+        // every connection rather than only the first: watching is stateless, so
+        // there is nothing to reclaim.
         const code = codeRef.current ?? routeRef.current.code;
         const isWatching = routeRef.current.mode !== "play";
         const identity = code && !isWatching ? loadIdentity(code) : null;
@@ -241,9 +203,8 @@ export const useGoleta = (): Goleta => {
       });
 
       socket.addEventListener("message", (raw) => {
-        // Anything at all counts, `pong` included. What is being measured is
-        // whether this socket is still carrying traffic, not whether the
-        // server bothered to answer the last question.
+        // Anything at all counts, `pong` included: what is measured is whether this
+        // socket is still carrying traffic.
         lastHeard = Date.now();
         const message = JSON.parse(String(raw.data)) as ServerMessage;
         switch (message.t) {
@@ -333,8 +294,8 @@ export const useGoleta = (): Goleta => {
 
   const leave = useCallback(() => {
     const code = codeRef.current;
-    // A watcher has no seat and nothing in `localStorage` to forget. Reaching
-    // for the key anyway would be the one write a watching browser makes.
+    // A watcher has no seat and nothing to forget. Reaching for the key anyway
+    // would be the one write a watching browser makes.
     if (code && !watching) forgetIdentity(code);
     codeRef.current = null;
     setHashCode(null);

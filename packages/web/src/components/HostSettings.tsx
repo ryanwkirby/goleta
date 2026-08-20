@@ -1,17 +1,12 @@
 /**
  * The host's controls over the table, in one place so the lobby and the table
- * show the same switches rather than two drifting copies of them.
+ * show the same switches rather than two drifting copies.
  *
- * There are two of them and they are not alike, which is the whole shape of
- * this module. **Where everybody is** changes how every phone draws the game
- * and takes effect the moment it is tapped. **The house rules** change what is
- * played and take effect at the next deal, never at this one — the game keeps
- * its own copy of them from the moment it is dealt, which is what lets the host
- * reach them mid-game at all (#134).
- *
- * Neither knows where it is being shown. The lobby lays them out down a panel;
- * the table stacks them in a popover behind a cog. Anything that depends on
- * which of those it is belongs to the caller.
+ * Two kinds, and they are not alike. **Where everybody is** changes how every
+ * phone draws the game and takes effect on the tap. **The house rules** change
+ * what is played and take effect at the next deal — the game keeps its own copy
+ * from the moment it is dealt, which is what lets a host reach them mid-game at
+ * all (#134). Neither knows where it is being shown.
  */
 
 import { useState } from "react";
@@ -20,10 +15,8 @@ import type { DealerMode, HouseRules } from "@goleta/engine";
 
 import { Button, Panel } from "./ui.tsx";
 
-/**
- * What a table is playing, for everyone who isn't the host and can't see the
- * switches. Silent when the table plays the game as written.
- */
+/** What a table is playing, for everyone who isn't the host. Silent when the
+ * table plays the game as written. */
 export const describeRules = (rules: HouseRules): string => {
   const on: string[] = [];
   if (!rules.sunny) on.push("no Sunny Rule");
@@ -34,39 +27,23 @@ export const describeRules = (rules: HouseRules): string => {
 };
 
 
-/**
- * How this table picks who deals, for everyone who isn't the host (#198).
- *
- * Silent when the deal rotates, which is both the default and the convention —
- * a table that has not chosen anything is not being told about a choice.
- */
+/** Silent when the deal rotates, which is the default: a table that has not
+ * chosen anything is not being told about a choice (#198). */
 export const describeDealing = (mode: DealerMode): string =>
   mode === "random" ? "The dealer is drawn at random each game." : "";
 
-/**
- * Whether the seats move, for everyone who isn't the host (#199).
- *
- * Silent when they don't, which is the default — a table that has not chosen
- * anything is not being told about a choice. Worth saying out loud when they
- * do, because seat order is turn order and it decides who you are handing to.
- */
+/** Silent when they don't (#199). Worth saying when they do, because seat order
+ * is turn order and it decides who you are handing to. */
 export const describeSeating = (shuffled: boolean): string =>
   shuffled ? "The seats are shuffled each game." : "";
 
 /**
- * The two answers, named — the same shape as `IrlToggle`, and for the same
- * reason: a question with two real answers should say both out loud rather than
- * state one and leave the other to be inferred from an Off.
+ * Two named answers rather than a switch, for `IrlToggle`'s reason: a question
+ * with two real answers should say both out loud.
  *
- * **What the dealer actually decides is two real things**, which is why this is
- * worth a control at all. Who opens: the player to the dealer's left goes
- * first, and in a game where playing is compulsory going first is not nothing.
- * And the seeded 8 under Dealer's Choice, which is the one advantage dealing
- * carries.
- *
- * A random dealer may land on the same seat twice running. That is the honest
- * answer for a random pick, and a table that finds it annoying is describing
- * the other option.
+ * What the dealer decides is who opens — going first is not nothing when playing
+ * is compulsory — and the seeded 8 under Dealer's Choice. A random dealer may
+ * land on the same seat twice; a table that finds that annoying wants rotation.
  */
 const DEALERS: { key: DealerMode; label: string; blurb: string }[] = [
   { key: "rotate", label: "Pass it along", blurb: "The deal moves one seat each game." },
@@ -74,17 +51,13 @@ const DEALERS: { key: DealerMode; label: string; blurb: string }[] = [
 ];
 
 /**
- * Whether the seats are shuffled at each deal.
+ * A switch rather than two named answers, unlike the dealer beside it: *pass it
+ * along* and *draw for it* are two conventions, whereas this is a thing a table
+ * either does or does not do.
  *
- * A switch rather than two named answers, unlike the dealer beside it, and the
- * difference is real: *pass it along* and *draw for it* are two conventions and
- * neither is the absence of the other, whereas this genuinely is a thing a
- * table either does or does not do.
- *
- * The copy says what it costs an IRL table, because that is the part somebody
- * has to agree to: turn order is where you are sitting, so shuffling it means
- * getting up. The screen that tells everybody where to go is the other half of
- * this feature, not a nicety on top of it.
+ * The copy says what it costs an IRL table, because that is what somebody has to
+ * agree to: turn order is where you are sitting, so shuffling it means getting
+ * up. The screen that says where to go is the other half of the feature.
  */
 export function ShuffleSeatsToggle({
   on,
@@ -92,7 +65,7 @@ export function ShuffleSeatsToggle({
   onChange,
 }: {
   on: boolean;
-  /** Whether this table is in one room, which is what changes what it costs. */
+  /** Whether this table is in one room, which changes what it costs. */
   irl: boolean;
   onChange: (on: boolean) => void;
 }) {
@@ -152,30 +125,18 @@ export function DealerPicker({
 
 
 /**
- * The house rules, as a row of switches.
- *
- * Every one of these is a rule the game already had written down — two
- * alternates from the original rules, plus the Sunny Rule, which not every
- * table wants to play with. Defaults are the game as written, so a host who
- * never opens this gets exactly what they got before.
+ * Every one of these is a rule the game already had written down, and the
+ * defaults are the game as written.
  *
  * **A row's description doesn't change when the row is switched.** It used to
  * rewrite itself between "what this rule does" and "Off. what happens instead",
- * which meant the sentence a host was reading to decide moved the moment they
- * decided, and flipping a switch twice to reread it landed somewhere different
- * each time. One fixed line saying what the rule does; the switch says whether
- * the table is playing it. Nothing here implies a table that drops one is
- * playing a lesser game.
+ * so the sentence a host was reading to decide moved the moment they decided.
  *
  * Two things the wording is careful about. **The Sunny line offers the draw
- * before it names the cost** — "you can draw any time, but others can call you
- * out" — because stating the violation as a condition reads as though the app is
- * about to stop you, and it never will: the draw pile stays tappable with no
- * warning, which is the whole rule (see AGENTS.md). And **Dealer's Choice on
- * Eight carries its condition in its name**, since the rule does nothing at all
- * unless the card turned up to start happens to be an 8 — about one game in
- * thirteen. `docs/RULES.md` still calls it Dealer's Choice, which is its name in
- * the original written rules.
+ * before it names the cost**, because stating the violation as a condition reads
+ * as though the app is about to stop you, and it never will. And **Dealer's
+ * Choice on Eight carries its condition in its name**, since the rule does
+ * nothing unless the card turned up happens to be an 8.
  */
 export function HouseRulesPicker({
   rules,
@@ -242,15 +203,9 @@ export function HouseRulesPicker({
 }
 
 
-/**
- * The two answers, named. `irl` is the flag each one sets.
- *
- * In person leads, because it is the answer that changes the most: it numbers
- * the seats, offers the order arrows, puts the QR up, and sends every phone into
- * the landscape hand view. Remote play is still what a new room *is* — see
- * `createRoom` — and the order of the buttons has nothing to do with which one
- * is selected.
- */
+/** In person leads, because it is the answer that changes the most. Remote play
+ * is still what a new room *is* — see `createRoom` — and the order of the
+ * buttons has nothing to do with which is selected. */
 const PLACES: { key: string; label: string; irl: boolean }[] = [
   { key: "irl", label: "In person", irl: true },
   { key: "remote", label: "Remote play", irl: false },
@@ -258,36 +213,17 @@ const PLACES: { key: string; label: string; irl: boolean }[] = [
 
 
 /**
- * Where everybody is.
+ * Where everybody is. Not a house rule and not next to them: it changes nothing
+ * about the game, only how each phone draws it. The copy says what it is for
+ * rather than naming a layout.
  *
- * Not a house rule and not next to them: it changes nothing about the game,
- * only about how each phone draws it. The copy says what it is for rather than
- * naming a layout — nobody sitting down to play has an opinion about landscape
- * hand views, and everybody has one about whether their friends are in the room.
+ * **Both answers are named**, as two halves of a switch: the old shape stated
+ * one and left the host to infer that Off meant the rest of the world. Naming
+ * both is also what made the explanatory line under them redundant.
  *
- * **Both answers are named**, as two halves of a switch rather than an On/Off
- * beside a sentence. The old shape stated one of them — "We're all in the same
- * room" — and left the host to infer that Off meant the rest of the world; a
- * question with two real answers should say both out loud, the same way the
- * seat-order check does.
- *
- * **And nothing explains them.** There was a line under the pair describing what
- * in-person mode does to a phone — a QR, a hand, landscape — which is two
- * mechanisms answering a question already asked in four words. Naming both
- * answers is what made it redundant: a host picking between "in person" and
- * "remote play" is not deciding about a layout, and the QR appearing directly
- * under the tap says the rest better than a sentence above it could.
- *
- * The one host control with no "between games only" on it, so it stays put once
- * a game is running. A table that only works out halfway through the first hand
- * that they are all sat together shouldn't have to finish the game first.
- *
- * It is also the one host control left outside the settings drawer, and it comes
- * before the seats rather than after them. It isn't a rule — it changes what
- * every person in the room does with their phone — and everything below it hangs
- * off the answer: whether the seats are numbered and orderable, whether the seat
- * order is checked before the deal, whether each phone shows a hand or a table,
- * and whether the QR is worth putting up at all.
+ * The one host control with no "between games only" on it, and the one left
+ * outside the settings drawer. It comes before the seats because everything
+ * below it hangs off the answer.
  */
 export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -314,48 +250,23 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
 
 /**
  * The host's way back to the table's settings once the cards are out (#134).
+ * Host only, and only while a game is running: in the lobby every one of these
+ * switches is already on the page.
  *
- * A cog in the corner of the table, host only, and only while a game is
- * running: in the lobby every one of these switches is already on the page,
- * unrolled, and a second door into the same room would just be somewhere else
- * to look for them.
+ * **The two settings inside answer at different times, and the panel says
+ * which.** Where everybody is takes effect on the tap; the house rules take
+ * effect at the next deal and cannot reach this hand. Being told that is the
+ * difference between a control that looks broken and one that isn't.
  *
- * It replaced a bare `in person: on` button sitting in the header, which was
- * the only host control that survived the lobby and read like a status line
- * somebody had left switched on. The cog says there is a room behind it; the
- * button said there was a fact.
- *
- * **The two settings inside it answer at different times, and the panel says
- * which.** Where everybody is takes effect on the tap — no rule and no timer
- * reads it, so nothing has to wait. The house rules take effect at the next
- * deal and cannot reach this hand, which holds the copy it was dealt under. A
- * host changing the rules mid-game is setting up the next one, and being told
- * that is the difference between a control that looks broken and one that
- * isn't.
- *
- * **Bot pace is deliberately not in here.** It reads live, every time a bot is
+ * **Bot pace is deliberately not in here**: it reads live, every time a bot is
  * scheduled, so changing it mid-game moves a challenge window somebody is
- * already watching — the one thing on the lobby's settings panel that is a
- * genuine "between games only", and the server still refuses it. The lobby is
- * where it stays.
+ * watching. The lobby is where it stays.
  *
- * **It is drawn at 44px in both layouts, and it exists in both** (#194). It was
- * a `text-base` glyph in a `p-1` box — sixteen pixels of ink and a 24px target,
- * in a header of small grey print, at the far left where the eye does not go —
- * and hosts did not find it. It is also the host's only way back to everything
- * the lobby held, so being hard to spot is the whole of what is wrong with it.
- * 44px is the number the rest of this app designs to (`handFan.ts` has the same
- * floor, for the same reason), and the ink is drawn to match rather than left
- * as punctuation in a bigger box.
- *
- * And it used to render only in the upright header, which `HandView` does not
- * have — so a host at an IRL table, which is to say a host holding a phone
- * sideways, which is the entire point of that view, could not reach their own
- * settings without turning the phone upright. It goes in the peek strip's
- * small-print cluster now, which is the one part of that row allowed to wrap.
- *
- * One size and one look in both places, deliberately: it is the same door, and
- * a control that changed shape with the orientation would read as two.
+ * **44px in both layouts, and it exists in both** (#194). It was a 16px glyph in
+ * a 24px box in a header of small grey print, and hosts did not find it — and it
+ * rendered only in the upright header, which `HandView` does not have, so a host
+ * at an IRL table could not reach their own settings at all. One size and one
+ * look in both places: it is the same door.
  */
 export function HostSettingsCog({
   rules,
@@ -390,9 +301,8 @@ export function HostSettingsCog({
         title="Table settings"
         onClick={() => setOpen(true)}
         className={[
-          // 44px square, the floor everything here is designed to. The glyph is
-          // drawn at a size that fills it rather than sitting in the middle of
-          // it: a big target around a small mark still reads as small print.
+          // 44px square, and the glyph is drawn to fill it: a big target around a
+          // small mark still reads as small print.
           "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
           "text-xl leading-none text-white/60",
           "transition-colors hover:bg-white/5 hover:text-white",
@@ -419,17 +329,14 @@ export function HostSettingsCog({
 
             <div className="flex flex-col gap-4 border-t border-white/10 pt-4">
               <HouseRulesPicker rules={rules} onChange={onRules} />
-              {/* Not a house rule, and in here because of when it answers
-                  rather than what it is: it is read once, at the deal, exactly
-                  like the switches above it, so the one note below covers
-                  both. */}
+              {/* In here because of when it answers rather than what it is: read
+                  once, at the deal, exactly like the switches above it. */}
               <DealerPicker mode={dealerMode} onChange={onDealerMode} />
-              {/* Beside the dealer and independent of it: that one changes who
-                  deals, this one changes who follows whom. */}
+              {/* Independent of the dealer: that one changes who deals, this one
+                  changes who follows whom. */}
               <ShuffleSeatsToggle on={shuffleSeats} irl={irl} onChange={onShuffleSeats} />
-              {/* Said once, under everything it is true of, rather than against
-                  each of them: the same sentence four times is a warning, not a
-                  note. */}
+              {/* Said once, under everything it is true of: the same sentence four
+                  times is a warning, not a note. */}
               <p className="text-xs text-white/40">
                 These apply at the next deal. This hand keeps the rules it was dealt under.
               </p>

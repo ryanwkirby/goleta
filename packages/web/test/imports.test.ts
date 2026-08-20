@@ -7,24 +7,17 @@ import { describe, expect, it } from "vitest";
 /**
  * The import graph is a one-way street, and this is what keeps it one.
  *
- * #224 removed three directory-level cycles from `packages/web/src`, all of
- * them caused by a pure value parked inside a module that renders or connects.
- * Two more were then introduced by later steps of the same refactor and went
- * unnoticed until a benchmark run happened to re-run the check by hand (#231) —
- * which is the whole argument for this file. A property nothing verifies is a
- * property you have until the next commit.
+ * #224 removed three directory-level cycles, all caused by a pure value parked
+ * inside a module that renders or connects. Two more were introduced by later
+ * steps of the same refactor and went unnoticed until a benchmark happened to
+ * re-run the check by hand (#231) — a property nothing verifies is one you have
+ * until the next commit.
  *
  * It asserts the folder order rather than merely "no cycles", because the order
- * is the thing with a reason behind it: `lib` is a leaf holding pure logic and
- * the hooks over it, and everything else may reach down into it. A cycle is
- * what you get when something pure ends up in the wrong folder, so catching the
- * direction catches the cause rather than the symptom.
- *
- * **Type-only imports count.** They vanish at build time, so a cycle made of
- * them is not a runtime problem — but it is still a shared shape living inside
- * one of its own consumers, which is exactly the mistake `lib/tableProps.ts`
- * exists to fix. If this ever needs relaxing, relax it deliberately and say why
- * here.
+ * is the thing with a reason behind it: `lib` is a leaf, and everything else may
+ * reach down into it. **Type-only imports count** — they vanish at build time,
+ * but a cycle made of them is still a shared shape living inside one of its own
+ * consumers.
  */
 
 const ROOT = resolve(import.meta.dirname, "../../..");
@@ -86,9 +79,9 @@ describe("the shape of packages/web/src", () => {
       .filter(({ fromLayer, toLayer }) => LAYERS.indexOf(toLayer) > LAYERS.indexOf(fromLayer))
       .map(({ from, to }) => `${from}  ->  ${to}`);
 
-    // `lib` importing from `net` is what put `graduation.ts` in the wrong
-    // folder; `screens/table` importing a shape out of `screens/HandView.tsx`
-    // is what put the prop bundles in the wrong file. Both read as harmless.
+    // `lib` importing from `net` is what put `graduation.ts` in the wrong folder;
+    // `screens/table` importing a shape out of `screens/HandView.tsx` is what put
+    // the prop bundles in the wrong file. Both read as harmless.
     expect(wrong).toEqual([]);
   });
 

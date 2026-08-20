@@ -7,36 +7,18 @@ import { Button } from "./ui.tsx";
 /**
  * A phone standing in for a spare tablet, asked to stand upright instead.
  *
- * The shared screen lies flat in the middle of a table with people round it, so
- * which way up the *device* is means nothing to anybody reading it — the board
- * is turned a quarter to suit (`fitScale.ts`). What it does decide is how much
- * of the screen the browser keeps, and on a phone that is most of the argument:
- * held sideways the address bar takes a third of the short side, and the board
- * comes out smaller than it does upright with the whole thing turned round.
- *
- * | held      | viewport   | board |
- * | --------- | ---------- | ----- |
- * | landscape | ~734×320   | ×0.57 |
- * | upright, turned a quarter | ~393×659 | ×0.66 |
+ * The shared screen lies flat with people round it, so which way up the *device*
+ * is means nothing — the board is turned a quarter to suit (`fitScale.ts`). What
+ * it does decide is how much of the screen the browser keeps: held sideways an
+ * iPhone fits the board at ×0.57, upright-and-turned at ×0.66.
  *
  * **A nudge, not a block**, which is where this parts company with
- * `RotatePanel`. That one guards a layout that genuinely cannot be drawn the
- * other way up, on the device its owner is playing their hand on. This one is
- * an optional extra screen that holds no cards, and somebody has usually just
- * propped it and walked back to their seat — a prompt with no way past would be
- * a device sitting there showing a sentence. So it says what it buys, and gets
- * out of the way for good on a tap.
+ * `RotatePanel`: that guards a layout that cannot be drawn the other way up, on
+ * the device somebody is playing their hand on. This is an optional extra screen
+ * holding no cards, usually just propped by somebody walking back to their seat.
  *
- * **Only where the ask is worth making.** A phone-sized screen, held the long
- * way, with a browser bar to be rid of. Fullscreen or installed, both ways up
- * give the same rectangle and there is nothing to gain; a tablet or a
- * television clears the size test and is never asked. None of it is a user
- * agent — the same rule the rest of this app follows.
- *
- * And nothing here turns anybody's phone. `screen.orientation.lock()` needs
- * fullscreen and iOS Safari has no implementation, so no page can — see
- * `RotatePanel` for the longer version, and #125 for what happened the last
- * time something in here reached for it.
+ * **Only where the ask is worth making** — a phone-sized screen, held the long
+ * way, with a browser bar to be rid of. None of it is a user agent.
  */
 export function TableRotateNudge() {
   const phone = useIsPhone();

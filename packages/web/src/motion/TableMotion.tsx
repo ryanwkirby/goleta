@@ -1,24 +1,19 @@
 /**
  * The table's sense of movement.
  *
- * Every state message arrives as a finished picture: the card is already on the
- * pile, already in the hand. That is correct, and it is also why the table used
- * to jump. This layer replays the difference — it flies a card from where the
- * thing was to where the state now says it is, and holds the destination back
- * until the card gets there.
+ * Every state message arrives as a finished picture — the card is already on the
+ * pile — which is correct and is also why the table used to jump. This layer
+ * replays the difference: it flies a card from where the thing was to where the
+ * state now says it is, and holds the destination back until it gets there. It
+ * knows nothing the client wasn't already told; a draw nobody may see arrives as
+ * `card: null` and flies face down.
  *
- * It knows nothing the client wasn't already told. A draw nobody may see
- * arrives as `card: null` and flies face down for exactly that reason.
- *
- * Two layout effects run here, in this order, and the order is load-bearing:
- *
- *   1. `drive` reads the DOM as it stands *now* and the geometry snapshot taken
- *      at the end of the previous commit — so a card that just left the hand
- *      still has a place to fly out of.
- *   2. `snapshot` then overwrites that geometry for the next update.
- *
- * A child's layout effects run before its parent's, so both of these land after
- * the seats, the piles and the hand have registered where they are.
+ * Two layout effects run here and the order is load-bearing: `drive` reads the
+ * DOM as it stands now against the geometry snapshot from the previous commit,
+ * so a card that just left the hand still has a place to fly out of; `snapshot`
+ * then overwrites that geometry for the next update. A child's layout effects
+ * run before its parent's, so both land after the seats, piles and hand have
+ * registered where they are.
  */
 
 import {
@@ -60,11 +55,9 @@ type PileFace = { kind: "actual" } | { kind: "card"; card: Card } | { kind: "emp
 export function TableMotion({
   game,
   log,
-  /**
-   * How big the cards are wherever they come to rest on this screen. The two
-   * layouts draw them at different sizes, and a flight is scaled between its
-   * two ends — so a plan made against the wrong one lands and then pops.
-   */
+  /** How big the cards are wherever they come to rest on this screen. A flight is
+   * scaled between its two ends, so a plan made against the wrong one lands and
+   * then pops. */
   scale = FULL_TABLE,
   children,
 }: {
@@ -90,12 +83,9 @@ export function TableMotion({
   const inbound = useRef(0);
   const sequence = useRef(0);
   /**
-   * The deal's own flights, so the table knows when the cards are down.
-   *
-   * Counted off as each one lands rather than timed: the flights already
-   * announce their own arrival, backstop included, and a second clock set to the
-   * same numbers would be a guess at what this one already knows. The last card
-   * to land is the upcard, which is what the prompt is waiting for anyway.
+   * The deal's own flights, so the table knows when the cards are down. Counted
+   * off as each one lands rather than timed: a second clock set to the same
+   * numbers would be a guess at what this one already knows.
    */
   const dealt = useRef(new Set<string>());
 
@@ -137,8 +127,8 @@ export function TableMotion({
 
     if (flight.toPile) {
       inbound.current -= 1;
-      // The last card in is the one the state already calls the top card, so
-      // once nothing is left inbound the pile goes back to reading the state.
+      // The last card in is the one the state already calls the top card, so once
+      // nothing is inbound the pile goes back to reading the state.
       const landed = flight.card;
       setPile(inbound.current > 0 && landed ? { kind: "card", card: landed } : { kind: "actual" });
     }
@@ -152,8 +142,7 @@ export function TableMotion({
     if (reduced) return;
 
     // The table acts out what just happened, never what it is only now being
-    // shown. The log outlives this screen — a finished game still has one when
-    // the next deal remounts the table — and none of that gets replayed.
+    // shown. The log outlives this screen, and none of that gets replayed.
     const now = Date.now();
     const recent = fresh.filter((entry) => now - entry.at < STALE_MS);
     if (recent.length === 0) return;
@@ -187,10 +176,9 @@ export function TableMotion({
       setPile(emptiesPile || !held ? { kind: "empty" } : { kind: "card", card: held });
     }
 
-    // Set here rather than the moment the batch is planned, so a deal whose
-    // anchors all resolved to nothing — no seats on screen, a hand not yet
-    // rendered — never says it is dealing. There would be nothing to watch and
-    // nothing to end it.
+    // Set here rather than when the batch is planned, so a deal whose anchors all
+    // resolved to nothing never says it is dealing: there would be nothing to
+    // watch and nothing to end it.
     if (deals) {
       for (const flight of live) dealt.current.add(flight.id);
       setDealing(true);
@@ -262,14 +250,10 @@ const centre = (rect: DOMRect): [number, number] => [
 ];
 
 /**
- * A card in the air.
- *
- * It owns the whole of its own trip, arrival included. Anything that cancels
- * the animation — an unmount, a re-render, StrictMode running the effect twice
- * — cancels the arrival with it, and starting over schedules a fresh one. A
- * timer held anywhere else can outlive the card, or be cleared while the card
- * is still flying, and a card that never announces it has landed leaves an
- * invisible hole in somebody's hand.
+ * A card in the air. It owns the whole of its own trip, arrival included:
+ * anything that cancels the animation cancels the arrival with it, and starting
+ * over schedules a fresh one. A timer held anywhere else can outlive the card,
+ * and a card that never announces it landed leaves an invisible hole in a hand.
  */
 function FlightCard({
   flight,
@@ -284,8 +268,8 @@ function FlightCard({
     const node = element.current;
     if (!node) return;
 
-    // Measured rather than assumed: the card is drawn at the size it will come
-    // to rest at, whatever the browser's root font size makes that.
+    // Measured rather than assumed: the card is drawn at the size it will come to
+    // rest at, whatever the root font size makes that.
     const { width, height } = node.getBoundingClientRect();
     const [fromX, fromY] = centre(flight.from);
     const [toX, toY] = centre(flight.to);
@@ -308,8 +292,8 @@ function FlightCard({
       {
         duration: flight.duration,
         delay: flight.delay,
-        // `both` parks the card at the start of its path through the delay,
-        // which is what makes a staggered deal look dealt rather than blinked.
+        // `both` parks the card at the start of its path through the delay, which is
+        // what makes a staggered deal look dealt rather than blinked.
         fill: "both",
         easing: "cubic-bezier(0.22, 0.72, 0.3, 1)",
       },
@@ -323,7 +307,7 @@ function FlightCard({
     };
     animation.addEventListener("finish", arrive);
     // A backstop for a tab that stops painting mid-flight: the card must reveal
-    // itself even if the animation never gets round to finishing.
+    // itself even if the animation never finishes.
     const backstop = window.setTimeout(arrive, flight.delay + flight.duration + SETTLE_GRACE_MS);
 
     return () => {

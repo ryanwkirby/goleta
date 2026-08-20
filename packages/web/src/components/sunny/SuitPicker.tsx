@@ -1,15 +1,9 @@
 
 /**
- * Naming the suit, without being shut in a box to do it.
- *
- * Deliberately not a modal. Choosing well means counting what everyone else is
- * holding — the whole table is face up for exactly that reason — and an overlay
- * with a scrim over it took the evidence away at the one moment you needed to
- * read it. So it docks to the bottom of the table instead: nothing is covered,
- * the seats still scroll, and it travels with you while you look around.
- *
- * Your own cards aren't tappable during this phase anyway, so there is no move
- * to fumble while it's up.
+ * Naming the suit, without being shut in a box to do it. Choosing well means
+ * counting what everyone else is holding — the whole table is face up for that
+ * reason — so a scrim would take the evidence away at the one moment you need
+ * it. Your own cards aren't tappable during this phase anyway.
  */
 export function SuitPicker({
   onPick,
@@ -17,12 +11,9 @@ export function SuitPicker({
 }: {
   onPick: (suit: "C" | "D" | "H" | "S") => void;
   /**
-   * Landscape: one row of four, shorter, and the aside goes.
-   *
-   * Compact means docked into the hand column, and a docked panel is paid for
-   * in card size. That column is *measured*, not fixed: `HandView` reads what
-   * this leaves with `useBox` and `handHeight` sizes the player's own cards to
-   * it (#166). A row added in here comes straight off their cards.
+   * Landscape: one row of four, shorter, and the aside goes. Docked into the
+   * hand column, which is *measured* — `handHeight` sizes the player's cards to
+   * what this leaves (#166), so a row added here comes off their cards.
    */
   compact?: boolean;
 }) {

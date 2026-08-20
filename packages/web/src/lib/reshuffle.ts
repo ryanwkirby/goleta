@@ -1,29 +1,18 @@
 /**
  * The beat the deck running out gets, wherever it is being watched (#209).
  *
- * Shuffling the face-up pile back in is one of the biggest things that happens
- * in a game, and on screen it used to be very nearly nothing: the deck count
- * jumped back up, the pile dropped to a single card, the card to match changed,
- * and play carried on. People at the table read it as the game skipping ahead
- * and asked what had happened.
+ * It used to be very nearly nothing on screen — the deck count jumped, the pile
+ * dropped to a card, play carried on — and people read it as the game skipping
+ * ahead. The timing lives here for `useJudgedCall`'s reason: it is the length of
+ * a moment the whole table is in, and neither screen gets to decide it.
  *
- * So it gets about five seconds — cards going back into the deck slowly enough
- * to watch, and the words to say why — and the timing lives here for exactly
- * the reason `useJudgedCall` does: it is the length of a moment the whole table
- * is in, and it has to be the same length on a phone in either orientation and
- * on the screen in the middle of the table. Neither screen gets to decide it.
+ * It reads the log rather than the state, because a reshuffle *is* an event and
+ * `GameView` carries no trace of one having just happened.
  *
- * It reads the log rather than the state, because a reshuffle *is* an event: it
- * describes something that happened in the open, it is broadcast whole, and
- * `GameView` carries no trace of it having just occurred.
- *
- * **It is presentation and never rules.** Nothing on the server changes, no
- * engine event is added, and bot pacing is untouched — bots may well move while
- * the beat is still running, exactly as they do under the peel. In particular
- * it is **not a gate on anything, least of all the draw pile**, which stays
- * tappable throughout with no disabled state and no warning. Five seconds of
- * animation is a tempting place to quietly break the first rule in
- * `AGENTS.md`'s "Rules that look like bugs"; it isn't one.
+ * **Presentation, never rules.** Nothing on the server changes and bot pacing is
+ * untouched. In particular it is **not a gate on the draw pile**, which stays
+ * tappable throughout — five seconds of animation is a tempting place to quietly
+ * break the first rule in `AGENTS.md`'s "Rules that look like bugs".
  */
 
 import { useEffect, useState } from "react";
@@ -37,20 +26,15 @@ import type { LoggedEvent } from "./feed.ts";
 export type Reshuffled = Extract<GameEvent, { type: "reshuffled" }>;
 
 export interface Reshuffle {
-  /**
-   * How many cards there are to draw, while the beat is running — and `null`
-   * the rest of the time, which is what every caller reads as "say nothing".
-   *
-   * The count rather than a bare boolean because the words carry it, and
-   * `drawPileSize` is already on the wire.
-   */
+  /** Null the rest of the time, which every caller reads as "say nothing". The
+   * count rather than a boolean because the words carry it. */
   drawPileSize: number | null;
 }
 
 export const useReshuffle = (log: LoggedEvent[]): Reshuffle => {
   const [running, setRunning] = useState(false);
 
-  // The log is newest first, so this is the latest reshuffle and not the first.
+  // The log is newest first, so this is the latest reshuffle.
   const entry = log.find((logged) => logged.event.type === "reshuffled");
   const id = entry?.id;
   const event = entry?.event.type === "reshuffled" ? entry.event : null;

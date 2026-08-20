@@ -26,44 +26,28 @@ export interface HandViewProps {
   help: HelpControls;
   sunny: SunnyControls;
   onShowInvite: () => void;
-  /**
-   * The way back to the rules screen (#195). Landscape had none: the upright
-   * table has a `rules` button in its header and this view has no header at
-   * all, so the answer to "what happens if I can't play anything?" was to turn
-   * the phone over, find the row of small grey print and come back.
-   */
+  /** The way back to the rules (#195). This view has no header, so the answer to
+   * "what happens if I can't play anything?" was to turn the phone over. */
   onShowRules: () => void;
 }
 
 /**
  * A phone in landscape, at a table of people who are looking at each other.
  *
- * The M1 table is one screen showing everything — the seat strip with every
- * hand face up, the piles, your hand, the log. That is right for a browser tab
- * you are staring into and wrong for a phone lying on a table between six
- * people, where your own cards, the thing you actually have to decide from, got
- * a fifth of the screen. Here they get most of it, at the size the pile used to
- * be, and the table centre peeks over the top (#78).
+ * The upright table is one screen showing everything, which is right for a
+ * browser tab and wrong for a phone lying between six people, where your own
+ * cards got a fifth of the display. Here they get most of it, and the table
+ * centre peeks over the top (#78). Since #131 they get the rest as well: there
+ * is a strip and there is the hand, and nothing under it — a line of small print
+ * at the foot cost a card size.
  *
- * Since #131 they get the rest of it as well. There is a strip and there is the
- * hand, and nothing under it: the line of small print that used to sit at the
- * foot cost a card size — `handSize` reads what the row is left — and every item
- * on it was quiet enough to move up into the strip instead. What the table is
- * waiting for is said in the strip's own words now, which were a shorter version
- * of the same sentence.
- *
- * Everything else that used to live down the side of the table has to fit in
- * one short, wide viewport, and the rule for all of it is the same: it docks
- * over the hand rather than covering it. The picker especially — it is asking
- * you to compare a hand against a board, and a scrim over the cards at that
- * exact moment was the wrong trade on the full table and is a worse one here.
+ * Everything that used to live down the side of the table docks over the hand
+ * rather than covering it. The picker especially: it asks you to compare a hand
+ * against a board, and a scrim over the cards at that moment is the wrong trade.
  *
  * What is *not* here is anybody else's hand, at any size. A sliver too small to
- * read a rank off is worse than nothing — `fan.ts` has a floor for exactly that
- * reason — so the full table is where hands live, and it is one turn of the
- * phone away the whole time a game is running rather than only on your turn.
- * Upright is the table, sideways is your hand, and nothing on either screen
- * needs tapping to say so.
+ * read a rank off is worse than nothing (`fan.ts` has a floor), so the full
+ * table is one turn of the phone away the whole time a game is running.
  */
 export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }: HandViewProps) {
   const { room, game, nameOf, send, offline, reshuffling } = table;
@@ -73,41 +57,34 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
   const { accusing, stillAccusable, onStartAccusing, onStopAccusing, onAccuse } = sunny;
   const sunnyTarget = sunny.target;
   /**
-   * The room the hand has to spend, measured rather than assumed — the same
-   * approach the seat strip takes, and for the same reason: how big the cards
-   * go and how tight they close up is arithmetic on a real box, not a guess at
-   * a phone. Both axes, because they answer different questions: the height
-   * decides the card size, the width decides the overlap.
+   * The room the hand has to spend, measured rather than assumed. Both axes,
+   * because they answer different questions: the height decides the card size,
+   * the width decides the overlap.
    */
   const row = useRef<HTMLDivElement>(null);
   const box = useBox(row);
 
   /**
-   * The strip's line, and whether the picker is allowed up yet.
-   *
-   * Worked out here rather than handed down, because both answers need
-   * `dealing` and `Table` renders the motion provider rather than sitting under
-   * it. Under Dealer's Choice the game opens in `phase: "suit"`, so without this
-   * the strip asked for a suit — and the picker took its room out of the column,
-   * shrinking the hand — while the cards were still going out (#75).
+   * The strip's line, and whether the picker is allowed up yet. Worked out here
+   * because both need `dealing` and `Table` renders the motion provider rather
+   * than sitting under it. Under Dealer's Choice the game opens in
+   * `phase: "suit"`, so without this the picker took its room out of the column
+   * while the cards were still going out (#75).
    */
   const { dealing } = useMotion();
   const prompt = turnPrompt(game, nameOf, assist, dealing, reshuffling);
 
-  // Measured against the row's *content* box, and the row is the only thing
-  // with padding — the hand inside it has none when it is fanning. So this is
-  // the width the cards actually get, with nothing subtracted by hand.
+  // Measured against the row's *content* box, and the row is the only thing with
+  // padding, so this is the width the cards actually get.
   const height = handHeight(box.height);
   const step = handStep(box.width, cards.length, cardWidthAt(height), undefined, true);
   const me = game.you ?? "";
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">
-      {/* Everything that isn't your cards, in one line across the top. The row
-          of furniture that used to sit under them is gone: it cost the hand a
-          card size, and none of what was on it — the prompt the strip was
-          already saying a thinner version of, the sort control, the offer of
-          help, the draws left on a missed call — is worth one (#131). */}
+      {/* Everything that isn't your cards, in one line across the top. The row of
+          furniture that used to sit under them is gone: it cost the hand a card
+          size, and none of what was on it is worth one (#131). */}
       <PeekStrip
         room={room}
         game={game}
@@ -116,8 +93,8 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
         offline={offline}
         helpFrom={helpFrom}
         prompt={prompt}
-        // Loud for your own turn, and loud for the deck running out — which is
-        // nobody's turn and is the more important of the two while it lasts.
+        // Loud for your own turn, and for the deck running out — which is nobody's
+        // turn and is the more important of the two while it lasts.
         loud={mine || reshuffling !== null}
         onShowInvite={onShowInvite}
         onShowRules={onShowRules}
@@ -129,20 +106,11 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/*
-          The way into a call, hung under the strip at the end furthest from
-          the deck (#189).
-
-          The sun used to sit *in* the strip, immediately before the draw pile
-          button, so a bigger version of it could only grow towards the deck —
-          and a fat target beside the deck is a mis-tap into the exact violation
-          it accuses. The two bottom corners are spoken for (#167), so this is
-          the corner left, and it is the same idea as the upright table's: over
-          the felt, near your own cards, naming who it is about.
-
-          Absolute, so it never moves the cards underneath it. With a wide fan
-          it sits over the top-left corner of the outermost card — the accepted
-          cost the bottom two corners already pay, and cheaper here, because a
-          window is only ever open on somebody else's turn.
+          The way into a call, hung under the strip at the end furthest from the
+          deck (#189). The sun used to sit *in* the strip, immediately before the
+          draw pile, so a bigger version could only grow towards the deck — and a
+          fat target beside the deck is a mis-tap into the exact violation it
+          accuses. Absolute, so it never moves the cards underneath it.
         */}
         {sunnyTarget ? (
           <SunnyCallOffer
@@ -155,19 +123,13 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
 
         {/*
           Both pickers **dock**: they take their room out of the column rather
-          than being laid over it. Overlaying was the obvious thing and it was
-          wrong — the accusation picker is asking you to compare a hand against
-          a board, and a panel that sits on top of your own cards at that exact
-          moment is the trade the full table already refused to make.
-
-          Because the row below measures what is left, the hand simply steps
-          down a size while a picker is up, and steps back when it goes. That
-          fall-back is the whole reason `handSize` reads a height instead of
-          being told one.
+          than being laid over it. Overlaying covers the cards the picker is
+          asking you to compare against — the trade the full table already
+          refused. The row below measures what is left, so the hand steps down a
+          size while a picker is up and steps back when it goes.
         */}
-        {/* No cap and no scroll: the picker is one row of cards however many
-            the offender is holding, so its height is known and the hand below
-            simply steps down a size to make the room. It used to be capped at a
+        {/* One row of cards however many the offender holds, so its height is
+            known and the hand below simply steps down. It used to be capped at a
             fraction of the column, which left both halves short — see #96. */}
         {accusing !== null && stillAccusable && game.sunnyReach ? (
           <div className="shrink-0 px-2 pt-1">
@@ -193,40 +155,28 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
           </div>
         ) : null}
 
-        {/* The hand sits in the middle of whatever is left rather than hugging
-            the foot of the screen: this view exists because your own cards were
-            the thing you decide from and were getting a fifth of the display,
-            and parking them at the bottom of an empty field is only half a fix. */}
+        {/* The hand sits in the middle of whatever is left rather than hugging the
+            foot of the screen. */}
         {/*
           The side insets go on the measured box, which is what makes the fan
-          honour them for free: `useBox` reads the content box, so `handStep`
-          below is handed the width the cards actually get and closes the fan up
-          by the rules it already has. Nothing subtracts hardware by hand.
-
-          It costs the fan ~59pt of width on the island side, and that is the
-          trade being taken deliberately. `fan.ts` has a floor because a card you
-          cannot read is a play you cannot spot, and an end card behind the
-          island is that same failure by another route — so the fan tightens,
-          which is the release valve it already has. Letting the row bleed would
-          keep the arithmetic looking healthy while the hardware overruled it.
+          honour them for free: `useBox` reads the content box, so `handStep` is
+          handed the width the cards actually get. It costs the fan ~59pt on the
+          island side, taken deliberately — an end card behind the island is the
+          same failure `fan.ts`'s floor exists to prevent, by another route.
         */}
         {/*
-          The bottom inset is on this row too, now that nothing sits under it.
-          It is the footer's old `pb` moved up rather than a new rule: the felt
-          bleeds to the edge and the content insets from it, and the hand is the
-          bottom-most content there is. `useBox` reads the content box, so the
-          height `handSize` is handed already has the home indicator taken off —
-          which is the difference between a rung it can hold and a rung that
+          The bottom inset is on this row too, now that nothing sits under it —
+          the footer's old `pb` moved up rather than a new rule. `useBox` reads
+          the content box, so the height already has the home indicator taken
+          off, which is the difference between a rung it can hold and one that
           draws its bottom row of cards under a swipe bar.
         */}
         <div
           ref={row}
           className={[
-            // `justify-end`, not `justify-center`. Whatever the row has left
-            // over belongs above the cards, not split into a band of bare felt
-            // under them — this view exists because your own cards were the
-            // thing you decide from, and they should sit at the near edge of
-            // the phone where a thumb already is (#166).
+            // `justify-end`, not `justify-center`: whatever the row has left over belongs
+            // above the cards, not split into a band of bare felt under them
+            // (#166).
             "relative flex min-h-0 flex-1 flex-col justify-end",
             "pb-[max(0.25rem,env(safe-area-inset-bottom))]",
             "pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]",
@@ -235,8 +185,8 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
           {/* Your own shout, over your own cards, same as everyone else sees. */}
           {shouting ? <HelpShout kind={shouting} /> : null}
 
-          {/* The same answer in the same place as upright: turning the phone
-              must not move where a refusal appears (#99). */}
+          {/* The same answer in the same place as upright: turning the phone must
+              not move where a refusal appears (#99). */}
           <HandFrame mine={mine} refusal={refusal}>
             <Hand
               cards={cards}
@@ -254,21 +204,12 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
       </div>
 
       {/*
-        The felt's own printing, in the two bottom corners.
-
-        Both of these are about your own hand, and your own hand is at the
-        bottom of this screen — they were at the top only because there was
-        nowhere else to put them. #131 is why: a row *under* the cards costs
-        the hand a card size, because `handHeight` reads the height the row is
-        left, and neither of these is worth one.
-
-        So they are neither on the strip nor in the column. They are laid over
-        the felt, outside the box `useBox` measures, which is what keeps that
-        rule intact while still putting them where a thumb is (#167). The cards
-        run to within twenty pixels of the bottom since #166, so with a wide fan
-        these sit over its outermost card — the accepted cost, and the reason
-        they are small, quiet, and above the cards rather than under them:
-        printing you cannot press is not a control.
+        The felt's own printing, in the two bottom corners. Both are about your
+        own hand, and your own hand is at the bottom of this screen — they were
+        at the top only because there was nowhere else. A row *under* the cards
+        costs a card size (#131), so they are laid over the felt, outside the box
+        `useBox` measures (#167). Small, quiet, and above the cards rather than
+        under them: printing you cannot press is not a control.
       */}
       {stalled ? (
         <div

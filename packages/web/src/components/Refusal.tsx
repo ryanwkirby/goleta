@@ -1,42 +1,28 @@
 import type { GoletaError } from "../lib/feed.ts";
 
 /**
- * How long each weight of refusal stays up.
- *
- * `MOVE_MS` is long enough to read three words twice and short enough that
- * reaching for it never occurs to anybody — which is what pays for having
- * nothing to dismiss. It is kept in step with the `move-refusal` keyframes in
- * `index.css`: they own the fade at each end, `App` owns the clearing up, and
- * the two figures have to agree or the pill either vanishes mid-fade or leaves
- * an invisible one behind.
+ * Long enough to read three words twice and short enough that reaching for it
+ * never occurs to anybody, which is what pays for having nothing to dismiss.
+ * Kept in step with the `move-refusal` keyframes in `index.css`, or the pill
+ * either vanishes mid-fade or leaves an invisible one behind.
  */
 export const MOVE_MS = 1800;
 export const SESSION_MS = 5000;
 
 /**
- * The surface both refusals are drawn on.
+ * The surface both refusals are drawn on: near-black and neutral, the shape a
+ * snackbar has had for a decade. The meaning is carried by the sign and the
+ * words.
  *
- * Near-black and neutral, with a hairline and a shadow to lift it off the
- * table — the shape a snackbar has had on every platform for a decade, and the
- * one thing on screen that should not look like it belongs to the felt. The
- * meaning is carried by the sign and the words; the panel stays out of it.
- *
- * The obvious alternative, a red-flooded panel, is wrong twice over here. Red
- * on this green is complementary-colour vibration, and red already means
- * *hearts and diamonds* on a screen full of cards. Spending it on furniture
- * would be spending the one colour the table cannot lend out.
+ * A red-flooded panel is wrong twice over here — red on this green is
+ * complementary-colour vibration, and red already means *hearts and diamonds* on
+ * a screen full of cards.
  */
 const SURFACE =
   "bg-zinc-900/95 text-white shadow-xl ring-1 ring-white/10 backdrop-blur-sm";
 
-/**
- * The universal "no": a circle with a bar through it.
- *
- * Drawn rather than written, and drawn rather than an emoji — ☀️ is the table's
- * voice and this is the app's. It is what lets the surface stay neutral: the
- * sign says "refused" on its own, so nobody has to be able to tell rose from
- * white to know what happened.
- */
+/** Drawn rather than written, and rather than an emoji — ☀️ is the table's voice
+ * and this is the app's. It is what lets the surface stay neutral. */
 function NoSign({ className = "" }: { className?: string }) {
   return (
     <svg
@@ -55,21 +41,14 @@ function NoSign({ className = "" }: { className?: string }) {
 }
 
 /**
- * The answer to a mis-tap: a card that doesn't match, a turn that isn't yours.
+ * The answer to a mis-tap. Placed immediately above the top edge of your own
+ * cards (#99) — it answers a tap you just made, so it belongs against the thing
+ * you tapped rather than pinned to the furniture.
  *
- * Placed by whichever layout is showing, immediately above the top edge of your
- * own cards (#99) — `Table` and `HandView` each keep the hand in a `relative`
- * box for this, and `HelpShout` hangs off the same one. It answers a tap you
- * just made, so it belongs against the thing you tapped rather than pinned to
- * the furniture at the foot of the screen.
- *
- * It must never drift to the *top* of the screen. That belongs to the Sunny
- * announcement, which is the one thing at this table nobody may miss, and a
- * refusal is perfectly reachable while one is up.
- *
- * `pointer-events-none` throughout: it hangs over the cards, and the hand under
- * it has to stay tappable — most of all by somebody trying the *right* card
- * immediately afterwards.
+ * It must never drift to the *top* of the screen: that belongs to the Sunny
+ * announcement, which is the one thing nobody may miss. `pointer-events-none`
+ * throughout, so the hand under it stays tappable — most of all by somebody
+ * trying the *right* card immediately afterwards.
  */
 export function MoveRefusal({ error }: { error: GoletaError }) {
   return (
@@ -89,21 +68,17 @@ export function MoveRefusal({ error }: { error: GoletaError }) {
 }
 
 /**
- * Everything that isn't a mis-tap: the room is full, the seat isn't yours any
- * more, that game is already under way.
- *
- * Same surface and same sign as the pill, because it is the same kind of news;
- * what differs is the weight. It keeps the top of the screen, five seconds, and
- * something to dismiss — `Join` latches the refused room code off the back of
- * it precisely because it lasts long enough to be read and acted on, and a
- * refusal that flashed past would take the way out with it.
+ * Everything that isn't a mis-tap: the room is full, the seat isn't yours, that
+ * game is already under way. Same surface and sign; what differs is the weight.
+ * `Join` latches the refused room code off the back of it precisely because it
+ * lasts long enough to be read and acted on.
  */
 export function SessionError({ error, onDismiss }: { error: GoletaError; onDismiss: () => void }) {
   return (
     <div
       role="status"
-      // Centred across the full width, so in landscape a long refusal reaches
-      // the island at whichever end the hardware is on.
+      // Centred across the full width, so in landscape a long refusal reaches the
+      // island at whichever end the hardware is on.
       className={[
         "fixed inset-x-0 top-0 z-40 flex justify-center p-3",
         "pt-[max(0.75rem,env(safe-area-inset-top))]",

@@ -1,14 +1,9 @@
 /**
- * Names for the places a card can be, and the geometry bookkeeping that lets a
- * flight find them.
- *
- * Two kinds of anchor exist, and the difference matters:
- *
- *   - **Region** anchors — `deck`, `pile`, `hand`, `seat:<id>` — are always on
- *     screen. A flight can always fall back to one.
- *   - **Card** anchors — `card:<id>` — come and go with the card. The card a
- *     flight starts from has usually just left the DOM, which is why every
- *     commit's geometry is kept for exactly one more commit: see `before`.
+ * Names for the places a card can be. **Region** anchors — `deck`, `pile`,
+ * `hand`, `seat:<id>` — are always on screen, so a flight can always fall back
+ * to one. **Card** anchors come and go with the card, and the one a flight
+ * starts from has usually just left the DOM, which is why every commit's
+ * geometry is kept for exactly one more commit: see `before`.
  */
 
 export type AnchorKey = string;
@@ -26,13 +21,9 @@ export interface AnchorGeometry {
   before: (key: AnchorKey) => DOMRect | null;
 }
 
-/**
- * The first of `keys` that resolves anywhere, current DOM preferred.
- *
- * A card that just left the hand is gone from the live DOM but still in the
- * previous commit's snapshot, so it resolves there; a card that just arrived is
- * the other way round. One lookup order covers both.
- */
+/** The first of `keys` that resolves anywhere, current DOM preferred. A card
+ * that just left the hand resolves in the previous commit's snapshot and one
+ * that just arrived in the live DOM; one lookup order covers both. */
 export const resolveAnchor = (keys: readonly AnchorKey[], at: AnchorGeometry): DOMRect | null => {
   for (const key of keys) {
     const rect = at.live(key) ?? at.before(key);

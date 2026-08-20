@@ -9,15 +9,20 @@
  * leaves `10♦` and `J♦` hard to tell apart breaks the Sunny Rule quietly.
  */
 
+/** `w-10` on a `sm` card — the same 40px `CARD_WIDTH_PX` records. */
 const CARD = 40;
+/** `gap-1`, which is all that sat between two cards before any of this. */
 const GAP = 4;
+/** A seat's `px-3`. */
 const SEAT_PAD = 24;
+/** The `min-w-32` a seat keeps however few cards it holds. */
 const SEAT_MIN = 128;
 
 /** A collapsed seat's `min-w-20` (#192). Easy to miss: `seatWidth(0, sliver)`
  * returns `SEAT_MIN`, so without this the fan reserves a full seat for something
  * no longer drawn as one and tightens everybody else to pay for it. */
 const SEAT_OUT_MIN = 80;
+/** `gap-2`, between one seat and the next. */
 const SEAT_GAP = 8;
 
 export const LOOSEST = CARD + GAP;

@@ -76,8 +76,11 @@ export function Piles({
   const suit = pileSuit(game, face);
   const cardsLeft = game.drawPileSize;
 
-  // Everything that isn't the evidence steps back while the peel is up. Nothing
-  // here moves or unmounts, so every anchor stays where it was.
+  // Everything that isn't the evidence steps back while the peel is up. It also
+  // keeps the fan legible where it overhangs the deck: `SunnyPeel` hangs the
+  // named card off the card in play at `right-full`, i.e. over whichever column
+  // is to its left, so the peel's geometry depends on the deck being that one
+  // (#259). Nothing here moves or unmounts, so every anchor stays where it was.
   const aside = peel ? "opacity-25 transition-opacity duration-300" : "transition-opacity";
   const pileBox = size === "xl" ? "h-44 w-33 rounded-2xl" : "h-32 w-24 rounded-xl";
 

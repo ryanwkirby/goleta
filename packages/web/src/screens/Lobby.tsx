@@ -680,7 +680,6 @@ export function Lobby({
                     "take your seat" screen up (#199). */}
                 <ShuffleSeatsToggle
                   on={room.shuffleSeats}
-                  irl={room.irl}
                   onChange={(on) => send({ t: "setShuffleSeats", on })}
                 />
                 <DealerPicker

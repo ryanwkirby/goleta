@@ -63,8 +63,11 @@ export const describeEvent = (event: FeedEvent, nameOf: NameOf): string => {
     }
     case "sunnyCalled": {
       // The named card is the substance of the call, and what makes a wrong one worth
-      // reading back afterwards.
-      const named = `${event.card.rank}${event.card.suit}`;
+      // reading back afterwards. Through `cardName` like every other line: this
+      // one built its own and printed a bare suit letter, which `spellSuits` then
+      // could not turn into words either, so the call was the one line in the log
+      // a screen reader said as "7C" (#286).
+      const named = cardName(event.card);
       const call = `${nameOf(event.callerId)} called the Sunny Rule on ${nameOf(event.targetId)}, naming the ${named}`;
       return event.correct ? `${call} — and was right.` : `${call} — and was wrong.`;
     }

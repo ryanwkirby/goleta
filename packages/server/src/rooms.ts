@@ -111,13 +111,15 @@ export const createStore = (): RoomStore => new Map();
 const MAX_NAME_LENGTH = NAME_LIMIT;
 const BOT_NAMES = [
   "Robot",
-  "Automaton",
   "Clockwork",
   "Tinny",
   "Gizmo",
   "Widget",
   "Sprocket",
   "Cogs",
+  // Last, not gone: eight bots still need eight names, but the second bot at
+  // every table was a word off a museum label (#247).
+  "Automaton",
 ];
 
 /** A refusal shown to a player as-is. `code` tags the handful the browser can

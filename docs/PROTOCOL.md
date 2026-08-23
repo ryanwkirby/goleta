@@ -111,7 +111,7 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order. Off either end does nothing rather than refusing. The lobby's drag handle sends a run of these — one per place — rather than a whole order; see below. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
-| `setIrl` | host | **Any time, including mid-game.** "In person" rather than "remote play"; carried back to everyone on `RoomView`. |
+| `setIrl` | host | **Any time, including mid-game.** "Real life" rather than "remote play"; carried back to everyone on `RoomView`. |
 | `setDealerMode` | host | **Any time, including mid-game**, for the same reason as `setHouseRules`. `rotate` or `random`; carried back to everyone on `RoomView`. |
 | `setShuffleSeats` | host | **Any time, including mid-game**, same reason again. Whether the seats are reshuffled at each deal; carried back to everyone on `RoomView`. |
 | `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |

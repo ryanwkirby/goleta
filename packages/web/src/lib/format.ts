@@ -66,7 +66,7 @@ export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
     case "eliminated":
       return `${nameOf(event.playerId)} is out of cards, and out of the game.`;
     case "turnChanged":
-      return `${nameOf(event.playerId)} to play.`;
+      return `${nameOf(event.playerId)}'s turn.`;
     case "gameOver":
       if (event.winnerId === null) return "Deadlock — the game ends in a tie.";
       return event.reason === "stalemate"
@@ -131,7 +131,7 @@ export const turnPrompt = (
         ? "☀️ Step 1 of 3 — make the play you skipped. Tap it twice."
         : `${nameOf(game.turnPlayerId)} has to make the play they skipped — step 1 of 3.`;
     case "action":
-      if (!mine) return `${nameOf(game.turnPlayerId)} to play.`;
+      if (!mine) return `${nameOf(game.turnPlayerId)}'s turn.`;
       // Both give the answer away — being told you *must* play is being told a card
       // matches — so neither is said unless help is on.
       if (!assist) return "Your turn.";

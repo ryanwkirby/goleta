@@ -68,9 +68,7 @@ function JoinQr({ code }: { code: string }) {
           className="w-44 max-w-[55%] p-2.5"
         />
       </div>
-      <p className="mt-2 text-xs text-white/40">
-        Point a camera at it, type the code, or tap it to copy the link.
-      </p>
+      <p className="mt-2 text-xs text-white/40">Have everyone scan this code</p>
     </div>
   );
 }
@@ -132,8 +130,10 @@ const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
 const describeTable = (room: RoomView, anyBots: boolean): string => {
   const said = [
     describeRules(room.houseRules),
-    describeDealing(room.dealerMode),
+    // Seating before starting, the order the drawer draws them in: where people
+    // sit is the bigger of the two and decides what the other is about (#245).
     describeSeating(room.shuffleSeats),
+    describeDealing(room.dealerMode),
   ];
   if (anyBots) {
     said.push(`Bots at ${room.botSpeed === "human" ? "human-like" : "lightning"} speed.`);
@@ -147,8 +147,17 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
  * state lives here, so every arrival starts collapsed.
  *
  * The triangle is deliberately much larger than its label — at body-text size it
- * read as punctuation. It is a **disclosure** triangle, `◂` shut and `▾` open,
- * pointing left because everything it is about is to its left (#137).
+ * read as punctuation, and that argument is about size rather than side. It is a
+ * **disclosure** triangle rather than a scroll affordance, which is why it turns
+ * rather than moving (#137).
+ *
+ * **It is to the left of the label** (#248). It sat at the right-hand end until
+ * then, pointing back at everything it was about, which is coherent and is still
+ * the wrong end: every disclosure control anybody has used puts the marker
+ * before the thing it discloses — `<details>` does, and `Rule` in `Rules.tsx`
+ * had to hide the native marker to move it. Shut, `▸` points at the label it
+ * will open; open, it points down at the panel. One glyph rotated, in its own
+ * column, so the label and the summary stay left-aligned under each other.
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -161,18 +170,18 @@ function TableSettings({ summary, children }: { summary: string; children: React
         onClick={() => setOpen(!open)}
         className="flex w-full items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-white">Advanced settings</span>
-          <span className="block text-xs text-white/40">{summary}</span>
-        </span>
         <span
           aria-hidden
           className={[
             "shrink-0 text-3xl leading-none text-white/60 transition-transform",
-            open ? "-rotate-90" : "",
+            open ? "rotate-90" : "",
           ].join(" ")}
         >
-          ◂
+          ▸
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-white">Advanced settings</span>
+          <span className="block text-xs text-white/40">{summary}</span>
         </span>
       </button>
       {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}
@@ -602,16 +611,18 @@ export function Lobby({
                   the switches above — so it belongs beside them rather than
                   beside bot speed, which really is between-games-only. */}
               <div className="flex flex-col gap-3 border-t border-white/10 pt-3">
-                <DealerPicker
-                  mode={room.dealerMode}
-                  onChange={(mode) => send({ t: "setDealerMode", mode })}
-                />
-                {/* Independent of the dealer. In an IRL room it is also what puts the
+                {/* Above the starting player, and independent of it: where people
+                    sit is the bigger of the two and decides what the other is
+                    even about (#245). In an IRL room it is also what puts the
                     "take your seat" screen up (#199). */}
                 <ShuffleSeatsToggle
                   on={room.shuffleSeats}
                   irl={room.irl}
                   onChange={(on) => send({ t: "setShuffleSeats", on })}
+                />
+                <DealerPicker
+                  mode={room.dealerMode}
+                  onChange={(mode) => send({ t: "setDealerMode", mode })}
                 />
               </div>
               {anyBots ? (

@@ -43,7 +43,7 @@ const RULES: { key: string; headline: ReactNode; detail: ReactNode }[] = [
       </>
     ),
     detail:
-      "With nothing playable, you draw a card (which is exactly what you want). Still stuck? Draw again, up to three.",
+      "Can't play any cards? Great! You get to draw. Still stuck? Draw again, up to three times.",
   },
   {
     key: "eights",
@@ -52,16 +52,16 @@ const RULES: { key: string; headline: ReactNode; detail: ReactNode }[] = [
         Eights are <em>wild</em>.
       </>
     ),
-    // The one item here that was actively wrong by omission, so its second
-    // sentence is reachable rather than cut. *An 8 plays on anything and you
-    // name the suit* is true of an 8 played from a hand and of nothing else,
-    // and a table meets the exception in its first minute: roughly one game in
-    // thirteen opens on an 8 nobody names a suit for, and a bot sheds an 8 at
-    // the first opportunity, so a second one lands on it and is named for. A
-    // player briefed only by this screen has been given no way to tell those
-    // apart, and what it looks like is the app breaking its own rule (#151).
+    // The natural-8 exception used to be spelled out here (#151) and the trade
+    // was taken the other way in #250: it is a fringe case that costs a player
+    // nothing when it happens, and it was buying that with the only sentence on
+    // this screen that could tell somebody how to play *well*. `docs/RULES.md`
+    // § Natural eights stays canonical and answers it at the table. If it
+    // confuses people again the answer is a line at the pile, where the
+    // confusion happens — `lib/pile.ts` already tells *named* from *owed* — not
+    // this sentence coming back.
     detail:
-      "An 8 plays on anything, and after playing one, you get to name the suit. An 8 turned up off the deck was played by nobody, so nobody names anything — it's just an 8 of the suit printed on it.",
+      "An 8 plays on anything, and after playing one, you get to name the suit. Hint: Look at the cards of the players next to you before choosing.",
   },
 ];
 

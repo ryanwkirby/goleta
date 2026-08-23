@@ -94,7 +94,7 @@ describe("what the table is waiting for", () => {
 
   it("holds nothing else back for the deal — every other prompt can be acted on", () => {
     expect(asks(table(), true)).toBe("Your turn.");
-    expect(asks(table({ you: "p2" }), true)).toBe("Ana to play.");
+    expect(asks(table({ you: "p2" }), true)).toBe("Ana's turn.");
     expect(asks(table({ phase: { kind: "sunnyPlay" } }), true)).toContain("Step 1 of 3");
   });
 
@@ -106,7 +106,7 @@ describe("what the table is waiting for", () => {
     const watching = (overrides: Partial<GameView> = {}): string =>
       asks(table({ you: null, waitingOn: "p2", turnPlayerId: "p2", ...overrides }));
 
-    expect(watching()).toBe("Bo to play.");
+    expect(watching()).toBe("Bo's turn.");
     expect(watching({ phase: { kind: "suit", playerId: "p2" } })).toBe("Bo is naming a suit.");
     // The two the band was silent on, and the reason this matters: a call lands
     // and the table is walked through a numbered punishment.

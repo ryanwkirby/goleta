@@ -4,6 +4,10 @@
  * the room**, which rules out everything on `HostSettings.tsx`. Two cogs this
  * close together want the difference legible, so this one is a person rather
  * than a gear. **A watcher gets none**: the only thing in it is about cards.
+ *
+ * "Changes nothing about the room" is about the *room*, not about secrecy.
+ * Nothing in here may claim the hints setting is private: it is announced when
+ * it goes on and the seat carries a mark while it lasts (#187, #251).
  */
 
 import { useState } from "react";
@@ -73,11 +77,14 @@ export function PlayerSettingsCog({
             className="flex w-full max-w-sm flex-col gap-4"
             onClick={(event) => event.stopPropagation()}
           >
-            {/* Said here rather than on the toggle, because it is what makes this
-                drawer different from the host's: nothing in here reaches
-                anybody else's game. */}
+            {/* "Yours, not the table's" until #251. It was true of the drawer —
+                nothing in here reaches anybody else's game — and never quite
+                true of the toggle inside it, which is announced when it goes on
+                and marks the seat for as long as it lasts (#187). With the
+                public half gone from the toggle's own blurb it was the only
+                line left saying the opposite of what happens. */}
             <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
-              Yours, not the table's
+              Yours to choose
             </p>
 
             <HintsToggle on={hints} onChange={onHints} />

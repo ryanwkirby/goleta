@@ -1,5 +1,6 @@
 import type { ClientMessage, PlayerId, RoomView } from "@goleta/engine";
 
+import { LeaveControl } from "../../components/Leave.tsx";
 import { QrGlyph } from "../../components/QrCode.tsx";
 import { SettingsCog } from "../../components/Settings.tsx";
 import { Button } from "../../components/ui.tsx";
@@ -92,9 +93,17 @@ export function TableHeader({
       <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
         rules
       </Button>
-      <Button variant="ghost" className="px-2 py-1 text-xs" onClick={onLeave}>
-        leave
-      </Button>
+      {/* A door rather than the word it was (#255). Two small grey words an inch
+          apart, one of which opens a panel and one of which drops you out of the
+          game, and the second fired instantly. It asks first now, and the copy
+          says what leaving actually costs. */}
+      <LeaveControl
+        compact
+        watching={!seated}
+        underWay={room.status === "playing"}
+        onLeave={onLeave}
+        className="-mr-2"
+      />
     </header>
   );
 }

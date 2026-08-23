@@ -335,7 +335,15 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
 - **A seat on autopilot never calls the Sunny Rule, and never could commit a
   violation either (#202).** A player can hand their seat over for a while —
   `forced`, which acts only when there is exactly one lawful thing to do, or
-  `bot`, which decides as well. Both run on the server with the bots, because
+  `bot`, which decides as well.
+
+  **The control asks two questions rather than offering three answers (#291).**
+  *Stepping away?* is a yes/no and is drawn as one, on `TwoWay`; **Autoplay
+  engages `forced`**, and a second switch, *Make decisions*, is what reaches
+  `bot`. It appears only once Autoplay is on and it is off when Autoplay is
+  engaged, so nothing is ever decided in somebody's name until they ask for it.
+  The three modes and every message on the wire are untouched by any of that —
+  it is the control, not the state behind it. Both run on the server with the bots, because
   the case worth having is a phone that has gone to sleep, and both go through
   `decideBotIntent`, which plays whenever it can. So an autopiloted seat can
   never reach for the deck holding a play: the property comes free and must stay

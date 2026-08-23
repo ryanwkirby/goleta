@@ -15,12 +15,13 @@ import { SettingsCog } from "./Settings.tsx";
  *
  * **Of the table it carries the centre and nothing more.** No hands, at any
  * size: `sunnyReach` already feeds the picker the evidence a call is made from —
- * the offender's hand *and*, since #220, the board it is judged against — and
- * turning the phone upright is the answer to *noticing* a reach. That claim was
- * load-bearing here before it was true: the board was on the wire and drawn
- * nowhere, so the flow this justifies had a hole in the middle of it. The sun
- * left the strip in #189 — it was drawn immediately before the draw pile, and a
- * fat target beside the deck is a mis-tap into the violation it accuses.
+ * the offender's hand as it stood at the reach — and turning the phone upright
+ * is the answer to *noticing* a reach. The board that hand is judged against
+ * rode the wire beside it and was drawn for one release (#220, #310); #318 took
+ * it back off, so what is missing from the middle of this flow is deliberate and
+ * is the caller's to remember. The sun left the strip in #189 — it was drawn
+ * immediately before the draw pile, and a fat target beside the deck is a
+ * mis-tap into the violation it accuses.
  *
  * Everything else here is not a table fact, and is here because the alternative
  * was a row under the cards, which costs a card size (#131).

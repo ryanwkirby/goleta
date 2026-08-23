@@ -17,7 +17,7 @@ import { AutopilotPicker } from "./Autopilot.tsx";
 import { HintsRow } from "./Help.tsx";
 import { SettingSwitch } from "./SettingSwitch.tsx";
 import { TwoWay } from "./TwoWay.tsx";
-import { Button, Panel } from "./ui.tsx";
+import { Button, headerItem, Panel } from "./ui.tsx";
 import { LAYER } from "../lib/layers.ts";
 
 /**
@@ -321,6 +321,7 @@ export function SettingsCog({
   onIrl,
   onDealerMode,
   onShuffleSeats,
+  label,
   className = "",
 }: {
   /** Whether the table half is drawn at all. The personal half is everyone's. */
@@ -339,6 +340,14 @@ export function SettingsCog({
   onIrl: (on: boolean) => void;
   onDealerMode: (mode: DealerMode) => void;
   onShuffleSeats: (on: boolean) => void;
+  /**
+   * The word under the glyph, in the upright header, where all four items are an
+   * icon with a word beneath it (#330). Left off in the peek strip, which has no
+   * room for words — the right-hand end of that row belongs to the card in play,
+   * the prompt and the deck, and anything pushed off it wraps the pile onto a
+   * second line, a card's height off the hand (#194).
+   */
+  label?: string;
   /** Where the caller wants it sat in its row. The size is not the caller's. */
   className?: string;
 }) {
@@ -352,17 +361,22 @@ export function SettingsCog({
         aria-expanded={open}
         title="Settings"
         onClick={() => setOpen(true)}
-        className={[
-          // 44px square, and the glyph is drawn to fill it: a big target around a
-          // small mark still reads as small print.
-          "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
-          "text-white/60",
-          "transition-colors hover:bg-white/5 hover:text-white",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-          className,
-        ].join(" ")}
+        className={
+          label
+            ? [headerItem, className].join(" ")
+            : [
+                // 44px square, and the glyph is drawn to fill it: a big target around a
+                // small mark still reads as small print.
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
+                "text-white/60",
+                "transition-colors hover:bg-white/5 hover:text-white",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+                className,
+              ].join(" ")
+        }
       >
         <CogGlyph />
+        {label ? <span>{label}</span> : null}
       </button>
 
       {open ? (

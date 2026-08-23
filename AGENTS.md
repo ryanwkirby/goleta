@@ -986,7 +986,7 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Header row (`TableHeader`) | the cog, invite glyph, rules, the door out | Yes, for a control rather than a table fact. |
+| Header row (`TableHeader`) | four icons with a word under each — settings, join, rules, leave (#330) | Yes, for a control rather than a table fact. A fifth item joins the four rather than being drawn some other way. |
 | Under the prompt | **I'm done** (#260) | **No.** A primary action, and the only thing the table is waiting for while it is up. Far from the piles above it. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
 | Above the hand, right | `SunnyCallOffer` | **No** (#257). The middle of that box is where your own `HelpShout` rises, and the left is free. |

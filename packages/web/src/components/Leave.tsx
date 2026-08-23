@@ -20,7 +20,7 @@
 
 import { useState } from "react";
 
-import { Button, Panel } from "./ui.tsx";
+import { Button, headerItem, Panel } from "./ui.tsx";
 import { LAYER } from "../lib/layers.ts";
 
 /** A doorway with somebody stepping through it. */
@@ -70,6 +70,7 @@ export function LeaveControl({
   underWay,
   onLeave,
   compact = false,
+  label,
   className = "",
 }: {
   /** No seat, so nothing to warn them about losing. */
@@ -85,6 +86,11 @@ export function LeaveControl({
    * nothing running.
    */
   compact?: boolean;
+  /** The word under the door, in the upright header where all four items carry
+   * one (#330). A labelled door is not a licence to drop the dialog: the word
+   * *leave* became a door in the first place because two small grey words an inch
+   * apart, one of which drops you out of the game, fired instantly (#255). */
+  label?: string;
   className?: string;
 }) {
   const [asking, setAsking] = useState(false);
@@ -98,14 +104,19 @@ export function LeaveControl({
           aria-haspopup="dialog"
           title="Leave the table"
           onClick={() => setAsking(true)}
-          className={[
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
-            "text-white/60 transition-colors hover:bg-white/5 hover:text-white",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-            className,
-          ].join(" ")}
+          className={
+            label
+              ? [headerItem, className].join(" ")
+              : [
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
+                  "text-white/60 transition-colors hover:bg-white/5 hover:text-white",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+                  className,
+                ].join(" ")
+          }
         >
           <DoorGlyph />
+          {label ? <span>{label}</span> : null}
         </button>
       ) : (
         <Button

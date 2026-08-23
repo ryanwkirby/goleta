@@ -1,6 +1,12 @@
 
 /**
- * Naming the suit, without being shut in a box to do it. Choosing well means
+ * Choosing the suit, without being shut in a box to do it.
+ *
+ * **It asks for a choice rather than a name** (#305). *Name a suit* is the
+ * game's own word for it — `docs/RULES.md` and the engine keep it, and it is
+ * still what the table is told about somebody else — but it is not what anybody
+ * sitting down says they are doing, and this is the heading over the four
+ * buttons they press to do it. Choosing well means
  * counting what everyone else is holding — the whole table is face up for that
  * reason — so a scrim would take the evidence away at the one moment you need
  * it. Your own cards aren't tappable during this phase anyway.
@@ -26,14 +32,14 @@ export function SuitPicker({
 
   return (
     <section
-      aria-label="Name a suit"
+      aria-label="Choose a suit"
       className={[
         "z-20 rounded-2xl bg-felt-900/95 shadow-xl ring-1 ring-amber-300/40 backdrop-blur",
         compact ? "p-2" : "sticky bottom-2 p-3",
       ].join(" ")}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold text-amber-300">Name a suit</h2>
+        <h2 className="text-sm font-semibold text-amber-300">Choose a suit</h2>
         {compact ? null : (
           <p className="truncate text-xs text-white/50">
             Take your time — look at the next players' cards.

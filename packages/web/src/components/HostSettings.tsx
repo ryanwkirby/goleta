@@ -24,19 +24,23 @@ export const describeRules = (rules: HouseRules): string => {
 /** Silent when the deal rotates, which is the default: a table that has not
  * chosen anything is not being told about a choice (#198). */
 export const describeDealing = (mode: DealerMode): string =>
-  mode === "random" ? "The dealer is drawn at random each game." : "";
+  mode === "random" ? "The starting player is randomized each game." : "";
 
 /** Silent when they don't (#199). Worth saying when they do, because seat order
  * is turn order and it decides who you are handing to. */
 export const describeSeating = (shuffled: boolean): string =>
-  shuffled ? "The seats are shuffled each game." : "";
+  shuffled ? "Musical chairs: everyone moves seats each game." : "";
 
 /** Two named answers rather than a switch, for `IrlToggle`'s reason. What the
  * dealer decides is who opens, and the seeded 8 under Dealer's Choice. A random
  * dealer may land on the same seat twice; a table that objects wants rotation. */
 const DEALERS: { key: DealerMode; label: string; blurb: string }[] = [
-  { key: "rotate", label: "Pass it along", blurb: "The deal moves one seat each game." },
-  { key: "random", label: "Draw for it", blurb: "A seat is picked at random each game." },
+  // "To the left" is the rotation from the table's point of view: the deal moves
+  // one seat and the player to the dealer's left opens, so who *starts* moves
+  // left. `docs/RULES.md` still calls dealing dealing — this is the lobby's
+  // vocabulary, not the game's (#245).
+  { key: "rotate", label: "To the left", blurb: "The starting player moves one seat each game." },
+  { key: "random", label: "Randomize", blurb: "The starting player is randomized each game." },
 ];
 
 /**
@@ -57,7 +61,7 @@ export function ShuffleSeatsToggle({
   return (
     <div className="flex items-center gap-3">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-white">Shuffle the seats</p>
+        <p className="text-sm font-semibold text-white">Musical chairs</p>
         <p className="text-xs text-white/40">
           {irl
             ? "Turn order changes each game, and everyone is shown where to sit."
@@ -69,7 +73,7 @@ export function ShuffleSeatsToggle({
         className="min-w-16 px-3 py-1.5 text-xs"
         role="switch"
         aria-checked={on}
-        aria-label="Shuffle the seats"
+        aria-label="Musical chairs"
         onClick={() => onChange(!on)}
       >
         {on ? "On" : "Off"}
@@ -89,7 +93,7 @@ export function DealerPicker({
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Who deals</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Who starts?</p>
       <div className="mt-2 flex gap-2">
         {DEALERS.map((option) => (
           <Button
@@ -179,10 +183,10 @@ export function HouseRulesPicker({
   );
 }
 
-/** In person leads, because it is the answer that changes the most. Remote play
+/** Real life leads, because it is the answer that changes the most. Remote play
  * is still what a new room *is* — see `createRoom`. */
 const PLACES: { key: string; label: string; irl: boolean }[] = [
-  { key: "irl", label: "In person", irl: true },
+  { key: "irl", label: "Real life", irl: true },
   { key: "remote", label: "Remote play", irl: false },
 ];
 
@@ -196,7 +200,7 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
-        Where is everyone?
+        Game mode (everyone sitting together?)
       </p>
       <div className="mt-2 flex gap-2">
         {PLACES.map((place) => (
@@ -284,12 +288,13 @@ export function HostSettingsCog({
 
             <div className="flex flex-col gap-4 border-t border-white/10 pt-4">
               <HouseRulesPicker rules={rules} onChange={onRules} />
+              {/* Above the starting player, and independent of it: where people sit
+                  is the bigger of the two and decides what the other is even
+                  about (#245). */}
+              <ShuffleSeatsToggle on={shuffleSeats} irl={irl} onChange={onShuffleSeats} />
               {/* In here because of when it answers rather than what it is: read
                   once, at the deal, exactly like the switches above it. */}
               <DealerPicker mode={dealerMode} onChange={onDealerMode} />
-              {/* Independent of the dealer: that one changes who deals, this one
-                  changes who follows whom. */}
-              <ShuffleSeatsToggle on={shuffleSeats} irl={irl} onChange={onShuffleSeats} />
               {/* Said once, under everything it is true of: the same sentence four
                   times is a warning, not a note. */}
               <p className="text-xs text-white/40">

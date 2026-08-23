@@ -68,9 +68,7 @@ function JoinQr({ code }: { code: string }) {
           className="w-44 max-w-[55%] p-2.5"
         />
       </div>
-      <p className="mt-2 text-xs text-white/40">
-        Point a camera at it, type the code, or tap it to copy the link.
-      </p>
+      <p className="mt-2 text-xs text-white/40">Have everyone scan this code</p>
     </div>
   );
 }
@@ -132,8 +130,10 @@ const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
 const describeTable = (room: RoomView, anyBots: boolean): string => {
   const said = [
     describeRules(room.houseRules),
-    describeDealing(room.dealerMode),
+    // Seating before starting, the order the drawer draws them in: where people
+    // sit is the bigger of the two and decides what the other is about (#245).
     describeSeating(room.shuffleSeats),
+    describeDealing(room.dealerMode),
   ];
   if (anyBots) {
     said.push(`Bots at ${room.botSpeed === "human" ? "human-like" : "lightning"} speed.`);
@@ -602,16 +602,18 @@ export function Lobby({
                   the switches above — so it belongs beside them rather than
                   beside bot speed, which really is between-games-only. */}
               <div className="flex flex-col gap-3 border-t border-white/10 pt-3">
-                <DealerPicker
-                  mode={room.dealerMode}
-                  onChange={(mode) => send({ t: "setDealerMode", mode })}
-                />
-                {/* Independent of the dealer. In an IRL room it is also what puts the
+                {/* Above the starting player, and independent of it: where people
+                    sit is the bigger of the two and decides what the other is
+                    even about (#245). In an IRL room it is also what puts the
                     "take your seat" screen up (#199). */}
                 <ShuffleSeatsToggle
                   on={room.shuffleSeats}
                   irl={room.irl}
                   onChange={(on) => send({ t: "setShuffleSeats", on })}
+                />
+                <DealerPicker
+                  mode={room.dealerMode}
+                  onChange={(mode) => send({ t: "setDealerMode", mode })}
                 />
               </div>
               {anyBots ? (

@@ -118,6 +118,7 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `setHints` | seated | "Mark up my playable cards" / "stop". Yours alone, host or not, mid-game included. Sets `SeatView.hinted` for everyone; shouted only when it turns *on*. |
 | `setAutopilot` | seated | "Play for me for a bit" (#202). `off`, `forced` or `bot`. Yours alone — the server stamps the seat from the connection, so nobody can set it for anybody else. Sets `SeatView.autopilot` for everyone. |
+| `leave` | seated | "I'm going" (#256). Mid-hand the seat keeps its cards and the autopilot plays them out; between games it goes. Not recoverable — the token is cleared. |
 | `ping` | anyone | Answered with `pong`. |
 
 **The `playerId` inside an `intent` is ignored.** The server stamps the seat the
@@ -303,6 +304,37 @@ connection stamps their own seat.
 Pacing is the table's, not the seat's: an autopiloted seat is scheduled through
 the same `botPace` as everyone else's bots, so it moves at the pace the room is
 set to.
+
+## Leaving, as opposed to dropping off
+
+Leaving used to be entirely client-side: the browser forgot its token and
+reloaded, and all the server ever saw was a socket closing — which is also what
+a lock screen looks like. So the turn could reach a seat nobody would ever move
+again and stay there forever, with no message on any screen saying what had
+happened and no way for the host to deal a new hand (#256).
+
+`{ t: "leave" }` says it out loud. What happens next depends on whether a hand
+is out:
+
+- **Between games** the seat is simply removed. It holds no cards.
+- **Mid-hand it cannot be**, because card conservation — hands plus deck plus
+  pile come to 52 — is the first invariant this game has. So `SeatView.left` goes
+  up, the seat's `autopilot` is set to `bot`, and the hand is played out (#202).
+  Turn order is untouched, the engine learns nothing, and `beginGame` drops the
+  seat at the next deal.
+
+**A disconnection is still recoverable and a leave is not**, which is the
+distinction the server could not draw before. `markDisconnected` is unchanged: a
+lock screen, a backgrounded tab and a dropped tunnel are one thing, and
+`seat.connected` is cleared on snapshot load for the same reason. A leave clears
+the seat's token and sets `left`, and `rejoinRoom` refuses on either.
+
+The table is told with a `TableEvent` — `{ type: "left", playerId }` — which
+rides the same feed as `GameEvent` because the log is one list of what has
+happened, but is deliberately **not** a `GameEvent`: the engine neither emits it
+nor reads it, and no rule turns on it. The bar for another is that it changes who
+is at the table without changing the position. `isGameEvent` is how the places
+that plan card movement filter them back out.
 
 ## Who deals
 

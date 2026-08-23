@@ -54,16 +54,41 @@ const SAID: Record<AutopilotMode, string> = {
  * surface at this table and a hand you cannot read is a play you cannot spot —
  * so the mode is one character's difference on screen and a whole sentence to a
  * screen reader.
+ *
+ * **`left` is its own word** (#256), not a third autopilot mode. A seat somebody
+ * has stepped away from is coming back; a seat somebody has left is not, and the
+ * autopilot is only there to play the hand out. Both are distinct from the
+ * lobby's *away*, which is a socket that dropped.
  */
 export function AutopilotMark({
   mode,
+  left = false,
   name,
   className = "",
 }: {
   mode: AutopilotMode;
+  /** They said they were going, and their hand is being played out (#256). */
+  left?: boolean;
   name?: string;
   className?: string;
 }) {
+  if (left) {
+    const gone = name ? `${name} left the table` : "This player left the table";
+    return (
+      <span
+        title={gone}
+        aria-label={gone}
+        role="img"
+        className={[
+          "shrink-0 rounded-full bg-white/10 px-1.5 font-medium text-white/45",
+          className,
+        ].join(" ")}
+      >
+        <span aria-hidden>left</span>
+      </span>
+    );
+  }
+
   if (mode === "off") return null;
   const label = name ? `${name}'s seat is ${SAID[mode]}` : `This seat is ${SAID[mode]}`;
 

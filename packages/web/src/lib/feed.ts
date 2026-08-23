@@ -4,13 +4,17 @@
  * put `lib` and `net` in a cycle (#224). What they have in common is a lifetime.
  */
 
-import type { ErrorCode, ErrorKind, GameEvent, ShoutKind } from "@goleta/engine";
+import type { ErrorCode, ErrorKind, FeedEvent, ShoutKind } from "@goleta/engine";
 
 export type ConnectionStatus = "connecting" | "open" | "closed";
 
 export interface LoggedEvent {
   id: number;
-  event: GameEvent;
+  /** A `GameEvent` or, since #256, one of the handful of things that happen to
+   * the *table* rather than inside the game. The log is one list of what has
+   * happened, so it carries both; the places that plan card movement filter with
+   * `isGameEvent`, a departure having no cards in the air. */
+  event: FeedEvent;
   /** The table won't act out old news. */
   at: number;
 }

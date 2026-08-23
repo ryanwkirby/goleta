@@ -17,9 +17,12 @@ import {
   createRoom,
   createStore,
   holdCall,
+  joinRoom,
+  leaveSeat,
   markDisconnected,
   moveSeat,
   nextBotMove,
+  rejoinRoom,
   roomView,
   setAutopilot,
   setBotSpeed,
@@ -66,6 +69,17 @@ const card = (spec: string, index = 0): Card => ({
 });
 
 const hostSeat = (room: Room) => room.seats.find((seat) => seat.id === room.hostId);
+
+/** Every card in the game, wherever it is. The count must never change. */
+const cardsInPlay = (room: Room): number => {
+  const game = room.game;
+  if (!game) throw new Error("no game");
+  return (
+    game.players.reduce((sum, player) => sum + player.hand.length, 0) +
+    game.drawPile.length +
+    game.discardPile.length
+  );
+};
 
 /** The lowest seed that makes the table's roll come out this way. */
 const seedRolling = (call: boolean): number => {
@@ -868,5 +882,127 @@ describe("a seat on autopilot", () => {
 
     expect(room.game?.status).toBe("over");
     expect(hostSeat(room)?.autopilot).toBe("off");
+  });
+});
+
+/**
+ * Leaving, as opposed to a socket dropping (#256).
+ *
+ * These invariants are `simulation.test.ts`'s — cards conserved, exactly one
+ * winner — and they are checked here rather than there because **the engine has
+ * nothing to leave**. A seat is a `rooms.ts` idea; `packages/engine` knows only
+ * players, and leaving is deliberately not something it learns about. Running
+ * the invariants over a room is the honest version of that acceptance criterion.
+ */
+describe("a player leaving mid-game", () => {
+  /** Plays the table out with whatever the bots and autopilots decide. */
+  const playOut = (room: Room): void => {
+    for (let guard = 0; guard < 4000 && room.game?.status === "playing"; guard += 1) {
+      const move = nextBotMove(room);
+      if (!move) break;
+      applySeatIntent(room, move.seat.id, move.intent);
+      expect(cardsInPlay(room)).toBe(52);
+    }
+  };
+
+  it("does not stop the table, and the hand still ends with one winner", () => {
+    const room = seatedRoom(4);
+    beginGame(room, room.hostId);
+    expect(cardsInPlay(room)).toBe(52);
+
+    // Before this existed the turn reached this seat and stayed there forever:
+    // `nextBotMove` drove `seat.bot` and nothing else, so a human seat was moved
+    // by messages from that human's socket and by nothing at all otherwise.
+    leaveSeat(room, room.hostId);
+    playOut(room);
+
+    expect(room.game?.status).toBe("over");
+    expect(room.game?.winnerId).not.toBeNull();
+    expect(cardsInPlay(room)).toBe(52);
+  });
+
+  it("keeps their cards in play rather than deleting the seat", () => {
+    const room = seatedRoom(4);
+    const gone = room.hostId;
+    beginGame(room, gone);
+    const seats = room.seats.length;
+
+    leaveSeat(room, gone);
+
+    // A seat with a hand in it is not deletable — card conservation is the first
+    // invariant this game has. It goes at the next deal instead.
+    expect(room.seats.length).toBe(seats);
+    expect(room.seats.find((seat) => seat.id === gone)?.left).toBe(true);
+    expect(cardsInPlay(room)).toBe(52);
+  });
+
+  it("hands the seat to the autopilot rather than to forced-only", () => {
+    const room = seatedRoom(4);
+    const who = room.seats[1]?.id ?? "";
+    beginGame(room, room.hostId);
+    leaveSeat(room, who);
+
+    // Nobody is coming back to make the choices, and forced-only stalls on any
+    // real one.
+    const seat = room.seats.find((candidate) => candidate.id === who);
+    expect(seat?.left).toBe(true);
+    expect(seat?.autopilot).toBe("bot");
+    expect(seat?.connected).toBe(false);
+  });
+
+  it("is not recoverable, where a dropped connection still is", () => {
+    const store = createStore();
+    const { room, seat } = createRoom(store, "Ryan");
+    while (room.seats.length < MIN_TABLE_PLAYERS) addBot(room, room.hostId);
+    beginGame(room, room.hostId);
+
+    // A lock screen, a backgrounded tab and a dropped tunnel are all one thing.
+    markDisconnected(room, seat.id);
+    expect(() => rejoinRoom(store, room.code, seat.id, seat.token)).not.toThrow();
+
+    // A leave is deliberate, and the browser has already thrown its token away.
+    const token = seat.token;
+    leaveSeat(room, seat.id);
+    expect(() => rejoinRoom(store, room.code, seat.id, token)).toThrow(/isn't yours any more/);
+  });
+
+  it("lets the host deal again, without the seat that left", () => {
+    const store = createStore();
+    const { room } = createRoom(store, "Ryan");
+    const { seat: guest } = joinRoom(store, room.code, "Ana");
+    // One over the minimum, so the table is still dealable once Ana has gone.
+    while (room.seats.length <= MIN_TABLE_PLAYERS) addBot(room, room.hostId);
+    beginGame(room, room.hostId);
+
+    leaveSeat(room, guest.id);
+    // The hand ends however it ends — the point here is what the *next* deal
+    // does. `playOut` cannot finish it: Ryan is still a person, and a person's
+    // seat is moved by messages from their socket and by nothing else.
+    if (room.game) room.game.status = "over";
+
+    // "That game is already under way" was the other half of the stall: with the
+    // turn parked forever, the host could not start a new one either.
+    expect(() => beginGame(room, room.hostId)).not.toThrow();
+    expect(room.seats.some((seat) => seat.id === guest.id)).toBe(false);
+    expect(room.seats.every((seat) => !seat.left)).toBe(true);
+  });
+
+  it("takes the seat straight out between games", () => {
+    const room = seatedRoom(4);
+    const gone = room.seats[1]?.id ?? "";
+
+    // No cards to conserve, so there is nothing to keep the seat for.
+    expect(leaveSeat(room, gone).map((event) => event.type)).toEqual(["left"]);
+    expect(room.seats.some((seat) => seat.id === gone)).toBe(false);
+  });
+
+  it("moves the host's powers on so somebody can still deal", () => {
+    const store = createStore();
+    const { room } = createRoom(store, "Ryan");
+    const { seat: guest } = joinRoom(store, room.code, "Ana");
+    while (room.seats.length < MIN_TABLE_PLAYERS) addBot(room, room.hostId);
+
+    leaveSeat(room, room.hostId);
+    expect(room.hostId).toBe(guest.id);
   });
 });

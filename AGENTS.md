@@ -320,6 +320,24 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   connection, exactly as it does for an intent, so a shared screen — which holds
   no `playerId` at all — and every other player are both out. Any intent from
   your own connection ends it, and so does the end of a game.
+- **A seat somebody has left keeps its cards and is played out (#256).** The
+  obvious answer — delete the seat — is ruled out by the first invariant this
+  game has: hands plus deck plus pile come to 52, and a seat with a hand in it
+  is not deletable. So a leave mid-hand marks the seat `left`, hands it to the
+  autopilot, and lets `beginGame` drop it at the next deal. Between games it
+  simply goes.
+
+  **A leave is not recoverable and a disconnection is**, and that distinction is
+  the whole of why this was not a two-line fix. Before #256 the server could not
+  tell them apart, because leaving was entirely client-side and all it ever saw
+  was a closed socket. Rejoining with the token still has to work for a lock
+  screen, a backgrounded tab and a dropped tunnel — which is also why
+  `seat.connected` is cleared on snapshot load. A leave clears the token as well,
+  because the browser has already thrown its copy away.
+
+  It is told to the table as a `TableEvent`, which rides the same feed as
+  `GameEvent` and is deliberately not one: the engine neither emits it nor reads
+  it. Do not move it into `types.ts`.
 - **Bots never wait for a Sunny window.** Their pacing is turn rhythm and
   nothing else, and `botPace` has no input that could tell it a call is on
   offer. A window opens on every draw, so a bot that held off would be stalling

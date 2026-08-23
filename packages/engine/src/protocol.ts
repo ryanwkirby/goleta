@@ -61,6 +61,18 @@ export interface SeatView {
    * different thing and recoverable.
    */
   autopilot: AutopilotMode;
+  /**
+   * They said they were going, rather than their socket dropping (#256). The two
+   * are different and the difference is the whole design question: a
+   * disconnection has to stay recoverable — a lock screen, a backgrounded tab and
+   * a dropped tunnel are all one — while a deliberate leave must not be, because
+   * the browser has already thrown its token away.
+   *
+   * A seat that leaves mid-hand keeps its cards and is played out by the
+   * autopilot, so the table is not stranded and no card leaves the deck. It is
+   * gone by the next deal.
+   */
+  left: boolean;
 }
 
 /** How fast the bots play. A table setting — bots are timed on the server. */
@@ -161,12 +173,36 @@ export type ClientMessage =
    * — you came back, you tapped, it stops.
    */
   | { t: "setAutopilot"; mode: AutopilotMode }
+  /**
+   * "I'm going" (#256). Said out loud rather than left for the server to guess
+   * at: a closed socket is a lock screen as often as it is a departure, and the
+   * server could not tell them apart. Yours alone, stamped from the connection.
+   */
+  | { t: "leave" }
   | { t: "ping" };
+
+/**
+ * Something that happened to the **table** rather than inside the game. It rides
+ * the same feed as `GameEvent` because it belongs in the same log — the table
+ * reads one list of what has happened — but it is deliberately not one: the
+ * engine neither emits it nor reads it, and no rule turns on it.
+ *
+ * The bar for another is that it changes who is at the table without changing
+ * the position.
+ */
+export type TableEvent = { type: "left"; playerId: PlayerId };
+
+/** What the log is made of. */
+export type FeedEvent = GameEvent | TableEvent;
+
+/** For the places that plan card movement, which are about the game and not the
+ * table: a departure has no cards in the air. */
+export const isGameEvent = (event: FeedEvent): event is GameEvent => event.type !== "left";
 
 export type ServerMessage =
   /** Identity for this browser. The token is stored and never broadcast. */
   | { t: "welcome"; code: string; playerId: PlayerId | null; token: string | null }
-  | { t: "state"; room: RoomView; game: GameView | null; events: GameEvent[] }
+  | { t: "state"; room: RoomView; game: GameView | null; events: FeedEvent[] }
   /** Not a game event: nothing about the position changes, and it isn't logged. */
   | { t: "shout"; playerId: PlayerId; kind: ShoutKind }
   | { t: "error"; message: string; code?: ErrorCode; kind?: ErrorKind }

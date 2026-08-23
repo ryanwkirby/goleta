@@ -1,4 +1,4 @@
-import type { ClientMessage, GameView, RoomView, Suit } from "@goleta/engine";
+import type { ClientMessage, GameView, PlayerId, RoomView, Suit } from "@goleta/engine";
 
 import { EventLog } from "../components/EventLog.tsx";
 import { Piles } from "../components/Piles.tsx";
@@ -33,12 +33,14 @@ function TurnPrompt({
   nameOf,
   assist,
   reshuffling,
+  departed,
 }: {
   game: GameView;
   nameOf: NameOf;
   assist: boolean;
   /** Cards to draw, while the deck running out is being watched (#209). */
   reshuffling: number | null;
+  departed: PlayerId | null;
 }) {
   const { dealing } = useMotion();
   const mine = game.waitingOn === game.you;
@@ -48,13 +50,13 @@ function TurnPrompt({
         "text-center text-sm",
         // The reshuffle line takes the emphasis whoever the table is waiting on: for
         // those five seconds it is the more important of the two.
-        reshuffling !== null || (mine && game.status !== "over")
+        reshuffling !== null || departed !== null || (mine && game.status !== "over")
           ? "font-semibold text-amber-300"
           : "text-white/60",
       ].join(" ")}
       aria-live="polite"
     >
-      {turnPrompt(game, nameOf, assist, dealing, reshuffling)}
+      {turnPrompt(game, nameOf, assist, dealing, reshuffling, departed)}
     </p>
   );
 }
@@ -134,6 +136,7 @@ export function Table({
     nameOf,
     owesPunishment,
     peeling,
+    departed,
     reshuffling,
     route,
     seated,
@@ -269,7 +272,13 @@ export function Table({
             }
           />
 
-          <TurnPrompt game={game} nameOf={nameOf} assist={assist} reshuffling={reshuffling} />
+          <TurnPrompt
+            game={game}
+            nameOf={nameOf}
+            assist={assist}
+            reshuffling={reshuffling}
+            departed={departed}
+          />
         </div>
 
         {finished ? (

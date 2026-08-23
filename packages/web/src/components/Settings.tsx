@@ -395,13 +395,18 @@ export function SettingsCog({
                     the note at the foot is true of these and not of that one. */}
                 <div className="flex flex-col gap-4">
                   <HouseRulesPicker rules={rules} onChange={onRules} />
-                  {/* Above the starting player, and independent of it: where people
-                      sit is the bigger of the two and decides what the other is
-                      even about (#245). */}
-                  <ShuffleSeatsToggle on={shuffleSeats} onChange={onShuffleSeats} />
                   {/* In here because of when it answers rather than what it is: read
                       once, at the deal, exactly like the switches above it. */}
                   <DealerPicker mode={dealerMode} onChange={onDealerMode} />
+                  {/* **Below the starting player, and independent of it** (#289).
+                      #245 put it above, on the argument that where people sit is
+                      the bigger of the two and decides what the other is even
+                      about. That is true of the *rules* and not of the *reading*:
+                      who opens is the question a host has already been asked by
+                      the lobby, and musical chairs is the one that changes what a
+                      table has to physically do. It is last because it is the
+                      loudest. */}
+                  <ShuffleSeatsToggle on={shuffleSeats} onChange={onShuffleSeats} />
                   {/* Said once, under everything it is true of: the same sentence
                       four times is a warning, not a note. */}
                   <p className="text-xs text-white/40">

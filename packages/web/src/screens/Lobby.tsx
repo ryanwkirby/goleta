@@ -674,17 +674,21 @@ export function Lobby({
                   the switches above — so it belongs beside them rather than
                   beside bot speed, which really is between-games-only. */}
               <div className="flex flex-col gap-3 border-t border-white/10 pt-3">
-                {/* Above the starting player, and independent of it: where people
-                    sit is the bigger of the two and decides what the other is
-                    even about (#245). In an IRL room it is also what puts the
-                    "take your seat" screen up (#199). */}
-                <ShuffleSeatsToggle
-                  on={room.shuffleSeats}
-                  onChange={(on) => send({ t: "setShuffleSeats", on })}
-                />
                 <DealerPicker
                   mode={room.dealerMode}
                   onChange={(mode) => send({ t: "setDealerMode", mode })}
+                />
+                {/* **Below the starting player, and independent of it** (#289),
+                    the same order the cog draws. #245 put it above because where
+                    people sit is the bigger of the two and decides what the other
+                    is even about; the ask is the other way round, and it reads
+                    better — who opens is a question the lobby has already put,
+                    and musical chairs is the one that changes what a table has to
+                    physically do. In an IRL room it is also what puts the "take
+                    your seat" screen up (#199). */}
+                <ShuffleSeatsToggle
+                  on={room.shuffleSeats}
+                  onChange={(on) => send({ t: "setShuffleSeats", on })}
                 />
               </div>
               {anyBots ? (

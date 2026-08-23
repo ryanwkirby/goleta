@@ -18,12 +18,25 @@ import { HintsToggle } from "./Help.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
 
-/** Both halves are headed, and the heading is what makes a host able to see at a
- * glance which of them changes the game for everybody. */
+/**
+ * Both halves are headed, and the heading is what makes a host able to see at a
+ * glance which of them changes the game for everybody.
+ *
+ * **It has to look like the level above the rows** (#289). It used to draw the
+ * five classes `DealerPicker`, `HouseRulesPicker`, `IrlToggle` and
+ * `AutopilotPicker` each draw their own heading with — so the division #253
+ * built came out as a flat list of six identical headings, and the one thing the
+ * panel most needs to say was said in the same voice as the things it governs.
+ * Bigger, brighter and not uppercase; the sub-headings are untouched.
+ *
+ * `text-base` rather than the `text-sm` one step up from them, because the
+ * sub-headings are not the only thing it has to sit above: every row *label* in
+ * here — **Musical chairs**, **The Sunny Rule** — is `text-sm font-semibold
+ * text-white` already, and a parent that matches its own grandchildren is the
+ * same failure one rung along.
+ */
 function SectionHeading({ children }: { children: string }) {
-  return (
-    <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{children}</p>
-  );
+  return <p className="text-base font-semibold text-white">{children}</p>;
 }
 
 /**
@@ -357,7 +370,7 @@ export function SettingsCog({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex flex-col gap-4">
-              <SectionHeading>Yours</SectionHeading>
+              <SectionHeading>Your settings</SectionHeading>
               <HintsToggle on={hints} onChange={onHints} />
               {/* Both halves of *yours* clear the bar #188 set: they belong to one
                   player and change nothing about the room. Neither is private —
@@ -369,7 +382,7 @@ export function SettingsCog({
             {isHost ? (
               <>
                 <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
-                  <SectionHeading>Table settings</SectionHeading>
+                  <SectionHeading>Room settings</SectionHeading>
                   <IrlToggle on={irl} onChange={onIrl} />
                 </div>
 

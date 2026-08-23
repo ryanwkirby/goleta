@@ -87,10 +87,14 @@ export function SunnyAccusePicker({
           never mind
         </Button>
       </div>
+      {/* The row of cards is the offender's hand as it stood at the reach, and
+          saying so described it rather than asking anything of the person
+          reading it. The question is what they are here to answer (#305). It
+          still says nothing about which of the cards was legal. */}
       <p className={["text-xs text-white/50", compact ? "mt-0.5" : "mt-1"].join(" ")}>
         {compact
-          ? "Their hand as it was when they reached."
-          : "Their hand as it was when they reached. Get it wrong and you can't call again for three draws."}
+          ? "Which of these cards was playable?"
+          : "Which of these cards was playable? Get it wrong and you can't call again for three draws."}
       </p>
       {/* One row when docked over a hand, wrapped when not. The row keeps no
           padding of its own: its width *is* the width the fan was fitted to. */}

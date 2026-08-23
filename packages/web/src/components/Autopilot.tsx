@@ -32,10 +32,32 @@ const ANSWERS = [
 ] as const;
 
 /** Written from the player's side: the question somebody has is *am I going to
- * hold this up*. Two blurbs for two answers, plus the switch's own line. */
+ * hold this up*. Two blurbs for two answers, plus the switch's own line.
+ *
+ * **Short enough to be read standing up** (#305). The Autoplay line was
+ * forty-two words — two subordinate clauses naming both of the choices it stops
+ * at, and a third saying it never calls the Sunny Rule — read by somebody who is
+ * already on their way out of the room. What they need is that the seat keeps up
+ * and gives itself back. The two choices it stops at are in the panel's prose
+ * and in `AGENTS.md`, and that it never accuses is a property of the thing
+ * rather than something the person leaving has to be told. */
 const BLURB: Record<"off" | "on", string> = {
   off: "You play your own turns.",
-  on: "Your seat plays for you when there's exactly one legal move, and waits for you on anything that's a real choice — naming a suit, or picking a card to give up. It never calls the Sunny Rule on anybody.",
+  on: "Plays automatically for you when there's exactly one legal move, but waits for you to return when there's a choice.",
+};
+
+/** The second question's two answers, in the player's own voice (#305).
+ *
+ * **The line about the table being able to see it has gone with them**, and the
+ * mark has not: a seat on autopilot carries a standing one in the strip, on the
+ * shared screen and in the lobby for as long as it lasts, and any intent from
+ * your own connection ends the whole thing. Both halves of that sentence were
+ * true and both are said better by the app doing them — the same trade #290 took
+ * on the hints question, which stopped claiming the table could see it while the
+ * shout and the seat mark carried on saying so. */
+const DECIDES: Record<"off" | "on", string> = {
+  off: "Don't make decisions on my behalf.",
+  on: "Choose which cards to play for me.",
 };
 
 /** One character's difference on screen, a whole sentence to a screen reader —
@@ -162,29 +184,26 @@ export function AutopilotPicker({
       />
       <p className="mt-2 text-xs text-white/40">{BLURB[away ? "on" : "off"]}</p>
       {away ? (
-        <>
-          <div className="mt-3 flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white">Make decisions</p>
-              <p className="text-xs text-white/40">
-                On, it chooses too. Off, it waits at every real choice.
-              </p>
-            </div>
-            <Button
-              variant={mode === "bot" ? "primary" : "secondary"}
-              className="min-w-16 px-3 py-1.5 text-xs"
-              role="switch"
-              aria-checked={mode === "bot"}
-              aria-label="Make decisions"
-              onClick={() => onChange(mode === "bot" ? "forced" : "bot")}
-            >
-              {mode === "bot" ? "On" : "Off"}
-            </Button>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-white">Make decisions</p>
+            {/* Both answers said in the player's own voice, and which one is
+                shown follows the switch (#305). It described itself in the third
+                person — *on, it chooses too* — which is a sentence about the
+                software rather than about the thing being asked for. */}
+            <p className="text-xs text-white/40">{DECIDES[mode === "bot" ? "on" : "off"]}</p>
           </div>
-          <p className="mt-2 text-xs text-white/40">
-            The table can see this, and it stops the moment you play a card yourself.
-          </p>
-        </>
+          <Button
+            variant={mode === "bot" ? "primary" : "secondary"}
+            className="min-w-16 px-3 py-1.5 text-xs"
+            role="switch"
+            aria-checked={mode === "bot"}
+            aria-label="Make decisions"
+            onClick={() => onChange(mode === "bot" ? "forced" : "bot")}
+          >
+            {mode === "bot" ? "On" : "Off"}
+          </Button>
+        </div>
       ) : null}
     </div>
   );

@@ -244,10 +244,19 @@ export function HouseRulesPicker({
 }
 
 /** Real life leads, because it is the answer that changes the most. Remote play
- * is still what a new room *is* — see `createRoom`. */
+ * is still what a new room *is* — see `createRoom`.
+ *
+ * **Both answers carry a line saying what they mean for the evening** (#305).
+ * The labels say where everybody is and nothing about what follows from it, and
+ * what follows is most of this app: which view the phones come up in, whether
+ * the seat order is worth getting right, whether a propped-up screen can draw
+ * for the seat on the clock. It is drawn for whichever answer is standing, in
+ * the shape `AutopilotPicker` and `BotSpeedPicker` already use — one line under
+ * the switch rather than two beside each other, because the track is one control
+ * and a phone gives each half about half a sentence's width. */
 const PLACES = [
-  { value: "irl", label: "Real life" },
-  { value: "remote", label: "Remote play" },
+  { value: "irl", label: "Real life", blurb: "Play against people at a table, in real life." },
+  { value: "remote", label: "Remote play", blurb: "Play with your friends online, remotely." },
 ] as const;
 
 /**
@@ -269,6 +278,7 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
         onChange={(place) => onChange(place === "irl")}
         className="mt-2"
       />
+      <p className="mt-2 text-xs text-white/40">{PLACES[on ? 0 : 1].blurb}</p>
     </div>
   );
 }

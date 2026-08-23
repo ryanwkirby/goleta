@@ -9,7 +9,7 @@ import {
 
 import type { GameView, PlayerView, RoomView, ShoutKind } from "@goleta/engine";
 
-import { fanTable, inRows, type SeatHand } from "../lib/fan.ts";
+import { SEAT_OUT_MIN, fanTable, inRows, type SeatHand } from "../lib/fan.ts";
 import { inTurnOrder, nextStillIn } from "../lib/seating.ts";
 import { cardAnchor, seatAnchor } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
@@ -26,16 +26,29 @@ const nameFor = (room: RoomView, id: string): string =>
  * A seat that has run out of cards, collapsed to its name (#192). It used to keep
  * a full 128px seat, so at a table of eight the hands that still mattered were
  * competing for width with three holding nothing. Still on screen and still
- * named; what goes is the width, and the word *out* survives for a screen
- * reader. No sun and no shout: neither can happen to somebody with no hand.
+ * named; what goes is the width. No sun and no shout: neither can happen to
+ * somebody with no hand.
+ *
+ * **Laid out like a live seat rather than centred in one** (#334). It was
+ * `items-center` in a row whose items stretch to the tallest of them, so the name
+ * floated in the middle of a chip as tall as everybody else's cards. The name is
+ * where a live seat's name is — top left, same font, grey — and the word *out*
+ * sits where the cards would be. It was `sr-only` before; visible now, and the
+ * duplicate is gone.
+ *
+ * **Every out seat is the same width**, handed in rather than found per seat: the
+ * chips came out different sizes from each other, which reads as three different
+ * kinds of thing rather than three people who are out.
  */
 function OutSeat({
   playerId,
   name,
+  width,
   seatRef,
 }: {
   playerId: string;
   name: string;
+  width: number;
   seatRef: RefCallback<HTMLElement>;
 }) {
   return (
@@ -43,14 +56,18 @@ function OutSeat({
       ref={seatRef}
       data-seat={playerId}
       title={`${name} is out`}
+      // `min-w-20` is the number `SEAT_OUT_MIN` in `fan.ts` floors the shared
+      // width at, and the belt to this brace before anything has been measured.
+      style={{ width }}
       className={[
-        // `min-w-20` is the number `SEAT_OUT_MIN` in `fan.ts` holds a place for.
-        "flex min-w-20 shrink-0 items-center rounded-xl bg-black/20 px-3 py-2 text-sm",
-        "font-semibold text-white opacity-45 ring-1 ring-white/10",
+        "flex min-w-20 shrink-0 flex-col rounded-xl bg-black/20 px-3 py-2",
+        "opacity-45 ring-1 ring-white/10",
       ].join(" ")}
     >
-      {name}
-      <span className="sr-only"> is out</span>
+      <span className="whitespace-nowrap text-sm font-semibold text-white/70">{name}</span>
+      {/* Where the cards used to be. `mt-1.5` is the live seat's gap between its
+          name row and its hand, so the two line up down the strip. */}
+      <span className="mt-1.5 text-xs text-white/50">out</span>
     </li>
   );
 }
@@ -64,6 +81,7 @@ function Seat({
   game,
   shouting,
   rows,
+  outWidth,
 }: {
   player: PlayerView;
   room: RoomView;
@@ -71,6 +89,8 @@ function Seat({
   shouting: ShoutKind | undefined;
   /** How many rows this hand takes at the strip's shared sliver. */
   rows: number;
+  /** The one width every out seat is drawn at (#334). */
+  outWidth: number;
 }) {
   const { anchor, isArriving } = useMotion();
   const onClock = game.waitingOn === player.id;
@@ -84,7 +104,14 @@ function Seat({
   const seatRef = anchor(seatAnchor(player.id));
 
   if (out) {
-    return <OutSeat playerId={player.id} name={nameFor(room, player.id)} seatRef={seatRef} />;
+    return (
+      <OutSeat
+        playerId={player.id}
+        name={nameFor(room, player.id)}
+        width={outWidth}
+        seatRef={seatRef}
+      />
+    );
   }
 
   return (
@@ -180,13 +207,44 @@ export function Seats({
     return () => watch.disconnect();
   }, []);
 
+  /**
+   * Every out seat is drawn at one width, as small as the longest already-out
+   * name allows (#334) — measured once across them rather than found per seat,
+   * because chips at different widths read as different kinds of thing rather
+   * than as three people who are out.
+   *
+   * Measured off a copy rather than off the chips themselves. A chip already
+   * carrying the shared width measures back the width it was given, so the number
+   * could never come down again once the longest name's owner had gone. The probe
+   * is absolutely positioned and invisible, so it takes no part in the strip's
+   * layout, and it carries the chip's own `px-3` and type — what comes back is a
+   * chip width rather than a text width plus a constant somebody has to keep in
+   * step.
+   */
+  const outNames = others
+    .filter((player) => player.eliminated)
+    .map((player) => nameFor(room, player.id));
+  const probe = useRef<HTMLLIElement>(null);
+  const [outWidth, setOutWidth] = useState(SEAT_OUT_MIN);
+  const measuring = outNames.join("\u0000");
+  useLayoutEffect(() => {
+    const node = probe.current;
+    let widest = 0;
+    for (const child of node?.children ?? []) {
+      widest = Math.max(widest, child.getBoundingClientRect().width);
+    }
+    setOutWidth(Math.max(SEAT_OUT_MIN, Math.ceil(widest)));
+  }, [measuring]);
+
   /** An eliminated seat is `"out"` rather than a hand of zero: `seatWidth(0, …)`
    * is a full 128px, and reserving that for a name chip would tighten everybody
-   * else's cards to pay for it. */
+   * else's cards to pay for it. The strip's arithmetic is told what a chip really
+   * measures, or it is wrong about how much room is left for the hands that still
+   * matter — which is the whole reason an out seat collapses at all. */
   const held: SeatHand[] = others.map((player) =>
     player.eliminated ? "out" : player.hand.length,
   );
-  const fan = fanTable(available, held);
+  const fan = fanTable(available, held, outWidth);
 
   /**
    * One rule for where the strip sits: show whoever the table is waiting on,
@@ -244,6 +302,20 @@ export function Seats({
       className="relative flex gap-2 overflow-x-auto p-1"
       aria-label="Other players"
     >
+      {/* The probe the shared out-seat width is measured off. Out of the flow and
+          out of the accessibility tree; the chips it is measuring are the real
+          thing. */}
+      <li
+        ref={probe}
+        aria-hidden
+        className="pointer-events-none invisible absolute left-0 top-0 flex"
+      >
+        {outNames.map((name, index) => (
+          <span key={`${name}#${index}`} className="whitespace-nowrap px-3 text-sm font-semibold">
+            {name}
+          </span>
+        ))}
+      </li>
       {others.map((player, seat) => (
         <Seat
           key={player.id}
@@ -252,6 +324,7 @@ export function Seats({
           game={game}
           shouting={shouting.get(player.id)}
           rows={fan.rows[seat] ?? 1}
+          outWidth={outWidth}
         />
       ))}
     </ul>

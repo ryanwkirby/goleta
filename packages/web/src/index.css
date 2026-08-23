@@ -96,8 +96,18 @@
    The figures moved once, in #295. Three seconds each way between full and half
    did stop the edge becoming furniture, but slowly and shallowly enough that the
    movement itself was easy to miss — and what this is fighting is a phone flat
-   on the felt being *glanced* at, not stared at. Two seconds each way, down to
-   5%, is the same shape with the stroke made visible.
+   on the felt being *glanced* at, not stared at. Two seconds each way to a
+   quarter: half again as deep a swing in two thirds of the time, so the edge
+   moves better than twice as fast.
+
+   **A quarter rather than the 5% #295 asked for, and that is the eyeball it
+   asked for too.** This ink is a soft inset wash, so opacity takes it away far
+   quicker than the number reads: at 5% there is nothing on the screen at all,
+   and `ease-in-out` on an `alternate` rests at both ends, so *nothing at all* is
+   where it sits for about half a second of every cycle. That is the glow
+   answering **no** to its own question — is it me — for a quarter of the time
+   somebody might look down. A quarter is the deepest end that still has an edge
+   at it.
 
    The two shadows differ in spread as well as blur. A positive spread on an
    inset shadow contracts the rectangle the light falls from, so the wash reaches
@@ -119,7 +129,7 @@
     opacity: 1;
   }
   to {
-    opacity: 0.05;
+    opacity: 0.25;
   }
 }
 

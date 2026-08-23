@@ -9,12 +9,12 @@
  *
  * **It is not a timer, and the breathe is not one either** (#254). Nothing about
  * the animation varies with how long you have been sitting there: one period,
- * one pair of endpoints — two seconds each way, full to 5% — the same at second
- * one and second ninety. What is banned is anything that reads as a countdown —
- * a ramp, a brightening, a second stage — because that is pressure on the
- * decision the Sunny Rule wants people to take their time over. A constant
- * breathe is what keeps the eye seeing an edge it would otherwise stop noticing.
- * `index.css` has the shape of it, and #295 has why those are the two figures.
+ * one pair of endpoints — two seconds each way, full to a quarter — the same at
+ * second one and second ninety. What is banned is anything that reads as a
+ * countdown — a ramp, a brightening, a second stage — because that is pressure
+ * on the decision the Sunny Rule wants people to take their time over. A
+ * constant breathe is what keeps the eye seeing an edge it would otherwise stop
+ * noticing. `index.css` has the shape of it, and why the dim end has a floor.
  *
  * Driven by `waitingOn`, so it covers naming a suit under Power of Eights and
  * the card owed after a landed call. **It goes to the physical edge, not the

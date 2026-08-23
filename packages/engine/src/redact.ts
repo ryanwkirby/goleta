@@ -80,7 +80,7 @@ export interface GameView {
    * caught, and a spectator is told nothing either.
    */
   sunnyReach: SunnyReach | null;
-  /** Draws left before *you* may call again. Visible only to the locked-out
+  /** Reaches left before *you* may call again. Visible only to the locked-out
    * player; nobody else at the table is told. */
   sunnyLockedReaches: number;
   /** Your own playable cards. Never computed for anyone else's hand. */

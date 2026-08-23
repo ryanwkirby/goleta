@@ -52,7 +52,7 @@ export function OwnHand({
       {sunny.target ? (
         <SunnyCallOffer
           targetName={nameOf(sunny.target)}
-          lockedDraws={game.sunnyLockedReaches}
+          lockedReaches={game.sunnyLockedReaches}
           onCall={() => sunny.target && sunny.onStartAccusing(sunny.target)}
           className="-top-12 right-0"
         />
@@ -66,7 +66,7 @@ export function OwnHand({
         {game.sunnyLockedReaches > 0 ? (
           <span className="text-xs text-white/35" aria-live="polite">
             <span aria-hidden>☀️</span> call missed — {game.sunnyLockedReaches} more{" "}
-            {game.sunnyLockedReaches === 1 ? "draw" : "draws"}
+            {game.sunnyLockedReaches === 1 ? "reach" : "reaches"}
           </span>
         ) : null}
         {hand.cards.length > 1 ? (

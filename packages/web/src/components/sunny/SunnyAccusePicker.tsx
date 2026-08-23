@@ -94,7 +94,7 @@ export function SunnyAccusePicker({
       <p className={["text-xs text-white/50", compact ? "mt-0.5" : "mt-1"].join(" ")}>
         {compact
           ? "Which of these cards was playable?"
-          : "Which of these cards was playable? Get it wrong and you can't call again for three draws."}
+          : "Which of these cards was playable? Get it wrong and you can't call again for three reaches."}
       </p>
       {/* One row when docked over a hand, wrapped when not. The row keeps no
           padding of its own: its width *is* the width the fan was fitted to. */}

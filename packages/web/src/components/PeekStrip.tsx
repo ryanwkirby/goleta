@@ -163,7 +163,7 @@ export function PeekStrip({
         {game.sunnyLockedReaches > 0 ? (
           <span className="shrink-0 text-xs text-white/35" aria-live="polite">
             <span aria-hidden>☀️</span> call missed — {game.sunnyLockedReaches} more{" "}
-            {game.sunnyLockedReaches === 1 ? "draw" : "draws"}
+            {game.sunnyLockedReaches === 1 ? "reach" : "reaches"}
           </span>
         ) : null}
       </div>

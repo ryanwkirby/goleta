@@ -375,7 +375,7 @@ const handleCallSunny = (
 
   const locked = sunnyLockedReaches(s, callerId);
   if (locked > 0) {
-    return `Locked out — ${locked} more ${locked === 1 ? "draw" : "draws"}`;
+    return `Locked out — ${locked} more ${locked === 1 ? "reach" : "reaches"}`;
   }
 
   // The only cards an accusation may name: the hand as it stood before the draw.

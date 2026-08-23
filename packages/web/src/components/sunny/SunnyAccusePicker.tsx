@@ -17,8 +17,91 @@ import type { SunnyReach } from "@goleta/engine";
 import { handStep, PICKER_TIGHTEST } from "../../lib/handFan.ts";
 import { useBox } from "../../lib/measure.ts";
 import { PlayingCard } from "../Card.tsx";
-import { CARD_WIDTH_PX, SUIT_GLYPH } from "../../lib/cardShape.ts";
+import { CARD_WIDTH_PX, isRed, SUIT_GLYPH, SUIT_LABEL } from "../../lib/cardShape.ts";
 import { Button } from "../ui.tsx";
+
+/**
+ * The board the call will be judged against: the suit that had to be matched at
+ * the reach, and the rank that was in play then.
+ *
+ * **The other half of `SunnyReach`, and it was drawn nowhere at all** (#220).
+ * The picker listed `reach.hand` and left the board to be read off the pile —
+ * and the pile is very often no longer the board a call is judged against,
+ * because the challenge window deliberately outlives the turn: it shuts on the
+ * *next* player's first action, so the offender routinely draws and then plays
+ * before anybody calls. An 8 makes it worse than a coin flip, since naming a
+ * suit is exactly the play that leaves the board maximally unlike the board
+ * before it. So a player who read the table correctly was punished for it: they
+ * named the card that matched the pile in front of them, and took the lockout
+ * while the offender walked.
+ *
+ * **Two chips rather than one card, and this is the constraint to hold.**
+ * `topRank` and `activeSuit` are not a card and must not be drawn as one: after
+ * an 8 they are the 8's rank and somebody else's suit, so a single `8♣` would
+ * put a card on this panel that nobody has played and that the pile is not
+ * showing. They are two facts, so they are two marks with the word between them.
+ * `sunnyReach` carries no `Card` to draw instead, and it must not grow one — the
+ * issue is explicit that `GameView` gains nothing here.
+ *
+ * It says what the board was and stops. It does not say which of the cards below
+ * answered it, does not mark, sort, dim or count them, and says nothing about
+ * whether a call would land — nothing on the client knows that, and nothing ever
+ * will (#50). **Wilds go unmentioned for the same reason**: "or any 8" is true,
+ * harmless-looking, and points straight at cards in the hand this panel is
+ * deliberately silent about.
+ */
+function ReachBoard({
+  reach,
+  compact = false,
+  className = "",
+}: {
+  reach: SunnyReach;
+  /** Landscape, where this shares a line with the question rather than taking one. */
+  compact?: boolean;
+  className?: string;
+}) {
+  // `CardChip`'s own shape, which is how the caught dialog names a card: white,
+  // in the suit's colour. This is a board, so it is drawn in the register of the
+  // cards it is about rather than as another line of small print. The rank stays
+  // dark whatever the suit is — it is a rank, and colouring it would print a
+  // card that was never played.
+  const chip = "rounded bg-white px-1 py-px font-semibold tabular-nums";
+
+  return (
+    <div
+      className={[
+        // `inline-flex` so it hugs its own contents wherever it is put: upright it
+        // goes into the panel's block flow, where a full flex box would stretch to
+        // the width and read as a band rather than as a mark.
+        "inline-flex shrink-0 items-center rounded-lg bg-black/30 ring-1 ring-white/10",
+        compact ? "gap-1.5 px-1.5 py-0.5" : "gap-2 px-2 py-1",
+        className,
+      ].join(" ")}
+    >
+      <span className="text-[0.6rem] font-semibold uppercase leading-none tracking-wider text-amber-300">
+        had to match
+      </span>
+      <span
+        aria-hidden
+        className={["flex items-center gap-1 leading-none", compact ? "text-xs" : "text-sm"].join(
+          " ",
+        )}
+      >
+        <span
+          className={[chip, isRed(reach.activeSuit) ? "text-rose-600" : "text-slate-900"].join(" ")}
+        >
+          {SUIT_GLYPH[reach.activeSuit]}
+        </span>
+        <span className="text-[0.65rem] font-medium uppercase tracking-wide text-white/40">or</span>
+        <span className={[chip, "text-slate-900"].join(" ")}>{reach.topRank}</span>
+      </span>
+      <span className="sr-only">
+        When they reached, they had to match {SUIT_LABEL[reach.activeSuit].toLowerCase()}, or the{" "}
+        {reach.topRank} that was in play.
+      </span>
+    </div>
+  );
+}
 
 /**
  * Docked rather than modal, for the suit picker's reason and one of its own: the

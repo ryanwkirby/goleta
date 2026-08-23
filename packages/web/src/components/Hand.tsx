@@ -35,8 +35,54 @@ const CONFIRMS: ReadonlySet<HandMode> = new Set<HandMode>(["forced", "surrender"
 
 const REFLOW_MS = 190;
 
-/** Quiet, and next to the offer of help rather than near the table — it changes
- * nothing about the game. */
+/** The up/down pair. Drawn rather than typed, like every other glyph here since
+ * #296 — an arrow character is a gamble on the device's font, and this one has to
+ * read at small print size in two layouts. */
+function SortGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden
+    >
+      <path d="M7 4v16M7 20l-3.2-3.4M7 20l3.2-3.4" />
+      <path d="M17 20V4M17 4l-3.2 3.4M17 4l3.2 3.4" />
+    </svg>
+  );
+}
+
+/**
+ * Quiet, and next to the offer of help rather than near the table — it changes
+ * nothing about the game.
+ *
+ * **A glyph that speaks when pressed** (#328). It used to read `sort: by suit`
+ * and say so for the whole game, which is a setting reading itself back to you on
+ * every turn of every hand for the one moment a year you change it. Now it is the
+ * glyph until you press it, and the words arrive for a couple of seconds
+ * afterwards and go again.
+ *
+ * The label is **absolute and out of the flow**, to the left of the glyph — which
+ * is the end of both of its rows, so it grows towards the middle of the screen
+ * rather than off the edge of it. Nothing may take room the hand is using or move
+ * the cards under a thumb (#131), and that holds in both layouts: upright the row
+ * is kept clear whether or not anything is in it, and in landscape this is
+ * already an absolute corner over the felt (#167).
+ *
+ * It arrives on `help-offer`'s own rise-and-fade and leaves on it reversed, held
+ * in between — one animation for the whole life of the thing, the shape
+ * `move-refusal` uses, so there is no timer here to fall out of step with the
+ * CSS. It is `aria-hidden`, and the `sr-only` live region next to it is what a
+ * screen reader is told instead: the words being transient must not make the
+ * change inaudible.
+ *
+ * `NEXT_SORT` and `SORT_LABELS` do not move. This is presentation; the sort
+ * itself is still cosmetic and yours alone.
+ */
 export function HandSortButton({
   sort,
   onCycle,
@@ -46,19 +92,46 @@ export function HandSortButton({
   onCycle: () => void;
   className?: string;
 }) {
+  /** Which tap the words on screen belong to. Zero is silence; a fresh number
+   * remounts the label, so tapping again restarts it rather than being swallowed
+   * by an animation already running. */
+  const [spoken, setSpoken] = useState(0);
+
   return (
     <button
       type="button"
-      onClick={onCycle}
+      onClick={() => {
+        onCycle();
+        setSpoken((tap) => tap + 1);
+      }}
+      // The only place a pointer can find out what the sort currently is.
       title={`Your hand is ${SORT_LABELS[sort]}. Tap to sort it ${SORT_LABELS[NEXT_SORT[sort]]}.`}
+      aria-label={`Sort your hand — ${SORT_LABELS[sort]}`}
       className={[
-        "rounded-lg px-2 py-1 text-xs text-white/35",
+        "relative rounded-lg px-2 py-1 text-white/35",
         "transition-colors hover:bg-white/5 hover:text-white/70",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
         className,
       ].join(" ")}
     >
-      sort: {SORT_LABELS[sort]}
+      <SortGlyph />
+      {/* The box is centred on the glyph and never animated; the words inside it
+          are, so the animation's own `transform` cannot fight the centring. */}
+      <span className="pointer-events-none absolute inset-y-0 right-full mr-1 flex items-center">
+        {spoken > 0 ? (
+          <span
+            key={spoken}
+            aria-hidden
+            onAnimationEnd={() => setSpoken(0)}
+            className="animate-sort-said whitespace-nowrap text-xs text-white/50"
+          >
+            {SORT_LABELS[sort]}
+          </span>
+        ) : null}
+      </span>
+      <span className="sr-only" aria-live="polite">
+        {`Your hand is ${SORT_LABELS[sort]}.`}
+      </span>
     </button>
   );
 }

@@ -1,17 +1,24 @@
 /**
  * A question with exactly two named answers, drawn as one sliding switch.
  *
- * Four places in this app ask one (#244), and all four used to draw two filled
- * rectangles side by side. Two buttons do not say *these are the two ends of one
- * thing*; they say *here are two buttons, one of which is already pressed* —
- * which is why the copy around each of them had to work so hard to name both
- * answers out loud. Naming them is right and is not what makes them read as a
- * pair. A track with a thumb on it is.
+ * Four places in this app asked one when it was written (#244), and all four used
+ * to draw two filled rectangles side by side. Two buttons do not say *these are
+ * the two ends of one thing*; they say *here are two buttons, one of which is
+ * already pressed* — which is why the copy around each of them had to work so
+ * hard to name both answers out loud. Naming them is right and is not what makes
+ * them read as a pair. A track with a thumb on it is.
+ *
+ * `AutopilotPicker` is the newest (#291), and it arrived by the same argument
+ * running backwards: it asked *stepping away?* and answered with three buttons,
+ * two of which were the same answer at different strengths.
  *
  * **It is never an On/Off**, and that is the reason it exists rather than a
- * limitation. None of the four has a side that means *off*: `ShuffleSeatsToggle`
- * and the rows inside `HouseRulesPicker` genuinely do, and they are deliberately
- * not drawn with this.
+ * limitation. Every caller has two answers a person would *say*, so neither end
+ * is drawn as the absence of the other: `ShuffleSeatsToggle` and the rows inside
+ * `HouseRulesPicker` genuinely are off when they are off, and they are
+ * deliberately not drawn with this. *I'm here* passes that bar and `off` in the
+ * engine underneath it is beside the point — what a control is drawn as is
+ * decided by what it reads as, not by what it sends.
  *
  * **One control, not two buttons**, to a screen reader as well: a `radiogroup`
  * of two radios rather than a pair of `aria-pressed` buttons. Roving `tabIndex`
@@ -38,7 +45,7 @@ export function TwoWay<T extends string>({
   className = "",
 }: {
   /** The question, for a screen reader. The visible heading is the caller's —
-   * one of the four has no room for one. */
+   * one of them has no room for one. */
   label: string;
   options: readonly [TwoWayOption<T>, TwoWayOption<T>];
   value: T;

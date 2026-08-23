@@ -433,10 +433,23 @@ export function Lobby({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
-      <RoomCode code={room.code} />
+    /*
+      **While the question is up, the rest of the screen goes** (#317). The one
+      screen in this app that exists to make somebody look at one list and answer
+      yes or no was competing with the room code, the game-mode switch, the join
+      QR, two *add* buttons, the table settings and the footer. What is left is
+      the Players panel and the question under it.
 
-      {winner ? (
+      A gate on `confirming` rather than any new state, and nothing about the deal
+      changes: `deal`, `dealNow`, `checkingOrder` and `orderChecked` are untouched.
+      It is still a confirmation rather than a block, it still does not repeat once
+      answered, and it still never appears in an online room. `checkingOrder` is
+      local to the host's device, so nobody else's screen changes at all.
+    */
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
+      {confirming ? null : <RoomCode code={room.code} />}
+
+      {winner && !confirming ? (
         <Panel className="text-center">
           <p className="text-sm text-white/60">Last game</p>
           <p className="mt-1 text-lg font-semibold text-amber-300">
@@ -447,7 +460,7 @@ export function Lobby({
 
       {/* Ahead of the names, because the answer decides how the rest of this
           screen — and every phone at the table — behaves. */}
-      {isHost ? (
+      {isHost && !confirming ? (
         <Panel>
           <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
         </Panel>
@@ -455,7 +468,7 @@ export function Lobby({
 
       {/* Shown to everyone seated: the phone nearest the newcomer isn't always
           the host's. */}
-      {room.irl ? <JoinQr code={room.code} /> : null}
+      {room.irl && !confirming ? <JoinQr code={room.code} /> : null}
 
       <Panel>
         <div className="flex items-baseline justify-between">
@@ -575,8 +588,18 @@ export function Lobby({
             </li>
           ))}
 
-          {/* The end of the list is where the bot it adds turns up. */}
-          {isHost ? (
+          {/*
+            The end of the list is where the bot it adds turns up.
+
+            **The three additive controls go while the question is up** (#317),
+            and that is the shape of the rule: during the check the list is the
+            thing being answered about, so an invitation to make it longer is the
+            one control on this panel actively working against the question. The
+            seat-editing controls stay — the grips (#197), the arrows (#89) and
+            the remove button (#246) — so *Go back* is not the only way to fix an
+            order the host can simply fix in place.
+          */}
+          {isHost && !confirming ? (
             <li>
               <Button
                 variant="ghost"
@@ -591,8 +614,13 @@ export function Lobby({
           ) : null}
           {/* Rows rather than a tally, because a screen arriving should be something
               appearing in the room — and a long table may want one at each end
-              (#138). */}
-          {room.irl
+              (#138). Gone during the check: a shared screen isn't a seat and takes
+              no place in the turn order — it already renders with a blank number
+              cell for exactly that reason — so its row is noise in a list somebody
+              is counting round a table. One connecting mid-question simply does
+              not show; `room.tableScreens` is connection state read fresh on every
+              view, so the row is back the moment the question is answered. */}
+          {room.irl && !confirming
             ? Array.from({ length: room.tableScreens }, (_, index) => (
                 <li
                   key={`shared-screen-${index}`}
@@ -610,7 +638,7 @@ export function Lobby({
                 </li>
               ))
             : null}
-          {room.irl ? (
+          {room.irl && !confirming ? (
             <li>
               <Button
                 variant="ghost"
@@ -665,41 +693,45 @@ export function Lobby({
             </Button>
           )}
 
-          <Panel>
-            <TableSettings summary={describeTable(room, anyBots)}>
-              <HouseRulesPicker
-                rules={room.houseRules}
-                onChange={(rules) => send({ t: "setHouseRules", rules })}
-              />
-              {/* A room setting rather than a house rule, but read at the same moment as
-                  the switches above — so it belongs beside them rather than
-                  beside bot speed, which really is between-games-only. */}
-              <div className="flex flex-col gap-3 border-t border-white/10 pt-3">
-                <DealerPicker
-                  mode={room.dealerMode}
-                  onChange={(mode) => send({ t: "setDealerMode", mode })}
+          {/* Gone during the check, with everything else that is not the list or
+              the question (#317). */}
+          {confirming ? null : (
+            <Panel>
+              <TableSettings summary={describeTable(room, anyBots)}>
+                <HouseRulesPicker
+                  rules={room.houseRules}
+                  onChange={(rules) => send({ t: "setHouseRules", rules })}
                 />
-                {/* **Below the starting player, and independent of it** (#289),
-                    the same order the cog draws. #245 put it above because where
-                    people sit is the bigger of the two and decides what the other
-                    is even about; the ask is the other way round, and it reads
-                    better — who opens is a question the lobby has already put,
-                    and musical chairs is the one that changes what a table has to
-                    physically do. In an IRL room it is also what puts the "take
-                    your seat" screen up (#199). */}
-                <ShuffleSeatsToggle
-                  on={room.shuffleSeats}
-                  onChange={(on) => send({ t: "setShuffleSeats", on })}
-                />
-              </div>
-              {anyBots ? (
-                <BotSpeedPicker
-                  speed={room.botSpeed}
-                  onPick={(speed) => send({ t: "setBotSpeed", speed })}
-                />
-              ) : null}
-            </TableSettings>
-          </Panel>
+                {/* A room setting rather than a house rule, but read at the same moment as
+                    the switches above — so it belongs beside them rather than
+                    beside bot speed, which really is between-games-only. */}
+                <div className="flex flex-col gap-3 border-t border-white/10 pt-3">
+                  <DealerPicker
+                    mode={room.dealerMode}
+                    onChange={(mode) => send({ t: "setDealerMode", mode })}
+                  />
+                  {/* **Below the starting player, and independent of it** (#289),
+                      the same order the cog draws. #245 put it above because where
+                      people sit is the bigger of the two and decides what the other
+                      is even about; the ask is the other way round, and it reads
+                      better — who opens is a question the lobby has already put,
+                      and musical chairs is the one that changes what a table has to
+                      physically do. In an IRL room it is also what puts the "take
+                      your seat" screen up (#199). */}
+                  <ShuffleSeatsToggle
+                    on={room.shuffleSeats}
+                    onChange={(on) => send({ t: "setShuffleSeats", on })}
+                  />
+                </div>
+                {anyBots ? (
+                  <BotSpeedPicker
+                    speed={room.botSpeed}
+                    onPick={(speed) => send({ t: "setBotSpeed", speed })}
+                  />
+                ) : null}
+              </TableSettings>
+            </Panel>
+          )}
         </>
       ) : (
         <Panel className="text-center text-sm text-white/60">
@@ -750,19 +782,21 @@ export function Lobby({
         </Panel>
       )}
 
-      <div className="mt-auto flex justify-between pt-2">
-        <Button variant="ghost" onClick={onShowRules}>
-          How to play
-        </Button>
-        {/* This one keeps its word (#255): a screen with room, opposite **How to
-            play**, with nothing running. It asks the same question, because the
-            seat token is destroyed either way. */}
-        <LeaveControl
-          watching={playerId === null}
-          underWay={room.status === "playing"}
-          onLeave={onLeave}
-        />
-      </div>
+      {confirming ? null : (
+        <div className="mt-auto flex justify-between pt-2">
+          <Button variant="ghost" onClick={onShowRules}>
+            How to play
+          </Button>
+          {/* This one keeps its word (#255): a screen with room, opposite **How to
+              play**, with nothing running. It asks the same question, because the
+              seat token is destroyed either way. */}
+          <LeaveControl
+            watching={playerId === null}
+            underWay={room.status === "playing"}
+            onLeave={onLeave}
+          />
+        </div>
+      )}
     </div>
   );
 }

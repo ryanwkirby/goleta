@@ -198,6 +198,12 @@ It is that hand and no other. Anything they drew after the reach you are
 challenging was never theirs to play, so it is not on the list and cannot be
 named.
 
+It shows you the board that hand is judged against, too: the suit that had to
+be matched at the reach, and the rank that was in play then. The pile is often
+no longer that board by the time anybody calls — the window outlives the turn,
+so the offender may well have played since, and an 8 played since will have
+changed the suit outright.
+
 Nothing in the app marks up which of those cards was legal. It is the same
 judgement you would make leaning over a real table — their cards are face up,
 the card in play is face up, and the two are all you need.

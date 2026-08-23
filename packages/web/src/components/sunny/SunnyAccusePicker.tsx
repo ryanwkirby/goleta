@@ -8,6 +8,13 @@
  *
  * The first three are one idea from three directions: which card was legal is
  * exactly the question, so any weighting at all answers it.
+ *
+ * **Showing the board is not a sixth prohibition breached, it is the question
+ * being asked properly** (#220). `AGENTS.md` forbids saying which cards were
+ * legal; it says nothing about withholding what was in play, and `docs/RULES.md`
+ * describes the judgement as *"their cards are face up, the card in play is face
+ * up, and the two are all you need"*. Until #220 the second of those was missing
+ * at the moment you need it. See `ReachBoard`.
  */
 
 import { useRef, type CSSProperties } from "react";
@@ -173,12 +180,35 @@ export function SunnyAccusePicker({
       {/* The row of cards is the offender's hand as it stood at the reach, and
           saying so described it rather than asking anything of the person
           reading it. The question is what they are here to answer (#305). It
-          still says nothing about which of the cards was legal. */}
-      <p className={["text-xs text-white/50", compact ? "mt-0.5" : "mt-1"].join(" ")}>
-        {compact
-          ? "Which of these cards was playable?"
-          : "Which of these cards was playable? Get it wrong and you can't call again for three reaches."}
-      </p>
+          still says nothing about which of the cards was legal.
+
+          The board those cards are judged against goes **last before the hand**,
+          because it is the thing being read against it (#220).
+
+          Landscape puts the two on one line rather than taking a second. The
+          picker's height is exactly what the hand below steps down by (#166), so
+          a row added here comes straight off the player's cards — and the board
+          is a label and two marks beside a question with width to spare, so the
+          compact view buys the whole of it for no cards at all. The question is
+          the half that gives, because it is the same sentence every time and the
+          board is the half carrying information; that is #294's rule about which
+          end of a line may be cut, applied to a different line. */}
+      {compact ? (
+        <div className="mt-0.5 flex items-center gap-2">
+          <ReachBoard reach={reach} compact />
+          <p className="min-w-0 truncate text-xs text-white/50">
+            Which of these cards was playable?
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="mt-1 text-xs text-white/50">
+            Which of these cards was playable? Get it wrong and you can't call again for three
+            reaches.
+          </p>
+          <ReachBoard reach={reach} className="mt-2" />
+        </>
+      )}
       {/* One row when docked over a hand, wrapped when not. The row keeps no
           padding of its own: its width *is* the width the fan was fitted to. */}
       <div

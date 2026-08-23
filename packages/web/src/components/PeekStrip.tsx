@@ -14,8 +14,11 @@ import { SettingsCog } from "./Settings.tsx";
  * since #131, the whole of this view's furniture as well.
  *
  * **Of the table it carries the centre and nothing more.** No hands, at any
- * size: `sunnyReach` already feeds the picker the evidence a call is made from,
- * and turning the phone upright is the answer to *noticing* a reach. The sun
+ * size: `sunnyReach` already feeds the picker the evidence a call is made from —
+ * the offender's hand *and*, since #220, the board it is judged against — and
+ * turning the phone upright is the answer to *noticing* a reach. That claim was
+ * load-bearing here before it was true: the board was on the wire and drawn
+ * nowhere, so the flow this justifies had a hole in the middle of it. The sun
  * left the strip in #189 — it was drawn immediately before the draw pile, and a
  * fat target beside the deck is a mis-tap into the violation it accuses.
  *

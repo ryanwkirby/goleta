@@ -28,6 +28,19 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   sunny: DEFAULT_OPTIONS.sunny !== null,
 };
 
+/**
+ * Whether a seat is playing itself for a while (#202), and how much of itself.
+ *
+ * - `forced` acts only when there is exactly one lawful thing to do, and waits
+ *   for the player on anything that is a real choice.
+ * - `bot` makes the decisions too, exactly as a bot at this table would.
+ *
+ * It is a seat flag rather than anything the engine knows about, and it runs on
+ * the server with the bots — the whole point is a seat that keeps playing while
+ * the phone is asleep.
+ */
+export type AutopilotMode = "off" | "forced" | "bot";
+
 export interface SeatView {
   id: PlayerId;
   name: string;
@@ -40,6 +53,14 @@ export interface SeatView {
    * taking it is never quiet (#33). Switching it *off* is not announced.
    */
   hinted: boolean;
+  /**
+   * Public and standing, for as long as it lasts. At a real table you can see
+   * somebody has gone; this is the app not hiding it, and it is the explanation
+   * for why a seat is suddenly playing differently. Deliberately its own word:
+   * the lobby already says *away* for a socket that has dropped, which is a
+   * different thing and recoverable.
+   */
+  autopilot: AutopilotMode;
 }
 
 /** How fast the bots play. A table setting — bots are timed on the server. */
@@ -133,6 +154,13 @@ export type ClientMessage =
    * *on* is announced.
    */
   | { t: "setHints"; on: boolean }
+  /**
+   * "Play for me for a bit" (#202). Yours alone: the server stamps the seat from
+   * the connection, so no shared screen and no other player can put somebody on
+   * autopilot or take them off it. Any `intent` from your own connection ends it
+   * — you came back, you tapped, it stops.
+   */
+  | { t: "setAutopilot"; mode: AutopilotMode }
   | { t: "ping" };
 
 export type ServerMessage =

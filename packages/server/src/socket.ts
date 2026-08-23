@@ -37,6 +37,7 @@ import {
   seatOf,
   setBotSpeed,
   setDealerMode,
+  setAutopilot,
   setHints,
   setHouseRules,
   setIrl,
@@ -276,6 +277,10 @@ export const attachSockets = (
       case "intent": {
         const outcome = applySeatIntent(room, playerId, message.intent);
         if (!outcome.ok) throw new RoomError(outcome.error ?? "That move isn't allowed");
+        // You came back, you tapped, it stops (#202). After the move rather than
+        // before it: a refused intent is a mis-tap, and a mis-tap should not be
+        // what hands your seat back to you halfway across the room.
+        setAutopilot(room, playerId, "off");
         broadcast(room, outcome.events);
         // Restarted rather than scheduled: a call submitted from the picker shuts its
         // own window, which lifts the hold.
@@ -319,6 +324,13 @@ export const attachSockets = (
         client.lastShoutAt = now;
         return announce(room, { t: "shout", playerId, kind: "help" });
       }
+      case "setAutopilot":
+        // Stamped from this connection, so it can only ever be your own seat.
+        setAutopilot(room, playerId, message.mode);
+        broadcast(room);
+        // Scheduled rather than left: switching it on mid-wait is the case where
+        // the table is already sitting on this seat.
+        return restartBots(room);
       case "setHints": {
         // Not host-gated and not frozen mid-game: it changes one screen only.
         const announced = setHints(room, playerId, message.on === true);

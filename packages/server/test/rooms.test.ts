@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { MAX_TABLE_PLAYERS, MIN_TABLE_PLAYERS, rollSunnyCall } from "@goleta/engine";
+import { MAX_TABLE_PLAYERS, MIN_TABLE_PLAYERS, rollSunnyCall, type Card } from "@goleta/engine";
 
 import {
   CALL_HOLD_MS,
@@ -21,6 +21,7 @@ import {
   moveSeat,
   nextBotMove,
   roomView,
+  setAutopilot,
   setBotSpeed,
   setDealerMode,
   setHints,
@@ -56,6 +57,15 @@ const dealAgain = (room: Room): string => {
   beginGame(room, room.hostId);
   return leaderOf(room);
 };
+
+/** `card("10D")` — the shorthand the engine tests use. */
+const card = (spec: string, index = 0): Card => ({
+  id: `${spec}#${index}`,
+  rank: spec.slice(0, -1) as Card["rank"],
+  suit: spec.slice(-1) as Card["suit"],
+});
+
+const hostSeat = (room: Room) => room.seats.find((seat) => seat.id === room.hostId);
 
 /** The lowest seed that makes the table's roll come out this way. */
 const seedRolling = (call: boolean): number => {
@@ -709,5 +719,154 @@ describe("holding the table to name a card", () => {
 
     holdCall(room, room.hostId, true, 1000);
     expect(callHeldUntil(room, 1000)).toBe(0);
+  });
+});
+
+/**
+ * A seat somebody has handed over for a while (#202).
+ *
+ * The properties worth holding are all about what it *won't* do: it cannot
+ * commit a Sunny violation nobody chose, it never accuses, and forced-only means
+ * genuinely forced.
+ */
+describe("a seat on autopilot", () => {
+  /**
+   * The host on the clock, holding exactly these cards, against exactly this
+   * card in play. Dealt hands are random and every assertion below is about a
+   * *count* of legal cards, which is the one thing a random hand won't hold
+   * still.
+   */
+  const stageHostTurn = (room: Room, hand: string[], top: string) => {
+    beginGame(room, room.hostId);
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    game.turnIndex = game.players.findIndex((player) => player.id === room.hostId);
+    const player = game.players[game.turnIndex];
+    if (!player) throw new Error("no player");
+
+    player.hand = hand.map((spec, index) => card(spec, index + 1));
+    game.discardPile[game.discardPile.length - 1] = card(top);
+    game.activeSuit = card(top).suit;
+    game.drawsThisTurn = 0;
+    return game;
+  };
+
+
+  it("is off until the player says otherwise, and goes out to the whole table", () => {
+    const room = seatedRoom();
+    expect(roomView(room).seats.every((seat) => seat.autopilot === "off")).toBe(true);
+
+    setAutopilot(room, room.hostId, "forced");
+    expect(roomView(room).seats[0]?.autopilot).toBe("forced");
+  });
+
+  it("is nobody else's to set", () => {
+    const room = seatedRoom();
+    // The only handle is the caller's own id, which the socket stamps from the
+    // connection — so there is nothing here another player could reach.
+    expect(() => setAutopilot(room, "somebody-else", "bot")).toThrow(/not at this table/);
+    expect(() => setAutopilot(room, room.hostId, "sideways" as never)).toThrow(/No such autopilot/);
+  });
+
+  it("refuses a bot, which already plays itself", () => {
+    const room = seatedRoom();
+    const bot = room.seats.find((seat) => seat.bot);
+    expect(() => setAutopilot(room, bot?.id ?? "", "bot")).toThrow(/already plays itself/);
+  });
+
+  it("moves a seat the table would otherwise be waiting on", () => {
+    const room = seatedRoom();
+    stageHostTurn(room, ["7H", "2D"], "7S");
+
+    // Nothing moves this seat while it is a person's.
+    expect(nextBotMove(room)?.seat.id).not.toBe(room.hostId);
+    setAutopilot(room, room.hostId, "bot");
+    expect(nextBotMove(room)?.seat.id).toBe(room.hostId);
+  });
+
+  it("never draws while holding a play, in either mode", () => {
+    // The single most important property of the feature, and it comes free from
+    // playing whenever it can: an autopiloted seat can never commit the
+    // violation the Sunny Rule exists to punish.
+    for (const mode of ["forced", "bot"] as const) {
+      const room = seatedRoom();
+      stageHostTurn(room, ["7H", "2D"], "7S");
+
+      setAutopilot(room, room.hostId, mode);
+      const move = nextBotMove(room);
+      expect(move?.seat.id).toBe(room.hostId);
+      expect(move?.intent.type).toBe("playCard");
+    }
+  });
+
+  it("waits for the player on a real choice, and only in forced-only", () => {
+    const room = seatedRoom();
+    // Two playable cards is a decision, which is the whole of what forced-only
+    // hands back.
+    stageHostTurn(room, ["7H", "7D"], "7S");
+
+    setAutopilot(room, room.hostId, "forced");
+    expect(nextBotMove(room)).toBeNull();
+
+    setAutopilot(room, room.hostId, "bot");
+    expect(nextBotMove(room)?.seat.id).toBe(room.hostId);
+  });
+
+  it("draws in forced-only when nothing matches, because that is not a choice", () => {
+    const room = seatedRoom();
+    stageHostTurn(room, ["2D", "3D"], "7S");
+
+    setAutopilot(room, room.hostId, "forced");
+    const move = nextBotMove(room);
+    expect(move?.seat.id).toBe(room.hostId);
+    expect(move?.intent.type).toBe("drawCard");
+  });
+
+  it("names no suit and picks no punishment card in forced-only", () => {
+    const room = seatedRoom();
+    const game = stageHostTurn(room, ["2D", "3D"], "7S");
+    setAutopilot(room, room.hostId, "forced");
+
+    // Which suit to call is a choice, and under Power of Eights an important one.
+    game.phase = { kind: "suit", playerId: room.hostId };
+    expect(nextBotMove(room)).toBeNull();
+
+    // And which card to lose is a choice about which card to lose.
+    game.phase = { kind: "surrender", playerId: room.hostId, reason: "sunnyPunishment" };
+    expect(nextBotMove(room)).toBeNull();
+  });
+
+  it("never calls the Sunny Rule, however watchful the table is", () => {
+    const room = seatedRoom();
+    room.botSeed = seedRolling(true);
+    const bot = botDrawsWithAPlay(room);
+    setAutopilot(room, room.hostId, "bot");
+
+    // The bot is caught and the table has agreed to call. Every call that comes
+    // out is a bot's; the autopiloted seat plays its hand and accuses nobody.
+    for (let move = nextBotMove(room); move; move = nextBotMove(room)) {
+      if (move.intent.type !== "callSunny") break;
+      expect(move.seat.id).not.toBe(room.hostId);
+      const outcome = applySeatIntent(room, move.seat.id, move.intent);
+      expect(outcome.ok).toBe(true);
+    }
+    expect(bot).not.toBe(room.hostId);
+  });
+
+  it("switches itself off when the game ends", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    setAutopilot(room, room.hostId, "bot");
+
+    // Play it out. A new deal is a new hand, and coming back to find you had
+    // been playing on autopilot for three games is not what anybody asked for.
+    for (let guard = 0; guard < 2000 && room.game?.status === "playing"; guard += 1) {
+      const move = nextBotMove(room);
+      if (!move) break;
+      applySeatIntent(room, move.seat.id, move.intent);
+    }
+
+    expect(room.game?.status).toBe("over");
+    expect(hostSeat(room)?.autopilot).toBe("off");
   });
 });

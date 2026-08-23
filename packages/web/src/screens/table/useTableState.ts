@@ -13,7 +13,12 @@ import { useBox } from "../../lib/measure.ts";
 import { useDeparture } from "../../lib/departure.ts";
 import { useReshuffle } from "../../lib/reshuffle.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../../lib/sort.ts";
-import { caughtState, stillAccusable, sunnyTarget } from "../../lib/sunnyOffer.ts";
+import {
+  accusePickerOpen,
+  caughtState,
+  stillAccusable,
+  sunnyTarget,
+} from "../../lib/sunnyOffer.ts";
 import {
   isIrlPhone,
   shuffleEntryId,
@@ -199,6 +204,9 @@ export function useTableState({
 
   // Somebody else may act, or call it first, while you're still choosing.
   const accusable = stillAccusable(game, accusing);
+  // The picker being up, which is also exactly how long this player's log is
+  // concealed for (#319). One value, so the two can't disagree.
+  const namingCard = accusePickerOpen(game, accusing);
   useEffect(() => {
     if (accusing !== null && !accusable) stopAccusing();
   }, [accusing, accusable, stopAccusing]);
@@ -439,6 +447,7 @@ export function useTableState({
     mine,
     mode,
     nameOf,
+    namingCard,
     owesPunishment,
     peeling,
     departed,

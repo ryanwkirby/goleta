@@ -48,7 +48,10 @@ export function HandFrame({
  *
  * **Absolute in both layouts**, so it arrives with some presence without moving
  * the cards underneath it. Where it is pinned is the one thing the two callers
- * disagree about: upright, the middle of that box is where `HelpShout` rises.
+ * disagree about, and since #257 they disagree about the side as well: upright
+ * it is at the right, under the hand most people tap with, and landscape keeps
+ * the left because that row's right-hand end is the draw pile. The middle is
+ * spoken for either way — that is where `HelpShout` rises.
  */
 export function SunnyCallOffer({
   targetName,

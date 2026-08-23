@@ -5,6 +5,15 @@
  * would. **The disabled variant is your own missed call still being served**,
  * sent to nobody else. **44px, and nowhere near the draw pile** in either
  * layout. **Tapping it opens the picker and does not call.**
+ *
+ * **Quiet, and still large** (#257). #189 made it big because a 20px circle in a
+ * scrolling seat strip was a missed call, and that was right; it overshot on
+ * presence. A call window opens on **every draw**, which is most turns of most
+ * games, so a bold amber sentence was the widest thing over the felt almost
+ * continuously — for an action that is correctly used rarely. It is small print
+ * and the app's ordinary grey now, and the target is untouched: a smaller-looking
+ * control, not a smaller one. Amber at this table means *the game is waiting on
+ * you* (#190), and this is not that.
  */
 
 /** A plain outline. It is furniture until it has something to say. */
@@ -33,6 +42,11 @@ function SunGlyph() {
  * **Leaving the seat is what makes it say who.** There is only ever one
  * `sunnyTargetId`, so the control names them, which stops the call being a thing
  * you do *to a name in a list*. Opening the picker also holds the bots (#73).
+ *
+ * A sun with a name **under** it rather than a sentence with a sun in front of
+ * it: the glyph does the work of being findable and the name does the work of
+ * saying who, and neither needs "call it on" to say so. A nameless sun would not
+ * do — naming one person is the point.
  */
 export function SunnyCall({
   targetName,
@@ -58,23 +72,27 @@ export function SunnyCall({
       title={label}
       aria-label={label}
       className={[
-        // `min-h-11` rather than a fixed height: 44px is a floor here, as in
-        // `handFan.ts` and for the same reason.
-        "flex min-h-11 shrink-0 items-center gap-2 rounded-full px-3.5 py-2",
-        "text-sm font-semibold shadow-lg ring-1 backdrop-blur-sm transition-colors",
-        // Near-black with an amber edge rather than a flood: a thing to notice, not a
-        // verdict, and the table's amber already means *waiting on you* (#190).
-        locked
-          ? "cursor-not-allowed bg-black/50 text-white/25 ring-white/10"
-          : "bg-black/65 text-amber-200 ring-amber-300/50 hover:bg-black/80 hover:text-amber-100",
+        // `min-h-11`/`min-w-11` rather than fixed: 44px is a floor here, as in
+        // `handFan.ts` and for the same reason. What #257 shrank is the ink.
+        "flex min-h-11 min-w-11 shrink-0 flex-col items-center justify-center gap-0.5",
+        "rounded-xl px-2 py-1 transition-colors",
+        // A dark backing and nothing else. It is drawn over the felt and, with a
+        // wide fan, over a corner of a card, so it needs something to stand on —
+        // but no amber and no ring: this is small print, not a verdict.
+        "bg-black/40 backdrop-blur-sm",
+        locked ? "cursor-not-allowed text-white/25" : "text-white/60 hover:text-white/90",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
         className,
       ].join(" ")}
     >
-      <span aria-hidden className="h-6 w-6 shrink-0">
+      <span aria-hidden className="h-5 w-5 shrink-0">
         <SunGlyph />
       </span>
-      <span className="whitespace-nowrap">call it on {targetName}</span>
+      {/* Truncated rather than wrapped: this is one line of small print under a
+          glyph, and a two-line name would move the sun. */}
+      <span className="max-w-20 truncate text-[0.65rem] font-medium leading-none">
+        {targetName}
+      </span>
     </button>
   );
 }

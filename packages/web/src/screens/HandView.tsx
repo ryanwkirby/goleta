@@ -96,7 +96,15 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
         {/* Hung under the strip at the end furthest from the deck (#189): the sun
           used to sit *in* the strip, immediately before the draw pile, and a fat
           target beside the deck is a mis-tap into the exact violation it
-          accuses. Absolute, so it never moves the cards underneath it. */}
+          accuses. Absolute, so it never moves the cards underneath it.
+
+          **Left, where upright is right** (#257). The two layouts disagree here
+          and that is the answer rather than an oversight: the peek strip's draw
+          pile is at this row's right-hand end, so right-aligning it would hang
+          the sun directly beneath the deck — the one thing #189 exists to
+          prevent. Upright the piles are mid-screen and a prompt line away, so
+          the near hand wins there. `className` is the one prop the two callers
+          have always disagreed about. */}
         {sunnyTarget ? (
           <SunnyCallOffer
             targetName={nameOf(sunnyTarget)}

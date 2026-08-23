@@ -6,6 +6,7 @@ import {
   edgeFor,
   edgeSeats,
   LABEL,
+  nearestSeat,
   seatPoint,
   TURN_FOR,
   type Edge,
@@ -192,5 +193,38 @@ describe("naming the seats round a shared table screen", () => {
     expect(edgeSeats(0)).toEqual([]);
     expect(edgeSeats(1)).toEqual([{ edge: "top", along: 24 }]);
     expect(edgeFor(0, 0)).toBe("top");
+  });
+});
+
+const nearest = (point: { x: number; y: number }, count: number): number =>
+  nearestSeat(point, count, TABLE_DESIGN);
+
+/**
+ * Dropping a dragged name (#201). Position on that board *is* seat order, so
+ * "which place did it land in" is "whose spot did it come down on".
+ */
+describe("the seat a point on the board is nearest", () => {
+  it("answers with the seat sitting there", () => {
+    // Four seats walk clockwise from the top, one to an edge.
+    const spots = edgeSeats(4);
+    for (const [index, spot] of spots.entries()) {
+      expect(nearest(seatPoint(spot, TABLE_DESIGN), 4)).toBe(index);
+    }
+  });
+
+  it("reads an edge rather than a point", () => {
+    const spots = edgeSeats(4);
+    const left = spots.findIndex((spot) => spot.edge === "left");
+    // Well inside the left band and a long way off the name's own centre. A
+    // *corner* is genuinely ambiguous and answers with whichever seat is nearer,
+    // which is the honest reading of a drop into a corner.
+    expect(nearest({ x: 4, y: TABLE_DESIGN.height / 2 - 90 }, 4)).toBe(left);
+  });
+
+  it("never answers with nothing, however far outside the drop is", () => {
+    // Dropping off the board is dropping on the nearest edge — the same answer
+    // `moveSeat` gives for a hop off either end.
+    expect(nearest({ x: -900, y: -900 }, 4)).toBeGreaterThanOrEqual(0);
+    expect(nearest({ x: 9000, y: 9000 }, 6)).toBeLessThan(6);
   });
 });

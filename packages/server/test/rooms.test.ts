@@ -21,6 +21,7 @@ import {
   leaveSeat,
   markDisconnected,
   moveSeat,
+  moveSeatFromTable,
   nextBotMove,
   rejoinRoom,
   roomView,
@@ -1004,5 +1005,69 @@ describe("a player leaving mid-game", () => {
 
     leaveSeat(room, room.hostId);
     expect(room.hostId).toBe(guest.id);
+  });
+});
+
+/**
+ * Reordering the table from the shared screen (#201).
+ *
+ * The same operation as the lobby's arrows, gated the way the shared-screen draw
+ * is: the `table` bit is the client's own word for what it is, so what holds the
+ * line is `irl` — checked here — and between-games, which it shares with
+ * `moveSeat`.
+ */
+describe("moving a seat from the shared table screen", () => {
+  const irlRoom = (): Room => {
+    const room = seatedRoom();
+    setIrl(room, room.hostId, true);
+    return room;
+  };
+
+  it("reorders the table, without a host", () => {
+    const room = irlRoom();
+    const before = seatOrder(room);
+    const second = room.seats[1]?.id ?? "";
+
+    moveSeatFromTable(room, second, "up");
+    expect(seatOrder(room)).toEqual([before[1], before[0], before[2], before[3]]);
+  });
+
+  it("matches what the same move produces from the lobby's arrows", () => {
+    const byArrow = irlRoom();
+    const byDrag = irlRoom();
+    // Same table, same seed of names — `seatedRoom` builds them identically.
+    expect(seatOrder(byArrow)).toEqual(seatOrder(byDrag));
+
+    const arrowTarget = byArrow.seats[2]?.id ?? "";
+    const dragTarget = byDrag.seats[2]?.id ?? "";
+    moveSeat(byArrow, byArrow.hostId, arrowTarget, "up");
+    moveSeatFromTable(byDrag, dragTarget, "up");
+
+    expect(seatOrder(byDrag)).toEqual(seatOrder(byArrow));
+  });
+
+  it("refuses an online room outright", () => {
+    const room = seatedRoom();
+    expect(room.irl).toBe(false);
+    // Strangers, and none of them get to reorder a stranger's table.
+    expect(() => moveSeatFromTable(room, room.seats[1]?.id ?? "", "up")).toThrow(/only watch/);
+  });
+
+  it("refuses while a hand is out", () => {
+    const room = irlRoom();
+    beginGame(room, room.hostId);
+    expect(() => moveSeatFromTable(room, room.seats[1]?.id ?? "", "up")).toThrow(
+      /Wait for this game to finish/,
+    );
+  });
+
+  it("does nothing off either end, rather than refusing", () => {
+    const room = irlRoom();
+    const before = seatOrder(room);
+    // The same answer the arrows get: the table may have moved under somebody's
+    // thumb, and an error is no help.
+    moveSeatFromTable(room, room.seats[0]?.id ?? "", "up");
+    moveSeatFromTable(room, room.seats[room.seats.length - 1]?.id ?? "", "down");
+    expect(seatOrder(room)).toEqual(before);
   });
 });

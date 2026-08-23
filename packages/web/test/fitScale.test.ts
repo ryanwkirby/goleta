@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { TABLE_DESIGN, fitScale, shouldTurn, turned } from "../src/lib/fitScale.ts";
+import {
+  TABLE_DESIGN,
+  designPoint,
+  fitScale,
+  shouldTurn,
+  turned,
+} from "../src/lib/fitScale.ts";
 
 /** The two ends of the range #14 names: a 10" tablet, and a television. */
 const TABLET = { width: 1180, height: 820 };
@@ -91,5 +97,46 @@ describe("turning the board a quarter to fit the screen it is on", () => {
     // The observer corrects this in the same frame, and a board that flipped
     // on its way to being measured would be a visible lurch on every load.
     expect(shouldTurn({ width: 0, height: 0 })).toBe(false);
+  });
+});
+
+/**
+ * A pointer on the shared screen, back in design coordinates (#201).
+ *
+ * The board carries one transform about its own centre, which is what makes this
+ * arithmetic rather than a matrix read off the DOM.
+ */
+describe("a pointer on the board", () => {
+  const centre = { x: 500, y: 300 };
+  const middle = { x: TABLE_DESIGN.width / 2, y: TABLE_DESIGN.height / 2 };
+
+  it("puts the middle of the element at the middle of the design", () => {
+    expect(designPoint(centre, centre, 1, false)).toEqual(middle);
+    expect(designPoint(centre, centre, 0.4, false)).toEqual(middle);
+    expect(designPoint(centre, centre, 0.4, true)).toEqual(middle);
+  });
+
+  it("undoes the scale", () => {
+    // 100 client pixels right of centre at ×0.5 is 200 design pixels right.
+    expect(designPoint({ x: 600, y: 300 }, centre, 0.5, false)).toEqual({
+      x: middle.x + 200,
+      y: middle.y,
+    });
+  });
+
+  it("undoes the quarter turn", () => {
+    // The board is turned +90°, so the design's +x runs *down* the screen.
+    expect(designPoint({ x: 500, y: 400 }, centre, 1, true)).toEqual({
+      x: middle.x + 100,
+      y: middle.y,
+    });
+    expect(designPoint({ x: 600, y: 300 }, centre, 1, true)).toEqual({
+      x: middle.x,
+      y: middle.y - 100,
+    });
+  });
+
+  it("answers something sane for a board with no size yet", () => {
+    expect(designPoint({ x: 0, y: 0 }, centre, 0, false)).toEqual(middle);
   });
 });

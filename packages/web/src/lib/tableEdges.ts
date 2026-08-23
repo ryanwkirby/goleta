@@ -92,3 +92,29 @@ export const edgeSeats = (count: number): EdgeSeat[] => {
   }
   return placed;
 };
+
+/**
+ * Which seat a point on the board is nearest (#201).
+ *
+ * A name dragged to an edge is a seat moved in the order, and the honest way to
+ * say which place it landed in is *whose spot did it come down on*. Measured
+ * against the same `seatPoint` the names and the flights already aim at, so
+ * there is one idea of where a seat is rather than three.
+ *
+ * Never -1: dropping outside the board is dropping on the nearest edge, which is
+ * the same answer `moveSeat` gives for a hop off either end.
+ */
+export const nearestSeat = (point: Point, count: number, design: Box): number => {
+  const spots = edgeSeats(count);
+  let best = 0;
+  let closest = Infinity;
+  for (const [index, spot] of spots.entries()) {
+    const at = seatPoint(spot, design);
+    const distance = (at.x - point.x) ** 2 + (at.y - point.y) ** 2;
+    if (distance < closest) {
+      closest = distance;
+      best = index;
+    }
+  }
+  return best;
+};

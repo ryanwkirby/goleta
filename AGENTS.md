@@ -948,22 +948,46 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   can see who else is in it. It is never what the screen comes up in, it is not
   remembered, and the centre piles stay large in both views. Do not make it the
   default, and do not persist it.
-- **It has exactly one auxiliary action**, in the sense that matters: one thing
-  it can do that reaches the server. It still joins as a watcher (#16), with a
-  `table` bit on the watch message. (Opening the invite is not a second one —
-  it is a local panel over two links and a code, and it changes nothing about
-  the room.) In an IRL room, while the game is
-  waiting on an ordinary action, tapping its draw pile draws for the current
-  player. It cannot play, name a suit, call Sunny or surrender.
+- **It has exactly two auxiliary actions**, in the sense that matters: two
+  things it can do that reach the server. It still joins as a watcher (#16), with
+  a `table` bit on the watch message. (Opening the invite is not a third — it is
+  a local panel over two links and a code, and it changes nothing about the
+  room.) In an IRL room, while the game is waiting on an ordinary action, tapping
+  its draw pile draws for the current player; and between games, a **name can be
+  dragged to the edge its player is actually sitting at** (#201). It cannot play,
+  name a suit, call Sunny, surrender or end a turn.
+
+  **A name dragged to another edge is a seat moved in the order**, not a label
+  repositioned: position on this board *is* seat order, and seat order is turn
+  order (#186). So it is the shared-screen twin of the lobby's arrows (#197) and
+  sends the same `moveSeat` hops underneath, for the same reason — a whole posted
+  order can arrive stale, a swap cannot. The alternative was finding the host's
+  phone and nudging names with arrows while looking at a different screen.
+
+  **Not host-only, deliberately.** The arrows exist because a table wants its
+  seating right, and the person who can see the room is whoever is standing next
+  to the screen. **Between games only**, which the server enforces and which is
+  doubly right here: this screen is propped in the middle of a table where
+  somebody will put a drink down on it, so the gesture also has a travel
+  threshold before it takes.
+
+  The label keeps **its own angle while in flight** and settles into the new
+  edge's on the drop — turning it mid-drag means re-aiming the thing under
+  somebody's finger every frame, and where it lands is the question, not what
+  angle it was read at on the way. The pointer is put back into design
+  coordinates by `designPoint`, which is arithmetic rather than a matrix read off
+  the DOM: the board's one transform is about its own centre, so the centre does
+  not move.
 
   **The bit is the client's own word for what it is**, so it narrows rather than
   grants — any browser can send it, and the honest reading is that in an IRL
-  room any watcher may draw for the seat on the clock. That is why `irl` is the
-  gate that matters and why it is checked on the server: an online room is
-  strangers, and none of them get to move a stranger's hand. In a room where the
-  flag means what it says, everybody can already reach the propped-up screen
-  with their actual hand. There is no identity to check here and there will not
-  be one — see the note on logins under **Testing**.
+  room any watcher may draw for the seat on the clock, or reorder the seats
+  between hands. That is why `irl` is the gate that matters and why it is checked
+  on the server for both: an online room is strangers, and none of them get to
+  move a stranger's hand or a stranger's table. In a room where the flag means
+  what it says, everybody can already reach the propped-up screen with their
+  actual hand. There is no identity to check here and there will not be one — see
+  the note on logins under **Testing**.
 
   **A bot's turn is refused too.** The pile is drawn tappable to the whole room
   and a bot's turn goes past under a finger already on its way down, so without

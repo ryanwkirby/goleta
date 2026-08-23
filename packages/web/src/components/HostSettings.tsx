@@ -9,6 +9,7 @@ import { useState } from "react";
 
 import type { DealerMode, HouseRules } from "@goleta/engine";
 
+import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
 
 /** Silent when the table plays the game as written. */
@@ -34,13 +35,13 @@ export const describeSeating = (shuffled: boolean): string =>
 /** Two named answers rather than a switch, for `IrlToggle`'s reason. What the
  * dealer decides is who opens, and the seeded 8 under Dealer's Choice. A random
  * dealer may land on the same seat twice; a table that objects wants rotation. */
-const DEALERS: { key: DealerMode; label: string; blurb: string }[] = [
+const DEALERS: { value: DealerMode; label: string; blurb: string }[] = [
   // "To the left" is the rotation from the table's point of view: the deal moves
   // one seat and the player to the dealer's left opens, so who *starts* moves
   // left. `docs/RULES.md` still calls dealing dealing — this is the lobby's
   // vocabulary, not the game's (#245).
-  { key: "rotate", label: "To the left", blurb: "The starting player moves one seat each game." },
-  { key: "random", label: "Randomize", blurb: "The starting player is randomized each game." },
+  { value: "rotate", label: "To the left", blurb: "The starting player moves one seat each game." },
+  { value: "random", label: "Randomize", blurb: "The starting player is randomized each game." },
 ];
 
 /**
@@ -89,24 +90,18 @@ export function DealerPicker({
   mode: DealerMode;
   onChange: (mode: DealerMode) => void;
 }) {
-  const chosen = DEALERS.find((option) => option.key === mode);
+  const chosen = DEALERS.find((option) => option.value === mode);
 
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Who starts?</p>
-      <div className="mt-2 flex gap-2">
-        {DEALERS.map((option) => (
-          <Button
-            key={option.key}
-            variant={option.key === mode ? "primary" : "secondary"}
-            className="flex-1"
-            aria-pressed={option.key === mode}
-            onClick={() => onChange(option.key)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
+      <TwoWay
+        label="Who starts?"
+        options={[DEALERS[0]!, DEALERS[1]!]}
+        value={mode}
+        onChange={onChange}
+        className="mt-2"
+      />
       <p className="mt-2 text-xs text-white/40">{chosen?.blurb}</p>
     </div>
   );
@@ -185,10 +180,10 @@ export function HouseRulesPicker({
 
 /** Real life leads, because it is the answer that changes the most. Remote play
  * is still what a new room *is* — see `createRoom`. */
-const PLACES: { key: string; label: string; irl: boolean }[] = [
-  { key: "irl", label: "Real life", irl: true },
-  { key: "remote", label: "Remote play", irl: false },
-];
+const PLACES = [
+  { value: "irl", label: "Real life" },
+  { value: "remote", label: "Remote play" },
+] as const;
 
 /**
  * Where everybody is. Not a house rule and not next to them: it changes nothing
@@ -197,24 +192,18 @@ const PLACES: { key: string; label: string; irl: boolean }[] = [
  * world. It comes before the seats because everything below hangs off it.
  */
 export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  const question = "Game mode (everyone sitting together?)";
+
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
-        Game mode (everyone sitting together?)
-      </p>
-      <div className="mt-2 flex gap-2">
-        {PLACES.map((place) => (
-          <Button
-            key={place.key}
-            variant={place.irl === on ? "primary" : "secondary"}
-            className="flex-1"
-            aria-pressed={place.irl === on}
-            onClick={() => onChange(place.irl)}
-          >
-            {place.label}
-          </Button>
-        ))}
-      </div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{question}</p>
+      <TwoWay
+        label={question}
+        options={PLACES}
+        value={on ? "irl" : "remote"}
+        onChange={(place) => onChange(place === "irl")}
+        className="mt-2"
+      />
     </div>
   );
 }

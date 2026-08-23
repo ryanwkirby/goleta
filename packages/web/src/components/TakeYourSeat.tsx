@@ -14,6 +14,7 @@
 import type { RoomView } from "@goleta/engine";
 
 import { Button, Panel } from "./ui.tsx";
+import { LAYER } from "../lib/layers.ts";
 
 export function TakeYourSeat({
   room,
@@ -28,7 +29,7 @@ export function TakeYourSeat({
   return (
     <div
       className={[
-        "fixed inset-0 z-40 flex items-center justify-center bg-black/75 backdrop-blur-sm",
+        `fixed inset-0 ${LAYER.alert} flex items-center justify-center bg-black/75 backdrop-blur-sm`,
         "pt-[max(1.25rem,env(safe-area-inset-top))] pr-[max(1.25rem,env(safe-area-inset-right))]",
         "pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]",
       ].join(" ")}

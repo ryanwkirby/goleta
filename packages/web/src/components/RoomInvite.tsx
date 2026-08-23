@@ -18,6 +18,7 @@ import { Button, CodeButton, Panel } from "./ui.tsx";
 import { useCopyLink } from "../lib/copy.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { joinLink } from "../net/route.ts";
+import { LAYER } from "../lib/layers.ts";
 
 type Invite = "player" | "screen";
 
@@ -74,7 +75,7 @@ export function RoomInvite({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+      className={`fixed inset-0 ${LAYER.dialog} flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm`}
       role="dialog"
       aria-modal="true"
       aria-label="Invite to this table"

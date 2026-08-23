@@ -21,6 +21,7 @@
 import { useState } from "react";
 
 import { Button, Panel } from "./ui.tsx";
+import { LAYER } from "../lib/layers.ts";
 
 /** A doorway with somebody stepping through it. */
 function DoorGlyph() {
@@ -118,9 +119,8 @@ export function LeaveControl({
       )}
 
       {asking ? (
-        // `z-30` like every other overlay here, so it sits above the turn glow.
         <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+          className={`fixed inset-0 ${LAYER.overlay} flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm`}
           role="dialog"
           aria-modal="true"
           aria-label="Leave the table?"

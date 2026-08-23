@@ -1206,6 +1206,26 @@ npm workspaces monorepo, one Docker image, one process.
   If something pure is wanted by two folders, it belongs in `lib`, not in
   whichever one wrote it first.
 
+  **The stack is named once, in `lib/layers.ts`, and nothing `fixed` to the
+  viewport may carry a bare `z-…` (#297).** The numbers exist to be compared, so
+  they have to live where they can be: they were one per component, scattered
+  over eleven files, with a comment in `Leave.tsx` claiming `z-30` was "like
+  every other overlay here" that was already only half true. `FlightLayer`
+  portals to `document.body`, which makes it the last child of the page, and it
+  was `z-50` — the same rung as the settings dialog and the invite, which a tie
+  hands to whoever comes last in the DOM. So a card drawn, played or dealt
+  underneath an open panel flew across the front of it, and bots keep moving
+  under a dialog by design, so that was most of what happened while somebody read
+  the settings.
+
+  **Cards fly over the table and under everything laid on top of it**, which is
+  why `flights` has a rung of its own between the glow and the panels. The
+  `z-10`s and `z-20`s inside components order things within their own positioned
+  parent and are deliberately **not** on the list — putting them there would
+  imply they compete with these, and they cannot. Neither is the shared table
+  screen: `TableFlights` lives inside the board's transform and is ordered
+  against the board's own pieces (#200).
+
 **`packages/engine/src/redact.ts` is the security boundary.** Nothing outside it
 decides what a client may see. Hands are not what it guards — every hand is face
 up — but `state.challenge`, `state.sunny` and the deck are, and there is a test

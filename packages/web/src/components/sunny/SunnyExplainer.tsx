@@ -1,5 +1,6 @@
 
 import { Button } from "../ui.tsx";
+import { LAYER } from "../../lib/layers.ts";
 
 /** Shown the first time the rule touches you, which is how you are meant to
  * learn it. It waits behind the announcement so you know what you are being
@@ -20,7 +21,7 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
   return (
     <div
       className={[
-        "fixed inset-0 z-30 flex items-end justify-center bg-black/60 sm:items-center",
+        `fixed inset-0 ${LAYER.overlay} flex items-end justify-center bg-black/60 sm:items-center`,
         "pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]",
         "pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]",
       ].join(" ")}

@@ -17,6 +17,7 @@ import { AutopilotPicker } from "./Autopilot.tsx";
 import { HintsRow } from "./Help.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
+import { LAYER } from "../lib/layers.ts";
 
 /**
  * Both halves are headed, and the heading is what makes a host able to see at a
@@ -364,7 +365,7 @@ export function SettingsCog({
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+          className={`fixed inset-0 ${LAYER.dialog} flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm`}
           role="dialog"
           aria-modal="true"
           aria-label="Settings"

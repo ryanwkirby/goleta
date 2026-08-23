@@ -1,4 +1,5 @@
 import type { GoletaError } from "../lib/feed.ts";
+import { LAYER } from "../lib/layers.ts";
 
 /**
  * Long enough to read three words twice and short enough that reaching for it
@@ -76,7 +77,7 @@ export function SessionError({ error, onDismiss }: { error: GoletaError; onDismi
       // Centred across the full width, so in landscape a long refusal reaches the
       // island at whichever end the hardware is on.
       className={[
-        "fixed inset-x-0 top-0 z-40 flex justify-center p-3",
+        `fixed inset-x-0 top-0 ${LAYER.alert} flex justify-center p-3`,
         "pt-[max(0.75rem,env(safe-area-inset-top))]",
         "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
       ].join(" ")}

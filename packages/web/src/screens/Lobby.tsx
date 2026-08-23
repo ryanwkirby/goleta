@@ -223,8 +223,43 @@ function BotSpeedPicker({
  * touch. `touch-action: none` keeps the gesture from scrolling the lobby, and
  * pointer capture keeps it working once the finger has left its row. */
 
-/** **The arrows stay**: they are the keyboard path and the precise one. The ends
- * are disabled — the server treats a move off either end as nothing happening. */
+/** A lid and a bin. Destructive, and sitting between two arrows that are not —
+ * so the *glyph* is what separates them and the colour is left alone. Red on
+ * this green vibrates, and red already means hearts and diamonds here
+ * (`Refusal.tsx` has the argument in full). */
+function TrashGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden
+    >
+      <path d="M4 6.5h16M9.5 6.5V4.5h5v2" />
+      <path d="M6.5 6.5 7.4 20h9.2l.9-13.5" />
+      <path d="M10.4 10v6.4M13.6 10v6.4" />
+    </svg>
+  );
+}
+
+/**
+ * **The arrows stay**: they are the keyboard path and the precise one, and a
+ * drag handle is neither. The ends are disabled — the server treats a move off
+ * either end as nothing happening.
+ *
+ * **On a narrow screen they are hidden from the eye and from nothing else**
+ * (#246). A seat row in an IRL lobby carries a number, a name, a remove control
+ * and two arrows, and on a phone in portrait the name is the only thing that
+ * shrinks — while the grip is the better gesture at that width anyway. So they
+ * go `sr-only` rather than away: a keyboard still tabs to them, a screen reader
+ * still announces them, and focus brings them back on screen. `display: none`
+ * here would take the *only* accessible way to reorder a seat off a phone
+ * entirely, `SeatGrip` being `aria-hidden` on purpose.
+ */
 function MoveSeat({
   name,
   first,
@@ -239,7 +274,7 @@ function MoveSeat({
   const arrow = "min-h-0 size-8 shrink-0 px-0 py-0 text-xs";
 
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex items-center gap-1 sr-only focus-within:not-sr-only sm:not-sr-only">
       <Button
         variant="secondary"
         className={arrow}
@@ -488,13 +523,19 @@ export function Lobby({
                 <span className="text-xs text-white/40">away</span>
               ) : null}
               <span className="ml-auto flex shrink-0 items-center gap-1">
+                {/* A trash can rather than the word it was, at the 44px the rest
+                    of the app designs to, and labelled with the person it
+                    removes rather than with "remove" (#246). The server refuses
+                    a removal mid-game, so nothing here needs a confirmation. */}
                 {isHost && seat.id !== room.hostId ? (
                   <Button
                     variant="ghost"
-                    className="px-2 py-1 text-xs"
+                    className="size-11 shrink-0 px-0 py-0"
+                    aria-label={`Remove ${seat.name}`}
+                    title={`Remove ${seat.name}`}
                     onClick={() => send({ t: "removeSeat", playerId: seat.id })}
                   >
-                    remove
+                    <TrashGlyph />
                   </Button>
                 ) : null}
                 {orderable ? (

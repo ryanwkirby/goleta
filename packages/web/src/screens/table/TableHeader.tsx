@@ -1,6 +1,7 @@
 import type { ClientMessage, PlayerId, RoomView } from "@goleta/engine";
 
 import { LeaveControl } from "../../components/Leave.tsx";
+import { SunnyCall } from "../../components/sunny/SunnyCall.tsx";
 import { QrGlyph } from "../../components/QrCode.tsx";
 import { SettingsCog } from "../../components/Settings.tsx";
 import { headerItem } from "../../components/ui.tsx";
@@ -60,6 +61,9 @@ export function TableHeader({
   onShowInvite,
   onShowRules,
   onLeave,
+  sunnyTargetName,
+  lockedReaches,
+  onStartAccusing,
 }: {
   room: RoomView;
   /** Whose header this is, for the seat-shaped settings in the cog. */
@@ -74,6 +78,12 @@ export function TableHeader({
   onShowInvite: () => void;
   onShowRules: () => void;
   onLeave: () => void;
+  /** Who a call would be against, or null when no window is open. There is only
+   * ever one, which is what lets the control name them (#189). */
+  sunnyTargetName: string | null;
+  /** Reaches left before you may call again. Visible only to you (#50). */
+  lockedReaches: number;
+  onStartAccusing: () => void;
 }) {
   return (
     <header className="flex items-center gap-2 text-xs text-white/50">
@@ -126,6 +136,36 @@ export function TableHeader({
         <span>join</span>
       </button>
       {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
+
+      {/*
+        The way into a call, top centre (#329). It was pinned over the felt just
+        above your own cards, and it appears and disappears on **every draw** —
+        which is most turns of most games — so it was the one thing on the screen
+        that moved when the phone was turned and flickered in and out where the
+        eye was on the cards.
+
+        #189's constraint is *away from the draw pile*, and it was written about
+        the sun drawn immediately before the deck. This is the full height of the
+        column away from the piles, which satisfies it with room to spare.
+
+        **The slot is reserved whether or not the offer is in it**: `flex-1` takes
+        the row's slack either way, so the four controls beside it do not reflow
+        when a window opens. Same reasoning as the `min-h-7` line above the hand,
+        which is kept clear for the same reason (#131).
+
+        Only the offer moved. The missed-call count — yours alone — and the offer
+        of help stay on the line above the cards.
+      */}
+      <div className="flex min-w-0 flex-1 justify-center">
+        {sunnyTargetName !== null ? (
+          <SunnyCall
+            targetName={sunnyTargetName}
+            lockedReaches={lockedReaches}
+            onCall={onStartAccusing}
+          />
+        ) : null}
+      </div>
+
       {/* No way back to the hand here, and none needed: at an IRL table the phone
           is the toggle, and turning it is a gesture the table can see you make. */}
       <button
@@ -133,7 +173,7 @@ export function TableHeader({
         aria-label="How to play"
         title="How to play"
         onClick={onShowRules}
-        className={[headerItem, "ml-auto"].join(" ")}
+        className={headerItem}
       >
         <BookGlyph />
         <span>rules</span>

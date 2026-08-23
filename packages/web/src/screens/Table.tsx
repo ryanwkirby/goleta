@@ -246,6 +246,14 @@ export function Table({
           onShowInvite={() => setInviting(true)}
           onShowRules={onShowRules}
           onLeave={onLeave}
+          // The sun lives up here now rather than over the cards (#329). The
+          // window opens on every draw, so what it buys is a control that is
+          // always in the same place whichever way up the phone is held.
+          sunnyTargetName={sunnyControls.target ? nameOf(sunnyControls.target) : null}
+          lockedReaches={game.sunnyLockedReaches}
+          onStartAccusing={() => {
+            if (sunnyControls.target) sunnyControls.onStartAccusing(sunnyControls.target);
+          }}
         />
 
         <Seats room={room} game={game} shouts={shouts} />
@@ -336,10 +344,8 @@ export function Table({
         {seated ? (
           <OwnHand
             game={game}
-            nameOf={nameOf}
             hand={handControls}
             help={helpControls}
-            sunny={sunnyControls}
             irl={room.irl}
             step={handFanStep}
             boxRef={handRow}

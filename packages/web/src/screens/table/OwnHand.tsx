@@ -2,11 +2,10 @@ import type { Ref } from "react";
 import type { GameView } from "@goleta/engine";
 
 import { Hand, HandSortButton } from "../../components/Hand.tsx";
-import { HandFrame, SunnyCallOffer } from "../../components/HandFrame.tsx";
+import { HandFrame } from "../../components/HandFrame.tsx";
 import { HelpLink, HelpShout } from "../../components/Help.tsx";
-import type { NameOf } from "../../lib/format.ts";
 import { FULL_TABLE } from "../../motion/plan.ts";
-import type { HandControls, HelpControls, SunnyControls } from "../../lib/tableProps.ts";
+import type { HandControls, HelpControls } from "../../lib/tableProps.ts";
 
 /**
  * Your own cards at the foot of the upright table, and the small print that
@@ -16,19 +15,15 @@ import type { HandControls, HelpControls, SunnyControls } from "../../lib/tableP
  */
 export function OwnHand({
   game,
-  nameOf,
   hand,
   help,
-  sunny,
   irl,
   step,
   boxRef,
 }: {
   game: GameView;
-  nameOf: NameOf;
   hand: HandControls;
   help: HelpControls;
-  sunny: SunnyControls;
   irl: boolean;
   /** Left edge to left edge, fitted against the measured box below. */
   step: number;
@@ -37,26 +32,11 @@ export function OwnHand({
 }) {
   return (
     <div className="relative flex flex-col">
-      {/*
-        The way into a call, over the felt just above your own cards — where your
-        eyes are during somebody else's turn (#189). Not the middle: that is where
-        your own `HelpShout` rises.
-
-        **Pinned right** since #257, because most people are right-handed and this
-        is the one control whose window closes when somebody else moves. The piles
-        are mid-screen and a whole prompt line away, so it is nowhere near the
-        draw pile even after #259 moved that to the right as well. Landscape keeps
-        its left corner, where the argument runs the other way — the strip's deck
-        *is* at the right-hand end.
-      */}
-      {sunny.target ? (
-        <SunnyCallOffer
-          targetName={nameOf(sunny.target)}
-          lockedReaches={game.sunnyLockedReaches}
-          onCall={() => sunny.target && sunny.onStartAccusing(sunny.target)}
-          className="-top-12 right-0"
-        />
-      ) : null}
+      {/* No sun here any more (#329). It was pinned over the felt just above these
+          cards, appearing and disappearing on every draw — most turns of most
+          games — and in a different place depending on which way up the phone was
+          held. It is in the header now, top centre, which is the full height of
+          the column from the piles. */}
 
       {/* Kept clear whether or not the offer is showing, so the hand doesn't move
           under your fingers when it appears. */}

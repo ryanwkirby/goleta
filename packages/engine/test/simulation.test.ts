@@ -147,7 +147,7 @@ const runGame = ({
         (p) =>
           !p.eliminated &&
           p.id !== challenge.drawerId &&
-          (state.sunnyLockouts[p.id] ?? 0) <= state.totalDraws,
+          (state.sunnyLockouts[p.id] ?? 0) <= state.totalReaches,
       );
       const accused = challenge.reach.hand[0];
       if (roll < slander && accuser && accused) {
@@ -346,7 +346,7 @@ describe("full games", () => {
         if (options.sunny === null) {
           expect(run.sunnyCalls, `${label}: a call landed with the rule off`).toBe(0);
           expect(run.state.challenge, `${label}: a window opened with the rule off`).toBeNull();
-          expect(run.state.totalDraws, `${label}: draws counted with the rule off`).toBe(0);
+          expect(run.state.totalReaches, `${label}: reaches counted with the rule off`).toBe(0);
         }
       }
     }

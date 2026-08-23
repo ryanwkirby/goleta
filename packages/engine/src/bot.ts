@@ -147,7 +147,7 @@ export const decideBotIntent = (view: GameView, { callSunny = false }: BotOption
 
   // Only somebody it has actually caught, and only when not locked out. A call it
   // can't back with a legal card is one it never makes.
-  if (callSunny && view.sunnyCallable && view.sunnyLockedDraws === 0 && view.sunnyReach) {
+  if (callSunny && view.sunnyCallable && view.sunnyLockedReaches === 0 && view.sunnyReach) {
     const card = pickAccusation(view.sunnyReach);
     if (card) return { type: "callSunny", playerId: me, cardId: card.id };
   }

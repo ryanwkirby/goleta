@@ -23,8 +23,10 @@ export const WILD_RANK: Rank = "8";
 
 export const MAX_DRAWS_PER_TURN = 3;
 
-/** Draws a wrong caller must sit out before they may call again. */
-export const SUNNY_LOCKOUT_DRAWS = 3;
+/** Reaches for the deck a wrong caller must sit out before they may call again.
+ * Reaches rather than cards: a reach that found an empty deck and only recycled
+ * the pile counts like any other (#222). */
+export const SUNNY_LOCKOUT_REACHES = 3;
 
 export type CardId = string;
 export type PlayerId = string;
@@ -46,7 +48,7 @@ export type SeedEightRule = "natural" | "dealerNames";
 /** `null` at a table that plays without it — no challenge window, and no
  * per-draw snapshot taken. */
 export interface SunnyRule {
-  readonly lockoutDraws: number;
+  readonly lockoutReaches: number;
 }
 
 /**
@@ -68,7 +70,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   startingHandSize: 3,
   eights: "playerNames",
   seedEight: "natural",
-  sunny: { lockoutDraws: SUNNY_LOCKOUT_DRAWS },
+  sunny: { lockoutReaches: SUNNY_LOCKOUT_REACHES },
 };
 
 export interface PlayerState {
@@ -183,12 +185,13 @@ export interface GameState {
   /**
    * Reaches for the deck across the whole game, never reset. Lockouts count
    * against this rather than turns, so they run down at the same rate however
-   * draws fall within a turn.
+   * reaches fall within a turn. A reach that found an empty deck and recycled
+   * instead of drawing counts here too — see `recordDraw`.
    */
-  totalDraws: number;
+  totalReaches: number;
   /**
-   * Per caller, the `totalDraws` value at which their lockout from a wrong
-   * accusation lifts. Absent or at-or-below `totalDraws` means free to call.
+   * Per caller, the `totalReaches` value at which their lockout from a wrong
+   * accusation lifts. Absent or at-or-below `totalReaches` means free to call.
    */
   sunnyLockouts: Record<PlayerId, number>;
   rngSeed: number;

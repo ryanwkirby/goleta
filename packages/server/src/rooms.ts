@@ -9,7 +9,7 @@ import {
   MAX_TABLE_PLAYERS,
   MIN_TABLE_PLAYERS,
   NAME_LIMIT,
-  SUNNY_LOCKOUT_DRAWS,
+  SUNNY_LOCKOUT_REACHES,
   applyIntent,
   decideBotIntent,
   redact,
@@ -440,7 +440,7 @@ export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRule
     ...DEFAULT_OPTIONS,
     eights: rules.eights,
     seedEight: rules.seedEight,
-    sunny: rules.sunny ? { lockoutDraws: SUNNY_LOCKOUT_DRAWS } : null,
+    sunny: rules.sunny ? { lockoutReaches: SUNNY_LOCKOUT_REACHES } : null,
   };
   touch(room);
 };
@@ -631,7 +631,7 @@ export const holdCall = (
 
   if (window === null) return;
   const view = gameViewFor(room, playerId);
-  if (!view?.sunnyCallable || view.sunnyLockedDraws > 0) return;
+  if (!view?.sunnyCallable || view.sunnyLockedReaches > 0) return;
   if (held?.window === window) {
     held.open = true;
     return;

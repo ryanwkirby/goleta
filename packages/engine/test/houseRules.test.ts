@@ -210,7 +210,7 @@ describe("a table playing without the Sunny Rule", () => {
     expect(state.challenge).toBeNull();
     // The counter the lockout is measured on never starts: the per-draw bookkeeping
     // never happens at all.
-    expect(state.totalDraws).toBe(0);
+    expect(state.totalReaches).toBe(0);
     // The draw itself is perfectly ordinary.
     expect(handOf(state, "a")).toEqual(["5H#1", "2C#1", "KD#1"]);
   });
@@ -229,14 +229,14 @@ describe("a table playing without the Sunny Rule", () => {
       expect(view.sunnyCallable).toBe(false);
       expect(view.sunnyTargetId).toBeNull();
       expect(view.sunnyReach).toBeNull();
-      expect(view.sunnyLockedDraws).toBe(0);
+      expect(view.sunnyLockedReaches).toBe(0);
     }
   });
 
   it("still catches the same draw with the rule on", () => {
     const state = illegalDraw(DEFAULT_OPTIONS);
     expect(state.challenge?.violation).not.toBeNull();
-    expect(state.totalDraws).toBe(1);
+    expect(state.totalReaches).toBe(1);
     expect(
       applyIntent(state, { type: "callSunny", playerId: "b", cardId: card("5H").id }).ok,
     ).toBe(true);
@@ -250,11 +250,11 @@ describe("a table playing without the Sunny Rule", () => {
         hands: { a: ["2C"], b: ["9C"], c: ["4D"] },
         top: "5S",
         drawPile: ["QD", "KD"],
-        options: withRules({ sunny: { lockoutDraws: 7 } }),
+        options: withRules({ sunny: { lockoutReaches: 7 } }),
       }),
       "a",
     );
     state = must(state, { type: "callSunny", playerId: "b", cardId: card("2C").id });
-    expect(state.sunnyLockouts.b).toBe(state.totalDraws + 7);
+    expect(state.sunnyLockouts.b).toBe(state.totalReaches + 7);
   });
 });

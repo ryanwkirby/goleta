@@ -16,7 +16,7 @@ import {
   legalCards,
   mustPlay,
   playerById,
-  sunnyLockedDraws,
+  sunnyLockedReaches,
   topCard,
   turnDrawnOut,
 } from "./rules.ts";
@@ -82,7 +82,7 @@ export interface GameView {
   sunnyReach: SunnyReach | null;
   /** Draws left before *you* may call again. Visible only to the locked-out
    * player; nobody else at the table is told. */
-  sunnyLockedDraws: number;
+  sunnyLockedReaches: number;
   /** Your own playable cards. Never computed for anyone else's hand. */
   legalCardIds: CardId[];
   youMustPlay: boolean;
@@ -153,7 +153,7 @@ export const redact = (state: GameState, viewerId: PlayerId | null): GameView =>
     sunnyCallable: canCall,
     sunnyTargetId: canCall ? challenge.drawerId : null,
     sunnyReach: canCall ? challenge.reach : null,
-    sunnyLockedDraws: viewer ? sunnyLockedDraws(state, viewer.id) : 0,
+    sunnyLockedReaches: viewer ? sunnyLockedReaches(state, viewer.id) : 0,
     legalCardIds: viewer ? legalCards(state, viewer).map((c) => c.id) : [],
     youMustPlay: viewer ? mustPlay(state, viewer) : false,
     canEndTurn:

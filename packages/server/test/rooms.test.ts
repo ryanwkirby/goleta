@@ -730,7 +730,7 @@ describe("holding the table to name a card", () => {
     botDrawsWithAPlay(room);
     const game = room.game;
     if (!game) throw new Error("no game");
-    game.sunnyLockouts[room.hostId] = game.totalDraws + 3;
+    game.sunnyLockouts[room.hostId] = game.totalReaches + 3;
 
     holdCall(room, room.hostId, true, 1000);
     expect(callHeldUntil(room, 1000)).toBe(0);

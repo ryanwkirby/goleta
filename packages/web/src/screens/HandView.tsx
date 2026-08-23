@@ -109,7 +109,7 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
         {sunnyTarget ? (
           <SunnyCallOffer
             targetName={nameOf(sunnyTarget)}
-            lockedDraws={game.sunnyLockedDraws}
+            lockedDraws={game.sunnyLockedReaches}
             onCall={() => onStartAccusing(sunnyTarget)}
             className="left-2 top-2"
           />

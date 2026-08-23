@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { GameView } from "@goleta/engine";
 
 import type { SunnyCalled } from "../src/lib/judgedCall.ts";
-import { caughtState, stillAccusable, sunnyTarget } from "../src/lib/sunnyOffer.ts";
+import {
+  accusePickerOpen,
+  caughtState,
+  stillAccusable,
+  sunnyTarget,
+} from "../src/lib/sunnyOffer.ts";
 
 /**
  * The window to make an accusation, and the dialog for having one land on you.
@@ -15,7 +20,16 @@ import { caughtState, stillAccusable, sunnyTarget } from "../src/lib/sunnyOffer.
  */
 
 const view = (over: Partial<GameView> = {}): GameView =>
-  ({ you: "me", sunnyCallable: false, sunnyTargetId: null, ...over }) as unknown as GameView;
+  ({
+    you: "me",
+    sunnyCallable: false,
+    sunnyTargetId: null,
+    sunnyReach: null,
+    ...over,
+  }) as unknown as GameView;
+
+/** Whatever the offender was holding. What is in it decides nothing here. */
+const reach = { hand: [], activeSuit: "S", topRank: "5" } as unknown as GameView["sunnyReach"];
 
 const called = (over: Partial<SunnyCalled> = {}): SunnyCalled =>
   ({ type: "sunnyCalled", correct: true, targetId: "me", ...over }) as unknown as SunnyCalled;
@@ -61,6 +75,42 @@ describe("whether the accusation being composed can still be made", () => {
     // Somebody else drew while you were choosing. The card you were about to
     // name is not evidence about this reach.
     expect(stillAccusable(view({ sunnyCallable: true, sunnyTargetId: "bob" }), "angela")).toBe(
+      false,
+    );
+  });
+});
+
+describe("whether the accusation picker is up", () => {
+  // This is what conceals the log (#319), so it has to be true for exactly as
+  // long as the picker is on the screen — no longer, or the log is gone from a
+  // player who is not being asked anything.
+  const open = view({ sunnyCallable: true, sunnyTargetId: "angela", sunnyReach: reach });
+
+  it("is up while a call is being composed against an open window", () => {
+    expect(accusePickerOpen(open, "angela")).toBe(true);
+  });
+
+  it("is not up merely because a call could be made", () => {
+    // The sun is on offer on most turns of most games. If this were true of the
+    // window rather than of the picker, the log would be concealed almost
+    // continuously.
+    expect(accusePickerOpen(open, null)).toBe(false);
+  });
+
+  it("goes down when the window shuts under it", () => {
+    const shut = view({ sunnyCallable: false, sunnyTargetId: "angela", sunnyReach: reach });
+    expect(accusePickerOpen(shut, "angela")).toBe(false);
+  });
+
+  it("goes down when the window moves to a different seat", () => {
+    const moved = view({ sunnyCallable: true, sunnyTargetId: "bob", sunnyReach: reach });
+    expect(accusePickerOpen(moved, "angela")).toBe(false);
+  });
+
+  it("is not up without the evidence it is composed from", () => {
+    // `redact.ts` sends the reach and the flag together, so this is belt and
+    // braces — and the screen draws no picker without it either way.
+    expect(accusePickerOpen(view({ sunnyCallable: true, sunnyTargetId: "angela" }), "angela")).toBe(
       false,
     );
   });

@@ -110,7 +110,6 @@ export function Table({
   offline: boolean;
 }) {
   const {
-    accusable,
     accuse,
     accusing,
     acknowledgeCaught,
@@ -135,6 +134,7 @@ export function Table({
     mine,
     mode,
     nameOf,
+    namingCard,
     owesPunishment,
     peeling,
     departed,
@@ -313,7 +313,7 @@ export function Table({
         {/* Both pickers dock above your hand rather than being thrown over the
             table: each is a decision you make by reading what everyone else is
             holding, and a scrim would take the evidence away. */}
-        {accusing !== null && accusable && game.sunnyReach ? (
+        {accusing !== null && namingCard && game.sunnyReach ? (
           <SunnyAccusePicker
             targetName={nameOf(accusing)}
             reach={game.sunnyReach}
@@ -346,7 +346,11 @@ export function Table({
           />
         ) : null}
 
-        <EventLog log={log} nameOf={nameOf} />
+        {/* Concealed while this player is naming a card, and only for them: the
+            log is every play in the game in words, which is the board a call is
+            judged against written out at the one moment they are being asked to
+            remember it (#319). It keeps its space and says so. */}
+        <EventLog log={log} nameOf={nameOf} concealed={namingCard} />
 
         <TableOverlays
           nameOf={nameOf}

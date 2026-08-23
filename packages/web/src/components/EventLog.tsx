@@ -16,9 +16,44 @@ function Line({ children }: { children: string }) {
   );
 }
 
-export function EventLog({ log, nameOf }: { log: LoggedEvent[]; nameOf: NameOf }) {
+export function EventLog({
+  log,
+  nameOf,
+  concealed = false,
+}: {
+  log: LoggedEvent[];
+  nameOf: NameOf;
+  /**
+   * Whether this player is part-way through an accusation (#319). Their own log
+   * is every card played into the middle, in order, in words — which is the
+   * board the call is judged against, written out, at the one moment they are
+   * being asked to remember it (#318).
+   *
+   * **The collapsed line goes too**, and it is the half that mattered most: it
+   * is the most recent event, and after a reach the most recent event is very
+   * often the play that changed the board.
+   *
+   * It keeps its space and says what it is doing rather than disappearing. A box
+   * vanishing out of the column the moment you tap a control reads as a bug, the
+   * caller knows perfectly well what they are being denied, and the cards above
+   * it do not move under a thumb (#131).
+   */
+  concealed?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const latest = log[0];
+
+  // Held rather than reset, so backing out of a call gives you the log the way
+  // you left it. There is nothing to protect by then: the question has gone.
+  if (concealed) {
+    return (
+      <div className="rounded-xl bg-black/25 ring-1 ring-white/10">
+        <p className="flex items-center gap-2 px-3 py-2 text-xs text-white/40">
+          <span aria-hidden>☀️</span> the log is hidden while you name a card
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl bg-black/25 ring-1 ring-white/10">

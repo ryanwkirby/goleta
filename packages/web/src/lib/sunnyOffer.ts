@@ -26,6 +26,26 @@ export const sunnyTarget = (game: GameView, accusing: string | null): string | n
 export const stillAccusable = (game: GameView, accusing: string | null): boolean =>
   game.sunnyCallable && game.sunnyTargetId === accusing;
 
+/**
+ * Whether the accusation picker is actually up: the window still open on the
+ * seat you tapped, and evidence to draw in it.
+ *
+ * It exists because **the log is concealed for exactly as long as this is true**
+ * (#319). The upright table draws every event in the game in words at the foot
+ * of the column, most recent first, so a caller who cannot remember what has
+ * landed on the pile since the reach could otherwise scroll until they found it
+ * — which would leave #318 as a change of typography rather than of difficulty.
+ * One predicate rather than two conditions that have to agree: the picker and
+ * the concealment are the same moment, and a screen deciding it twice is a
+ * screen that can get it half right.
+ *
+ * The limit is honest and deliberate: back out of the picker and the log is
+ * there again. Concealing it for the whole window a call could be made would
+ * conceal it for most of most games, because a window opens on every draw.
+ */
+export const accusePickerOpen = (game: GameView, accusing: string | null): boolean =>
+  accusing !== null && stillAccusable(game, accusing) && game.sunnyReach !== null;
+
 export interface CaughtState {
   caughtYou: boolean;
   caughtHold: boolean;

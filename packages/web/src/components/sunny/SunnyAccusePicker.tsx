@@ -9,12 +9,15 @@
  * The first three are one idea from three directions: which card was legal is
  * exactly the question, so any weighting at all answers it.
  *
- * **Showing the board is not a sixth prohibition breached, it is the question
- * being asked properly** (#220). `AGENTS.md` forbids saying which cards were
- * legal; it says nothing about withholding what was in play, and `docs/RULES.md`
- * describes the judgement as *"their cards are face up, the card in play is face
- * up, and the two are all you need"*. Until #220 the second of those was missing
- * at the moment you need it. See `ReachBoard`.
+ * **The board the call is judged against is a sixth thing it does not show, and
+ * that is a reversal** (#318). #220 argued the board was the question being
+ * asked properly and #310 drew it; a call is meant to be paid for out of memory
+ * instead, the way it is at a table where the card in play at the reach is
+ * buried under everything that has landed on it since. The panel still says
+ * nothing about which of the cards below was legal — what has gone is the half
+ * of the question the app was answering on the caller's behalf.
+ *
+ * `ReachBoard` is switched off rather than deleted; see `SHOW_REACH_BOARD`.
  */
 
 import { useRef, type CSSProperties } from "react";
@@ -26,6 +29,23 @@ import { useBox } from "../../lib/measure.ts";
 import { PlayingCard } from "../Card.tsx";
 import { CARD_WIDTH_PX, isRed, SUIT_GLYPH, SUIT_LABEL } from "../../lib/cardShape.ts";
 import { Button } from "../ui.tsx";
+
+/**
+ * Whether the picker draws the board a call is judged against. **Off since
+ * #318**, and the switch exists so that turning it back on is a one-line
+ * decision made against the argument below rather than a component rebuilt from
+ * the wire fields.
+ *
+ * The board is on the wire either way — `sunnyReach` has carried `activeSuit`
+ * and `topRank` since #74, `redact.ts` gates them on being able to call, and
+ * `sunnyCalled.evidence` reads the same facts to the whole table once a call has
+ * been judged. Nothing about the protocol depends on this.
+ *
+ * It is a constant rather than a prop or a house rule on purpose: this is one
+ * decision about what a call costs, taken for every table, and threading it
+ * through two layouts would suggest a room could differ on it.
+ */
+const SHOW_REACH_BOARD: boolean = false;
 
 /**
  * The board the call will be judged against: the suit that had to be matched at
@@ -56,6 +76,12 @@ import { Button } from "../ui.tsx";
  * will (#50). **Wilds go unmentioned for the same reason**: "or any 8" is true,
  * harmless-looking, and points straight at cards in the hand this panel is
  * deliberately silent about.
+ *
+ * **Nothing renders this today** (#318). Everything above it is the argument for
+ * drawing it at all and everything in this paragraph is the argument for the
+ * shape it takes, and both are kept whole: the second is the expensive one to
+ * re-derive, and a future table that wants the board back wants it as two chips
+ * rather than as a card that was never played.
  */
 function ReachBoard({
   reach,
@@ -182,20 +208,24 @@ export function SunnyAccusePicker({
           reading it. The question is what they are here to answer (#305). It
           still says nothing about which of the cards was legal.
 
-          The board those cards are judged against goes **last before the hand**,
-          because it is the thing being read against it (#220).
+          The board those cards are judged against would go **last before the
+          hand**, because it is the thing being read against it (#220) — and it
+          is not drawn at all now that the caller supplies it from memory (#318).
+          The placement and the two layouts are kept because `SHOW_REACH_BOARD`
+          is a switch rather than a demolition: where it goes is settled, and
+          re-settling it is the part that costs.
 
-          Landscape puts the two on one line rather than taking a second. The
+          Landscape put the two on one line rather than taking a second. The
           picker's height is exactly what the hand below steps down by (#166), so
           a row added here comes straight off the player's cards — and the board
-          is a label and two marks beside a question with width to spare, so the
-          compact view buys the whole of it for no cards at all. The question is
-          the half that gives, because it is the same sentence every time and the
-          board is the half carrying information; that is #294's rule about which
-          end of a line may be cut, applied to a different line. */}
+          was a label and two marks beside a question with width to spare, so the
+          compact view bought the whole of it for no cards at all. The question
+          is the half that gives, because it is the same sentence every time and
+          the board is the half carrying information; that is #294's rule about
+          which end of a line may be cut, applied to a different line. */}
       {compact ? (
         <div className="mt-0.5 flex items-center gap-2">
-          <ReachBoard reach={reach} compact />
+          {SHOW_REACH_BOARD ? <ReachBoard reach={reach} compact /> : null}
           <p className="min-w-0 truncate text-xs text-white/50">
             Which of these cards was playable?
           </p>
@@ -206,7 +236,7 @@ export function SunnyAccusePicker({
             Which of these cards was playable? Get it wrong and you can't call again for three
             reaches.
           </p>
-          <ReachBoard reach={reach} className="mt-2" />
+          {SHOW_REACH_BOARD ? <ReachBoard reach={reach} className="mt-2" /> : null}
         </>
       )}
       {/* One row when docked over a hand, wrapped when not. The row keeps no

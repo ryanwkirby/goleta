@@ -294,24 +294,51 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   which of them was legal. Do not add a `legalCardIds` equivalent for it, do not
   sort it helpfully, and do not dim the cards that wouldn't have played.
 
-  **Both halves are drawn, and the board half was not until #220.** `activeSuit`
-  and `topRank` rode the wire from #74 with no reader anywhere in
-  `packages/web`, so the picker asked which card was legal while showing half of
-  what legal is measured against — and the player supplied the other half off
-  the pile, which is usually not that board, because the window outlives the
-  turn. An 8 played since makes it worse than a coin flip: the cards that look
-  right are exactly the ones that are wrong, and the player who read the table
-  correctly took the lockout. Showing what was in play is showing the
-  **question**, which is why it is not a sixth thing this panel may not do —
-  `docs/RULES.md` has always said the hand and the card in play "are all you
-  need."
+  **Only the hand half is drawn, and the board half is the caller's to
+  remember** (#318). `activeSuit` and `topRank` rode the wire from #74 with no
+  reader anywhere in `packages/web` until #220 argued that a picker asking which
+  card was legal while showing half of what legal is measured against was asking
+  the question wrong, and #310 drew them as a `had to match ♠ or 5` chip. That
+  is switched back off. **Calling the Sunny Rule is meant to cost something only
+  memory can pay**: at a real table the card in play at the reach is buried
+  under everything that has landed on it since, nobody deals it back out, and
+  keeping track of the middle of the table is part of what makes a call a claim
+  rather than a lookup.
 
-  `ReachBoard` draws it as **two chips rather than one card**, and that is the
-  constraint to hold: after an 8, `topRank` and `activeSuit` are the 8's rank
+  The failure case #220 was filed over is therefore back, and is now the
+  intended difficulty rather than a bug: a caller who reads the *pile* instead of
+  remembering the board will name the card that matches what is showing now, and
+  after an 8 that is worse than a coin flip. The pile in front of you is not the
+  board, because the window outlives the turn. A caller who has not kept track
+  should not be calling.
+
+  **`ReachBoard` is switched off, not deleted** — `SHOW_REACH_BOARD` in
+  `SunnyAccusePicker.tsx`, one constant, with #220's argument and its own kept
+  whole above it. This panel has now reversed twice (#31 → #50, #220/#310 →
+  #318), so the arguments are worth more than the code. If a table ever gets the
+  board back, it comes back as **two chips rather than one card**, and that is
+  the constraint to hold: after an 8, `topRank` and `activeSuit` are the 8's rank
   and somebody else's suit, so a single `8♣` would print a card nobody played
   and the pile is not showing. `sunnyReach` carries no `Card` to draw instead
   and must not grow one. Wilds go unmentioned for the bullet's own reason — "or
   any 8" is true, harmless-looking, and points straight at cards in the hand.
+
+  **The log is concealed while the picker is up, and that is the same rule
+  enforced twice** (#319). The upright table draws every event in the game in
+  words at the foot of the column, most recent first, so a caller who could
+  scroll it would have the board written out for them and #318 would be a change
+  of typography rather than of difficulty — and the *collapsed* line is the worst
+  of it, being the most recent event, which after a reach is very often the play
+  that changed the board. It keeps its space and says what it is doing: a box
+  vanishing out of the column as you tap a control reads as a bug, and the cards
+  above it must not move under a thumb (#131). The condition is
+  `accusePickerOpen` in `lib/sunnyOffer.ts` — one predicate, because the picker
+  and the concealment are the same moment. Nothing goes on the wire and no other
+  screen changes; landscape has no log at all. **Back out of the picker and the
+  log is there again**, which is deliberate: concealing it for the whole window
+  a call could be made would conceal it for most of most games, since a window
+  opens on every draw. What it buys is that the question and its answer are never
+  on the screen together.
 - **A judged call shows its working, and shows the same working either way.**
   `sunnyCalled` carries `evidence`: the card that was in play at the reach, the
   suit that had to be matched then, and whatever has landed on the pile since.

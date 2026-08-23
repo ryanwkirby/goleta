@@ -18,12 +18,25 @@ import { HintsToggle } from "./Help.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
 
-/** Both halves are headed, and the heading is what makes a host able to see at a
- * glance which of them changes the game for everybody. */
+/**
+ * Both halves are headed, and the heading is what makes a host able to see at a
+ * glance which of them changes the game for everybody.
+ *
+ * **It has to look like the level above the rows** (#289). It used to draw the
+ * five classes `DealerPicker`, `HouseRulesPicker`, `IrlToggle` and
+ * `AutopilotPicker` each draw their own heading with — so the division #253
+ * built came out as a flat list of six identical headings, and the one thing the
+ * panel most needs to say was said in the same voice as the things it governs.
+ * Bigger, brighter and not uppercase; the sub-headings are untouched.
+ *
+ * `text-base` rather than the `text-sm` one step up from them, because the
+ * sub-headings are not the only thing it has to sit above: every row *label* in
+ * here — **Musical chairs**, **The Sunny Rule** — is `text-sm font-semibold
+ * text-white` already, and a parent that matches its own grandchildren is the
+ * same failure one rung along.
+ */
 function SectionHeading({ children }: { children: string }) {
-  return (
-    <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{children}</p>
-  );
+  return <p className="text-base font-semibold text-white">{children}</p>;
 }
 
 /**
@@ -82,27 +95,32 @@ export const describeSeating = (shuffled: boolean): string =>
  * dealer decides is who opens, and the seeded 8 under Dealer's Choice. A random
  * dealer may land on the same seat twice; a table that objects wants rotation. */
 const DEALERS: { value: DealerMode; label: string; blurb: string }[] = [
-  // "To the left" is the rotation from the table's point of view: the deal moves
-  // one seat and the player to the dealer's left opens, so who *starts* moves
-  // left. `docs/RULES.md` still calls dealing dealing — this is the lobby's
-  // vocabulary, not the game's (#245).
-  { value: "rotate", label: "To the left", blurb: "The starting player moves one seat each game." },
+  // *Rotate left* names the movement rather than a destination (#289). "To the
+  // left" was the rotation from the table's point of view — the deal moves one
+  // seat and the player to the dealer's left opens, so who *starts* moves left —
+  // and read as a place the deal was going rather than as the other half of a
+  // pair with *Randomize*. `docs/RULES.md` still calls dealing dealing: this is
+  // the lobby's vocabulary, not the game's (#245).
+  { value: "rotate", label: "Rotate left", blurb: "The starting player moves one seat each game." },
   { value: "random", label: "Randomize", blurb: "The starting player is randomized each game." },
 ];
 
 /**
  * A switch rather than two named answers, unlike the dealer beside it: this is a
- * thing a table either does or does not do. The copy says what it costs an IRL
- * table, because that is what somebody has to agree to — turn order is where you
- * are sitting, so shuffling it means getting up.
+ * thing a table either does or does not do.
+ *
+ * **One sentence in every room** (#289). It used to branch on `irl` and promise
+ * an IRL table that "everyone is shown where to sit" — which is true, the
+ * take-your-seat screen still appears (#199), but it is not what a row this
+ * narrow should be spending its width on. What both rooms need to know is that
+ * this moves *everybody*, because turn order is where you are sitting and at a
+ * real table that means getting up. So the prop is gone with the branch.
  */
 export function ShuffleSeatsToggle({
   on,
-  irl,
   onChange,
 }: {
   on: boolean;
-  irl: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
@@ -110,9 +128,7 @@ export function ShuffleSeatsToggle({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-white">Musical chairs</p>
         <p className="text-xs text-white/40">
-          {irl
-            ? "Turn order changes each game, and everyone is shown where to sit."
-            : "Turn order changes each game, so you don't play the same neighbours all night."}
+          <em>Everyone</em> shuffles seats each game, to shake things up.
         </p>
       </div>
       <Button
@@ -140,9 +156,11 @@ export function DealerPicker({
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Who starts?</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
+        Who starts each game?
+      </p>
       <TwoWay
-        label="Who starts?"
+        label="Who starts each game?"
         options={[DEALERS[0]!, DEALERS[1]!]}
         value={mode}
         onChange={onChange}
@@ -238,7 +256,7 @@ const PLACES = [
  * world. It comes before the seats because everything below hangs off it.
  */
 export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
-  const question = "Game mode (everyone sitting together?)";
+  const question = "Game mode (sitting together?)";
 
   return (
     <div>
@@ -357,7 +375,7 @@ export function SettingsCog({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex flex-col gap-4">
-              <SectionHeading>Yours</SectionHeading>
+              <SectionHeading>Your settings</SectionHeading>
               <HintsToggle on={hints} onChange={onHints} />
               {/* Both halves of *yours* clear the bar #188 set: they belong to one
                   player and change nothing about the room. Neither is private —
@@ -369,7 +387,7 @@ export function SettingsCog({
             {isHost ? (
               <>
                 <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
-                  <SectionHeading>Table settings</SectionHeading>
+                  <SectionHeading>Room settings</SectionHeading>
                   <IrlToggle on={irl} onChange={onIrl} />
                 </div>
 
@@ -377,13 +395,18 @@ export function SettingsCog({
                     the note at the foot is true of these and not of that one. */}
                 <div className="flex flex-col gap-4">
                   <HouseRulesPicker rules={rules} onChange={onRules} />
-                  {/* Above the starting player, and independent of it: where people
-                      sit is the bigger of the two and decides what the other is
-                      even about (#245). */}
-                  <ShuffleSeatsToggle on={shuffleSeats} irl={irl} onChange={onShuffleSeats} />
                   {/* In here because of when it answers rather than what it is: read
                       once, at the deal, exactly like the switches above it. */}
                   <DealerPicker mode={dealerMode} onChange={onDealerMode} />
+                  {/* **Below the starting player, and independent of it** (#289).
+                      #245 put it above, on the argument that where people sit is
+                      the bigger of the two and decides what the other is even
+                      about. That is true of the *rules* and not of the *reading*:
+                      who opens is the question a host has already been asked by
+                      the lobby, and musical chairs is the one that changes what a
+                      table has to physically do. It is last because it is the
+                      loudest. */}
+                  <ShuffleSeatsToggle on={shuffleSeats} onChange={onShuffleSeats} />
                   {/* Said once, under everything it is true of: the same sentence
                       four times is a warning, not a note. */}
                   <p className="text-xs text-white/40">

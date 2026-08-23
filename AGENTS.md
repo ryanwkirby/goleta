@@ -559,11 +559,18 @@ wholesale rather than editing it in place, and `beginGame` spreads it into a
 fresh object on the way to `startGame`. Don't make either of them share.
 
 **One cog with two rooms in it (#253).** Every seated player gets the same gear,
-top left, in both layouts. Opened, it has a **yours** section — the hints
-toggle and the autopilot (#202) — and, below it and only for the host, a **table
-settings** section. Both halves are headed, so a host can see at a glance
-which one changes the game for everybody. A watcher gets no cog: the yours half
-is about cards they do not have and the table half is not theirs.
+top left, in both layouts. Opened, it has a **Your settings** section — the
+hints toggle and the autopilot (#202) — and, below it and only for the host, a
+**Room settings** section. A watcher gets no cog: the personal half is about
+cards they do not have and the room half is not theirs.
+
+**Both halves are headed, and the headings have to look like the level above
+the rows** (#289). That is the whole point of the division — a host seeing at a
+glance which half changes the game for everybody — and it was drawn in the exact
+five classes `DealerPicker`, `HouseRulesPicker`, `IrlToggle` and
+`AutopilotPicker` each use for their own headings, so the panel came out as a
+flat list of six identical ones. `SectionHeading` is bigger, brighter and not
+uppercase; the sub-headings did not move.
 
 **The bar for the personal half is that it belongs to one player and changes
 nothing about the room**, which rules out everything in the other half. That is

@@ -52,7 +52,7 @@ export function OwnHand({
       {sunny.target ? (
         <SunnyCallOffer
           targetName={nameOf(sunny.target)}
-          lockedDraws={game.sunnyLockedDraws}
+          lockedReaches={game.sunnyLockedReaches}
           onCall={() => sunny.target && sunny.onStartAccusing(sunny.target)}
           className="-top-12 right-0"
         />
@@ -63,10 +63,10 @@ export function OwnHand({
       <div className="flex min-h-7 items-center gap-2 px-1">
         {help.stalled ? <HelpLink onAsk={help.onAskForHelp} /> : null}
         {/* Yours alone: the server sends this to nobody else. */}
-        {game.sunnyLockedDraws > 0 ? (
+        {game.sunnyLockedReaches > 0 ? (
           <span className="text-xs text-white/35" aria-live="polite">
-            <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
-            {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
+            <span aria-hidden>☀️</span> call missed — {game.sunnyLockedReaches} more{" "}
+            {game.sunnyLockedReaches === 1 ? "reach" : "reaches"}
           </span>
         ) : null}
         {hand.cards.length > 1 ? (

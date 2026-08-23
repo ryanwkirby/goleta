@@ -55,13 +55,13 @@ export function HandFrame({
  */
 export function SunnyCallOffer({
   targetName,
-  lockedDraws,
+  lockedReaches,
   onCall,
   className,
 }: {
   targetName: string;
-  /** Draws left before you may call again. Visible only to you (#50). */
-  lockedDraws: number;
+  /** Reaches left before you may call again. Visible only to you (#50). */
+  lockedReaches: number;
   onCall: () => void;
   /** Where it is pinned. The only thing the two layouts disagree about. */
   className: string;
@@ -70,7 +70,7 @@ export function SunnyCallOffer({
     <div className={`pointer-events-none absolute z-20 flex ${className}`}>
       <SunnyCall
         targetName={targetName}
-        lockedDraws={lockedDraws}
+        lockedReaches={lockedReaches}
         onCall={onCall}
         className="pointer-events-auto"
       />

@@ -50,18 +50,18 @@ function SunGlyph() {
  */
 export function SunnyCall({
   targetName,
-  lockedDraws = 0,
+  lockedReaches = 0,
   onCall,
   className = "",
 }: {
   targetName: string;
-  lockedDraws?: number;
+  lockedReaches?: number;
   onCall?: () => void;
   className?: string;
 }) {
-  const locked = lockedDraws > 0;
+  const locked = lockedReaches > 0;
   const label = locked
-    ? `Your last call missed — ${lockedDraws} more ${lockedDraws === 1 ? "draw" : "draws"} before you can call again`
+    ? `Your last call missed — ${lockedReaches} more ${lockedReaches === 1 ? "reach" : "reaches"} before you can call again`
     : `Call the Sunny Rule on ${targetName}`;
 
   return (

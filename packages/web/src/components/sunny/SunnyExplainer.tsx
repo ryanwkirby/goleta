@@ -40,7 +40,7 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
               <strong className="text-white">Right:</strong> they play that card, plus a second card as a punishment.
             </li>
             <li>
-              <strong className="text-white">Wrong:</strong> nobody loses a card, but you can't call again for three draws.
+              <strong className="text-white">Wrong:</strong> nobody loses a card, but you can't call again until the table has reached for the deck three more times.
             </li>
           </ul>
         </div>

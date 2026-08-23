@@ -253,8 +253,12 @@ anything named would be erased before it could matter.
 accused, and the position is exactly as it was.
 
 What a miss costs is your voice: **you cannot call the Sunny Rule again until
-three more cards have been drawn** at the table. Everyone else can still call in
-the meantime, including on the very draw you just got wrong.
+the table has reached for the deck three more times.** Everyone else can still
+call in the meantime, including on the very reach you just got wrong.
+
+It counts reaches rather than cards, for the reason the offence itself is
+written that way: a reach that found an empty deck and only triggered a recycle
+is still a reach, and it runs your lockout down like any other.
 
 That is the whole penalty, and it is deliberately not a card. Having to name a
 specific card is what stops a call being a free guess — you have to be able to

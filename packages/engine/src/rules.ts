@@ -126,7 +126,7 @@ export const startGame = (
     challenge: null,
     sunny: null,
     drawsThisTurn: 0,
-    totalDraws: 0,
+    totalReaches: 0,
     sunnyLockouts: {},
     rngSeed: seedAfterShuffle,
     status: "playing",
@@ -350,9 +350,9 @@ const handleChooseSuit = (
 
 /** Written without `Math.max` on purpose: the engine bans the `Math` global,
  * which is how `Math.random` is kept out of a package that replays from a seed. */
-export const sunnyLockedDraws = (s: GameState, playerId: PlayerId): number => {
+export const sunnyLockedReaches = (s: GameState, playerId: PlayerId): number => {
   const until = s.sunnyLockouts[playerId] ?? 0;
-  return until > s.totalDraws ? until - s.totalDraws : 0;
+  return until > s.totalReaches ? until - s.totalReaches : 0;
 };
 
 const handleCallSunny = (
@@ -373,9 +373,9 @@ const handleCallSunny = (
   if (!caller) return "Unknown player";
   if (caller.eliminated) return "You're out";
 
-  const locked = sunnyLockedDraws(s, callerId);
+  const locked = sunnyLockedReaches(s, callerId);
   if (locked > 0) {
-    return `Locked out — ${locked} more ${locked === 1 ? "draw" : "draws"}`;
+    return `Locked out — ${locked} more ${locked === 1 ? "reach" : "reaches"}`;
   }
 
   // The only cards an accusation may name: the hand as it stood before the draw.
@@ -400,7 +400,7 @@ const handleCallSunny = (
 
   if (!correct) {
     challenge.resolved = true;
-    s.sunnyLockouts[callerId] = s.totalDraws + rule.lockoutDraws;
+    s.sunnyLockouts[callerId] = s.totalReaches + rule.lockoutReaches;
     return null;
   }
 
@@ -408,13 +408,13 @@ const handleCallSunny = (
   if (!violation) throw new Error("a correct accusation found no violation to rewind to");
 
   // Rewind wholesale, which is what lets the punishment undo whatever the drawer
-  // did afterwards, an 8's named suit included. `totalDraws` and `sunnyLockouts`
+  // did afterwards, an 8's named suit included. `totalReaches` and `sunnyLockouts`
   // are carried forward rather than restored: they happened regardless of how the
   // call landed, and the rewind must not hand anyone their call back.
   const touchedIds = [...violation.touchedIds];
-  const { totalDraws, sunnyLockouts } = s;
+  const { totalReaches, sunnyLockouts } = s;
   Object.assign(s, structuredClone(violation.snapshot));
-  s.totalDraws = totalDraws;
+  s.totalReaches = totalReaches;
   s.sunnyLockouts = sunnyLockouts;
   s.challenge = null;
 
@@ -548,9 +548,13 @@ const recordReach = (
   }
 };
 
-/** A reach for the deck. `totalDraws` counts *draws* and nothing else, because
- * that is what a lockout is measured in — an `endTurn` goes through
- * `recordReach` directly and does not touch it. */
+/** A reach for the deck. `totalReaches` counts **reaches** — this is called with
+ * a `null` card when the deck was empty and the reach only triggered a recycle,
+ * and that still counts, because reaching is the offence rather than what comes
+ * back with it (#74, #222). The name said *draws* until #222 and the comment
+ * here said it twice; `docs/RULES.md` now says reaches too.
+ *
+ * An `endTurn` goes through `recordReach` directly and does not touch this. */
 const recordDraw = (
   s: GameState,
   playerId: PlayerId,
@@ -560,7 +564,7 @@ const recordDraw = (
   reach: SunnyReach,
   reachPile: ReachPile,
 ): void => {
-  s.totalDraws += 1;
+  s.totalReaches += 1;
   recordReach(s, playerId, reach, reachPile, inViolation, snapshot, card);
 };
 

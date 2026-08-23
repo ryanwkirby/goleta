@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  SUNNY_LOCKOUT_DRAWS,
+  SUNNY_LOCKOUT_REACHES,
   applyIntent,
   currentPlayer,
   topCard,
@@ -307,13 +307,13 @@ describe("a wrong call", () => {
     });
   });
 
-  it("locks the caller out until three more draws happen at the table", () => {
+  it("locks the caller out until three more reaches happen at the table", () => {
     let state = draw(
       table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD", "KD", "3D"] }),
       "a",
     );
     state = call(state, "b", "2C");
-    expect(state.sunnyLockouts.b).toBe(state.totalDraws + SUNNY_LOCKOUT_DRAWS);
+    expect(state.sunnyLockouts.b).toBe(state.totalReaches + SUNNY_LOCKOUT_REACHES);
 
     // The lockout counts draws at the table, not whether the window is open.
     state = draw(state, "a");
@@ -324,7 +324,7 @@ describe("a wrong call", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("lifts once totalDraws has advanced by three, not before", () => {
+  it("lifts once totalReaches has advanced by three, not before", () => {
     const base = table({ hands: { a: ["2C"], b: ["9C"], c: ["4D"] }, top: "5S", drawPile: ["QD"] });
     const locked: GameState = {
       ...base,
@@ -336,18 +336,18 @@ describe("a wrong call", () => {
         violation: null,
         resolved: false,
       },
-      totalDraws: 10,
+      totalReaches: 10,
       sunnyLockouts: { b: 13 },
     };
 
     expect(reject(locked, { type: "callSunny", playerId: "b", cardId: card("2C").id })).toMatch(
       /Locked out/,
     );
-    const stillLocked = { ...locked, totalDraws: 12 };
+    const stillLocked = { ...locked, totalReaches: 12 };
     expect(
       reject(stillLocked, { type: "callSunny", playerId: "b", cardId: card("2C").id }),
     ).toMatch(/Locked out/);
-    const free = { ...locked, totalDraws: 13 };
+    const free = { ...locked, totalReaches: 13 };
     expect(applyIntent(free, { type: "callSunny", playerId: "b", cardId: card("2C").id }).ok).toBe(
       true,
     );
@@ -367,7 +367,7 @@ describe("a wrong call", () => {
     );
     // b names the 2C, which was dead against the 5S. A miss.
     state = call(state, "b", "2C");
-    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_DRAWS + 1);
+    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_REACHES + 1);
 
     // c names the 5H, which really was playable, rewinding past b's miss.
     state = draw(state, "a");
@@ -375,8 +375,8 @@ describe("a wrong call", () => {
     expect(state.phase.kind).toBe("sunnyPlay");
 
     // b's miss stands, and the draws served against it weren't handed back.
-    expect(state.totalDraws).toBe(2);
-    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_DRAWS + 1);
+    expect(state.totalReaches).toBe(2);
+    expect(state.sunnyLockouts.b).toBe(SUNNY_LOCKOUT_REACHES + 1);
   });
 
   it("is per caller: someone else's lockout doesn't apply to you", () => {
@@ -606,7 +606,7 @@ describe("a call that spans a recycle", () => {
     expect(state.challenge?.violation).toBeNull();
 
     state = call(state, "b", "5C");
-    expect(state.sunnyLockouts["b"]).toBeGreaterThan(state.totalDraws);
+    expect(state.sunnyLockouts["b"]).toBeGreaterThan(state.totalReaches);
   });
 });
 
@@ -712,7 +712,7 @@ describe("reaching for an empty deck", () => {
     });
     state = draw(state, "a");
     expect(state.challenge).toBeNull();
-    expect(state.totalDraws).toBe(0);
+    expect(state.totalReaches).toBe(0);
 
     // A reach that recycles the pile is still a reach: the window opens on it.
     let recycling = table({
@@ -723,7 +723,7 @@ describe("reaching for an empty deck", () => {
     });
     recycling = draw(recycling, "a");
     expect(recycling.challenge).not.toBeNull();
-    expect(recycling.totalDraws).toBe(1);
+    expect(recycling.totalReaches).toBe(1);
   });
 });
 
@@ -911,10 +911,10 @@ describe("ending a turn you should have played on", () => {
     expect(dishonest.challenge?.violation).not.toBeNull();
   });
 
-  it("does not count against anybody's lockout, because nothing was drawn", () => {
+  it("does not count against anybody's lockout, because it is not a reach", () => {
     const before = drawnOutHoldingAPlay();
     const after = must(before, { type: "endTurn", playerId: "a" });
-    // A lockout is measured in draws at the table. Ending a turn is not one.
-    expect(after.totalDraws).toBe(before.totalDraws);
+    // A lockout is measured in reaches at the table. Ending a turn is not one.
+    expect(after.totalReaches).toBe(before.totalReaches);
   });
 });

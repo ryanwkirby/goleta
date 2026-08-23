@@ -160,10 +160,10 @@ export function PeekStrip({
         ) : null}
 
         {/* Yours alone: the server sends this to nobody else. */}
-        {game.sunnyLockedDraws > 0 ? (
+        {game.sunnyLockedReaches > 0 ? (
           <span className="shrink-0 text-xs text-white/35" aria-live="polite">
-            <span aria-hidden>☀️</span> call missed — {game.sunnyLockedDraws} more{" "}
-            {game.sunnyLockedDraws === 1 ? "draw" : "draws"}
+            <span aria-hidden>☀️</span> call missed — {game.sunnyLockedReaches} more{" "}
+            {game.sunnyLockedReaches === 1 ? "reach" : "reaches"}
           </span>
         ) : null}
       </div>

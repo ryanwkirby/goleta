@@ -743,12 +743,22 @@ have found your row. It is not a new rule and nothing in it may be cited as one;
 the linked issue is the authority, and if this table and the code ever disagree
 the code is right and this is stale.
 
+**It is a starting point, not a reference, and it has already been wrong.** Two
+rows contradicted each other for the whole of round two: the sun was listed at
+the strip's right end, beside the draw pile, after #189 had moved it away from
+exactly there — and an agent working on #257 reported that having to verify the
+map against the components anyway was most of the saving gone (#262). So it is
+hand-maintained and nothing enforces it. **The rule that keeps it honest is that
+a control moving moves its row in the same PR**, and the check on that is
+reading the two or three files a row names before trusting it — which is the
+cost this map only partly removes.
+
 **Landscape — `HandView`**
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
 | Peek strip, left cluster | both cogs, rules, fullscreen offer, sort, help offer, missed-call count | **Yes — this is the place.** The only part of the row allowed to wrap, so the only one a new control may take its width from. `PeekStrip.tsx` states the rule in full, once, on the cluster element. |
-| Peek strip, right end | prompt, sun, draw pile | **No.** The pile has to stay reachable, and anything pushed off it wraps *the pile* onto a second row — a card's height off the hand. |
+| Peek strip, right end | the card in play, help asked for, prompt, draw pile | **No.** The pile has to stay reachable, and anything pushed off it wraps *the pile* onto a second row — a card's height off the hand. The sun is **not** here: #189 took it off the strip precisely because it was drawn immediately before the deck. |
 | Under the strip, left | `SunnyCallOffer` | **No.** Deliberately the far end from the deck: a fat target beside the pile is a mis-tap into the exact violation it accuses (#189). |
 | Bottom-left felt corner | the offer of help | **No** (#167). |
 | Bottom-right felt corner | the sort control | **No** (#167). |

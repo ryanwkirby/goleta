@@ -67,10 +67,10 @@ export function PeekStrip({
   // Null only while a flight is still landing — see `pileSuit`.
   const suit = pileSuit(game, face);
 
-  // The side insets are why this strip has ends worth protecting: the room code is
-  // at the left and the prompt and sun are pushed right, so on a phone with an
-  // island one or the other is behind hardware. The border still runs the full
-  // width — the felt bleeds, the content insets.
+  // The side insets are why this strip has ends worth protecting: the small print
+  // is at the left and the prompt and draw pile are pushed right, so on a phone
+  // with an island one or the other is behind hardware. The border still runs the
+  // full width — the felt bleeds, the content insets.
   return (
     <header
       className={[
@@ -189,7 +189,8 @@ export function PeekStrip({
         ) : null}
       </div>
 
-      {/* Before the turn indicator: the sun keeps the end of the strip. */}
+      {/* Before the prompt, which takes the slack: whoever is asking for help is
+        a person waiting on an answer, and the prompt is the thing that truncates. */}
       {helpFrom ? (
         <HelpAsk name={helpFrom.name} kind={helpFrom.kind} className="ml-auto text-xs" />
       ) : null}

@@ -293,6 +293,25 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   reach, because an accusation has to name one of those cards. Nothing says
   which of them was legal. Do not add a `legalCardIds` equivalent for it, do not
   sort it helpfully, and do not dim the cards that wouldn't have played.
+
+  **Both halves are drawn, and the board half was not until #220.** `activeSuit`
+  and `topRank` rode the wire from #74 with no reader anywhere in
+  `packages/web`, so the picker asked which card was legal while showing half of
+  what legal is measured against — and the player supplied the other half off
+  the pile, which is usually not that board, because the window outlives the
+  turn. An 8 played since makes it worse than a coin flip: the cards that look
+  right are exactly the ones that are wrong, and the player who read the table
+  correctly took the lockout. Showing what was in play is showing the
+  **question**, which is why it is not a sixth thing this panel may not do —
+  `docs/RULES.md` has always said the hand and the card in play "are all you
+  need."
+
+  `ReachBoard` draws it as **two chips rather than one card**, and that is the
+  constraint to hold: after an 8, `topRank` and `activeSuit` are the 8's rank
+  and somebody else's suit, so a single `8♣` would print a card nobody played
+  and the pile is not showing. `sunnyReach` carries no `Card` to draw instead
+  and must not grow one. Wilds go unmentioned for the bullet's own reason — "or
+  any 8" is true, harmless-looking, and points straight at cards in the hand.
 - **A judged call shows its working, and shows the same working either way.**
   `sunnyCalled` carries `evidence`: the card that was in play at the reach, the
   suit that had to be matched then, and whatever has landed on the pile since.

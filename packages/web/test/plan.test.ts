@@ -35,6 +35,7 @@ const view = (overrides: Partial<GameView> = {}): GameView => ({
   sunnyLockedDraws: 0,
   legalCardIds: [],
   youMustPlay: false,
+  canEndTurn: false,
   status: "playing",
   winnerId: null,
   turnNumber: 7,

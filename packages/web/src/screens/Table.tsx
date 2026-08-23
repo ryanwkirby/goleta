@@ -1,5 +1,6 @@
 import type { ClientMessage, GameView, PlayerId, RoomView, Suit } from "@goleta/engine";
 
+import { EndTurnButton } from "../components/EndTurn.tsx";
 import { EventLog } from "../components/EventLog.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { RotatePanel } from "../components/RotatePanel.tsx";
@@ -279,6 +280,16 @@ export function Table({
             reshuffling={reshuffling}
             departed={departed}
           />
+
+          {/* Under the prompt, which is the line already saying what the table is
+              waiting for — and this is the one moment it is waiting for something
+              with a button attached (#260). Nowhere near the draw pile, which is
+              the row above, and never under the cards. */}
+          {handControls.canEndTurn ? (
+            <div className="flex justify-center">
+              <EndTurnButton onEndTurn={handControls.onEndTurn} />
+            </div>
+          ) : null}
         </div>
 
         {finished ? (

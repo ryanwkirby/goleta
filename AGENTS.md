@@ -101,6 +101,34 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   Drawing when you could have played is the violation the entire Sunny Rule
   exists to punish. The UI must permit it silently. No disabled state, no
   confirmation dialog, no "are you sure?", no hint.
+- **So does "I'm done", and it is the same rule on a second control (#260).**
+  The turn used to end itself after a third fruitless draw. That was one action
+  doing two things, and the second shut the challenge window on the first: the
+  next seat was on the clock the instant the third card landed, and the third
+  reach is the hardest one to judge, because by then the offender is holding
+  three more cards than the table has been reading. The turn now stays with them
+  until they play or press it, so the window stays open for as long as they take.
+
+  The button is drawn on `GameView.canEndTurn`, which is the engine's one
+  condition — three draws, or a deck that cannot be replenished — and **says
+  nothing about your cards**: it is exactly as true when the third draw handed
+  you a play as when it left you stuck. Pressing it while you hold a play is a
+  lie and a callable violation, judged against the board and the hand at the
+  moment you pressed it rather than at the draw. Everything in the bullet above
+  applies here: no disabled state, no confirmation, no hint, and nothing on any
+  screen separating an honest end from a dishonest one.
+
+  Two placement constraints follow from it being a control that can commit an
+  offence. **Not near the draw pile** — #189's argument in reverse. And **never
+  under the cards**, because `handHeight` reads the room the row is left and a
+  control appearing there resizes the hand under a thumb (#131). It goes under
+  the prompt, which is the line already saying what the table is waiting for.
+
+  **Bots end their own turns and are never made to end one by anybody else.**
+  `decideBotIntent` presses it only when it is genuinely stuck, and the shared
+  table screen cannot send it at all — a screen in the middle of a table handing
+  somebody a violation they never chose is what the bot check on its draw
+  already exists to prevent.
 - **The app never highlights other players' legal cards.** Every hand is face
   up, so you can see them; working out whether they had a play is your job.
   Adding that highlight would make Sunny calls trivially automatic.
@@ -868,6 +896,7 @@ cost this map only partly removes.
 | Peek strip, left cluster | the cog, rules, fullscreen offer, sort, help offer, missed-call count | **Yes — this is the place.** The only part of the row allowed to wrap, so the only one a new control may take its width from. `PeekStrip.tsx` states the rule in full, once, on the cluster element. |
 | Peek strip, right end | the card in play, help asked for, prompt, draw pile | **No.** The pile has to stay reachable, and anything pushed off it wraps *the pile* onto a second row — a card's height off the hand. The sun is **not** here: #189 took it off the strip precisely because it was drawn immediately before the deck. |
 | Under the strip, left | `SunnyCallOffer` | **No.** Deliberately the far end from the deck: a fat target beside the pile is a mis-tap into the exact violation it accuses (#189). |
+| Under the strip, centred | **I'm done** (#260) | **No.** The same argument in reverse: it can now *commit* the offence, so it is kept away from the deck at the strip's right-hand end. |
 | Bottom-left felt corner | the offer of help | **No** (#167). |
 | Bottom-right felt corner | the sort control | **No** (#167). |
 | Under the cards | — | **Never.** `handHeight` reads the room the row is left, so a line there is paid for in card size (#131). |
@@ -877,6 +906,7 @@ cost this map only partly removes.
 | Where | What is there now | Free? |
 | --- | --- | --- |
 | Header row (`TableHeader`) | the cog, invite glyph, rules, the door out | Yes, for a control rather than a table fact. |
+| Under the prompt | **I'm done** (#260) | **No.** A primary action, and the only thing the table is waiting for while it is up. Far from the piles above it. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
 | Above the hand, right | `SunnyCallOffer` | **No** (#257). The middle of that box is where your own `HelpShout` rises, and the left is free. |
 | Top of the screen | the Sunny announcement | **Never.** It is the one thing at this table nobody may miss, which is exactly why a refused move answers against the hand instead (#99). |

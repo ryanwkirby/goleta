@@ -251,6 +251,11 @@ export function Table({
             canDraw={canDraw}
             onDraw={drawCard}
             irl={room.irl}
+            // The deck is the only one of the two you touch, and upright it was
+            // under the hand holding the phone rather than the one tapping. The
+            // landscape strip already puts it at the right-hand end, so this
+            // makes the two phone layouts agree (#259).
+            deckSide="right"
             peel={
               peeling && call
                 ? {

@@ -162,11 +162,27 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
 
   Three things it must never become. **It says nothing about your cards** —
   same glow whether you hold a play, are stuck, or are about to be caught; the
-  bullet above is why. **It is not a timer**: no ramp, no pulse, no
-  intensifying, because that would be pressure on exactly the decision the
-  Sunny Rule wants people to take their time over — and a thing that never
-  moves is also the whole of what `prefers-reduced-motion` needs here. **And it
+  bullet above is why. **It is not a timer**: nothing about it may vary with how
+  long you have been sitting there — no ramp, no brightening, no second stage,
+  nothing that reads as a countdown — because that would be pressure on exactly
+  the decision the Sunny Rule wants people to take their time over. **And it
   does not replace the prompt**, which still says what is being asked for.
+
+  **It does breathe, on a fixed period** (#254). It was static until then, and a
+  static amber edge on a green screen is something the eye stops seeing inside
+  about twenty seconds — which at a table where people are looking at each other
+  is most of a turn, so by the time somebody looked down it had become part of
+  the furniture. Three seconds down to about half, three seconds back, forever:
+  what it is doing at second one it is doing at second ninety, which is the
+  whole of what keeps it from being the timer above. It is drawn as `opacity` on
+  the overlay rather than as an animated `box-shadow`, so it composites instead
+  of repainting the viewport, and so both shadows move together rather than
+  becoming a second design at the dim end.
+
+  "A thing that never moves" used to be the whole of what
+  `prefers-reduced-motion` needed here, and that is spent: under reduced motion
+  the keyframes flatten and the glow holds steady at the bright end, exactly as
+  it was before.
 
   It follows `waitingOn` rather than whose turn it is, which is what makes it
   cover naming a suit under Power of Eights and the card owed after a landed

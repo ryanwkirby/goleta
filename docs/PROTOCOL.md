@@ -117,6 +117,7 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `composingCall` | seated | "The picker is open" / "it isn't". Holds the bots while a call is being named. Answered with nothing and broadcast to nobody. |
 | `help` | seated | "I'm stuck." Echoed to the whole table as a `shout`. Rate limited to one every 2s and silently dropped above that — an error banner is no answer to somebody asking for help. |
 | `setHints` | seated | "Mark up my playable cards" / "stop". Yours alone, host or not, mid-game included. Sets `SeatView.hinted` for everyone; shouted only when it turns *on*. |
+| `setAutopilot` | seated | "Play for me for a bit" (#202). `off`, `forced` or `bot`. Yours alone — the server stamps the seat from the connection, so nobody can set it for anybody else. Sets `SeatView.autopilot` for everyone. |
 | `ping` | anyone | Answered with `pong`. |
 
 **The `playerId` inside an `intent` is ignored.** The server stamps the seat the
@@ -252,6 +253,56 @@ there are still no accounts anywhere — and the seat flag is the room's copy, s
 that the table can see it.
 
 The room snapshot gained the field, so `SNAPSHOT_VERSION` went up again.
+
+## Playing your seat while you are away
+
+`SeatView.autopilot` is `off`, `forced` or `bot`, and the seat sets it with
+`{ t: "setAutopilot", mode }` (#202). Somebody gets up for a drink and the table
+waits; this is how a seat says *carry on without me* without leaving the room
+and losing the seat.
+
+**It runs on the server, with the bots**, which is the whole point: an autopilot
+driven from a browser would be a phone in somebody's pocket playing cards,
+including while that phone is asleep, which is exactly when this is wanted. So
+it survives a disconnect, and it is room state — `SNAPSHOT_VERSION` went up
+again.
+
+**`packages/engine` does not learn it exists.** `decideBotIntent` already decides
+a move for a seat and does not care whether there is a person behind it;
+`forced` is a narrowing applied on the server to the same redacted `GameView`
+everybody else gets.
+
+What it will not do is the design:
+
+- **It cannot commit a Sunny violation the player did not choose.** It plays
+  whenever it can, so it never reaches for the deck holding a play. Free, and
+  the most important property here.
+- **It never calls the Sunny Rule**, in either mode. Bots do; a wrong call is a
+  three-draw lockout, and taking that in somebody's name, out loud, at the table
+  is not the same kind of act as playing their forced card. Others may still
+  call *on* an autopiloted seat — the rule does not care who moved the cards,
+  and in practice there will be nothing to catch.
+- **`forced` means genuinely forced**: exactly one legal card, or none and a
+  draw. It names no suit and picks no punishment card, both being choices — and
+  the forced play in front of the punishment card goes with them, since stopping
+  at step 2 of 3 would be the same stall one beat later. A forced-only seat can
+  still hold the table up when it has two legal cards; that is inherent, and the
+  mark on the seat is what makes it visible.
+
+**Public and standing.** At a real table you can see somebody has gone. The mark
+is its own word rather than the lobby's *away*, which is a dropped socket — a
+different thing, and recoverable.
+
+**Ending it.** Any `intent` from your own connection turns it off, after the move
+rather than before, so a refused mis-tap is not what hands your seat back to you
+from across the room. The cog turns it off explicitly too, and it clears itself
+when a game ends: a new deal is a new hand. Nothing else may end it and nothing
+else may start it — a shared screen holds no `playerId`, and another player's
+connection stamps their own seat.
+
+Pacing is the table's, not the seat's: an autopiloted seat is scheduled through
+the same `botPace` as everyone else's bots, so it moves at the pace the room is
+set to.
 
 ## Who deals
 

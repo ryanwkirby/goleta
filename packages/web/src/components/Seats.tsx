@@ -16,6 +16,7 @@ import { useMotion } from "../lib/motion.ts";
 import type { Shout } from "../lib/feed.ts";
 import { PlayingCard } from "./Card.tsx";
 import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
+import { AutopilotMark } from "./Autopilot.tsx";
 import { HelpShout, HintedMark, shoutingNow } from "./Help.tsx";
 
 const nameFor = (room: RoomView, id: string): string =>
@@ -74,7 +75,9 @@ function Seat({
   const { anchor, isArriving } = useMotion();
   const onClock = game.waitingOn === player.id;
   const out = player.eliminated;
-  const hinted = room.seats.find((seat) => seat.id === player.id)?.hinted ?? false;
+  const seat = room.seats.find((candidate) => candidate.id === player.id);
+  const hinted = seat?.hinted ?? false;
+  const autopilot = seat?.autopilot ?? "off";
 
   // The anchor is how the motion layer finds this seat, and `data-seat` is how the
   // strip scrolls to it — neither wants a hole in it.
@@ -104,6 +107,14 @@ function Seat({
         {/* The standing half of the #33 bargain: taking help is never quiet. Not a
             tell — it says nothing about their hand, only their screen. */}
         {hinted ? <HintedMark name={nameFor(room, player.id)} className="self-center text-xs" /> : null}
+        {/* Standing, for as long as it lasts. At a real table you can see somebody
+            has gone (#202), and it is the explanation for a seat suddenly
+            playing differently. */}
+        <AutopilotMark
+          mode={autopilot}
+          name={nameFor(room, player.id)}
+          className="self-center text-[0.65rem]"
+        />
         <span
           className={[
             "ml-auto font-mono text-sm tabular-nums",

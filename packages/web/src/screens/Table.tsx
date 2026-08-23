@@ -232,6 +232,7 @@ export function Table({
       >
         <TableHeader
           room={room}
+          me={game.you}
           isHost={room.hostId === game.you}
           seated={seated}
           hints={hints}

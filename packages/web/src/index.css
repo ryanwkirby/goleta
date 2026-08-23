@@ -79,11 +79,20 @@
    turn ring and the prompt already use. Same light, more of it, and far enough
    from the middle of the screen that it never competes with the cards.
 
-   **It does not move, and that is the design rather than a shortcut.** A glow
-   that ramped would be a timer, and a timer is pressure on exactly the decision
-   the Sunny Rule wants people to take their time over. It also means there is
-   nothing for `prefers-reduced-motion` to reduce, which is the simplest way to
-   honour it.
+   **It breathes on a fixed period, and never varies with time on turn** (#254).
+   Static amber on green is something the eye stops seeing inside about twenty
+   seconds, which is most of a turn at a table where people are looking at each
+   other — so by the time somebody looked down it had become furniture. What
+   #190 banned was a *timer*: a ramp, a brightening, a second stage, anything
+   that turns the edge into pressure on the decision the Sunny Rule wants people
+   to take their time over. Whatever this is doing five seconds in it is doing
+   two minutes in, so it tells the table nothing about how long somebody has been
+   deciding.
+
+   **Opacity, not the shadows.** Animating `box-shadow` repaints the whole
+   viewport every frame; opacity on a fixed overlay composites, and it takes both
+   shadows down together rather than inventing a second design at the dim end.
+   The dim end is half, so the edge never goes away.
 
    The two shadows differ in spread as well as blur. A positive spread on an
    inset shadow contracts the rectangle the light falls from, so the wash reaches
@@ -93,6 +102,20 @@
   box-shadow:
     inset 0 0 1rem 0 color-mix(in oklab, var(--color-amber-300) 42%, transparent),
     inset 0 0 3.5rem 0.5rem color-mix(in oklab, var(--color-amber-300) 18%, transparent);
+  /* `alternate` at 3s rather than a 6s cycle, because the two halves are the two
+     figures anybody would name: three seconds down, three seconds back. It
+     starts at the bright end, so the turn arriving is announced at full. */
+  animation: turn-breathe 3s ease-in-out infinite alternate;
+  will-change: opacity;
+}
+
+@keyframes turn-breathe {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
 }
 
 /* "help!", rising off the hand that asked for it. */
@@ -197,6 +220,18 @@
   to {
     opacity: 1;
     transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+/* The glow is the message and the breathe is only what keeps the eye on it.
+   Anyone who has asked for less movement gets it steady, at the bright end —
+   exactly what it was before #254. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes turn-breathe {
+    from,
+    to {
+      opacity: 1;
+    }
   }
 }
 

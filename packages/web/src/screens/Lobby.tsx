@@ -8,6 +8,7 @@ import {
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
 import { AutopilotMark } from "../components/Autopilot.tsx";
+import { LeaveControl } from "../components/Leave.tsx";
 import { useCopyLink } from "../lib/copy.ts";
 import { dropIndex, hopsBetween, type SeatDrag } from "../lib/seatDrag.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
@@ -737,9 +738,14 @@ export function Lobby({
         <Button variant="ghost" onClick={onShowRules}>
           How to play
         </Button>
-        <Button variant="ghost" onClick={onLeave}>
-          Leave
-        </Button>
+        {/* This one keeps its word (#255): a screen with room, opposite **How to
+            play**, with nothing running. It asks the same question, because the
+            seat token is destroyed either way. */}
+        <LeaveControl
+          watching={playerId === null}
+          underWay={room.status === "playing"}
+          onLeave={onLeave}
+        />
       </div>
     </div>
   );

@@ -320,6 +320,18 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   connection, exactly as it does for an intent, so a shared screen — which holds
   no `playerId` at all — and every other player are both out. Any intent from
   your own connection ends it, and so does the end of a game.
+- **Leaving is a door and a question, and the question is not a formality
+  (#255).** It was the word *leave*, small and grey, an inch after the word
+  *rules* — two words the same size and colour, one of which opens a panel and
+  one of which drops you out of the game — and it fired instantly. The dialog
+  says what leaving actually costs, which is more than people expect: this
+  browser throws away the token that proved the seat was yours, so **a leave is
+  not a closed tab and cannot be undone**. Both answers name themselves, the
+  shape the lobby's seat-order check already uses; a bare Cancel/OK asks somebody
+  to work out which is which while reading a sentence about losing their seat.
+  The lobby keeps the *word*, because it is a screen with room, opposite **How to
+  play**, with nothing running — but it asks the same question, since the token
+  goes either way.
 - **A seat somebody has left keeps its cards and is played out (#256).** The
   obvious answer — delete the seat — is ruled out by the first invariant this
   game has: hands plus deck plus pile come to 52, and a seat with a hand in it
@@ -864,7 +876,7 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Header row (`TableHeader`) | the cog, invite glyph, rules, leave | Yes, for a control rather than a table fact. |
+| Header row (`TableHeader`) | the cog, invite glyph, rules, the door out | Yes, for a control rather than a table fact. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
 | Above the hand, right | `SunnyCallOffer` | **No** (#257). The middle of that box is where your own `HelpShout` rises, and the left is free. |
 | Top of the screen | the Sunny announcement | **Never.** It is the one thing at this table nobody may miss, which is exactly why a refused move answers against the hand instead (#99). |

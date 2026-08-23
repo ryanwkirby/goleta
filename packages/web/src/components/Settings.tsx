@@ -14,7 +14,7 @@ import { useState } from "react";
 import type { AutopilotMode, DealerMode, HouseRules } from "@goleta/engine";
 
 import { AutopilotPicker } from "./Autopilot.tsx";
-import { HintsToggle } from "./Help.tsx";
+import { HintsRow } from "./Help.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
 
@@ -376,7 +376,7 @@ export function SettingsCog({
           >
             <div className="flex flex-col gap-4">
               <SectionHeading>Your settings</SectionHeading>
-              <HintsToggle on={hints} onChange={onHints} />
+              <HintsRow on={hints} onChange={onHints} />
               {/* Both halves of *yours* clear the bar #188 set: they belong to one
                   player and change nothing about the room. Neither is private —
                   hints are shouted (#187) and an autopiloted seat carries a

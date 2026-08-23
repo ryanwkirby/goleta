@@ -26,6 +26,13 @@
      after it, so the two figures move together. */
   --animate-move-refusal: move-refusal 1.8s ease-out forwards;
 
+  /* What the sort just became, said once and taken away again (#328). The same
+     shape as the refusal above — in, held, out, all of it in the one animation,
+     so there is no timer in the component to fall out of step with — on
+     `help-offer`'s figures, because it is the same quarter-rem rise on the same
+     row of small print. */
+  --animate-sort-said: sort-said 2.8s cubic-bezier(0.22, 0.72, 0.3, 1) both;
+
   /* The phone on the rotate panel, showing which way it wants to go. */
   --animate-rotate-hint: rotate-hint 2.6s ease-in-out infinite;
 
@@ -171,6 +178,29 @@
   }
 }
 
+/* The sort, saying what it just became. `help-offer` rising in, held for a
+   couple of seconds, then the same rise run backwards — it slides back down the
+   quarter rem it came up and fades out, rather than simply stopping being
+   drawn. Quicker out than in, so leaving never looks like hesitating. */
+@keyframes sort-said {
+  0% {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
 /* The answer to a mis-tap, arriving and leaving on its own. In over ~145ms,
    held for a second and a half, out over ~215ms — quick enough at both ends
    that it reads as a flick rather than a thing that has to be waited out, and
@@ -273,6 +303,20 @@
       opacity: 0;
     }
     to {
+      opacity: 1;
+    }
+  }
+
+  /* The rise goes, the fade stays, the couple of seconds are untouched. Without
+     a fade there would be nothing at all to say the words had just arrived —
+     the same reasoning as `help-offer` above. */
+  @keyframes sort-said {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    15%,
+    85% {
       opacity: 1;
     }
   }

@@ -40,9 +40,10 @@ export function App() {
   const [hints, setHints] = useState(wantsHints);
   const watching = mode !== "play";
 
-  // First time in, explain the game before the lobby — everything except the Sunny
-  // Rule, which people meet by having it called on them. Not for a watcher:
-  // `markRulesSeen` would be the one thing a watching browser wrote to storage.
+  // First time in, explain the game before the lobby — everything except how the
+  // Sunny Rule actually works, which people meet by having it called on them.
+  // Not for a watcher: `markRulesSeen` would be the one thing a watching browser
+  // wrote to storage.
   useEffect(() => {
     if (room && !seatedOnce && !watching) {
       setSeatedOnce(true);
@@ -90,6 +91,10 @@ export function App() {
             ctaLabel={room.status === "lobby" ? "Continue" : "Play"}
             hints={hints}
             onChooseHints={chooseHints}
+            // So the screen never describes a rule this table has switched off
+            // (#249). Reachable only with a room today, and the default is the
+            // game as written for when it isn't.
+            houseRules={room.houseRules}
           />
         </div>
       );

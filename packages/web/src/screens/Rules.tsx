@@ -1,12 +1,22 @@
 import type { ReactNode } from "react";
 
+import { DEFAULT_HOUSE_RULES, type HouseRules } from "@goleta/engine";
+
 import { HintsToggle } from "../components/Help.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 
 /** Headlines carry the game on their own — read as a list they are the whole
- * thing in five lines. The sentence under each is for the second read, or when
- * somebody at the table asks (#195). */
-const RULES: { key: string; headline: ReactNode; detail: ReactNode }[] = [
+ * thing in six lines. The sentence under each is for the second read, or when
+ * somebody at the table asks (#195).
+ *
+ * `when` is what a table has to be playing for the line to be drawn. Absent
+ * means always. */
+const RULES: {
+  key: string;
+  headline: ReactNode;
+  detail: ReactNode;
+  when?: (rules: HouseRules) => boolean;
+}[] = [
   {
     key: "keep",
     headline: (
@@ -63,6 +73,26 @@ const RULES: { key: string; headline: ReactNode; detail: ReactNode }[] = [
     detail:
       "An 8 plays on anything, and after playing one, you get to name the suit. Hint: Look at the cards of the players next to you before choosing.",
   },
+  {
+    key: "sunny",
+    headline: (
+      <>
+        People might try to <em>cheat</em>.
+      </>
+    ),
+    // It was a tinted paragraph hanging off the bottom of the list until #249 —
+    // the only thing on the screen you could not open, so it read as a footnote
+    // about the rule this whole game is built around, and it was shown to tables
+    // that had switched it off.
+    //
+    // It stays an allusion. **You meet the Sunny Rule by having it called on
+    // you**, and `SunnyExplainer` teaches the whole mechanic at that moment,
+    // when it sticks — so this names no window, no naming of a card, no
+    // punishment card and no lockout. Nothing here may make that redundant.
+    detail:
+      "Don't draw cards unless you're forced to. If someone's cheating, you can shine sunlight ☀️ on them to call them out.",
+    when: (rules) => rules.sunny,
+  },
 ];
 
 /**
@@ -101,12 +131,18 @@ function Rule({ headline, detail }: { headline: ReactNode; detail: ReactNode }) 
 }
 
 /**
- * What a new player is told on their way in. **Five headlines, collapsed**
- * (#196) — it used to be a wall of text on the first screen anybody sees, and a
- * screen that opened with one rule expanded would say which one matters most.
+ * What a new player is told on their way in. **Headlines, collapsed** (#196) —
+ * it used to be a wall of text on the first screen anybody sees, and a screen
+ * that opened with one rule expanded would say which one matters most.
  *
- * The Sunny Rule gets an allusion and nothing more: you meet it by having it
- * called on you, and `SunnyExplainer` teaches it when it will stick.
+ * **Six of them when the table plays the Sunny Rule, five when it doesn't**
+ * (#249). Absent is the plainest way to say a table isn't playing something —
+ * a line saying so would describe a lesser game. The Sunny line is still an
+ * allusion and nothing more: you meet that rule by having it called on you, and
+ * `SunnyExplainer` teaches it when it will stick.
+ *
+ * Where there is no table to ask — the screen is reachable before one exists —
+ * it describes the game as written, which includes the Sunny Rule.
  *
  * **The hints offer is a toggle, and it is here every time** (#187). It says
  * nothing about the mechanism and says the one thing that matters: switching it
@@ -120,13 +156,19 @@ export function Rules({
   ctaLabel = "Got it",
   hints,
   onChooseHints,
+  houseRules = DEFAULT_HOUSE_RULES,
 }: {
   onDone: () => void;
   ctaLabel?: string;
   /** Whether the table is marking up your playable cards right now. */
   hints: boolean;
   onChooseHints: (wanted: boolean) => void;
+  /** What this table is playing, so the screen does not describe a rule nobody
+   * here can use. Defaults to the game as written. */
+  houseRules?: HouseRules;
 }) {
+  const rules = RULES.filter((rule) => !rule.when || rule.when(houseRules));
+
   return (
     <Panel
       // Definite rather than `max-h-full`: this panel's parent is sized by `flex-1`
@@ -142,17 +184,13 @@ export function Rules({
         <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
 
         <ol className="mt-4">
-          {RULES.map((rule) => (
+          {rules.map((rule) => (
             <li key={rule.key}>
               <Rule headline={rule.headline} detail={rule.detail} />
             </li>
           ))}
         </ol>
 
-        <p className="mt-4 rounded-xl bg-white/5 p-3 text-sm text-white/70">
-          Don't draw cards unless you're forced to. If someone's acting shady, you can call them out
-          — shine some sunlight on the situation. ☀️
-        </p>
       </div>
 
       {/* The last decision before the first hand, so it must never be below the

@@ -77,6 +77,7 @@ const table = (overrides: Partial<GameView> = {}): GameView =>
     turnPlayerId: "p1",
     phase: { kind: "action" },
     youMustPlay: false,
+    canEndTurn: false,
     status: "playing",
     winnerId: null,
     ...overrides,
@@ -129,6 +130,26 @@ describe("what the table is waiting for", () => {
     expect(
       watching({ phase: { kind: "over" }, status: "over", winnerId: "p2", waitingOn: null }),
     ).toBe("Bo wins, still holding cards.");
+  });
+
+  // The line that told you to draw after your third draw, an inch above the only
+  // control left to press (#333). The two halves of `canEndTurn` read the same,
+  // and so does a hand holding a play — the prompt must not separate an honest
+  // end from a dishonest one (#260).
+  it("stops telling you to draw once the turn has nowhere left to go", () => {
+    const helped = (overrides: Partial<GameView> = {}): string =>
+      turnPrompt(table({ canEndTurn: true, ...overrides }), nameOf, true);
+
+    expect(helped()).toBe("Your turn — no draws left.");
+    expect(helped({ youMustPlay: true })).toBe("Your turn — no draws left.");
+  });
+
+  it("says nothing of the sort with hints off, or with draws still to take", () => {
+    expect(turnPrompt(table({ canEndTurn: true }), nameOf, false)).toBe("Your turn.");
+    expect(turnPrompt(table({ canEndTurn: false }), nameOf, true)).toBe("Nothing matches. Draw a card.");
+    expect(turnPrompt(table({ canEndTurn: false, youMustPlay: true }), nameOf, true)).toBe(
+      "Your turn — you have a card that matches, so you have to play it.",
+    );
   });
 
   // Reduced motion plans no flights at all, so nothing is ever mid-deal there —

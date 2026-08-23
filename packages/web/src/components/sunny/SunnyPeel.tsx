@@ -65,6 +65,7 @@ export function SunnyPeel({
   callerName,
   targetName,
   irl = false,
+  deckSide = "left",
 }: {
   evidence: SunnyEvidence;
   /** The card the caller named. Marked wherever it now happens to be. */
@@ -72,11 +73,18 @@ export function SunnyPeel({
   callerName: string;
   targetName: string;
   irl?: boolean;
+  /**
+   * Which column the deck is in, from `Piles`. Everything below hangs off the
+   * card in play, so both pieces have to mirror when the columns do (#259).
+   */
+  deckSide?: "left" | "right";
 }) {
   const { inPlay, since, activeSuit } = evidence;
   // They may have gone on to play the very card they stand accused of holding.
   const buried = since.some((card) => card.id === named.id);
   const suitNote = activeSuit === inPlay.suit ? "" : `, with ${SUIT_LABEL[activeSuit]} called`;
+  // Away from the deck for the cards played since, over it for the card named.
+  const away = deckSide === "right" ? -1 : 1;
 
   return (
     <>
@@ -96,10 +104,18 @@ export function SunnyPeel({
 
       {/* Played since the offence, fanned off the top, oldest first. The window
           shuts on the next player's first action, so there is rarely more than
-          one card up here and often none. */}
+          one card up here and often none.
+
+          It fans into the outer margin of the row — the side the deck is *not*
+          on — so it never lands on top of the named card below, which needs the
+          deck's column. Both margins are the same width, the row being centred,
+          so mirroring costs it no room. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute left-full top-1/2 z-10 -ml-10 flex -translate-y-1/2"
+        className={[
+          "pointer-events-none absolute top-1/2 z-10 flex -translate-y-1/2",
+          away === 1 ? "left-full -ml-10" : "right-full -mr-10",
+        ].join(" ")}
       >
         {since.map((card, index) => (
           <span
@@ -110,8 +126,8 @@ export function SunnyPeel({
             ].join(" ")}
             style={
               {
-                "--peel-from": `calc(-3rem - ${index} * 0.75rem)`,
-                "--peel-tilt": `${(index + 1) * 5}deg`,
+                "--peel-from": `calc(${away * -3}rem - ${away * index} * 0.75rem)`,
+                "--peel-tilt": `${away * (index + 1) * 5}deg`,
                 ...(card.id === named.id ? { "--peel-opacity": 1 } : {}),
               } as CSSProperties
             }
@@ -128,18 +144,18 @@ export function SunnyPeel({
       {/* Still in their hand, so it is shown beside the card it was supposed to be
           played on. The pairing is the whole message.
 
-          `right-full` puts it over the column to the left of the card in play,
-          which is the draw pile, which `Piles` fades to 25% for exactly this.
-          Swap those two columns and this hangs off the row instead: 68px plus
-          `mr-6` off a 216px group centred on a 393px phone lands at −3.5px, and
-          left overflow does not scroll — so the peel has to mirror with them
-          (#259). */}
+          It goes over the **deck's** column, which `Piles` fades to 25% for
+          exactly this — so it follows `deckSide` rather than picking a hand.
+          Hung off the wrong side it does not overflow gracefully: 68px plus the
+          gap, off a 216px group centred on a 393px phone, lands at −3.5px, and
+          left overflow does not scroll (#259). The margin is the row's own
+          `gap-6`, so the card starts at the deck's near edge either way. */}
       {buried ? null : (
         <span
           aria-hidden
           className={[
-            "pointer-events-none absolute right-full top-1/2 z-10 mr-6",
-            "-translate-y-1/2 animate-peel-mark",
+            "pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 animate-peel-mark",
+            away === 1 ? "right-full mr-6" : "left-full ml-6",
           ].join(" ")}
         >
           <Marked card={named} label="named" size="md" lift irl={irl} />

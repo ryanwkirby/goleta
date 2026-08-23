@@ -10,6 +10,11 @@
  *   identically for a wrong call and a right one (#63).
  * - **The badge names a suit only when somebody chose one** (#76, #150).
  * - **A five-second reshuffle gates nothing**, least of all this pile (#209).
+ *
+ * **Which column the deck is in is the caller's** (#259). The upright phone puts
+ * it on the right, under the thumb that taps; the shared table screen must not
+ * move, because that board is read from four sides by people who never touch it
+ * and there is no right hand on a screen lying flat.
  */
 
 import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
@@ -50,6 +55,7 @@ export function Piles({
   irl = false,
   size = "lg",
   turn = 0,
+  deckSide = "left",
 }: {
   game: GameView;
   canDraw: boolean;
@@ -57,6 +63,13 @@ export function Piles({
   peel?: Peel | null;
   irl?: boolean;
   size?: Extract<CardSize, "lg" | "xl">;
+  /**
+   * Which side the deck sits on. `left` for the shared screen, which is one
+   * design read from four sides and has no near hand; `right` for the upright
+   * phone, where the deck is the only one of the two anybody touches and it was
+   * under the hand holding the phone rather than the one tapping (#259).
+   */
+  deckSide?: "left" | "right";
   /**
    * How far to turn the two bits of *writing* on these piles, so they read from
    * wherever the shared screen is facing (#160). Zero on every phone. The cards
@@ -78,14 +91,23 @@ export function Piles({
 
   // Everything that isn't the evidence steps back while the peel is up. It also
   // keeps the fan legible where it overhangs the deck: `SunnyPeel` hangs the
-  // named card off the card in play at `right-full`, i.e. over whichever column
-  // is to its left, so the peel's geometry depends on the deck being that one
-  // (#259). Nothing here moves or unmounts, so every anchor stays where it was.
+  // named card over whichever column the deck is in, which is why it is handed
+  // `deckSide` too. Nothing here moves or unmounts, so every anchor stays where
+  // it was.
   const aside = peel ? "opacity-25 transition-opacity duration-300" : "transition-opacity";
   const pileBox = size === "xl" ? "h-44 w-33 rounded-2xl" : "h-32 w-24 rounded-xl";
 
   return (
-    <div className="flex items-center justify-center gap-6">
+    // Reversed rather than reordered: the deck stays first in the DOM, so it is
+    // still the first thing a screen reader meets and still the first tab stop,
+    // and only the picture changes. Anchors are measured off the box, so a
+    // flight follows the column wherever it is drawn.
+    <div
+      className={[
+        "flex items-center justify-center gap-6",
+        deckSide === "right" ? "flex-row-reverse" : "",
+      ].join(" ")}
+    >
       <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
         {/* Tappable whenever it's your turn, playable card in hand or not. First
             rule in the header above, and the one most often "fixed". */}
@@ -131,7 +153,7 @@ export function Piles({
               className={[pileBox, "border border-dashed border-white/15"].join(" ")}
             />
           )}
-          {peel ? <SunnyPeel {...peel} irl={irl} /> : null}
+          {peel ? <SunnyPeel {...peel} irl={irl} deckSide={deckSide} /> : null}
           {/* One badge, two things it can say, in the same place either way — so an
               answer arriving fills the mark in rather than putting a badge on the
               board out of nowhere. At the pile because that is where the decision

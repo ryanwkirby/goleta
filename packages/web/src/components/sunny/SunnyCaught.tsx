@@ -117,7 +117,7 @@ export function SunnyCaught({
 
         <div className="shrink-0 p-5 pt-0">
           <Button variant="primary" full onClick={onDone}>
-            Take my medicine
+            Take my penalty
           </Button>
         </div>
       </div>

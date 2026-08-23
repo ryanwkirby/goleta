@@ -26,6 +26,10 @@ interface RunOptions {
   seed: number;
   /** Chance in a hundred that a bot draws on purpose while holding a play. */
   mischief?: number;
+  /** Chance in a hundred that a drawn-out turn is ended on purpose while holding
+   * a play (#260) — the second way to commit the Sunny offence, and the one a
+   * bot never commits. */
+  bluff?: number;
   /** Chance in a hundred of an accusation on spec. Bots only call violations they
    * have caught, so a wrong call has to be made deliberately. */
   slander?: number;
@@ -43,6 +47,8 @@ interface RunResult {
   /** Calls a bot chose to make, as against the ones the harness forced. */
   botCalls: number;
   wrongBotCalls: number;
+  /** Turns the harness ended dishonestly, which is the position #260 is about. */
+  bluffs: number;
 }
 
 const waitingOn = (state: GameState): PlayerId | null => {
@@ -63,6 +69,7 @@ const runGame = ({
   players,
   seed,
   mischief = 0,
+  bluff = 0,
   slander = 0,
   stepCap = 5000,
   options = DEFAULT_OPTIONS,
@@ -77,6 +84,7 @@ const runGame = ({
   let correctCalls = 0;
   let botCalls = 0;
   let wrongBotCalls = 0;
+  let bluffs = 0;
 
   /** Rolled once and remembered, the same bargain the server strikes. */
   let verdict: { drawerId: PlayerId; firstDrawnId: CardId | null; call: boolean } | null = null;
@@ -107,6 +115,22 @@ const runGame = ({
       if (player && roll < mischief && legalCards(state, player).length > 0) {
         return {
           intent: { type: "drawCard", playerId: player.id },
+          deliberateFoul: true,
+          fromBot: false,
+        };
+      }
+    }
+
+    // "I'm done" pressed on a hand that has something playable in it (#260). It is
+    // a lie and the engine permits it silently, exactly as it permits a reach for
+    // the deck — and it is the second way to commit the offence.
+    if (bluff > 0 && state.phase.kind === "action" && waiting !== null && !canStillDraw) {
+      const player = playerById(state, waiting);
+      const [roll, next] = randomInt(rng, 100);
+      rng = next;
+      if (player && roll < bluff && legalCards(state, player).length > 0) {
+        return {
+          intent: { type: "endTurn", playerId: player.id },
           deliberateFoul: true,
           fromBot: false,
         };
@@ -158,6 +182,7 @@ const runGame = ({
     if (!result.ok) break;
     state = result.state;
     events.push(...result.events);
+    if (move.intent.type === "endTurn" && move.deliberateFoul) bluffs += 1;
 
     for (const event of result.events) {
       if (event.type !== "sunnyCalled") continue;
@@ -172,13 +197,18 @@ const runGame = ({
     expect(present, `a card was lost or duplicated by ${move.intent.type}`).toHaveLength(total);
     expect(new Set(present).size).toBe(total);
 
-    // If you can play, you must: an honest draw comes only from a hand with nothing
-    // playable in it.
-    if (move.intent.type === "drawCard" && !move.deliberateFoul) {
+    // If you can play, you must: an honest draw — or an honest end to a turn —
+    // comes only from a hand with nothing playable in it. Bots never break this;
+    // only the harness does, on purpose.
+    if (
+      (move.intent.type === "drawCard" || move.intent.type === "endTurn") &&
+      !move.deliberateFoul
+    ) {
       const player = playerById(before, move.intent.playerId);
-      expect(player && legalCards(before, player), "a bot drew while holding a play").toHaveLength(
-        0,
-      );
+      expect(
+        player && legalCards(before, player),
+        `a bot ${move.intent.type === "drawCard" ? "drew" : "ended its turn"} while holding a play`,
+      ).toHaveLength(0);
     }
 
     // A card turned up off the deck is natural, 8 or not.
@@ -200,7 +230,7 @@ const runGame = ({
     if (state.status === "over") expect(state.phase.kind).toBe("over");
   }
 
-  return { state, steps, events, sunnyCalls, correctCalls, botCalls, wrongBotCalls };
+  return { state, steps, events, sunnyCalls, correctCalls, botCalls, wrongBotCalls, bluffs };
 };
 
 describe("full games", () => {
@@ -251,6 +281,32 @@ describe("full games", () => {
     // As do both ways a card comes off the deck.
     expect(turnUps.sunnyTouched).toBeGreaterThan(0);
     expect(turnUps.recycle).toBeGreaterThan(0);
+  });
+
+  /**
+   * The second way to commit the offence (#260). The turn no longer ends itself
+   * after a third fruitless draw, so **I'm done** can be pressed on a hand with
+   * a play in it — a lie the engine permits silently, exactly as it permits a
+   * reach for the deck.
+   *
+   * The three invariants have to survive it, and the interesting one is *forced
+   * play is never skipped*: this is the second control that lets a **player**
+   * break it while the bots never do.
+   */
+  it("finish when players end drawn-out turns dishonestly", () => {
+    let bluffs = 0;
+    let calls = 0;
+    for (let seed = 1; seed <= 25; seed++) {
+      const run = runGame({ players: 4, seed: seed * 15485863, bluff: 90, slander: 4 });
+      expect(run.state.status, `seed ${seed}: unfinished after ${run.steps}`).toBe("over");
+      expect(run.state.winnerId).not.toBeNull();
+      bluffs += run.bluffs;
+      calls += run.sunnyCalls;
+    }
+    // The runs have to have actually reached the position — a drawn-out turn
+    // holding a play — or they proved nothing.
+    expect(bluffs).toBeGreaterThan(0);
+    expect(calls).toBeGreaterThan(0);
   });
 
   it("play out identically from the same seed", () => {

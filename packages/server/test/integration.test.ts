@@ -219,6 +219,10 @@ const drive = async (client: TestClient): Promise<void> => {
         t: "intent",
         intent: { type: "playCard", playerId: "", cardId: view.legalCardIds[0] as string },
       });
+    } else if (view.canEndTurn) {
+      // Stuck and drawn out, so the turn is theirs to end (#260). It no longer
+      // ends itself, which is what keeps the challenge window open.
+      client.send({ t: "intent", intent: { type: "endTurn", playerId: "" } });
     } else {
       client.send({ t: "intent", intent: { type: "drawCard", playerId: "" } });
     }
@@ -643,14 +647,18 @@ describe("what the wire carries", () => {
 
     // The bit widens exactly one message. Everything else a seat may send is
     // refused on the same line an ordinary watcher meets — it holds no cards to
-    // play, has no suit to name, and #16 keeps the accusation off a screen the
-    // whole room can read over.
+    // play, has no suit to name, #16 keeps the accusation off a screen the whole
+    // room can read over, and #260 keeps the end of a turn off it too.
     const card = screen.game?.players.find((p) => p.id === screen.game?.waitingOn)?.hand?.[0];
     const seatedOnly: ClientMessage[] = [
       { t: "intent", intent: { type: "playCard", playerId: "", cardId: card?.id ?? "x" } },
       { t: "intent", intent: { type: "chooseSuit", playerId: "", suit: "H" } },
       { t: "intent", intent: { type: "callSunny", playerId: "", cardId: card?.id ?? "x" } },
       { t: "intent", intent: { type: "surrenderCard", playerId: "", cardId: card?.id ?? "x" } },
+      // #260: it can end a turn dishonestly, and a screen in the middle of a
+      // table handing somebody a violation they never chose is exactly what the
+      // bot check on the draw already guards against.
+      { t: "intent", intent: { type: "endTurn", playerId: "" } },
       { t: "composingCall", open: true },
       { t: "help" },
       { t: "setIrl", on: false },

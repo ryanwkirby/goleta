@@ -674,6 +674,10 @@ const tableCallsSunny = (room: Room): boolean => {
  *   loud, at the table, is not the same kind of act as playing their forced
  *   card. The autopilot plays your hand; it does not make accusations for you.
  *
+ * Ending a drawn-out turn *is* forced, and is taken (#260) — the branch is
+ * reached only with no legal card, so it can never be the lie that control also
+ * permits.
+ *
  * A forced-only seat can still stall the table when it holds two legal cards.
  * That is inherent, the badge is what makes it visible, and the answer is that
  * somebody shouts through the door.
@@ -689,7 +693,13 @@ const autopilotIntent = (view: GameView, mode: AutopilotMode): Intent | null => 
 
   if (view.you === null || view.waitingOn !== view.you) return null;
   if (view.phase.kind !== "action") return null;
-  if (view.legalCardIds.length === 0) return { type: "drawCard", playerId: view.you };
+  if (view.legalCardIds.length === 0) {
+    // Drawn out and stuck, so the only lawful move left is to say so (#260). It
+    // can never be a lie from here: this branch is reached with no legal card.
+    return view.canEndTurn
+      ? { type: "endTurn", playerId: view.you }
+      : { type: "drawCard", playerId: view.you };
+  }
   if (view.legalCardIds.length === 1) {
     return { type: "playCard", playerId: view.you, cardId: view.legalCardIds[0]! };
   }

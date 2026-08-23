@@ -817,3 +817,104 @@ describe("the evidence a judged call sends", () => {
     expect(JSON.stringify(state.challenge)).not.toContain("evidence");
   });
 });
+
+/** Three draws that leave `a` drawn out and holding a play. */
+const drawnOutHoldingAPlay = (): GameState => {
+  let state = table({
+    hands: { a: ["2C"], b: ["9D"], c: ["4H"] },
+    top: "5S",
+    // Drawn from the end: JC, 10H, then the 5D — which does match. The two at the
+    // bottom stay put, so the seats after `a` still have a deck to reach for.
+    drawPile: ["7C", "6D", "5D", "10H", "JC"],
+  });
+  state = draw(state, "a");
+  state = draw(state, "a");
+  state = draw(state, "a");
+  expect(handOf(state, "a")).toEqual(["2C#1", "JC#1", "10H#1", "5D#1"]);
+  return state;
+};
+
+/**
+ * The second way to commit the offence (#260).
+ *
+ * The turn used to end itself after a third fruitless draw, which shut the
+ * challenge window on the reach that had just opened it. It waits for the player
+ * now — and **I'm done** pressed on a hand that has something playable in it is
+ * a lie, permitted silently exactly as reaching for the deck is.
+ */
+describe("ending a turn you should have played on", () => {
+  it("is permitted with no warning, and recorded", () => {
+    let state = drawnOutHoldingAPlay();
+    // The three draws were honest — they were stuck each time they reached — so
+    // nothing is recorded against them yet.
+    expect(state.challenge?.violation).toBeNull();
+
+    state = must(state, { type: "endTurn", playerId: "a" });
+    // No refusal, no hint, and the turn passes as asked.
+    expect(currentPlayer(state).id).toBe("b");
+    expect(state.challenge?.violation).not.toBeNull();
+  });
+
+  it("is judged against the hand as it stood when they pressed it", () => {
+    let state = drawnOutHoldingAPlay();
+    state = must(state, { type: "endTurn", playerId: "a" });
+
+    // The 5D is what makes it an offence, and it only reached their hand on the
+    // third draw — so a call has to be able to name it.
+    expect(state.challenge?.reach.hand.map((c) => c.id)).toContain("5D#1");
+    expect(state.challenge?.reach.activeSuit).toBe("S");
+    expect(state.challenge?.reach.topRank).toBe("5");
+
+    state = call(state, "b", "5D");
+    expect(state.phase.kind).toBe("sunnyPlay");
+  });
+
+  it("resolves the way a reach does, and keeps the cards they drew legally", () => {
+    const total = allCardIds(drawnOutHoldingAPlay()).length;
+    let state = must(drawnOutHoldingAPlay(), { type: "endTurn", playerId: "a" });
+
+    state = call(state, "b", "5D");
+    // Step one: the play they skipped.
+    state = play(state, "a", "5D");
+    // Step two: a punishment card.
+    state = surrender(state, "a", "2C");
+
+    // Step three takes back what was drawn *illegally*, and nothing was: the three
+    // draws were honest, so they keep them.
+    expect(handOf(state, "a")).toEqual(["JC#1", "10H#1"]);
+    expect(allCardIds(state)).toHaveLength(total);
+    expect(new Set(allCardIds(state)).size).toBe(total);
+  });
+
+  it("is indistinguishable from an honest one, before and after", () => {
+    // The same three draws, but nothing playable arrives.
+    let honest = table({
+      hands: { a: ["2C"], b: ["9D"], c: ["4H"] },
+      top: "5S",
+      drawPile: ["7C", "6D", "3D", "10H", "JC"],
+    });
+    honest = draw(honest, "a");
+    honest = draw(honest, "a");
+    honest = draw(honest, "a");
+    honest = must(honest, { type: "endTurn", playerId: "a" });
+
+    const dishonest = must(drawnOutHoldingAPlay(), { type: "endTurn", playerId: "a" });
+
+    // A window is open on both, and everything a viewer is sent about them is the
+    // same shape. Whether a call would land never leaves the server (#50).
+    for (const state of [honest, dishonest]) {
+      expect(state.challenge?.drawerId).toBe("a");
+      expect(state.challenge?.resolved).toBe(false);
+      expect(state.challenge?.reach.hand).toHaveLength(4);
+    }
+    expect(honest.challenge?.violation).toBeNull();
+    expect(dishonest.challenge?.violation).not.toBeNull();
+  });
+
+  it("does not count against anybody's lockout, because nothing was drawn", () => {
+    const before = drawnOutHoldingAPlay();
+    const after = must(before, { type: "endTurn", playerId: "a" });
+    // A lockout is measured in draws at the table. Ending a turn is not one.
+    expect(after.totalDraws).toBe(before.totalDraws);
+  });
+});

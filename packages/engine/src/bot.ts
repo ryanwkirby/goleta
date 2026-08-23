@@ -167,7 +167,15 @@ export const decideBotIntent = (view: GameView, { callSunny = false }: BotOption
   if (view.phase.kind === "action" || view.phase.kind === "sunnyPlay") {
     const card = pickPlay(view);
     if (card) return { type: "playCard", playerId: me, cardId: card.id };
-    if (view.phase.kind === "action") return { type: "drawCard", playerId: me };
+    // Genuinely stuck and drawn out, so the turn is over and somebody has to say
+    // so (#260). **Only ever when stuck**: a bot pressing it while holding a play
+    // would be a bot handed a Sunny violation it never chose, which is the thing
+    // the shared screen's bot check already exists to prevent.
+    if (view.phase.kind === "action") {
+      return view.canEndTurn
+        ? { type: "endTurn", playerId: me }
+        : { type: "drawCard", playerId: me };
+    }
   }
 
   return null;

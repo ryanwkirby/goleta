@@ -41,6 +41,13 @@ export interface HandControls {
   refusal: GoletaError | null;
   canDraw: boolean;
   onDraw: () => void;
+  /**
+   * Whether the turn can be declared over, straight off `GameView` (#260). It
+   * says nothing about your cards, and pressing it while you hold a play is
+   * permitted with no warning.
+   */
+  canEndTurn: boolean;
+  onEndTurn: () => void;
   mine: boolean;
   handSort: HandSort;
   onCycleSort: () => void;

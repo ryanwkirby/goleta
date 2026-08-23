@@ -12,7 +12,14 @@
  * `GameEvent`s need no redaction: every one describes something already public.
  */
 
-import { legalCards, mustPlay, playerById, sunnyLockedDraws, topCard } from "./rules.ts";
+import {
+  legalCards,
+  mustPlay,
+  playerById,
+  sunnyLockedDraws,
+  topCard,
+  turnDrawnOut,
+} from "./rules.ts";
 import type {
   Card,
   CardId,
@@ -79,6 +86,16 @@ export interface GameView {
   /** Your own playable cards. Never computed for anyone else's hand. */
   legalCardIds: CardId[];
   youMustPlay: boolean;
+  /**
+   * Whether *you* may end your turn (#260) — three draws, or a deck that cannot
+   * be replenished. It says nothing about your cards: it is exactly as true when
+   * the third draw handed you a play as when it left you stuck, which is what
+   * makes ending a turn dishonestly possible and indistinguishable.
+   *
+   * On the wire rather than re-derived, so the one condition lives in `rules.ts`
+   * and the bots and the browser read the same answer.
+   */
+  canEndTurn: boolean;
   status: "playing" | "over";
   winnerId: PlayerId | null;
   turnNumber: number;
@@ -139,6 +156,11 @@ export const redact = (state: GameState, viewerId: PlayerId | null): GameView =>
     sunnyLockedDraws: viewer ? sunnyLockedDraws(state, viewer.id) : 0,
     legalCardIds: viewer ? legalCards(state, viewer).map((c) => c.id) : [],
     youMustPlay: viewer ? mustPlay(state, viewer) : false,
+    canEndTurn:
+      viewer !== undefined &&
+      state.phase.kind === "action" &&
+      state.players[state.turnIndex]?.id === viewer.id &&
+      turnDrawnOut(state),
     status: state.status,
     winnerId: state.winnerId,
     turnNumber: state.turnNumber,

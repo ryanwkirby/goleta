@@ -59,11 +59,20 @@ Draw one card from the deck, into your hand.
 - If that card gives you a play, **you must play it** — the must-play rule
   doesn't pause just because you were mid-draw. Your turn then ends.
 - If you still can't play, draw again.
-- **You may draw at most 3 cards in a turn.** If you're still stuck after the
-  third, your turn ends and you keep all three.
+- **You may draw at most 3 cards in a turn.** After the third, your turn does not
+  end on its own: **you end it**, by saying you're done. You keep all three.
 
 So three draws only happen when you're genuinely, thoroughly stuck — and that's
-the best turn you can have. The card most likely to spoil one is an
+the best turn you can have.
+
+**Declaring the end of your turn is a move like any other, and it can be a
+lie.** If the third card gave you a play, the must-play rule says you have to
+play it — and saying you're done instead is a
+[Sunny Rule](#the-sunny-rule) violation exactly as reaching for the deck would
+have been. Nothing stops you. The table has to catch you.
+
+The same is true when the deck has run out and there is nothing left to recycle
+back into it: your turn is over, and ending it is yours to say. The card most likely to spoil one is an
 [8](#eights-are-wild), which is playable on anything and so always cuts a draw
 short.
 
@@ -147,6 +156,18 @@ It is on unless somebody says otherwise.
 If you take a card from the deck when you had a playable card in your hand, any
 other player still in the game can call **"Sunny Rule!"** on you.
 
+**There are two ways to commit it**, and they are the same offence:
+
+- **Reaching for the deck** while holding a play.
+- **Saying you're done** while holding a play, at the end of a turn you have
+  drawn out. The three draws may have been perfectly honest — you were stuck
+  every time you reached — and it is the card the *third* one gave you that
+  makes ending the turn an offence. A call is judged against your hand as it
+  stood when you said it.
+
+Nothing on any screen tells the two apart, and nothing tells an honest end from
+a dishonest one.
+
 ### Calling it
 
 The window opens the moment a card is drawn and closes when **the next player
@@ -160,7 +181,12 @@ rest are too late, and cost them nothing.
 When somebody draws, a small sun appears beside them — and stays beside them
 until the window shuts, even once play has moved on. Tap it to call. That it is
 there at all says nothing about whether you'd be right; it means only that they
-drew, and it looks exactly the same whether they were allowed to or not.
+reached, and it looks exactly the same whether they were allowed to or not.
+
+**A turn ended after three draws keeps the window open for as long as the player
+takes over it**, which is the point: the third reach is the hardest one to
+judge, because by then they are holding three more cards than the table has been
+reading.
 
 ### Naming the card
 

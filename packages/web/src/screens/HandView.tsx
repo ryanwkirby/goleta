@@ -3,6 +3,7 @@ import { useRef } from "react";
 import type { Suit } from "@goleta/engine";
 
 import { Hand, HandSortButton } from "../components/Hand.tsx";
+import { EndTurnButton } from "../components/EndTurn.tsx";
 import { HandFrame, SunnyCallOffer } from "../components/HandFrame.tsx";
 import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
@@ -112,6 +113,17 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
             onCall={() => onStartAccusing(sunnyTarget)}
             className="left-2 top-2"
           />
+        ) : null}
+
+        {/* The one moment the table is waiting for something with a button attached
+          (#260). Absolute and centred under the strip, so it never moves the
+          cards and is nowhere near the draw pile at the strip's right-hand end —
+          which matters more here than anywhere, since this control can now commit
+          the offence a mis-tap into the deck would. */}
+        {hand.canEndTurn ? (
+          <div className="pointer-events-none absolute left-1/2 top-2 z-20 -translate-x-1/2">
+            <EndTurnButton onEndTurn={hand.onEndTurn} className="pointer-events-auto" />
+          </div>
         ) : null}
 
         {/* Both pickers **dock** rather than being laid over the column: overlaying

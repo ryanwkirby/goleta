@@ -348,6 +348,15 @@ export function useTableState({
   const drawCard = (): void =>
     send({ t: "intent", intent: { type: "drawCard", playerId: me } });
 
+  /**
+   * The turn no longer ends itself (#260), so somebody has to say so. Offered on
+   * `game.canEndTurn` and nothing else — that flag is the engine's one condition
+   * and it says nothing about your hand, so this button is the same button
+   * whether the third draw left you stuck or handed you a play.
+   */
+  const endTurn = (): void =>
+    send({ t: "intent", intent: { type: "endTurn", playerId: me } });
+
   /** Written once and passed to whichever screen is up. */
   const sunnyExplained = (): void => {
     markSunnySeen();
@@ -381,6 +390,8 @@ export function useTableState({
     refusal,
     canDraw,
     onDraw: drawCard,
+    canEndTurn: game.canEndTurn && !finished,
+    onEndTurn: endTurn,
     mine,
     handSort,
     onCycleSort: cycleSort,

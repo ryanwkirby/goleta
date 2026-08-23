@@ -98,6 +98,10 @@ export const play = (state: GameState, playerId: PlayerId, spec: string): GameSt
 export const draw = (state: GameState, playerId: PlayerId): GameState =>
   must(state, { type: "drawCard", playerId });
 
+/** "I'm done" (#260). The turn no longer ends itself, so the tests say so too. */
+export const endTurn = (state: GameState, playerId: PlayerId): GameState =>
+  must(state, { type: "endTurn", playerId });
+
 export const surrender = (state: GameState, playerId: PlayerId, spec: string): GameState =>
   must(state, { type: "surrenderCard", playerId, cardId: card(spec).id });
 

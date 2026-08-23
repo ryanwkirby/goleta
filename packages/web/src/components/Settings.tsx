@@ -15,6 +15,7 @@ import type { AutopilotMode, DealerMode, HouseRules } from "@goleta/engine";
 
 import { AutopilotPicker } from "./Autopilot.tsx";
 import { HintsRow } from "./Help.tsx";
+import { SettingSwitch } from "./SettingSwitch.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
 import { LAYER } from "../lib/layers.ts";
@@ -125,24 +126,16 @@ export function ShuffleSeatsToggle({
   onChange: (on: boolean) => void;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-white">Musical chairs</p>
-        <p className="text-xs text-white/40">
+    <SettingSwitch
+      label="Musical chairs"
+      blurb={
+        <>
           <em>Everyone</em> shuffles seats each game, to shake things up.
-        </p>
-      </div>
-      <Button
-        variant={on ? "primary" : "secondary"}
-        className="min-w-16 px-3 py-1.5 text-xs"
-        role="switch"
-        aria-checked={on}
-        aria-label="Musical chairs"
-        onClick={() => onChange(!on)}
-      >
-        {on ? "On" : "Off"}
-      </Button>
-    </div>
+        </>
+      }
+      on={on}
+      onChange={onChange}
+    />
   );
 }
 
@@ -221,21 +214,16 @@ export function HouseRulesPicker({
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">House rules</p>
       <ul className="mt-2 flex flex-col gap-2">
         {rows.map((row) => (
-          <li key={row.key} className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white">{row.label}</p>
-              <p className="text-xs text-white/40">{row.blurb}</p>
-            </div>
-            <Button
-              variant={row.on ? "primary" : "secondary"}
-              className="min-w-16 px-3 py-1.5 text-xs"
-              role="switch"
-              aria-checked={row.on}
-              aria-label={row.label}
-              onClick={() => onChange(row.toggle)}
-            >
-              {row.on ? "On" : "Off"}
-            </Button>
+          <li key={row.key}>
+            {/* The whole rewritten `HouseRules`, never a flipped boolean:
+                `setHouseRules` replaces `room.options` wholesale so a game already
+                dealt cannot be reached (`AGENTS.md`). */}
+            <SettingSwitch
+              label={row.label}
+              blurb={row.blurb}
+              on={row.on}
+              onChange={() => onChange(row.toggle)}
+            />
           </li>
         ))}
       </ul>

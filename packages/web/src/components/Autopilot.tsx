@@ -12,8 +12,8 @@
 
 import type { AutopilotMode } from "@goleta/engine";
 
+import { SettingSwitch } from "./SettingSwitch.tsx";
 import { TwoWay } from "./TwoWay.tsx";
-import { Button } from "./ui.tsx";
 
 /**
  * **Two answers, because the heading asks a yes/no question** (#291). It used to
@@ -184,26 +184,17 @@ export function AutopilotPicker({
       />
       <p className="mt-2 text-xs text-white/40">{BLURB[away ? "on" : "off"]}</p>
       {away ? (
-        <div className="mt-3 flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-white">Make decisions</p>
-            {/* Both answers said in the player's own voice, and which one is
-                shown follows the switch (#305). It described itself in the third
-                person — *on, it chooses too* — which is a sentence about the
-                software rather than about the thing being asked for. */}
-            <p className="text-xs text-white/40">{DECIDES[mode === "bot" ? "on" : "off"]}</p>
-          </div>
-          <Button
-            variant={mode === "bot" ? "primary" : "secondary"}
-            className="min-w-16 px-3 py-1.5 text-xs"
-            role="switch"
-            aria-checked={mode === "bot"}
-            aria-label="Make decisions"
-            onClick={() => onChange(mode === "bot" ? "forced" : "bot")}
-          >
-            {mode === "bot" ? "On" : "Off"}
-          </Button>
-        </div>
+        /* Both answers said in the player's own voice, and which one is shown
+           follows the switch (#305). It described itself in the third person —
+           *on, it chooses too* — which is a sentence about the software rather
+           than about the thing being asked for. */
+        <SettingSwitch
+          label="Make decisions"
+          blurb={DECIDES[mode === "bot" ? "on" : "off"]}
+          on={mode === "bot"}
+          onChange={(on) => onChange(on ? "bot" : "forced")}
+          className="mt-3"
+        />
       ) : null}
     </div>
   );

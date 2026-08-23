@@ -5,6 +5,7 @@
 
 import type { ShoutKind } from "@goleta/engine";
 
+import { SettingSwitch } from "./SettingSwitch.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button } from "./ui.tsx";
 import { LAYER } from "../lib/layers.ts";
@@ -201,25 +202,15 @@ export function HintsQuestion({
  */
 export function HintsRow({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-white">Tutorial mode</p>
-        {/* What you get rather than the mechanism — and the *always* is what
-            separates the standing preference from the two kinds of help you can
-            have a single turn of (#305). */}
-        <p className="text-xs text-white/40">Always show which cards are playable.</p>
-      </div>
-      <Button
-        variant={on ? "primary" : "secondary"}
-        className="min-w-16 px-3 py-1.5 text-xs"
-        role="switch"
-        aria-checked={on}
-        aria-label="Tutorial mode"
-        onClick={() => onChange(!on)}
-      >
-        {on ? "On" : "Off"}
-      </Button>
-    </div>
+    // What you get rather than the mechanism — and the *always* is what separates
+    // the standing preference from the two kinds of help you can have a single
+    // turn of (#305).
+    <SettingSwitch
+      label="Tutorial mode"
+      blurb="Always show which cards are playable."
+      on={on}
+      onChange={onChange}
+    />
   );
 }
 

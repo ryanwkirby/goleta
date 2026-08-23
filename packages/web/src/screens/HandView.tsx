@@ -4,7 +4,7 @@ import type { Suit } from "@goleta/engine";
 
 import { Hand, HandSortButton } from "../components/Hand.tsx";
 import { EndTurnButton } from "../components/EndTurn.tsx";
-import { HandFrame, SunnyCallOffer } from "../components/HandFrame.tsx";
+import { HandFrame } from "../components/HandFrame.tsx";
 import { HelpLink, HelpShout } from "../components/Help.tsx";
 import { PeekStrip } from "../components/PeekStrip.tsx";
 import { SunnyAccusePicker } from "../components/sunny/SunnyAccusePicker.tsx";
@@ -91,29 +91,22 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
         onChooseHints={onChooseHints}
         seated={game.you !== null}
         send={send}
+        // The sun sits in the strip's left cluster now, at the far end of the row
+        // from the deck (#329).
+        sunnyTargetName={sunnyTarget ? nameOf(sunnyTarget) : null}
+        onStartAccusing={() => {
+          if (sunnyTarget) onStartAccusing(sunnyTarget);
+        }}
       />
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {/* Hung under the strip at the end furthest from the deck (#189): the sun
-          used to sit *in* the strip, immediately before the draw pile, and a fat
-          target beside the deck is a mis-tap into the exact violation it
-          accuses. Absolute, so it never moves the cards underneath it.
-
-          **Left, where upright is right** (#257). The two layouts disagree here
-          and that is the answer rather than an oversight: the peek strip's draw
-          pile is at this row's right-hand end, so right-aligning it would hang
-          the sun directly beneath the deck — the one thing #189 exists to
-          prevent. Upright the piles are mid-screen and a prompt line away, so
-          the near hand wins there. `className` is the one prop the two callers
-          have always disagreed about. */}
-        {sunnyTarget ? (
-          <SunnyCallOffer
-            targetName={nameOf(sunnyTarget)}
-            lockedReaches={game.sunnyLockedReaches}
-            onCall={() => onStartAccusing(sunnyTarget)}
-            className="left-2 top-2"
-          />
-        ) : null}
+        {/* No sun hanging under the strip any more (#329). It is in the strip's
+          left cluster now — which is not #189 being undone: #189's objection was
+          that it was drawn immediately before the *draw pile* at the row's
+          right-hand end, and the cluster is the far end of the same row from the
+          deck. What the move buys is a control that does not appear and
+          disappear over the felt on every draw, in a different place depending
+          on which way up the phone is. */}
 
         {/* The one moment the table is waiting for something with a button attached
           (#260). Absolute and centred under the strip, so it never moves the

@@ -259,13 +259,8 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
 
   There is only ever one `sunnyTargetId`, so the control names them — a sun with
   *Angela* under it — which is what stops a call being a thing you do to a name
-  in a list. A nameless sun would not do. It is 44px in both layouts, it is over
-  the felt near your own cards in both, and it is nowhere near the draw pile in
-  either. It is **absolute** in both, because it must arrive with some presence
-  without moving the cards underneath it; with a wide fan it sits over a corner
-  of the outermost card, which is the cost the two bottom corners already pay
-  (#167) and a cheaper one here, since a window is only ever open on somebody
-  else's turn.
+  in a list. A nameless sun would not do. It is 44px in both layouts and nowhere
+  near the draw pile in either.
 
   **It is small print, and the target is not** (#257). #189 was right that a
   20px circle was a missed tap and it overshot on presence: a window opens on
@@ -275,13 +270,35 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   dark backing with no ring, and the 44px floor is untouched. Not amber: amber at
   this table means *the game is waiting on you* (#190), and this is not that.
 
-  **The two layouts disagree about the side, deliberately.** Upright it is
-  right-aligned, because most people are right-handed and this is the one control
-  whose window closes when somebody else moves; the piles are mid-screen and a
-  whole prompt line away, which stays true after #259 put the deck on the right.
-  Landscape keeps the **left**, because the peek strip's draw pile is at that
-  row's right-hand end and right-aligning would hang the sun directly beneath the
-  deck — the one thing #189 exists to prevent.
+  **It has stopped moving** (#329). It was drawn absolutely over the felt near
+  your own cards — pinned right just above the hand upright, hung under the peek
+  strip at its left end sideways — and a window opens on **every draw**, which is
+  most turns of most games. So the one control whose window shuts when somebody
+  else acts was the thing on the screen that flickered in and out at the edge of
+  where your eyes already were, in a different place depending on which way up
+  the phone was held. It is furniture now: **the header, top centre** upright,
+  and **the peek strip's left cluster** sideways.
+
+  Both homes satisfy #189's actual constraint, which is *away from the draw
+  pile*, and which was written about the sun drawn immediately before the deck at
+  the strip's right-hand end. The header is the full height of the column from
+  the piles; the cluster is the far end of the same row from the deck, and is the
+  only part of that row a control may take width from. So the sun being back on
+  the strip is not #189 undone — the end it was taken off is still the end it may
+  not go back to.
+
+  Two consequences worth stating. **Its place in the header is reserved whether
+  or not a window is open**, on a `flex-1` slot, so the four controls beside it
+  do not reflow when one opens — the reasoning that keeps the `min-h-7` line
+  above the hand clear (#131). And in the cluster it is drawn `inline`, glyph
+  beside name rather than above it, so it reads as one line of small print like
+  the fullscreen offer next to it: a stack there would spend the strip's height,
+  and the strip spends height out of the hand. That is a layout, exactly as the
+  side used to be. **Nothing about it varies with whether a call would land**, and
+  nothing ever will.
+
+  Only the offer moved. The missed-call count, which is yours alone, and the
+  offer of help stay where they were.
 
   Tapping it opens the picker and does not call. An accusation names a card, so
   the tap that starts one cannot be the tap that commits it — and opening the
@@ -974,9 +991,9 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Peek strip, left cluster | the cog, rules, fullscreen offer, sort, help offer, missed-call count | **Yes — this is the place.** The only part of the row allowed to wrap, so the only one a new control may take its width from. `PeekStrip.tsx` states the rule in full, once, on the cluster element. |
-| Peek strip, right end | the card in play, help asked for, prompt, draw pile | **No.** The pile has to stay reachable, and anything pushed off it wraps *the pile* onto a second row — a card's height off the hand. The sun is **not** here: #189 took it off the strip precisely because it was drawn immediately before the deck. |
-| Under the strip, left | `SunnyCallOffer` | **No.** Deliberately the far end from the deck: a fat target beside the pile is a mis-tap into the exact violation it accuses (#189). |
+| Peek strip, left cluster | the cog, rules, fullscreen offer, **the sun** (#329), sort, help offer, missed-call count | **Yes — this is the place.** The only part of the row allowed to wrap, so the only one a new control may take its width from. `PeekStrip.tsx` states the rule in full, once, on the cluster element. A control here is drawn as one line of small print — the sun takes its `inline` layout for that reason. |
+| Peek strip, right end | the card in play, help asked for, prompt, draw pile | **No.** The pile has to stay reachable, and anything pushed off it wraps *the pile* onto a second row — a card's height off the hand. The sun is **not** here: #189 took it off *this end* precisely because it was drawn immediately before the deck, and #329 put it back on the strip at the other one. |
+| Under the strip, left | — | **No.** The sun hung here from #189 until #329 moved it into the cluster; what has not changed is why it may not go near the deck at the other end — a fat target beside the pile is a mis-tap into the exact violation it accuses. |
 | Under the strip, centred | **I'm done** (#260) | **No.** The same argument in reverse: it can now *commit* the offence, so it is kept away from the deck at the strip's right-hand end. |
 | Bottom-left felt corner | the offer of help | **No** (#167). |
 | Bottom-right felt corner | the sort control | **No** (#167). |
@@ -986,10 +1003,10 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Header row (`TableHeader`) | four icons with a word under each — settings, join, rules, leave (#330) | Yes, for a control rather than a table fact. A fifth item joins the four rather than being drawn some other way. |
+| Header row (`TableHeader`) | four icons with a word under each — settings, join, rules, leave (#330) — and **the sun**, centred, in a slot that is reserved whether or not a window is open (#329) | Yes, for a control rather than a table fact. A new item joins the four rather than being drawn some other way, and anything that comes and goes reserves its place. |
 | Under the prompt | **I'm done** (#260) | **No.** A primary action, and the only thing the table is waiting for while it is up. Far from the piles above it. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
-| Above the hand, right | `SunnyCallOffer` | **No** (#257). The middle of that box is where your own `HelpShout` rises, and the left is free. |
+| Above the hand, right | — | Free since #329 took the sun to the header. The middle of that box is still where your own `HelpShout` rises; the right and left are open. |
 | Top of the screen | the Sunny announcement | **Never.** It is the one thing at this table nobody may miss, which is exactly why a refused move answers against the hand instead (#99). |
 
 **Shared table screen — `TableScreen`**

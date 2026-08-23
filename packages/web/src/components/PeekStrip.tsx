@@ -8,6 +8,7 @@ import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
 import { QrGlyph } from "./QrCode.tsx";
 import { SettingsCog } from "./Settings.tsx";
+import { SunnyCall } from "./sunny/SunnyCall.tsx";
 
 /**
  * The middle of the table, as much of it as a phone in landscape can spare — and,
@@ -26,6 +27,15 @@ import { SettingsCog } from "./Settings.tsx";
  * Everything else here is not a table fact, and is here because the alternative
  * was a row under the cards, which costs a card size (#131).
  *
+ * **The sun is back on this strip, in the cluster** (#329) — which is not #189
+ * being undone. #189's objection was the *place*: it was drawn immediately
+ * before the draw pile at the right-hand end, and a fat target beside the deck
+ * is a mis-tap into the violation it accuses. The cluster is the far end of the
+ * row from the deck, and it is the only part of the row allowed to take width.
+ * It is drawn `inline` here so it reads as one line of small print beside the
+ * fullscreen offer rather than as a stack that could push the pile onto a
+ * second row.
+ *
  * Nothing in here says anything about legality.
  */
 export function PeekStrip({
@@ -43,6 +53,8 @@ export function PeekStrip({
   onChooseHints,
   seated,
   send,
+  sunnyTargetName,
+  onStartAccusing,
 }: {
   room: RoomView;
   game: GameView;
@@ -63,6 +75,9 @@ export function PeekStrip({
   onChooseHints: (on: boolean) => void;
   seated: boolean;
   send: (message: ClientMessage) => void;
+  /** Who a call would be against, or null when no window is open (#329). */
+  sunnyTargetName: string | null;
+  onStartAccusing: () => void;
 }) {
   const { anchor, pileFace } = useMotion();
   const fullscreen = useFullscreen();
@@ -113,6 +128,30 @@ export function PeekStrip({
             onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
             // 44px of target painted out of 36px of row: a full-height line would spend
             // the cluster's slack, and it spends it out of the hand.
+            className="-my-1"
+          />
+        ) : null}
+
+        {/* The way into a call, at the far end of the row from the deck (#329),
+            and **straight after the cog rather than at the end of the cluster**.
+            The cluster wraps within itself, and these two are the only things in
+            it with a 44px floor — next to each other they share the wrapped
+            line, so a narrow phone with a window open grows the strip by 6px
+            instead of 18. Measured both ways: the sun last costs the hand a whole
+            band at 220px of cluster, and next to the cog costs it almost nothing.
+
+            One line of small print, `inline`, like the fullscreen offer below.
+            Tapping it opens the picker and does not call — it sends
+            `composingCall`, which holds the bots (#73). */}
+        {sunnyTargetName !== null ? (
+          <SunnyCall
+            targetName={sunnyTargetName}
+            lockedReaches={game.sunnyLockedReaches}
+            onCall={onStartAccusing}
+            inline
+            // 44px of target painted out of the cluster's own line, exactly as the
+            // cog above it is: a full-height control here spends the strip's
+            // height, and the strip spends it out of the hand.
             className="-my-1"
           />
         ) : null}

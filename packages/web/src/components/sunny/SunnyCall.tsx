@@ -52,11 +52,22 @@ export function SunnyCall({
   targetName,
   lockedReaches = 0,
   onCall,
+  inline = false,
   className = "",
 }: {
   targetName: string;
   lockedReaches?: number;
   onCall?: () => void;
+  /**
+   * Glyph and name side by side rather than stacked, for the peek strip's left
+   * cluster (#329). That cluster is the only part of a row that must never wrap
+   * — the right-hand end is the draw pile, and anything pushed off it wraps the
+   * pile onto a second line, a card's height off the hand — so a control there
+   * has to read as one line of small print, the way the fullscreen offer beside
+   * it does. It is a layout, exactly as `className` is: **nothing here varies
+   * with whether a call would land**, and it never will (#50).
+   */
+  inline?: boolean;
   className?: string;
 }) {
   const locked = lockedReaches > 0;
@@ -74,7 +85,8 @@ export function SunnyCall({
       className={[
         // `min-h-11`/`min-w-11` rather than fixed: 44px is a floor here, as in
         // `handFan.ts` and for the same reason. What #257 shrank is the ink.
-        "flex min-h-11 min-w-11 shrink-0 flex-col items-center justify-center gap-0.5",
+        "flex min-h-11 min-w-11 shrink-0 items-center justify-center",
+        inline ? "flex-row gap-1.5" : "flex-col gap-0.5",
         "rounded-xl px-2 py-1 transition-colors",
         // A dark backing and nothing else. It is drawn over the felt and, with a
         // wide fan, over a corner of a card, so it needs something to stand on —

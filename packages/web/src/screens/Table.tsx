@@ -199,7 +199,7 @@ export function Table({
 
   if (route.kind === "compact") {
     return (
-      <TableMotion game={game} log={log} scale={PEEK_TABLE}>
+      <TableMotion game={game} log={log} scale={PEEK_TABLE} mirrored={room.irl}>
         {/* Deliberately the same thing in both layouts: this is the one cue that
             should not depend on which way the phone is held. */}
         {glowing ? <TurnGlow /> : null}
@@ -222,7 +222,7 @@ export function Table({
   }
 
   return (
-    <TableMotion game={game} log={log}>
+    <TableMotion game={game} log={log} mirrored={room.irl}>
       {glowing ? <TurnGlow /> : null}
       {/* All four, not just the bottom. The top costs nothing in Safari, where the
           browser's chrome covers the island — and stops costing nothing the

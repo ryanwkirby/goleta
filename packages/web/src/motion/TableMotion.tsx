@@ -54,11 +54,16 @@ export function TableMotion({
    * scaled between its two ends, so a plan made against the wrong one lands and
    * then pops. */
   scale = FULL_TABLE,
+  /** Every card at rest in an IRL room is mirrored, so a card in the air that is
+   * not is the only unmirrored face on the screen — and you see it sitting over
+   * the card it is about to become (#332). */
+  mirrored = false,
   children,
 }: {
   game: GameView;
   log: LoggedEvent[];
   scale?: TableScale;
+  mirrored?: boolean;
   children: ReactNode;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -211,16 +216,18 @@ export function TableMotion({
   return (
     <MotionContext value={api}>
       {children}
-      <FlightLayer flights={flights} onLanded={land} />
+      <FlightLayer flights={flights} mirrored={mirrored} onLanded={land} />
     </MotionContext>
   );
 }
 
 function FlightLayer({
   flights,
+  mirrored,
   onLanded,
 }: {
   flights: LiveFlight[];
+  mirrored: boolean;
   onLanded: (flight: LiveFlight) => void;
 }) {
   if (flights.length === 0) return null;
@@ -230,7 +237,7 @@ function FlightLayer({
       className={`pointer-events-none fixed inset-0 overflow-hidden ${LAYER.flights}`}
     >
       {flights.map((flight) => (
-        <FlightCard key={flight.id} flight={flight} onLanded={onLanded} />
+        <FlightCard key={flight.id} flight={flight} mirrored={mirrored} onLanded={onLanded} />
       ))}
     </div>,
     document.body,
@@ -257,9 +264,11 @@ const centre = (rect: DOMRect): [number, number] => [
  */
 function FlightCard({
   flight,
+  mirrored,
   onLanded,
 }: {
   flight: LiveFlight;
+  mirrored: boolean;
   onLanded: (flight: LiveFlight) => void;
 }) {
   const element = useRef<HTMLDivElement>(null);
@@ -320,7 +329,7 @@ function FlightCard({
   return (
     <div ref={element} className="absolute left-0 top-0 will-change-transform">
       {flight.card ? (
-        <PlayingCard card={flight.card} size={flight.size} />
+        <PlayingCard card={flight.card} size={flight.size} mirrored={mirrored} />
       ) : (
         <CardBack size={flight.size} />
       )}

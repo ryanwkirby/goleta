@@ -7,6 +7,7 @@ import {
 
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
+import { useCopyLink } from "../lib/copy.ts";
 import { dropIndex, hopsBetween, type SeatDrag } from "../lib/seatDrag.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { QrCode } from "../components/QrCode.tsx";
@@ -19,33 +20,28 @@ import {
   HouseRulesPicker,
   IrlToggle,
 } from "../components/HostSettings.tsx";
-import { Button, Panel } from "../components/ui.tsx";
+import { Button, CodeButton, Panel } from "../components/ui.tsx";
 import { loadName } from "../net/identity.ts";
 import { joinLink } from "../net/route.ts";
 
 /** The QR used to grow out of the middle of this and push the copy button down
- * the moment the host said the table was in person. See `JoinQr`. */
+ * the moment the host said the table was in person. See `JoinQr`.
+ *
+ * **The code is itself the copy control** (#243), sharing one piece of state
+ * with the button under it so either tap says the same thing. */
 function RoomCode({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
-  const link = joinLink(code);
-
-  const copy = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
-  };
+  const { copied, copy } = useCopyLink(joinLink(code));
 
   return (
     <div className="text-center">
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Room code</p>
-      <p className="mt-1 font-mono text-5xl font-semibold tracking-[0.3em] text-amber-300">
-        {code}
-      </p>
-      <Button variant="ghost" className="mt-1" onClick={() => void copy()}>
+      <CodeButton
+        code={code}
+        label={`Copy the invite link for room ${code}`}
+        onCopy={copy}
+        className="mt-1 font-mono text-5xl font-semibold tracking-[0.3em] text-amber-300"
+      />
+      <Button variant="ghost" className="mt-1" onClick={copy}>
         {copied ? "Link copied" : "Copy invite link"}
       </Button>
     </div>
@@ -113,7 +109,9 @@ function SharedScreenInvite({
             className="w-64 p-4"
           />
         </div>
-        <p className="mt-2 text-xs text-white/40">Or tap the code to copy the link.</p>
+        {/* There is no code drawn on this panel — the QR above is the whole of
+            it, and it is what copies (#243). */}
+        <p className="mt-2 text-xs text-white/40">Or tap it to copy the link.</p>
         <Button variant="secondary" full className="mt-3" onClick={onClose}>
           Done
         </Button>

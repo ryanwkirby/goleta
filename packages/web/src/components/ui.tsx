@@ -80,3 +80,49 @@ export function Field({
 export const inputClass =
   "w-full rounded-xl bg-white/10 px-4 py-3 text-base text-white placeholder:text-white/30 " +
   "ring-1 ring-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300";
+
+/**
+ * A room code drawn as the control that copies its link (#243).
+ *
+ * The code is the biggest thing on the screen it is on and the thing a host
+ * reaches for, and two other places in this app already say *tap it to copy*
+ * about a code — so drawing it as a `<p>` was the app telling people to do
+ * something that did nothing.
+ *
+ * **A real button, not a click handler on some text**: keyboard reachable, and
+ * labelled with what it copies rather than with the four characters it draws,
+ * which a screen reader would otherwise spell out as the whole of what pressing
+ * it means. The labelled button stays beside it, because it is the path that
+ * says out loud what tapping the code does.
+ *
+ * The size and colour are the caller's — a lobby draws this at reading-across-a-
+ * room size and the in-game panel at reading-out size.
+ */
+export function CodeButton({
+  code,
+  label,
+  onCopy,
+  className = "",
+}: {
+  code: string;
+  /** What pressing it does, said as a sentence. Not the code. */
+  label: string;
+  onCopy: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onCopy}
+      className={[
+        "block w-full rounded-xl transition-colors hover:brightness-110",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+        className,
+      ].join(" ")}
+    >
+      {code}
+    </button>
+  );
+}

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
+import { useCopyLink } from "../lib/copy.ts";
 import { qrSymbol } from "../lib/qr.ts";
 
 /**
@@ -45,22 +46,15 @@ export function QrCode({
   className?: string;
 }) {
   const { side, path } = useMemo(() => qrSymbol(value), [value]);
-  const [copied, setCopied] = useState(false);
-
-  const copy = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
-  };
+  // The same one copy path the code characters go through (#243): a clipboard
+  // that refuses leaves `copied` false, so the confirmation never appears over a
+  // copy that did not happen.
+  const { copied, copy } = useCopyLink(value);
 
   return (
     <button
       type="button"
-      onClick={() => void copy()}
+      onClick={copy}
       aria-label={`${label}. Copies the link.`}
       // A container, so the confirmation over it is sized against the code rather
       // than the root font: the same component is 11rem wide in the lobby and

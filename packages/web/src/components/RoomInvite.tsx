@@ -13,7 +13,8 @@
 import { useState } from "react";
 
 import { QrCode } from "./QrCode.tsx";
-import { Button, Panel } from "./ui.tsx";
+import { Button, CodeButton, Panel } from "./ui.tsx";
+import { useCopyLink } from "../lib/copy.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { joinLink } from "../net/route.ts";
 
@@ -58,25 +59,17 @@ export function RoomInvite({
   onClose: () => void;
 }) {
   const [kind, setKind] = useState<Invite>("player");
-  const [copied, setCopied] = useState(false);
 
   const invite = INVITES.find((option) => option.key === kind) ?? INVITES[0]!;
   const link = joinLink(code, kind === "screen" ? "table" : "play");
+  // Shared with the code above the QR: two triggers, one "Link copied" (#243).
+  // It clears itself when the toggle changes the link under it.
+  const { copied, copy } = useCopyLink(link);
 
   // The shared-screen code takes itself away once a shared screen arrives, but
   // only while it is the code on screen: a screen joining is no reason to shut a
   // panel being held out to a newcomer.
   useDismissOnScreenJoin(screens, kind === "screen", onClose);
-
-  const copy = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
-  };
 
   return (
     <div
@@ -97,18 +90,25 @@ export function RoomInvite({
               variant={option.key === kind ? "primary" : "secondary"}
               className="flex-1"
               aria-pressed={option.key === kind}
-              onClick={() => {
-                setKind(option.key);
-                setCopied(false);
-              }}
+              onClick={() => setKind(option.key)}
             >
               {option.label}
             </Button>
           ))}
         </div>
 
-        {/* Above the QR, at the size it is read out at. */}
-        <p className="mt-4 font-mono text-2xl tracking-[0.3em] text-white">{code}</p>
+        {/* Above the QR, at the size it is read out at — and, since #243, the
+            control that copies whichever link is showing. */}
+        <CodeButton
+          code={code}
+          label={
+            kind === "screen"
+              ? `Copy the shared-screen link for room ${code}`
+              : `Copy the invite link for room ${code}`
+          }
+          onCopy={copy}
+          className="mt-4 font-mono text-2xl tracking-[0.3em] text-white"
+        />
 
         <div className="mt-3 flex justify-center">
           <QrCode
@@ -137,7 +137,7 @@ export function RoomInvite({
           </p>
         ) : null}
 
-        <Button variant="ghost" className="mt-3" onClick={() => void copy()}>
+        <Button variant="ghost" className="mt-3" onClick={copy}>
           {copied ? "Link copied" : invite.copy}
         </Button>
         <Button variant="secondary" full className="mt-3" onClick={onClose}>

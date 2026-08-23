@@ -11,8 +11,9 @@
 
 import { useState } from "react";
 
-import type { DealerMode, HouseRules } from "@goleta/engine";
+import type { AutopilotMode, DealerMode, HouseRules } from "@goleta/engine";
 
+import { AutopilotPicker } from "./Autopilot.tsx";
 import { HintsToggle } from "./Help.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
@@ -257,6 +258,8 @@ export function SettingsCog({
   isHost,
   hints,
   onHints,
+  autopilot,
+  onAutopilot,
   rules,
   irl,
   dealerMode,
@@ -271,6 +274,10 @@ export function SettingsCog({
   isHost: boolean;
   hints: boolean;
   onHints: (on: boolean) => void;
+  /** Whether this seat is playing itself for a while (#202). Yours alone to set
+   * — the server stamps it from the connection — and public once it is on. */
+  autopilot: AutopilotMode;
+  onAutopilot: (mode: AutopilotMode) => void;
   rules: HouseRules;
   irl: boolean;
   dealerMode: DealerMode;
@@ -317,9 +324,14 @@ export function SettingsCog({
             className="flex w-full max-h-full max-w-sm flex-col gap-4 overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4">
               <SectionHeading>Yours</SectionHeading>
               <HintsToggle on={hints} onChange={onHints} />
+              {/* Both halves of *yours* clear the bar #188 set: they belong to one
+                  player and change nothing about the room. Neither is private —
+                  hints are shouted (#187) and an autopiloted seat carries a
+                  standing mark (#202). */}
+              <AutopilotPicker mode={autopilot} onChange={onAutopilot} />
             </div>
 
             {isHost ? (

@@ -7,6 +7,7 @@ import {
 
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
+import { AutopilotMark } from "../components/Autopilot.tsx";
 import { useCopyLink } from "../lib/copy.ts";
 import { dropIndex, hopsBetween, type SeatDrag } from "../lib/seatDrag.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
@@ -523,6 +524,14 @@ export function Lobby({
               {!seat.connected && !seat.bot ? (
                 <span className="text-xs text-white/40">away</span>
               ) : null}
+              {/* Its own word, beside *away* rather than instead of it: a dropped
+                  socket and a seat somebody handed over are different things,
+                  and one of them is still playing (#202). */}
+              <AutopilotMark
+                mode={seat.autopilot}
+                name={seat.name}
+                className="text-[0.7rem]"
+              />
               <span className="ml-auto flex shrink-0 items-center gap-1">
                 {/* A trash can rather than the word it was, at the 44px the rest
                     of the app designs to, and labelled with the person it

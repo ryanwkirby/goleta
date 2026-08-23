@@ -25,6 +25,7 @@ import {
   type GameOptions,
   type GameState,
   type GameView,
+  type AutopilotMode,
   type HouseRules,
   type Intent,
   type PlayerId,
@@ -50,6 +51,13 @@ export interface Seat {
   /** Presentation only (#187). The durable copy lives in the player's own
    * `localStorage`; this one exists so the rest of the table can see it. */
   hinted: boolean;
+  /**
+   * Whether this seat is playing itself for a while (#202). Room state, so it
+   * survives a snapshot and — the useful case — a phone going to sleep. Set only
+   * from the seat's own connection, cleared by any intent from it and by the end
+   * of a game.
+   */
+  autopilot: AutopilotMode;
 }
 
 /**
@@ -164,6 +172,7 @@ const newSeatFor = (name: string, bot: boolean): Seat => ({
   connected: !bot,
   // A seat's own preference lives in its `localStorage` and is asserted on arrival.
   hinted: false,
+  autopilot: "off",
 });
 
 export const createRoom = (store: RoomStore, name: string): { room: Room; seat: Seat } => {
@@ -317,6 +326,33 @@ export const setHints = (room: Room, byPlayerId: PlayerId, on: boolean): boolean
   return announced;
 };
 
+const AUTOPILOTS = new Set<AutopilotMode>(["off", "forced", "bot"]);
+
+/**
+ * Hand your own seat to the autopilot, or take it back (#202).
+ *
+ * **Yours alone.** `byPlayerId` comes off the connection the same way an intent
+ * does, so there is no way to put somebody else on autopilot or to take them
+ * off it — not from another player, and not from a shared screen, which holds no
+ * `playerId` at all. A bot's seat is refused because it is already one.
+ */
+export const setAutopilot = (room: Room, byPlayerId: PlayerId, mode: AutopilotMode): void => {
+  if (!AUTOPILOTS.has(mode)) fail("No such autopilot");
+  const seat = room.seats.find((candidate) => candidate.id === byPlayerId);
+  if (!seat) fail("You're not at this table");
+  if (seat.bot) fail("That seat already plays itself");
+
+  seat.autopilot = mode;
+  touch(room);
+};
+
+/** Every seat's, at the end of a game. A new deal is a new hand, and coming back
+ * to find you had been playing on autopilot for three games is not what anybody
+ * asked for. */
+const clearAutopilots = (room: Room): void => {
+  for (const seat of room.seats) seat.autopilot = "off";
+};
+
 /**
  * Set by the host during a game as well as between them, because what they
  * choose is what the *next* deal plays: read once at `beginGame`, and the game
@@ -451,6 +487,7 @@ export const applySeatIntent = (
   if (result.state.status === "over" && game.status !== "over") {
     room.gamesPlayed += 1;
     room.lastWinnerId = result.state.winnerId;
+    clearAutopilots(room);
   }
   touch(room);
   return { ok: true, events: result.events };
@@ -547,16 +584,63 @@ const tableCallsSunny = (room: Room): boolean => {
   return call;
 };
 
+/**
+ * What an autopiloted seat is allowed to do, by mode.
+ *
+ * `bot` is the whole of `decideBotIntent`, which is the point: a bot at this
+ * table plays your hand *well*, by the reversed logic, and reading one seat
+ * ahead is not cheating (#107).
+ *
+ * `forced` is genuinely forced and nothing else — exactly one legal card, or
+ * none and a draw. Everything that is a real choice waits for the player:
+ *
+ * - **naming a suit** is a choice, and under Power of Eights an important one;
+ * - **the punishment card after a landed call** is a choice about which card to
+ *   lose, which is the last thing to take on somebody's behalf — and the forced
+ *   play in front of it is left with it, since stopping at step 2 of 3 would be
+ *   the same stall one beat later;
+ * - **calling the Sunny Rule** is never done in either mode. Bots do call, but a
+ *   wrong call is a three-draw lockout, and taking that in somebody's name, out
+ *   loud, at the table, is not the same kind of act as playing their forced
+ *   card. The autopilot plays your hand; it does not make accusations for you.
+ *
+ * A forced-only seat can still stall the table when it holds two legal cards.
+ * That is inherent, the badge is what makes it visible, and the answer is that
+ * somebody shouts through the door.
+ *
+ * **It cannot commit a Sunny violation the player did not choose**, in either
+ * mode, and that is the single most important property here: `decideBotIntent`
+ * plays whenever it can, so it never reaches for the deck holding a play. It
+ * comes free.
+ */
+const autopilotIntent = (view: GameView, mode: AutopilotMode): Intent | null => {
+  if (mode === "off") return null;
+  if (mode === "bot") return decideBotIntent(view);
+
+  if (view.you === null || view.waitingOn !== view.you) return null;
+  if (view.phase.kind !== "action") return null;
+  if (view.legalCardIds.length === 0) return { type: "drawCard", playerId: view.you };
+  if (view.legalCardIds.length === 1) {
+    return { type: "playCard", playerId: view.you, cardId: view.legalCardIds[0]! };
+  }
+  return null;
+};
+
 /** One at a time, so the caller can space them out and each move is decided
  * against the table as it stands. */
 export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null => {
   const game = room.game;
   if (!game || game.status !== "playing") return null;
   const bots = room.seats.filter((seat) => seat.bot);
-  if (bots.length === 0) return null;
+  // A seat somebody has handed over for a while (#202). Moved here, with the
+  // bots, because a browser-driven autopilot would be a phone in a pocket playing
+  // cards — including while it is asleep, which is exactly when this is wanted.
+  const auto = room.seats.filter((seat) => !seat.bot && seat.autopilot !== "off");
+  if (bots.length === 0 && auto.length === 0) return null;
 
   // A call the table has agreed to make comes first: otherwise a bot earlier in
-  // seat order would take its turn and shut the window on it.
+  // seat order would take its turn and shut the window on it. Bots only — an
+  // autopilot never accuses.
   if (tableCallsSunny(room)) {
     for (const seat of bots) {
       const intent = decideBotIntent(redact(game, seat.id), { callSunny: true });
@@ -566,6 +650,10 @@ export const nextBotMove = (room: Room): { seat: Seat; intent: Intent } | null =
 
   for (const seat of bots) {
     const intent = decideBotIntent(redact(game, seat.id));
+    if (intent) return { seat, intent };
+  }
+  for (const seat of auto) {
+    const intent = autopilotIntent(redact(game, seat.id), seat.autopilot);
     if (intent) return { seat, intent };
   }
   return null;
@@ -587,6 +675,7 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
     connected: seat.connected,
     isHost: seat.id === room.hostId,
     hinted: seat.hinted,
+    autopilot: seat.autopilot,
   })),
   status: roomStatus(room),
   gamesPlayed: room.gamesPlayed,

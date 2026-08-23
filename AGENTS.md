@@ -289,6 +289,37 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   draws before anyone plays against it, and a suit named under **Power of
   Eights**, where the namer is the player who then has to follow it and the rule
   would have a bot name a suit against its own hand.
+- **A seat on autopilot never calls the Sunny Rule, and never could commit a
+  violation either (#202).** A player can hand their seat over for a while —
+  `forced`, which acts only when there is exactly one lawful thing to do, or
+  `bot`, which decides as well. Both run on the server with the bots, because
+  the case worth having is a phone that has gone to sleep, and both go through
+  `decideBotIntent`, which plays whenever it can. So an autopiloted seat can
+  never reach for the deck holding a play: the property comes free and must stay
+  free.
+
+  **It does not accuse.** Bots call; an autopilot does not, because a wrong call
+  is a three-draw lockout and taking that in somebody's name, out loud, at the
+  table is not the same kind of act as playing their forced card. Others may
+  still call *on* it — the rule does not care who moved the cards.
+
+  **`forced` stops at every real choice**: naming a suit, and the punishment card
+  after a landed call, which is a choice about which card to lose. The forced
+  play in front of that card goes with it, because stopping at step 2 of 3 would
+  be the same stall one beat later. A forced-only seat holding two legal cards
+  can still hold the table up; that is inherent, the mark is what makes it
+  visible, and the answer is that somebody shouts through the door.
+
+  **It is public, and it is not the lobby's *away*.** A dropped socket is a
+  different thing and it is recoverable. `SeatView.autopilot` is a standing mark
+  in the seat strip, on the shared screen and in the lobby, for as long as it
+  lasts — at a real table you can see somebody has gone, and it is also the
+  explanation for a seat suddenly playing differently.
+
+  **Nobody may set it for anybody else.** The server stamps the seat from the
+  connection, exactly as it does for an intent, so a shared screen — which holds
+  no `playerId` at all — and every other player are both out. Any intent from
+  your own connection ends it, and so does the end of a game.
 - **Bots never wait for a Sunny window.** Their pacing is turn rhythm and
   nothing else, and `botPace` has no input that could tell it a call is on
   offer. A window opens on every draw, so a bot that held off would be stalling
@@ -455,9 +486,9 @@ wholesale rather than editing it in place, and `beginGame` spreads it into a
 fresh object on the way to `startGame`. Don't make either of them share.
 
 **One cog with two rooms in it (#253).** Every seated player gets the same gear,
-top left, in both layouts. Opened, it has a **yours** section — the hints toggle
-today, whatever #202 turns into later — and, below it and only for the host, a
-**table settings** section. Both halves are headed, so a host can see at a glance
+top left, in both layouts. Opened, it has a **yours** section — the hints
+toggle and the autopilot (#202) — and, below it and only for the host, a **table
+settings** section. Both halves are headed, so a host can see at a glance
 which one changes the game for everybody. A watcher gets no cog: the yours half
 is about cards they do not have and the table half is not theirs.
 
@@ -465,7 +496,8 @@ is about cards they do not have and the table half is not theirs.
 nothing about the room**, which rules out everything in the other half. That is
 #188's rule and it is the part worth keeping verbatim. What it does *not* mean is
 private: the hints toggle is announced when it goes on and marks the seat for as
-long as it lasts (#187), and sharing a roof with the host's settings must not
+long as it lasts (#187), a seat on autopilot carries a standing mark for as long
+as *that* lasts (#202), and sharing a roof with the host's settings must not
 start implying otherwise.
 
 It was two doors an inch apart until #253 — a gear and a person, on the argument

@@ -16,6 +16,7 @@ import type {
   ShoutKind,
 } from "@goleta/engine";
 
+import { AutopilotMark } from "../components/Autopilot.tsx";
 import { HelpAsk, HintedMark, shoutingNow } from "../components/Help.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { QrCode, QrGlyph } from "../components/QrCode.tsx";
@@ -618,6 +619,7 @@ function EdgeNames({
               {/* Both, because they answer different questions: one lasts, the other
                   is *they just said something*. */}
               {seat.hinted ? <HintedMark name={seat.name} className="text-lg" /> : null}
+              <AutopilotMark mode={seat.autopilot} name={seat.name} className="text-sm" />
               {asking.get(seat.id) ? (
                 <HelpAsk kind={asking.get(seat.id)} className="shrink-0 text-lg" />
               ) : null}

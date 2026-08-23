@@ -1,4 +1,4 @@
-import type { ClientMessage, RoomView } from "@goleta/engine";
+import type { ClientMessage, PlayerId, RoomView } from "@goleta/engine";
 
 import { QrGlyph } from "../../components/QrCode.tsx";
 import { SettingsCog } from "../../components/Settings.tsx";
@@ -12,6 +12,7 @@ import { Button } from "../../components/ui.tsx";
  */
 export function TableHeader({
   room,
+  me,
   isHost,
   seated,
   hints,
@@ -23,6 +24,8 @@ export function TableHeader({
   onLeave,
 }: {
   room: RoomView;
+  /** Whose header this is, for the seat-shaped settings in the cog. */
+  me: PlayerId | null;
   isHost: boolean;
   /** A watcher gets no cog: the only thing in that drawer is about your cards. */
   seated: boolean;
@@ -48,6 +51,8 @@ export function TableHeader({
           isHost={isHost}
           hints={hints}
           onHints={onChooseHints}
+          autopilot={room.seats.find((seat) => seat.id === me)?.autopilot ?? "off"}
+          onAutopilot={(mode) => send({ t: "setAutopilot", mode })}
           rules={room.houseRules}
           irl={room.irl}
           dealerMode={room.dealerMode}

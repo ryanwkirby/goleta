@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { CardSize } from "../src/lib/cardShape.ts";
+import { CARD_HEIGHT_PX, type CardSize } from "../src/lib/cardShape.ts";
 import { TABLE_DESIGN, fitScale } from "../src/lib/fitScale.ts";
-import { deckPoint, pileBox } from "../src/lib/pileBox.ts";
+import { deckPoint, pileBox, pilePoint } from "../src/lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint } from "../src/lib/tableEdges.ts";
 
 /** The two boxes `TableScreen` gives the piles, kept in step with the constants
@@ -108,13 +108,25 @@ describe("fitting the centre piles into the room the board has", () => {
     }
   });
 
-  it("puts the deck to the left of the pile box's centre, and a little above it", () => {
+  it("puts the deck to the left of the pile box's centre, and level with it", () => {
     // The two cards and their gap are centred in the box and the deck is the left of
-    // the pair; the caption hangs under both. Get either wrong and the card in the
-    // air leaves from somewhere the deck is not.
+    // the pair. Get that wrong and the card in the air leaves from somewhere the
+    // deck is not. The vertical offset was the caption hanging under both cards, and
+    // it went with the caption (#335): the box is a card tall now, so the pair sits
+    // on the centre line.
     const at = deckPoint(CENTRE, CENTRE_AT, "xl");
     expect(at.x).toBeLessThan(CENTRE_AT.x);
-    expect(at.y).toBeLessThan(CENTRE_AT.y);
+    expect(at.y).toBe(CENTRE_AT.y);
+    expect(pilePoint(CENTRE, CENTRE_AT, "xl").y).toBe(CENTRE_AT.y);
+  });
+
+  it("reserves a box exactly as tall as the cards it paints", () => {
+    // The caption was 22px of this height and it is gone. Left behind, the piles
+    // would be fitted against a box taller than they paint and every flight would
+    // leave and land 11px off (#335).
+    for (const size of EVERY_SIZE) {
+      expect(pileBox(size).height).toBe(CARD_HEIGHT_PX[size]);
+    }
   });
 
   it("allows for the suit circle on both sides, so centring cannot hand it back", () => {

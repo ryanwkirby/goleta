@@ -18,8 +18,14 @@ import { fitScale, type Box, type Point } from "./fitScale.ts";
 /** `gap-6` between the draw pile and the card in play. */
 const BETWEEN = 24;
 
-/** `gap-1.5` under each card, and the caption's own `h-4`. */
-const CAPTION = 6 + 16;
+/*
+ * There is deliberately no caption allowance any more (#335). The word under the
+ * card in play — *naming* / *showing* — was 22px of this box, the `gap-1.5` plus
+ * its own `h-4`, and it is gone: the badge is at the corner of the same card and
+ * the prompt says it in words. Leave a constant behind for it and the piles are
+ * fitted against a box 22px taller than they paint, and every flight leaves and
+ * lands 11px off.
+ */
 
 /** The suit circle hangs twelve pixels past the card's right edge. Counted on
  * **both** sides, which looks wrong: the piles are centred, so allowing for it
@@ -28,7 +34,7 @@ const BADGE = 12;
 
 export const pileBox = (size: CardSize): Box => ({
   width: CARD_WIDTH_PX[size] * 2 + BETWEEN + BADGE * 2,
-  height: CARD_HEIGHT_PX[size] + CAPTION,
+  height: CARD_HEIGHT_PX[size],
 });
 
 /** The box's centre plus a fixed offset, scaled by however much the fitting
@@ -38,7 +44,7 @@ export const deckPoint = (room: Box, centre: Point, size: CardSize): Point => {
   const scale = fitScale(room, pileBox(size));
   return {
     x: centre.x - ((CARD_WIDTH_PX[size] + BETWEEN) / 2) * scale,
-    y: centre.y - (CAPTION / 2) * scale,
+    y: centre.y,
   };
 };
 
@@ -47,6 +53,6 @@ export const pilePoint = (room: Box, centre: Point, size: CardSize): Point => {
   const scale = fitScale(room, pileBox(size));
   return {
     x: centre.x + ((CARD_WIDTH_PX[size] + BETWEEN) / 2) * scale,
-    y: centre.y - (CAPTION / 2) * scale,
+    y: centre.y,
   };
 };

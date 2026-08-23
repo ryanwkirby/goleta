@@ -28,6 +28,7 @@ import {
   holdCall,
   joinRoom,
   markDisconnected,
+  moveSeatFromTable,
   moveSeat,
   nextBotMove,
   createRoom,
@@ -276,6 +277,18 @@ export const attachSockets = (
       if (!outcome.ok) throw new RoomError(outcome.error ?? "That move isn't allowed");
       broadcast(room, outcome.events);
       return restartBots(room);
+    }
+    /**
+     * The shared table screen's second auxiliary action (#201), and the same
+     * shape as the first: an **IRL** room only, checked on the server, and
+     * between games only, which `moveSeatFromTable` enforces. Position on that
+     * board *is* seat order, so a name dragged to another edge is a seat moved —
+     * one `moveSeat` hop at a time, exactly as the lobby's arrows send them.
+     */
+    if (!playerId && client.table && message.t === "moveSeat" && room.irl) {
+      moveSeatFromTable(room, message.playerId, message.direction);
+      broadcast(room);
+      return;
     }
     if (!playerId) throw new RoomError("You're watching this table, not playing it");
 

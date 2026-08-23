@@ -675,6 +675,56 @@ describe("what the wire carries", () => {
     expect(host.room?.irl).toBe(true);
   }, 20_000);
 
+  it("lets an IRL shared table screen reorder the seats between games", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    // Seated but not dealt: this is a between-games move, which is doubly right
+    // here — the screen is propped where somebody will put a drink down on it.
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    await fillTable(host);
+    host.send({ t: "setIrl", on: true });
+    await host.until((c) => c.room?.irl === true);
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code: host.code as string, table: true });
+    await screen.until((c) => c.room !== null);
+
+    // Position on that board *is* seat order (#201), so a name dragged to another
+    // edge is a seat moved — and the person who can see the room is whoever is
+    // standing next to the screen rather than whoever holds the host's phone.
+    const before = (host.room?.seats ?? []).map((seat) => seat.name);
+    const second = host.room?.seats[1]?.id as string;
+    screen.send({ t: "moveSeat", playerId: second, direction: "up" });
+    await host.until((c) => c.room?.seats[0]?.id === second);
+
+    expect((host.room?.seats ?? []).map((seat) => seat.name)).toEqual([
+      before[1],
+      before[0],
+      ...before.slice(2),
+    ]);
+    expect(screen.errors).toHaveLength(0);
+  }, 20_000);
+
+  it("keeps the shared-screen reorder out of an online room", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    await fillTable(host);
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code: host.code as string, table: true });
+    await screen.until((c) => c.room !== null);
+
+    const before = (host.room?.seats ?? []).map((seat) => seat.id);
+    screen.send({ t: "moveSeat", playerId: before[1] as string, direction: "up" });
+    await screen.until((c) => c.errors.length > 0);
+
+    expect(screen.errors.at(-1)).toMatch(/watching this table/);
+    expect((host.room?.seats ?? []).map((seat) => seat.id)).toEqual(before);
+  }, 20_000);
+
   it("keeps the shared-screen draw out of an online room", async () => {
     const server = await startServer(tempDir());
     const host = await openClient(server.port);

@@ -463,6 +463,35 @@ export const moveSeat = (
   direction: "up" | "down",
 ): void => {
   requireHost(room, byPlayerId);
+  shiftSeat(room, target, direction);
+};
+
+/**
+ * The same move, from the shared table screen (#201).
+ *
+ * The precedent is the draw (#120): the `table` bit is the client's own word for
+ * what it is, so it narrows rather than grants, and **`irl` is the gate that
+ * matters and is checked here**. In a room where that flag means what it says,
+ * everybody present can already reach the propped-up screen — and a table wants
+ * its seating right, so the person who can see the room is whoever is standing
+ * next to it rather than whoever happens to hold the host's phone. An online
+ * room refuses it outright, exactly as it refuses the draw: those are strangers,
+ * and none of them get to reorder a stranger's table.
+ *
+ * Between games, which `shiftSeat` already enforces and which is doubly right
+ * here — this screen is propped in the middle of a table where somebody will put
+ * a drink down on it.
+ */
+export const moveSeatFromTable = (
+  room: Room,
+  target: PlayerId,
+  direction: "up" | "down",
+): void => {
+  if (!room.irl) fail("That screen can only watch this table");
+  shiftSeat(room, target, direction);
+};
+
+const shiftSeat = (room: Room, target: PlayerId, direction: "up" | "down"): void => {
   if (roomStatus(room) === "playing") fail("Wait for this game to finish");
   if (direction !== "up" && direction !== "down") fail("A seat moves up or down");
 

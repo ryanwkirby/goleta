@@ -305,6 +305,25 @@ Pacing is the table's, not the seat's: an autopiloted seat is scheduled through
 the same `botPace` as everyone else's bots, so it moves at the pace the room is
 set to.
 
+## Reordering the table from the shared screen
+
+The shared table screen's second auxiliary action (#201). In an **IRL** room,
+**between games**, it may send `moveSeat` — the same message the lobby's arrows
+send, one hop at a time.
+
+Position on that board *is* seat order, and seat order is turn order, so a name
+dragged to another edge is a seat moved. There is no separate "where the name is
+drawn" to change, and no new `order:` field: a whole posted order can arrive
+after a seat has left, and a stale permutation is a worse thing to reconcile than
+a swap that no longer applies.
+
+The gate is the same as the draw's and works the same way. The `table` bit is the
+client's own word for what it is, so it narrows rather than grants; **`irl` is
+what holds the line and is checked on the server**. An online room refuses it
+outright, exactly as it refuses the draw. It is deliberately **not host-only**:
+the arrows exist because a table wants its seating right, and the person who can
+see the room is whoever is standing next to the screen.
+
 ## Ending a turn
 
 `endTurn` is an intent like any other (#260). The turn used to end itself after a

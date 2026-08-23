@@ -147,8 +147,17 @@ const describeTable = (room: RoomView, anyBots: boolean): string => {
  * state lives here, so every arrival starts collapsed.
  *
  * The triangle is deliberately much larger than its label — at body-text size it
- * read as punctuation. It is a **disclosure** triangle, `◂` shut and `▾` open,
- * pointing left because everything it is about is to its left (#137).
+ * read as punctuation, and that argument is about size rather than side. It is a
+ * **disclosure** triangle rather than a scroll affordance, which is why it turns
+ * rather than moving (#137).
+ *
+ * **It is to the left of the label** (#248). It sat at the right-hand end until
+ * then, pointing back at everything it was about, which is coherent and is still
+ * the wrong end: every disclosure control anybody has used puts the marker
+ * before the thing it discloses — `<details>` does, and `Rule` in `Rules.tsx`
+ * had to hide the native marker to move it. Shut, `▸` points at the label it
+ * will open; open, it points down at the panel. One glyph rotated, in its own
+ * column, so the label and the summary stay left-aligned under each other.
  */
 function TableSettings({ summary, children }: { summary: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -161,18 +170,18 @@ function TableSettings({ summary, children }: { summary: string; children: React
         onClick={() => setOpen(!open)}
         className="flex w-full items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-white">Advanced settings</span>
-          <span className="block text-xs text-white/40">{summary}</span>
-        </span>
         <span
           aria-hidden
           className={[
             "shrink-0 text-3xl leading-none text-white/60 transition-transform",
-            open ? "-rotate-90" : "",
+            open ? "rotate-90" : "",
           ].join(" ")}
         >
-          ◂
+          ▸
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-white">Advanced settings</span>
+          <span className="block text-xs text-white/40">{summary}</span>
         </span>
       </button>
       {open ? <div className="mt-3 flex flex-col gap-3">{children}</div> : null}

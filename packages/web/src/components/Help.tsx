@@ -118,9 +118,16 @@ export function HelpAsk({
 
 /**
  * Whether the table marks up your playable cards, as a switch you can find.
- * **The copy says it is public, because it is** (#187): switching it on is
- * announced and marks your seat, and a player deciding here is entitled to know
- * that first. It says nothing about how long it lasts — "until you change it".
+ *
+ * **Written from the player's side of the question** (#251): *Still confused?*
+ * is what somebody actually has when they reach this, and both answers sound
+ * like a person answering it. "I think I've got it" is the honest one — the old
+ * wording asked for a confidence nobody has before their first hand.
+ *
+ * It says nothing about how long it lasts, because it lasts until you change
+ * it. It no longer says the table can see it either: the shout still happens
+ * and the seat still carries the mark (#187), so the sentence was one of three
+ * places that is said rather than the only one.
  */
 export function HintsToggle({
   on,
@@ -132,7 +139,7 @@ export function HintsToggle({
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
-        Show me what I can play
+        Still confused?
       </p>
       <div className="mt-2 flex gap-2">
         <Button
@@ -141,7 +148,7 @@ export function HintsToggle({
           aria-pressed={on}
           onClick={() => onChange(true)}
         >
-          Guide me
+          Yes, guide me
         </Button>
         <Button
           variant={on ? "secondary" : "primary"}
@@ -149,13 +156,13 @@ export function HintsToggle({
           aria-pressed={!on}
           onClick={() => onChange(false)}
         >
-          I've got it
+          I think I've got it
         </Button>
       </div>
       <p className="mt-2 text-xs text-white/40">
         {on
-          ? "Your playable cards are marked up, and the table can see that they are."
-          : "You work out your own moves. You can ask for a hand any time."}
+          ? "Tutorial mode. Each turn, we'll show you which cards are playable. (You can turn this off in the settings when you're ready.)"
+          : "You won't be helped automatically. (Help will still be available if you request it.)"}
       </p>
     </div>
   );

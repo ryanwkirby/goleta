@@ -11,7 +11,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import type {
   BotSpeed,
   ClientMessage,
-  GameEvent,
+  FeedEvent,
   Intent,
   PlayerId,
   ServerMessage,
@@ -37,6 +37,7 @@ import {
   seatOf,
   setBotSpeed,
   setDealerMode,
+  leaveSeat,
   setAutopilot,
   setHints,
   setHouseRules,
@@ -137,7 +138,7 @@ export const attachSockets = (
     return screens;
   };
 
-  const broadcast = (room: Room, events: readonly GameEvent[] = []): void => {
+  const broadcast = (room: Room, events: readonly FeedEvent[] = []): void => {
     const screens = tableScreensAt(room);
     for (const client of clients) {
       if (client.code !== room.code) continue;
@@ -323,6 +324,15 @@ export const attachSockets = (
         if (now - client.lastShoutAt < SHOUT_COOLDOWN_MS) return;
         client.lastShoutAt = now;
         return announce(room, { t: "shout", playerId, kind: "help" });
+      }
+      case "leave": {
+        // Said out loud, so the server stops having to guess at a closed socket
+        // (#256). Mid-hand the seat keeps its cards and the autopilot plays them
+        // out; between games it simply goes.
+        const events = leaveSeat(room, playerId);
+        client.playerId = null;
+        broadcast(room, events);
+        return restartBots(room);
       }
       case "setAutopilot":
         // Stamped from this connection, so it can only ever be your own seat.

@@ -8,7 +8,14 @@
  * boundary and nowhere else.
  */
 
-import type { Card, ClientMessage, GameView, RoomView, ShoutKind } from "@goleta/engine";
+import type {
+  Card,
+  ClientMessage,
+  GameView,
+  PlayerId,
+  RoomView,
+  ShoutKind,
+} from "@goleta/engine";
 
 import type { GoletaError } from "./feed.ts";
 import type { NameOf } from "./format.ts";
@@ -22,6 +29,8 @@ export interface TableContext {
   send: (message: ClientMessage) => void;
   offline: boolean;
   reshuffling: number | null;
+  /** Whoever has just left the table, while it is worth saying (#256). */
+  departed: PlayerId | null;
 }
 
 export interface HandControls {

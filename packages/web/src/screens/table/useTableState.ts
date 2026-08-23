@@ -10,6 +10,7 @@ import { handStep } from "../../lib/handFan.ts";
 import { assisting, handMode } from "../../lib/handMode.ts";
 import { useJudgedCall } from "../../lib/judgedCall.ts";
 import { useBox } from "../../lib/measure.ts";
+import { useDeparture } from "../../lib/departure.ts";
 import { useReshuffle } from "../../lib/reshuffle.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../../lib/sort.ts";
 import { caughtState, stillAccusable, sunnyTarget } from "../../lib/sunnyOffer.ts";
@@ -136,6 +137,10 @@ export function useTableState({
    * rather than a decision either layout makes. It gates nothing.
    */
   const { drawPileSize: reshuffling } = useReshuffle(log);
+
+  /** Somebody leaving, said for a few seconds on the same line and by the same
+   * argument (#256). It ranks below the reshuffle and gates nothing. */
+  const departed = useDeparture(log);
 
   /**
    * A phone at a table where nobody is looking at their phone (#81). Never in an
@@ -359,7 +364,15 @@ export function useTableState({
 
   /** Four bundles rather than thirty separate props (#225). `HandView`
    * destructures them on its first line, so the grouping is at the boundary. */
-  const tableContext: TableContext = { room, game, nameOf, send, offline, reshuffling };
+  const tableContext: TableContext = {
+    room,
+    game,
+    nameOf,
+    send,
+    offline,
+    reshuffling,
+    departed,
+  };
   const handControls: HandControls = {
     cards: handCards,
     mode,
@@ -417,6 +430,7 @@ export function useTableState({
     nameOf,
     owesPunishment,
     peeling,
+    departed,
     reshuffling,
     route,
     seated,

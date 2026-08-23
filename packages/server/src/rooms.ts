@@ -22,6 +22,7 @@ import {
   type DealerMode,
   type ErrorCode,
   type GameEvent,
+  type TableEvent,
   type GameOptions,
   type GameState,
   type GameView,
@@ -58,6 +59,9 @@ export interface Seat {
    * of a game.
    */
   autopilot: AutopilotMode;
+  /** They said they were going (#256). Kept rather than deleted while a hand is
+   * out, because a seat with cards in it cannot vanish — see `leaveSeat`. */
+  left: boolean;
 }
 
 /**
@@ -173,6 +177,7 @@ const newSeatFor = (name: string, bot: boolean): Seat => ({
   // A seat's own preference lives in its `localStorage` and is asserted on arrival.
   hinted: false,
   autopilot: "off",
+  left: false,
 });
 
 export const createRoom = (store: RoomStore, name: string): { room: Room; seat: Seat } => {
@@ -231,7 +236,10 @@ export const rejoinRoom = (
 ): { room: Room; seat: Seat } => {
   const room = findRoom(store, code);
   const seat = seatOf(room, playerId);
-  if (!seat || seat.token !== token) fail("That seat isn't yours any more");
+  // A leave clears the token, so this refuses one on its own — the check is
+  // spelled out because "they left" and "wrong token" are the same sentence to a
+  // player and very different things here (#256).
+  if (!seat || seat.left || seat.token !== token) fail("That seat isn't yours any more");
 
   seat.connected = true;
   // Somebody has to be able to start the next game, so a returning player takes
@@ -242,6 +250,68 @@ export const rejoinRoom = (
   return { room, seat };
 };
 
+/**
+ * "I'm going" — as opposed to a socket dropping, which is `markDisconnected`
+ * (#256).
+ *
+ * The server could not tell the two apart before this existed, because leaving
+ * was entirely client-side: the browser forgot its token and reloaded, and all
+ * the server ever saw was a close. So the turn reached a seat nobody would ever
+ * move again, `waitingOn` stayed there forever, and the host could not deal
+ * because a game was still "under way". The only way out was for everybody to
+ * leave and make a new room.
+ *
+ * **Between games the seat simply goes.** It holds no cards, so there is nothing
+ * to conserve.
+ *
+ * **Mid-hand it cannot go**, because `simulation.test.ts`'s first invariant is
+ * that hands plus deck plus pile come to 52 — a seat with cards in it is not
+ * deletable. So it stays, and **the autopilot plays it out** (#202): the cards
+ * stay in play, turn order is untouched, the engine learns nothing, and the
+ * table finishes the hand with exactly one winner. It is dropped at the next
+ * deal, by `beginGame`.
+ *
+ * **It is not recoverable**, which is the difference that matters. A
+ * disconnection has to be — a lock screen, a backgrounded tab and a dropped
+ * tunnel are all one thing, and `seat.connected` is cleared on snapshot load for
+ * exactly that reason. A leave is deliberate and the browser has already thrown
+ * its token away by the time the socket closes, so the token is cleared here too
+ * and `rejoinRoom` refuses.
+ */
+export const leaveSeat = (room: Room, playerId: PlayerId): TableEvent[] => {
+  const seat = seatOf(room, playerId);
+  if (!seat) return [];
+
+  delete room.callHolds[playerId];
+  if (roomStatus(room) === "playing") {
+    seat.left = true;
+    seat.connected = false;
+    // A bot rather than forced-only: nobody is coming back to make the choices,
+    // and a forced-only seat stalls on any real one.
+    seat.autopilot = "bot";
+    // Nothing to prove any more. `rejoinRoom` checks `left` as well.
+    seat.token = "";
+    passHostOn(room, playerId);
+    touch(room);
+    return [{ type: "left", playerId }];
+  }
+
+  room.seats = room.seats.filter((candidate) => candidate.id !== playerId);
+  passHostOn(room, playerId);
+  touch(room);
+  return [{ type: "left", playerId }];
+};
+
+/** The host's powers, to the first human still here. Shared by leaving and by
+ * dropping off, which want the same thing for the same reason: somebody has to
+ * be able to start the next game. */
+const passHostOn = (room: Room, playerId: PlayerId): void => {
+  if (room.hostId !== playerId) return;
+  const successor = room.seats.find((s) => !s.bot && !s.left && s.connected);
+  if (successor) room.hostId = successor.id;
+  else room.hostId = room.seats.find((s) => !s.bot && !s.left)?.id ?? room.hostId;
+};
+
 export const markDisconnected = (room: Room, playerId: PlayerId): void => {
   const seat = seatOf(room, playerId);
   if (!seat) return;
@@ -249,10 +319,7 @@ export const markDisconnected = (room: Room, playerId: PlayerId): void => {
   delete room.callHolds[playerId];
 
   // The host's powers move on so the table isn't stranded mid-session.
-  if (room.hostId === playerId) {
-    const successor = room.seats.find((s) => !s.bot && s.connected);
-    if (successor) room.hostId = successor.id;
-  }
+  passHostOn(room, playerId);
   touch(room);
 };
 
@@ -438,6 +505,9 @@ const nextDealerIndex = (room: Room): number => {
 export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
   requireHost(room, byPlayerId);
   if (roomStatus(room) === "playing") fail("That game is already under way");
+  // Anybody who left mid-hand was kept only so the autopilot could play their
+  // cards out (#256). The hand is over; they are not at the table.
+  room.seats = room.seats.filter((seat) => !seat.left);
   if (room.seats.length < MIN_TABLE_PLAYERS) {
     fail(`Goleta needs ${MIN_TABLE_PLAYERS} players — add a bot to make up the numbers`);
   }
@@ -676,6 +746,7 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
     isHost: seat.id === room.hostId,
     hinted: seat.hinted,
     autopilot: seat.autopilot,
+    left: seat.left,
   })),
   status: roomStatus(room),
   gamesPlayed: room.gamesPlayed,

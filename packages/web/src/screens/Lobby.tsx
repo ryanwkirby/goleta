@@ -529,6 +529,7 @@ export function Lobby({
                   and one of them is still playing (#202). */}
               <AutopilotMark
                 mode={seat.autopilot}
+                left={seat.left}
                 name={seat.name}
                 className="text-[0.7rem]"
               />

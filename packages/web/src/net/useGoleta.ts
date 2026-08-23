@@ -279,9 +279,20 @@ export const useGoleta = (): Goleta => {
 
   const leave = useCallback(() => {
     const code = codeRef.current;
-    // A watcher has no seat and nothing to forget. Reaching for the key anyway
-    // would be the one write a watching browser makes.
-    if (code && !watching) forgetIdentity(code);
+    // Said out loud before the reload (#256). Leaving used to be entirely
+    // client-side, so all the server ever saw was a socket closing — which is
+    // also what a lock screen looks like — and the turn would reach a seat
+    // nobody was ever going to move again. A watcher has no seat and announces
+    // nothing.
+    if (code && !watching) {
+      const socket = socketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ t: "leave" } satisfies ClientMessage));
+      }
+      // The token goes whether or not that got through. It is what proves the
+      // seat is yours, and a leave is meant not to be recoverable.
+      forgetIdentity(code);
+    }
     codeRef.current = null;
     setHashCode(null);
     location.reload();

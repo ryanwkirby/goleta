@@ -9,7 +9,7 @@ import {
 
 import type {
   ClientMessage,
-  GameEvent,
+  FeedEvent,
   GameView,
   PlayerId,
   RoomView,
@@ -39,6 +39,7 @@ import {
 } from "../lib/fitScale.ts";
 import { ANNOUNCE_MS } from "../lib/beats.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
+import { useDeparture } from "../lib/departure.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
@@ -393,6 +394,7 @@ function Playing({
 
   /** Off the same hook the phones read, so it is the same five seconds (#209). */
   const { drawPileSize: reshuffling } = useReshuffle(log);
+  const departed = useDeparture(log);
 
   /** Which way up the board says things (#160). Two positions rather than four —
    * see `facing.ts` for why the prompt cannot be stood on its end. */
@@ -524,11 +526,12 @@ function Playing({
               {SUIT_GLYPH[call.card.suit]}.{" "}
               <span className="text-white/70">{call.correct ? "Right." : "Wrong."}</span>
             </span>
-          ) : reshuffling !== null ? (
+          ) : reshuffling !== null || departed !== null ? (
             // This screen has no log, so without it a reshuffle was a number changing
-            // (#209). After the ruling, for the reason the peel comes first.
+            // (#209) and a departure was nothing at all (#256). After the ruling,
+            // for the reason the peel comes first.
             <span className="text-amber-300">
-              {turnPrompt(game, nameOf, false, false, reshuffling)}
+              {turnPrompt(game, nameOf, false, false, reshuffling, departed)}
             </span>
           ) : finished ? (
             <span className="text-amber-300">{turnPrompt(game, nameOf, false)}</span>
@@ -619,7 +622,12 @@ function EdgeNames({
               {/* Both, because they answer different questions: one lasts, the other
                   is *they just said something*. */}
               {seat.hinted ? <HintedMark name={seat.name} className="text-lg" /> : null}
-              <AutopilotMark mode={seat.autopilot} name={seat.name} className="text-sm" />
+              <AutopilotMark
+                mode={seat.autopilot}
+                left={seat.left}
+                name={seat.name}
+                className="text-sm"
+              />
               {asking.get(seat.id) ? (
                 <HelpAsk kind={asking.get(seat.id)} className="shrink-0 text-lg" />
               ) : null}
@@ -689,7 +697,7 @@ function TableFlight({
   from,
   scale,
 }: {
-  event: GameEvent | null;
+  event: FeedEvent | null;
   room: RoomView;
   /** Where the deck is, in design pixels — it moves with the view. */
   from: Point;

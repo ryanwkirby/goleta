@@ -22,7 +22,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-import type { Card, GameView } from "@goleta/engine";
+import { isGameEvent, type Card, type GameView } from "@goleta/engine";
 
 import { CardBack, PlayingCard } from "../components/Card.tsx";
 import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
@@ -142,7 +142,9 @@ export function TableMotion({
     if (recent.length === 0) return;
 
     const { flights: plans, emptiesPile, deals } = planFlights(
-      recent.toReversed().map((entry) => entry.event),
+      // Game events only: the log also carries what happens to the *table*, and a
+      // seat leaving puts no card in the air (#256).
+      recent.toReversed().map((entry) => entry.event).filter(isGameEvent),
       game,
       () => `f${(sequence.current += 1)}`,
       scale,

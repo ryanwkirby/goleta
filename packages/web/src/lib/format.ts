@@ -1,4 +1,11 @@
-import type { Card, GameEvent, GameView, RoomView, SurrenderReason } from "@goleta/engine";
+import type {
+  Card,
+  FeedEvent,
+  GameView,
+  PlayerId,
+  RoomView,
+  SurrenderReason,
+} from "@goleta/engine";
 
 import { SUIT_GLYPH, SUIT_LABEL } from "./cardShape.ts";
 
@@ -32,7 +39,7 @@ const surrenderPhrase: Record<SurrenderReason, string> = {
 };
 
 /** One event, as a sentence for the table log. */
-export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
+export const describeEvent = (event: FeedEvent, nameOf: NameOf): string => {
   switch (event.type) {
     case "gameStarted":
       // Said here as well as shown: the log is what a table scrolls back through to
@@ -67,6 +74,11 @@ export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
       return `${nameOf(event.playerId)} is out of cards, and out of the game.`;
     case "turnChanged":
       return `${nameOf(event.playerId)}'s turn.`;
+    // Not a `GameEvent`: something that happened to the table (#256). The seat
+    // keeps its cards and the autopilot plays them out, so the table is told what
+    // changed and nothing about the position has.
+    case "left":
+      return `${nameOf(event.playerId)} left the table.`;
     case "gameOver":
       if (event.winnerId === null) return "Deadlock — the game ends in a tie.";
       return event.reason === "stalemate"
@@ -76,7 +88,7 @@ export const describeEvent = (event: GameEvent, nameOf: NameOf): string => {
 };
 
 /** Events worth interrupting someone for, rather than just logging. */
-export const isNoteworthy = (event: GameEvent): boolean =>
+export const isNoteworthy = (event: FeedEvent): boolean =>
   event.type === "sunnyCalled" || event.type === "eliminated" || event.type === "gameOver";
 
 /**
@@ -101,10 +113,19 @@ export const turnPrompt = (
    * answer to "what is happening" is the reshuffle.
    */
   reshuffling: number | null = null,
+  /**
+   * Whoever has just left the table, while it is worth saying (#256). Same place
+   * and same argument as the reshuffle: the one surface all three screens have.
+   * It ranks *below* the reshuffle, which is a moment the whole table is in.
+   */
+  departed: PlayerId | null = null,
 ): string => {
   const mine = game.waitingOn === game.you;
   if (reshuffling !== null && game.phase.kind !== "over") {
     return `Deck ran out — shuffling the pile back in, ${reshuffling} to draw.`;
+  }
+  if (departed !== null && game.phase.kind !== "over") {
+    return `${nameOf(departed)} left the table — their hand plays itself out.`;
   }
   switch (game.phase.kind) {
     case "over":

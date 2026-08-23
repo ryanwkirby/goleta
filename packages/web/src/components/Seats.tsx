@@ -112,6 +112,7 @@ function Seat({
             playing differently. */}
         <AutopilotMark
           mode={autopilot}
+          left={seat?.left ?? false}
           name={nameFor(room, player.id)}
           className="self-center text-[0.65rem]"
         />

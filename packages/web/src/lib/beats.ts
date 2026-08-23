@@ -16,3 +16,9 @@ export const ANNOUNCE_MS = 3200;
 /** It used to pass in under half a second, batched with the `drew` and
  * `turnedUp` around it, and people read it as the game skipping ahead (#209). */
 export const RESHUFFLE_MS = 4800;
+
+/** Somebody leaving is not an event with cards in it, so it needs no room to be
+ * watched in — only long enough to be read across a table while the game carries
+ * on underneath it (#256). Shorter than the reshuffle, which is a moment the
+ * table is *in*. */
+export const DEPARTURE_MS = 3600;

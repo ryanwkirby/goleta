@@ -5,6 +5,7 @@
  */
 
 import type { GameView } from "./redact.ts";
+import { DEFAULT_OPTIONS } from "./types.ts";
 import type { EightsRule, GameEvent, Intent, PlayerId, SeedEightRule, Suit } from "./types.ts";
 
 /**
@@ -17,6 +18,15 @@ export interface HouseRules {
   seedEight: SeedEightRule;
   sunny: boolean;
 }
+
+/** The game as written, in the wire's vocabulary — read off `DEFAULT_OPTIONS`
+ * rather than restated, so the two cannot drift. For a screen that has to
+ * describe the rules before there is a table to ask. */
+export const DEFAULT_HOUSE_RULES: HouseRules = {
+  eights: DEFAULT_OPTIONS.eights,
+  seedEight: DEFAULT_OPTIONS.seedEight,
+  sunny: DEFAULT_OPTIONS.sunny !== null,
+};
 
 export interface SeatView {
   id: PlayerId;

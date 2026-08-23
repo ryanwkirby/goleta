@@ -162,6 +162,15 @@ export const turnPrompt = (
       // Both give the answer away — being told you *must* play is being told a card
       // matches — so neither is said unless help is on.
       if (!assist) return "Your turn.";
+      // A turn with nowhere left to go is answered without mentioning the hand at
+      // all (#333). The old line told you to draw an inch above the one control
+      // left to press, and the fix cannot be to pick between the two branches
+      // below: `canEndTurn` is exactly as true when the third draw handed you a
+      // play as when it left you stuck, so a prompt that read differently either
+      // way would be the screen separating an honest end from a dishonest one
+      // (#260). One line covers both, and it is true of the other half of
+      // `canEndTurn` — a deck that cannot be replenished — as well.
+      if (game.canEndTurn) return "Your turn — no draws left.";
       return game.youMustPlay
         ? "Your turn — you have a card that matches, so you have to play it."
         : "Nothing matches. Draw a card.";

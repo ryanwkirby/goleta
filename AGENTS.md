@@ -200,12 +200,19 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   static amber edge on a green screen is something the eye stops seeing inside
   about twenty seconds — which at a table where people are looking at each other
   is most of a turn, so by the time somebody looked down it had become part of
-  the furniture. Three seconds down to about half, three seconds back, forever:
-  what it is doing at second one it is doing at second ninety, which is the
-  whole of what keeps it from being the timer above. It is drawn as `opacity` on
-  the overlay rather than as an animated `box-shadow`, so it composites instead
-  of repainting the viewport, and so both shadows move together rather than
+  the furniture. Two seconds down to 5%, two seconds back, forever: what it is
+  doing at second one it is doing at second ninety, which is the whole of what
+  keeps it from being the timer above. It is drawn as `opacity` on the overlay
+  rather than as an animated `box-shadow`, so it composites instead of
+  repainting the viewport, and so both shadows move together rather than
   becoming a second design at the dim end.
+
+  **The figures are the only part of it that has moved** (#295). #254 shipped
+  three seconds each way between full and half, which did stop the edge becoming
+  furniture but slowly and shallowly enough that the movement itself was easy to
+  miss — and what it is fighting is a phone flat on the felt being *glanced* at,
+  not stared at. A period and a pair of endpoints are free to be tuned; what
+  cannot move is that there is exactly one of each.
 
   "A thing that never moves" used to be the whole of what
   `prefers-reduced-motion` needed here, and that is spent: under reduced motion

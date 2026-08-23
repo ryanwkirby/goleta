@@ -994,9 +994,37 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   that check a tap lands on the bot — and a bot made to draw while holding a
   play has been handed a Sunny violation it never chose. Bots are decided and
   paced on the server for exactly that reason; nothing off a screen moves one.
-- **It is drawn without `TableMotion`.** The flight layer portals to the body
-  where the board's scaling can't reach it. Draws get a local flight toward the
-  player's edge; the peel is CSS on the pile and runs regardless.
+- **It is drawn without `TableMotion`**, and it has its own flight layer (#200).
+  `TableMotion` portals to the body, where the board's scaling cannot reach it,
+  so cards would land at body coordinates. `TableFlights` lives *inside* the
+  board's transform and aims in design pixels, which is what makes a flight
+  survive the quarter turn and every scale without one of its own.
+
+  **The planning is shared rather than written twice.** `motion/plan.ts` is pure
+  and tested and already turns a batch of events into ordered flights — the deal
+  the engine emits no events for, the hold a peel is entitled to, the recycle's
+  nine face-down cards, the compression that stops a burst narrating a queue it
+  has already left behind. All this screen replaces is the anchor resolution:
+  `lib/tableFlight.ts` puts an `AnchorKey` in design coordinates instead of
+  reading a DOM rect. Everything that changes place is seen changing place —
+  draws, plays, the deal, turn-ups, recycles and the cards a landed call takes
+  back.
+
+  Four things about it. **A drawn card turns over at the deck before it travels**,
+  which is what makes it read as a card coming off the deck rather than appearing
+  from nowhere — and it is no leak, because every hand here is face up. **It
+  flies off the edge rather than stopping at the name**: the hands are not on
+  this screen, so there is nothing for it to land in. **Nothing waits for it** —
+  no `dealing`, no gate on the prompt, and the draw pile stays tappable
+  throughout. And **reduced motion plans no flights at all**, exactly as the
+  phone does, with the board correct without them.
+
+  A card back in the air divides `--paint-scale` out by the board's scale *and*
+  the piles' fitting, multiplied by hand, for `ScaledPiles`' reason (#169): the
+  lattice is a screen measurement and must not grow with the board.
+
+  The peel is CSS on the pile and runs regardless, and it still goes first — the
+  planner gives the rewind's cards the far side of `PEEL_MS` for free.
 - **One design, scaled** (`fitScale.ts`), rather than each piece in viewport
   units. Sizing every piece independently gets the type right and the
   *relationships* wrong — a board recomposing itself at every aspect ratio is

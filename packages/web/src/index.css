@@ -304,48 +304,32 @@
     }
   }
 
-  /* Same card, arriving and leaving where it stands. The flight describes who
-     drew it; the fade is what says a card moved at all. */
-  @keyframes table-screen-flight {
-    0% {
-      opacity: 0;
-      transform: translate(-50%, -50%);
-    }
-    12%,
-    70% {
-      opacity: 1;
-      transform: translate(-50%, -50%);
-    }
-    100% {
-      opacity: 0;
-      transform: translate(-50%, -50%);
-    }
-  }
-
-  @keyframes table-screen-recycle {
-    0%,
-    100% {
-      opacity: 0;
-      transform: translate(-50%, -50%);
-    }
-    20%,
-    80% {
-      opacity: 0.9;
-      transform: translate(-50%, -50%);
-    }
-  }
+  /* No flattened flight here any more (#200). The shared screen plans no flights
+     at all under reduced motion, exactly as the phone does, and the board is
+     correct with none of them — so there is nothing left to flatten. */
 }
 
-/* A card leaving the shared screen's deck for the seat that drew it (#164).
-   The board is drawn through one transform, so the flight layer sits outside it
-   and does its own arithmetic — `--dx` and `--dy` are the trip, in design
-   pixels already scaled by the caller.
+/* Every card that changes place on the shared screen, seen changing place
+   (#200). One animation for all of it — draws, plays, the deal, turn-ups, the
+   recycle and the cards a landed call takes back — because `motion/plan.ts`
+   already decides *what* moves where and in what order, and this only has to
+   draw the trip it was given.
+
+   `--dx` and `--dy` are that trip in design pixels; `--delay` and `--duration`
+   come off the plan. The board is drawn through one transform and this layer
+   lives **inside** it, so a flight survives the quarter turn and every scale
+   without one of its own.
+
+   It fades out at the end rather than stopping: the board underneath is already
+   correct — the pile shows the card, the count has changed — so a card that
+   stayed would be a second copy of something the board has said.
 
    These lived **inside** the `prefers-reduced-motion` block until #209, which
    is to say the shared screen had no flight at all in ordinary motion and the
    full one for anybody who had asked for less. Both halves of that were
-   backwards. */
-@keyframes table-screen-flight {
+   backwards. Reduced motion now plans no flights at all, exactly as the phone
+   does, and the board is correct with none of them. */
+@keyframes table-screen-card {
   0% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.85);
@@ -356,35 +340,50 @@
   }
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.72);
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.8);
   }
 }
 
-.table-screen-flight {
-  animation: table-screen-flight 620ms cubic-bezier(0.2, 0.82, 0.25, 1) both;
+.table-screen-card {
+  animation: table-screen-card var(--duration, 620ms) cubic-bezier(0.2, 0.82, 0.25, 1)
+    var(--delay, 0ms) both;
 }
 
-/* The pile going back into the deck, on the one screen with no flight layer to
-   do it for us (#209). Slower and flatter than a draw: this is a stack being
-   put away rather than a card being handed to somebody, and there are nine of
-   them overlapping. `--delay` staggers them; every one is face down. */
-@keyframes table-screen-recycle {
+/* A card coming off the deck turns over before it travels, which is what makes
+   it read as a card being dealt out rather than one appearing from nowhere. It
+   is **not a leak**: every hand at this table is face up.
+
+   Two children in one box, squashed and unsquashed against each other. A 3D
+   flip would want `preserve-3d` inside a board that is already carrying a 2D
+   transform, and this says the same thing in two keyframes. The travel is on
+   the parent and starts once this has finished, so the two never fight over
+   `transform`. */
+@keyframes table-screen-turn-back {
   0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.92);
+    transform: scaleX(1);
   }
-  15% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) scale(1);
+  50%,
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes table-screen-turn-face {
+  0%,
+  50% {
+    transform: scaleX(0);
   }
   100% {
-    opacity: 0;
-    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.88);
+    transform: scaleX(1);
   }
 }
 
-.table-screen-recycle {
-  animation: table-screen-recycle 620ms cubic-bezier(0.3, 0.7, 0.35, 1) var(--delay, 0ms) both;
+.table-screen-turn-back {
+  animation: table-screen-turn-back var(--flip, 240ms) ease-in var(--delay, 0ms) both;
+}
+
+.table-screen-turn-face {
+  animation: table-screen-turn-face var(--flip, 240ms) ease-out var(--delay, 0ms) both;
 }
 
 html,

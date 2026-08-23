@@ -198,15 +198,22 @@ It is that hand and no other. Anything they drew after the reach you are
 challenging was never theirs to play, so it is not on the list and cannot be
 named.
 
-It shows you the board that hand is judged against, too: the suit that had to
-be matched at the reach, and the rank that was in play then. The pile is often
-no longer that board by the time anybody calls — the window outlives the turn,
-so the offender may well have played since, and an 8 played since will have
-changed the suit outright.
+**What it does not show you is the board that hand is judged against**: the suit
+that had to be matched at the reach, and the rank that was in play then. That is
+yours to remember, and it is the part of a call you pay for out of your own
+attention. The pile in front of you is often no longer that board by the time
+anybody calls — the window outlives the turn, so the offender may well have
+played since, and an 8 played since will have changed the suit outright. Name a
+card because it matched the pile as it is now and you can be wrong twice over.
+
+While you have somebody's hand up in front of you, the game log at the foot of
+the screen is hidden from you as well. Everything that has been played into the
+middle is written down in it, in order, and this is the one moment you are being
+asked to remember it rather than look it up.
 
 Nothing in the app marks up which of those cards was legal. It is the same
 judgement you would make leaning over a real table — their cards are face up,
-the card in play is face up, and the two are all you need.
+what has gone into the middle you watched go in, and the two are all you need.
 
 It applies to any illegal draw in the turn, not just the first one. Drawing a
 second card when the first card you drew gave you a play is exactly the same

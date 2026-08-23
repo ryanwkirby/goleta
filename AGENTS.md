@@ -214,14 +214,31 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   the one control in this app whose window closes when the next player takes
   their first action. A missed tap was usually a missed call.
 
-  There is only ever one `sunnyTargetId`, so the control names them — *call it
-  on Angela* — which is what stops a call being a thing you do to a name in a
-  list. It is 44px in both layouts, it is over the felt near your own cards in
-  both, and it is nowhere near the draw pile in either. It is **absolute** in
-  both, because it must arrive with some presence without moving the cards
-  underneath it; with a wide fan it sits over a corner of the outermost card,
-  which is the cost the two bottom corners already pay (#167) and a cheaper one
-  here, since a window is only ever open on somebody else's turn.
+  There is only ever one `sunnyTargetId`, so the control names them — a sun with
+  *Angela* under it — which is what stops a call being a thing you do to a name
+  in a list. A nameless sun would not do. It is 44px in both layouts, it is over
+  the felt near your own cards in both, and it is nowhere near the draw pile in
+  either. It is **absolute** in both, because it must arrive with some presence
+  without moving the cards underneath it; with a wide fan it sits over a corner
+  of the outermost card, which is the cost the two bottom corners already pay
+  (#167) and a cheaper one here, since a window is only ever open on somebody
+  else's turn.
+
+  **It is small print, and the target is not** (#257). #189 was right that a
+  20px circle was a missed tap and it overshot on presence: a window opens on
+  **every draw**, which is most turns of most games, so a bold amber sentence was
+  the widest thing over the felt almost continuously — for an action correctly
+  used rarely. It is the app's ordinary grey at small-print size now, on a plain
+  dark backing with no ring, and the 44px floor is untouched. Not amber: amber at
+  this table means *the game is waiting on you* (#190), and this is not that.
+
+  **The two layouts disagree about the side, deliberately.** Upright it is
+  right-aligned, because most people are right-handed and this is the one control
+  whose window closes when somebody else moves; the piles are mid-screen and a
+  whole prompt line away, which stays true after #259 put the deck on the right.
+  Landscape keeps the **left**, because the peek strip's draw pile is at that
+  row's right-hand end and right-aligning would hang the sun directly beneath the
+  deck — the one thing #189 exists to prevent.
 
   Tapping it opens the picker and does not call. An accusation names a card, so
   the tap that starts one cannot be the tap that commits it — and opening the
@@ -786,7 +803,7 @@ cost this map only partly removes.
 | --- | --- | --- |
 | Header row (`TableHeader`) | both cogs, invite glyph, rules, leave | Yes, for a control rather than a table fact. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
-| Above the hand, left | `SunnyCallOffer` | **No.** The middle of that box is where your own `HelpShout` rises. |
+| Above the hand, right | `SunnyCallOffer` | **No** (#257). The middle of that box is where your own `HelpShout` rises, and the left is free. |
 | Top of the screen | the Sunny announcement | **Never.** It is the one thing at this table nobody may miss, which is exactly why a refused move answers against the hand instead (#99). |
 
 **Shared table screen — `TableScreen`**

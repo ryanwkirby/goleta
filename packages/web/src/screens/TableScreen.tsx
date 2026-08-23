@@ -115,6 +115,17 @@ export function TableScreen({
   useLayoutEffect(() => {
     const element = frame.current;
     if (!element) return;
+
+    /**
+     * **Measured here, not only when the observer says so** (#285). A
+     * `ResizeObserver`'s first delivery is not something to rely on: in Chrome it
+     * simply never arrived on about two loads in three, leaving the box at zero —
+     * and `fitScale` answers 1 for a box with no size, so the board drew at its
+     * full 1000px inside an 894px screen and the seat names pinned to the edges
+     * were cut in half. That is the failure #141 is about, arriving by a
+     * different route.
+     */
+    setBox(contentBox(element));
     const watch = new ResizeObserver(([entry]) => {
       if (entry) setBox({ width: entry.contentRect.width, height: entry.contentRect.height });
     });
@@ -227,6 +238,25 @@ export function TableScreen({
     </div>
   );
 }
+
+/**
+ * The frame's **content** box, which is what `ResizeObserver` reports and
+ * therefore what the first measurement has to agree with (#285).
+ *
+ * Not `getBoundingClientRect()`: the frame carries the `env(safe-area-inset-*)`
+ * padding on purpose, so `fitScale` fits the design into the *safe* box rather
+ * than the whole screen. Measuring the border box would put a name back under
+ * the hardware on the one screen whose names sit on the very edges.
+ */
+const contentBox = (element: HTMLElement): Box => {
+  const style = getComputedStyle(element);
+  const across = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+  const down = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+  return {
+    width: Math.max(0, element.clientWidth - across),
+    height: Math.max(0, element.clientHeight - down),
+  };
+};
 
 /** Stated rather than measured, because the design box is a fixed rectangle —
  * the whole point of `fitScale.ts` — so this is arithmetic a test can hold. */

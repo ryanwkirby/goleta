@@ -21,6 +21,16 @@ const namingCards: GameEvent[] = [
   { type: "drew", playerId: "p2", card: card("10D") },
   { type: "turnedUp", cards: [card("3C"), card("QH")], reason: "recycle" },
   { type: "surrendered", playerId: "p1", card: card("AS"), reason: "sunnyPunishment" },
+  // The one that was missing, and the one still doing it (#286).
+  {
+    type: "sunnyCalled",
+    callerId: "p1",
+    targetId: "p2",
+    card: card("7C"),
+    correct: true,
+    returned: [],
+    evidence: { inPlay: card("5S"), activeSuit: "S", since: [] },
+  },
 ];
 
 describe("naming a card in the log", () => {

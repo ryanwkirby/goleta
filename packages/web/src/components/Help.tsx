@@ -5,6 +5,7 @@
 
 import type { ShoutKind } from "@goleta/engine";
 
+import { TwoWay } from "./TwoWay.tsx";
 import { Button } from "./ui.tsx";
 
 /**
@@ -129,6 +130,11 @@ export function HelpAsk({
  * and the seat still carries the mark (#187), so the sentence was one of three
  * places that is said rather than the only one.
  */
+const HINTS = [
+  { value: "yes", label: "Yes, guide me" },
+  { value: "no", label: "I think I've got it" },
+] as const;
+
 export function HintsToggle({
   on,
   onChange,
@@ -141,24 +147,13 @@ export function HintsToggle({
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
         Still confused?
       </p>
-      <div className="mt-2 flex gap-2">
-        <Button
-          variant={on ? "primary" : "secondary"}
-          className="flex-1"
-          aria-pressed={on}
-          onClick={() => onChange(true)}
-        >
-          Yes, guide me
-        </Button>
-        <Button
-          variant={on ? "secondary" : "primary"}
-          className="flex-1"
-          aria-pressed={!on}
-          onClick={() => onChange(false)}
-        >
-          I think I've got it
-        </Button>
-      </div>
+      <TwoWay
+        label="Still confused?"
+        options={HINTS}
+        value={on ? "yes" : "no"}
+        onChange={(answer) => onChange(answer === "yes")}
+        className="mt-2"
+      />
       <p className="mt-2 text-xs text-white/40">
         {on
           ? "Tutorial mode. Each turn, we'll show you which cards are playable. (You can turn this off in the settings when you're ready.)"

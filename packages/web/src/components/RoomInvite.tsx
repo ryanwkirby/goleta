@@ -13,6 +13,7 @@
 import { useState } from "react";
 
 import { QrCode } from "./QrCode.tsx";
+import { TwoWay } from "./TwoWay.tsx";
 import { Button, CodeButton, Panel } from "./ui.tsx";
 import { useCopyLink } from "../lib/copy.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
@@ -21,20 +22,20 @@ import { joinLink } from "../net/route.ts";
 type Invite = "player" | "screen";
 
 const INVITES: {
-  key: Invite;
+  value: Invite;
   label: string;
   /** What scanning it gets you, said as the thing that arrives. */
   blurb: string;
   copy: string;
 }[] = [
   {
-    key: "player",
+    value: "player",
     label: "New player",
     blurb: "Point a camera at it, or read the code out.",
     copy: "Copy invite link",
   },
   {
-    key: "screen",
+    value: "screen",
     label: "Shared screen",
     blurb: "A spare phone, tablet or TV showing the middle of the table.",
     copy: "Copy shared-screen link",
@@ -60,7 +61,7 @@ export function RoomInvite({
 }) {
   const [kind, setKind] = useState<Invite>("player");
 
-  const invite = INVITES.find((option) => option.key === kind) ?? INVITES[0]!;
+  const invite = INVITES.find((option) => option.value === kind) ?? INVITES[0]!;
   const link = joinLink(code, kind === "screen" ? "table" : "play");
   // Shared with the code above the QR: two triggers, one "Link copied" (#243).
   // It clears itself when the toggle changes the link under it.
@@ -83,19 +84,14 @@ export function RoomInvite({
         className="w-full max-w-sm text-center"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex gap-2">
-          {INVITES.map((option) => (
-            <Button
-              key={option.key}
-              variant={option.key === kind ? "primary" : "secondary"}
-              className="flex-1"
-              aria-pressed={option.key === kind}
-              onClick={() => setKind(option.key)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
+        {/* No heading of its own: the panel is the question, and the two answers
+            name themselves. */}
+        <TwoWay
+          label="Who is this invite for?"
+          options={[INVITES[0]!, INVITES[1]!]}
+          value={kind}
+          onChange={setKind}
+        />
 
         {/* Above the QR, at the size it is read out at — and, since #243, the
             control that copies whichever link is showing. */}

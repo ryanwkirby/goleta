@@ -20,6 +20,7 @@ import {
   HouseRulesPicker,
   IrlToggle,
 } from "../components/HostSettings.tsx";
+import { TwoWay } from "../components/TwoWay.tsx";
 import { Button, CodeButton, Panel } from "../components/ui.tsx";
 import { loadName } from "../net/identity.ts";
 import { joinLink } from "../net/route.ts";
@@ -120,9 +121,9 @@ function SharedScreenInvite({
   );
 }
 
-const SPEEDS: { key: BotSpeed; label: string; blurb: string }[] = [
-  { key: "human", label: "Human-like", blurb: "A few seconds a turn, like people play." },
-  { key: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
+const SPEEDS: { value: BotSpeed; label: string; blurb: string }[] = [
+  { value: "human", label: "Human-like", blurb: "A few seconds a turn, like people play." },
+  { value: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
 ];
 
 const describeTable = (room: RoomView, anyBots: boolean): string => {
@@ -196,24 +197,24 @@ function BotSpeedPicker({
   speed: BotSpeed;
   onPick: (speed: BotSpeed) => void;
 }) {
-  const chosen = SPEEDS.find((option) => option.key === speed);
+  const chosen = SPEEDS.find((option) => option.value === speed);
 
   return (
     <div className="border-t border-white/10 pt-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Bot speed</p>
-      <div className="mt-2 flex gap-2">
-        {SPEEDS.map((option) => (
-          <Button
-            key={option.key}
-            variant={option.key === speed ? "primary" : "secondary"}
-            className="flex-1"
-            aria-pressed={option.key === speed}
-            onClick={() => onPick(option.key)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
+      {/* The fifth two-answer question, and #244 left it to be decided here. It is
+          a slider like the other four, because it is drawn only in the lobby —
+          where it is never the refused setting — and `AGENTS.md` already says it
+          sits beside them looking identical. Left as two buttons it would be the
+          one two-answer control in this drawer drawn as buttons, one row under a
+          slider. */}
+      <TwoWay
+        label="Bot speed"
+        options={[SPEEDS[0]!, SPEEDS[1]!]}
+        value={speed}
+        onChange={onPick}
+        className="mt-2"
+      />
       <p className="mt-2 text-xs text-white/40">{chosen?.blurb}</p>
     </div>
   );

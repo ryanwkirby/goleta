@@ -20,8 +20,15 @@ const SEAT_MIN = 128;
 
 /** A collapsed seat's `min-w-20` (#192). Easy to miss: `seatWidth(0, sliver)`
  * returns `SEAT_MIN`, so without this the fan reserves a full seat for something
- * no longer drawn as one and tightens everybody else to pay for it. */
-const SEAT_OUT_MIN = 80;
+ * no longer drawn as one and tightens everybody else to pay for it.
+ *
+ * **A floor rather than the answer** (#334). Every out seat is now drawn at one
+ * width — as small as the longest already-out name allows — and that number is
+ * measured on the component side and handed in, the way `available` already is.
+ * Left flat here, the strip's arithmetic would be wrong about how much room is
+ * left for the hands that still matter, which is the whole reason an out seat
+ * collapses at all. */
+export const SEAT_OUT_MIN = 80;
 /** `gap-2`, between one seat and the next. */
 const SEAT_GAP = 8;
 
@@ -39,11 +46,19 @@ export const handWidth = (cards: number, sliver: number): number =>
  * flag: an eliminated seat is a different shape, and never wraps. */
 export type SeatHand = number | "out";
 
-export const seatWidth = (hand: SeatHand, sliver: number): number =>
-  hand === "out" ? SEAT_OUT_MIN : Math.max(SEAT_MIN, handWidth(hand, sliver) + SEAT_PAD);
+/** `out` is the measured shared chip width, floored at `SEAT_OUT_MIN`. Defaulted
+ * so a caller with nothing measured yet gets exactly what it got before. */
+export const seatWidth = (hand: SeatHand, sliver: number, out = SEAT_OUT_MIN): number =>
+  hand === "out"
+    ? Math.max(SEAT_OUT_MIN, out)
+    : Math.max(SEAT_MIN, handWidth(hand, sliver) + SEAT_PAD);
 
-export const stripWidth = (hands: readonly SeatHand[], sliver: number): number =>
-  hands.reduce<number>((total, hand) => total + seatWidth(hand, sliver), 0) +
+export const stripWidth = (
+  hands: readonly SeatHand[],
+  sliver: number,
+  out = SEAT_OUT_MIN,
+): number =>
+  hands.reduce<number>((total, hand) => total + seatWidth(hand, sliver, out), 0) +
   SEAT_GAP * Math.max(0, hands.length - 1);
 
 export interface Fan {
@@ -52,9 +67,9 @@ export interface Fan {
   rows: number[];
 }
 
-const tighten = (available: number, hands: readonly SeatHand[]): number => {
+const tighten = (available: number, hands: readonly SeatHand[], out: number): number => {
   for (let sliver = LOOSEST; sliver > TIGHTEST; sliver--) {
-    if (stripWidth(hands, sliver) <= available) return sliver;
+    if (stripWidth(hands, sliver, out) <= available) return sliver;
   }
   return TIGHTEST;
 };
@@ -76,10 +91,15 @@ const rowsFor = (hand: SeatHand, perRow: number | null): number => {
  * has been measured it renders the way it always did, and the observer corrects
  * it in the same frame.
  */
-export const fanTable = (available: number, hands: readonly SeatHand[]): Fan => {
+export const fanTable = (
+  available: number,
+  hands: readonly SeatHand[],
+  /** What one out seat's chip actually measures (#334). */
+  out = SEAT_OUT_MIN,
+): Fan => {
   if (available <= 0) return { sliver: LOOSEST, rows: hands.map((hand) => rowsFor(hand, null)) };
 
-  const sliver = tighten(available, hands);
+  const sliver = tighten(available, hands, out);
   const perRow = rowCapacity(available, sliver);
   return { sliver, rows: hands.map((hand) => rowsFor(hand, perRow)) };
 };

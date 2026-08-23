@@ -5,6 +5,7 @@ import {
   handWidth,
   inRows,
   LOOSEST,
+  SEAT_OUT_MIN,
   seatWidth,
   stripWidth,
   TIGHTEST,
@@ -186,6 +187,43 @@ describe("a table with players who are out", () => {
     const fan = fanTable(PHONE, ["out", "out", "out"]);
     expect(fan.rows).toEqual([0, 0, 0]);
     expect(stripWidth(["out", "out", "out"], fan.sliver)).toBeLessThan(PHONE);
+  });
+
+  /**
+   * Every out seat is drawn at one measured width, as small as the longest
+   * already-out name allows (#334). `SEAT_OUT_MIN` stops being the answer and
+   * becomes the floor, and the real number is handed in the way `available` is —
+   * otherwise the strip's arithmetic is wrong about how much room is left for the
+   * hands that still matter, which is the whole reason a chip exists.
+   */
+  it("takes the measured chip width rather than the placeholder", () => {
+    expect(seatWidth("out", LOOSEST, 140)).toBe(140);
+    // Still not a sliver's business: a chip has no cards for one to squeeze.
+    expect(seatWidth("out", TIGHTEST, 140)).toBe(seatWidth("out", LOOSEST, 140));
+    // Three chips at 140 cost the strip 180 more than three at the floor.
+    const chips: SeatHand[] = ["out", "out", "out"];
+    expect(stripWidth(chips, LOOSEST, 140) - stripWidth(chips, LOOSEST)).toBe(180);
+  });
+
+  it("floors it, so a short name cannot make a chip smaller than the old one", () => {
+    expect(seatWidth("out", LOOSEST, 40)).toBe(SEAT_OUT_MIN);
+    expect(seatWidth("out", LOOSEST, 0)).toBe(SEAT_OUT_MIN);
+  });
+
+  it("gives a caller with nothing measured yet exactly what it had before", () => {
+    for (const hands of [["out", 4] as SeatHand[], [3, 3, "out", "out"] as SeatHand[]]) {
+      expect(fanTable(PHONE, hands)).toEqual(fanTable(PHONE, hands, SEAT_OUT_MIN));
+      expect(stripWidth(hands, LOOSEST)).toBe(stripWidth(hands, LOOSEST, SEAT_OUT_MIN));
+    }
+  });
+
+  it("tightens the live hands to pay for wider chips, rather than overflowing", () => {
+    const hands: SeatHand[] = [8, 8, "out", "out"];
+    const wide = fanTable(PHONE, hands, 200);
+    expect(wide.sliver).toBeLessThanOrEqual(fanTable(PHONE, hands).sliver);
+    if (wide.sliver > TIGHTEST) {
+      expect(stripWidth(hands, wide.sliver, 200)).toBeLessThanOrEqual(PHONE);
+    }
   });
 });
 

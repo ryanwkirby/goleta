@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_OPTIONS,
+  MAX_DRAWS_PER_TURN,
   applyIntent,
   buildDeck,
   currentPlayer,
@@ -10,8 +11,19 @@ import {
   startGame,
   topCard,
   type GameState,
+  type Intent,
 } from "../src/index.ts";
-import { allCardIds, card, draw, handOf, must, play, reject, table } from "./helpers.ts";
+import {
+  allCardIds,
+  card,
+  draw,
+  endTurn,
+  handOf,
+  must,
+  play,
+  reject,
+  table,
+} from "./helpers.ts";
 
 describe("the deck", () => {
   it("is one of every card", () => {
@@ -141,7 +153,10 @@ describe("taking a turn", () => {
     expect(legalCards(state, currentPlayer(state))).toHaveLength(1);
   });
 
-  it("ends the turn after three fruitless draws", () => {
+  // The turn used to end itself here, which shut the challenge window on the
+  // reach that opened it — the next seat was on the clock the instant the third
+  // card landed (#260). It waits for the player now.
+  it("stays with the player after three fruitless draws, until they say otherwise", () => {
     let state = table({
       hands: { a: ["2C"], b: ["9S"] },
       top: "5S",
@@ -151,6 +166,10 @@ describe("taking a turn", () => {
     state = draw(state, "a");
     expect(currentPlayer(state).id).toBe("a");
     state = draw(state, "a");
+    expect(currentPlayer(state).id).toBe("a");
+    expect(handOf(state, "a")).toHaveLength(4);
+
+    state = endTurn(state, "a");
     expect(currentPlayer(state).id).toBe("b");
     expect(handOf(state, "a")).toHaveLength(4);
   });
@@ -163,9 +182,20 @@ describe("taking a turn", () => {
     });
     state = draw(state, "a");
     state = draw(state, "a");
-    // The third draw ends the turn, so a fourth isn't even a's to take.
     state = draw(state, "a");
-    expect(reject(state, { type: "drawCard", playerId: "a" })).toMatch(/turn/);
+    expect(reject(state, { type: "drawCard", playerId: "a" })).toMatch(/three draws/);
+  });
+
+  it("refuses an end to a turn that has not been drawn out", () => {
+    const state = table({
+      hands: { a: ["2C"], b: ["9S"] },
+      top: "5S",
+      drawPile: ["6C", "2H", "3D", "4H"],
+    });
+    // Not a general pass: there is no legal way to end a turn you have not drawn
+    // out, and none at all on somebody else's.
+    expect(reject(state, { type: "endTurn", playerId: "a" })).toMatch(/Draw first/);
+    expect(reject(state, { type: "endTurn", playerId: "b" })).toMatch(/Not your turn/);
   });
 });
 
@@ -334,18 +364,22 @@ describe("when the deck runs out", () => {
     expect(state.phase.kind).toBe("action");
   });
 
-  it("ends the turn when there is genuinely nothing left to draw", () => {
-    const state = draw(table({ hands: { a: ["2C"], b: ["9S"] }, top: "5S", drawPile: [] }), "a");
+  it("lets the turn be ended when there is genuinely nothing left to draw", () => {
+    let state = draw(table({ hands: { a: ["2C"], b: ["9S"] }, top: "5S", drawPile: [] }), "a");
+    // The reach found nothing, and the turn is the player's to end (#260).
+    expect(currentPlayer(state).id).toBe("a");
+    state = endTurn(state, "a");
     expect(currentPlayer(state).id).toBe("b");
     expect(handOf(state, "a")).toEqual(["2C#1"]);
   });
 
   it("ends the game rather than hanging when nobody can move", () => {
     // No pile to draw from, and neither hand matches the 5S showing.
-    const state: GameState = draw(
+    let state: GameState = draw(
       table({ hands: { a: ["2C"], b: ["9D", "10H"] }, top: "5S", drawPile: [] }),
       "a",
     );
+    state = endTurn(state, "a");
     expect(state.status).toBe("over");
     expect(state.winnerId).toBe("b");
   });
@@ -362,11 +396,12 @@ describe("card conservation", () => {
         state = must(state, { type: "chooseSuit", playerId: player.id, suit: "H" });
       } else {
         const playable = legalCards(state, player)[0];
+        const stuck: Intent = state.drawsThisTurn >= MAX_DRAWS_PER_TURN
+          ? { type: "endTurn", playerId: player.id }
+          : { type: "drawCard", playerId: player.id };
         const result = applyIntent(
           state,
-          playable
-            ? { type: "playCard", playerId: player.id, cardId: playable.id }
-            : { type: "drawCard", playerId: player.id },
+          playable ? { type: "playCard", playerId: player.id, cardId: playable.id } : stuck,
         );
         expect(result.ok).toBe(true);
         if (result.ok) state = result.state;

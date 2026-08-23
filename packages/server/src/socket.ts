@@ -255,6 +255,11 @@ export const attachSockets = (
      * what holds the line is the conditions: `drawCard` only, an IRL room only,
      * and a seat with a person behind it. Without that last one a bot would be
      * handed a Sunny violation it did not choose.
+     *
+     * **`endTurn` is deliberately not on the list** (#260). It can end a turn
+     * dishonestly, and a screen in the middle of a table handing somebody a
+     * violation they never chose is precisely what the bot check here guards
+     * against. It falls through to the refusal below, like `playCard`.
      */
     if (
       !playerId &&

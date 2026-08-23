@@ -204,7 +204,19 @@ export type Intent =
   | { type: "chooseSuit"; playerId: PlayerId; suit: Suit }
   /** `cardId` is the accused card from the offender's pre-draw hand. */
   | { type: "callSunny"; playerId: PlayerId; cardId: CardId }
-  | { type: "surrenderCard"; playerId: PlayerId; cardId: CardId };
+  | { type: "surrenderCard"; playerId: PlayerId; cardId: CardId }
+  /**
+   * "I'm done" (#260). The turn used to end itself after a third draw that left
+   * you stuck, which was one action doing two things — and the second shut the
+   * challenge window on the first, because the next player was on the clock the
+   * instant the third card landed.
+   *
+   * Refused unless the turn has actually been drawn out. It is **not** a general
+   * pass: there is no legal way to end a turn you have not drawn out, and
+   * pressing it while holding a playable card is a Sunny violation, permitted
+   * silently exactly as reaching for the deck is.
+   */
+  | { type: "endTurn"; playerId: PlayerId };
 
 /** Why a card came off the deck rather than out of a hand. */
 export type TurnUpReason = "recycle" | "sunnyTouched";

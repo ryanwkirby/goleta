@@ -305,6 +305,34 @@ Pacing is the table's, not the seat's: an autopiloted seat is scheduled through
 the same `botPace` as everyone else's bots, so it moves at the pace the room is
 set to.
 
+## Ending a turn
+
+`endTurn` is an intent like any other (#260). The turn used to end itself after a
+third fruitless draw, which shut the challenge window on the reach that had just
+opened it — the next seat was on the clock the instant the third card landed.
+
+It is **refused unless the turn has actually been drawn out**: three draws, or a
+deck that cannot be replenished. There is no legal way to end a turn you have not
+drawn out, and none at all on somebody else's. `GameView.canEndTurn` carries that
+one condition to the browser and to the bots, so nothing re-derives it — and it
+**says nothing about your cards**, being exactly as true when the third draw
+handed you a play as when it left you stuck.
+
+**Pressing it while holding a play is permitted silently**, and is a Sunny
+violation recorded like a reach for the deck. It is judged against the board and
+the hand at the moment it was pressed, not at the draw: the three draws may have
+been perfectly honest, and it is the card the third one *gave* them that makes
+ending the turn an offence. A violation already frozen from an earlier draw stays
+frozen — that is the first offence.
+
+It does not touch `totalDraws`, because a lockout is measured in draws at the
+table and this is not one.
+
+The **shared table screen cannot send it.** Its one auxiliary action stays
+`drawCard`, for the reason the bot check there exists: a screen in the middle of
+a table handing somebody a violation they never chose is precisely the case being
+guarded against.
+
 ## Leaving, as opposed to dropping off
 
 Leaving used to be entirely client-side: the browser forgot its token and

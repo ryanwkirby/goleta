@@ -158,6 +158,8 @@ const route = (s: GameState, intent: Intent, events: GameEvent[]): string | null
       return handleCallSunny(s, intent.playerId, intent.cardId, events);
     case "surrenderCard":
       return handleSurrender(s, intent.playerId, intent.cardId, events);
+    case "endTurn":
+      return handleEndTurn(s, intent.playerId, events);
   }
 };
 
@@ -250,8 +252,10 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   // is the offence — or an empty deck would be a free way to touch the pile while
   // holding a play.
   if (s.drawPile.length === 0) {
-    if (!recycleFaceUpPile(s, events)) advanceTurn(s, events);
-    else if (reach && reachPile) {
+    // A deck with nothing to recycle back into it leaves the turn where it is, for
+    // #260's reason: `turnDrawnOut` is true here, so ending it is the player's to
+    // press. The window this reach opened stays open until they do.
+    if (recycleFaceUpPile(s, events) && reach && reachPile) {
       recordDraw(s, player.id, null, inViolation, snapshot, reach, reachPile);
     }
     return null;
@@ -263,10 +267,62 @@ const handleDraw = (s: GameState, playerId: PlayerId, events: GameEvent[]): stri
   events.push({ type: "drew", playerId: player.id, card });
   if (reach && reachPile) recordDraw(s, player.id, card, inViolation, snapshot, reach, reachPile);
 
-  const stillStuck = !mustPlay(s, player);
-  if (stillStuck && (s.drawsThisTurn >= MAX_DRAWS_PER_TURN || !canRefill(s))) {
-    advanceTurn(s, events);
+  // The turn does **not** end itself here any more (#260). It used to, and that
+  // was one action doing two things: the second shut the challenge window on the
+  // first, with the next seat on the clock the instant the third card landed —
+  // and the third reach is the hardest one to judge, because by then the offender
+  // is holding three more cards than the table has been reading. `endTurn` is the
+  // player's to press.
+  return null;
+};
+
+/**
+ * "I'm done" — the end of a turn, said rather than done to you (#260).
+ *
+ * **Refused unless the turn has actually been drawn out.** Three draws, or a deck
+ * that cannot be replenished, which is the case the turn used to end early on.
+ * There is no legal way to end a turn you have not drawn out.
+ *
+ * **Pressing it while holding a playable card is permitted, silently.** Must-play
+ * has not changed, so it is a lie, and it is a Sunny violation recorded like a
+ * reach for the deck — the same first rule in `AGENTS.md` § "Rules that look like
+ * bugs and are not", applied to a second control.
+ *
+ * **The violation is recorded at this moment, not at the draw.** The third draw
+ * may have been perfectly legal — they were stuck when they reached — and it is
+ * the card it *gave* them that makes ending the turn an offence. So the reach,
+ * the board, the frozen pile and the snapshot are all taken here, against the
+ * hand as it now stands. A violation already frozen from an earlier draw stays
+ * frozen: that is the first offence and the one a call is judged against.
+ */
+const handleEndTurn = (s: GameState, playerId: PlayerId, events: GameEvent[]): string | null => {
+  closeWindowIfSomeoneElseActs(s, playerId);
+
+  if (s.phase.kind !== "action") return "Can't do that now";
+  const player = currentPlayer(s);
+  if (player.id !== playerId) return "Not your turn";
+  if (!turnDrawnOut(s)) return "Draw first";
+
+  const watching = s.options.sunny !== null;
+  const inViolation = watching && mustPlay(s, player);
+  const alreadyCaught = s.challenge?.drawerId === player.id && s.challenge.violation !== null;
+  const snapshot = inViolation && !alreadyCaught ? structuredClone(s) : null;
+
+  if (watching) {
+    recordReach(
+      s,
+      player.id,
+      { hand: [...player.hand], activeSuit: s.activeSuit, topRank: topCard(s).rank },
+      { inPlay: topCard(s), ids: s.discardPile.map((c) => c.id) },
+      inViolation,
+      snapshot,
+      // No card: nothing was drawn, so there is nothing to take back and nothing
+      // to count against anybody's lockout.
+      null,
+    );
   }
+
+  advanceTurn(s, events);
   return null;
 };
 
@@ -457,14 +513,14 @@ const handleSurrender = (
  * and rewound against each other, so they must describe one moment, and a
  * recycle mid-turn is what pulls them apart (#74).
  */
-const recordDraw = (
+const recordReach = (
   s: GameState,
   playerId: PlayerId,
-  card: Card | null,
-  inViolation: boolean,
-  snapshot: GameState | null,
   reach: SunnyReach,
   reachPile: ReachPile,
+  inViolation: boolean,
+  snapshot: GameState | null,
+  card: Card | null,
 ): void => {
   if (!s.challenge || s.challenge.drawerId !== playerId) {
     s.challenge = {
@@ -482,9 +538,6 @@ const recordDraw = (
     challenge.reach = reach;
     challenge.reachPile = reachPile;
   }
-  // A reach that found nothing at all isn't one, and shouldn't count down
-  // anybody's lockout.
-  s.totalDraws += 1;
   if (card) challenge.drawnIds.push(card.id);
   challenge.resolved = false;
 
@@ -493,6 +546,22 @@ const recordDraw = (
   } else if (inViolation && snapshot) {
     challenge.violation = { snapshot, touchedIds: card ? [card.id] : [] };
   }
+};
+
+/** A reach for the deck. `totalDraws` counts *draws* and nothing else, because
+ * that is what a lockout is measured in — an `endTurn` goes through
+ * `recordReach` directly and does not touch it. */
+const recordDraw = (
+  s: GameState,
+  playerId: PlayerId,
+  card: Card | null,
+  inViolation: boolean,
+  snapshot: GameState | null,
+  reach: SunnyReach,
+  reachPile: ReachPile,
+): void => {
+  s.totalDraws += 1;
+  recordReach(s, playerId, reach, reachPile, inViolation, snapshot, card);
 };
 
 /** In the rewound state these are normally still in the deck, but a recycle
@@ -530,6 +599,14 @@ const takeCardsFromPiles = (s: GameState, ids: readonly string[]): Card[] => {
 const canRefill = (s: GameState): boolean =>
   // Recycling n face-up cards turns one straight back up, leaving n-1 to draw.
   s.drawPile.length > 0 || s.discardPile.length >= 2;
+
+/**
+ * Whether this turn has nowhere left to go but its end (#260) — three draws, or
+ * a deck that cannot be replenished. The one condition `endTurn` is legal under,
+ * and the one `redact` puts on the wire, so nothing outside here re-derives it.
+ */
+export const turnDrawnOut = (s: GameState): boolean =>
+  s.drawsThisTurn >= MAX_DRAWS_PER_TURN || !canRefill(s);
 
 /** Off the deck rather than out of a hand, so even an 8 is natural here. */
 const turnUp = (

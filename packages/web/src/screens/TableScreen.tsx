@@ -7,13 +7,13 @@ import {
   type ReactNode,
 } from "react";
 
-import type {
-  ClientMessage,
-  FeedEvent,
-  GameView,
-  PlayerId,
-  RoomView,
-  ShoutKind,
+import {
+  isGameEvent,
+  type ClientMessage,
+  type GameView,
+  type PlayerId,
+  type RoomView,
+  type ShoutKind,
 } from "@goleta/engine";
 
 import { AutopilotMark } from "../components/Autopilot.tsx";
@@ -27,6 +27,7 @@ import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
 import { Button } from "../components/ui.tsx";
+import { DECK } from "../lib/anchors.ts";
 import { facingTurn } from "../lib/facing.ts";
 import { namerFor, turnPrompt } from "../lib/format.ts";
 import {
@@ -44,8 +45,10 @@ import { useSeatFling, type SeatFling } from "../lib/seatFling.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
+import { tablePoint, type TablePlaces } from "../lib/tableFlight.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
-import { RESHUFFLE_BEAT_MS, RESHUFFLE_CARDS } from "../motion/plan.ts";
+import { planFlights, TABLE_SCREEN, type FlightPlan } from "../motion/plan.ts";
+import { usePrefersReducedMotion } from "../motion/reducedMotion.ts";
 import { joinLink } from "../net/route.ts";
 import type { LoggedEvent, Shout } from "../lib/feed.ts";
 
@@ -54,11 +57,15 @@ import type { LoggedEvent, Shout } from "../lib/feed.ts";
  * can see it. **Nothing anywhere depends on this existing** — the phone view
  * carries its own peek strip.
  *
- * It joins as a watcher (#16) with a `table` bit, which buys one narrow
- * auxiliary action: tapping the draw pile in an IRL room draws for the current
- * player. It cannot play, name a suit or call Sunny, and it is drawn without
- * `TableMotion` — the flight layer portals to the body, where this screen's
- * transform cannot reach it.
+ * It joins as a watcher (#16) with a `table` bit, which buys two narrow
+ * auxiliary actions: tapping the draw pile in an IRL room draws for the current
+ * player, and between games a name can be dragged to the edge its player is
+ * sitting at (#201). It cannot play, name a suit, call Sunny or end a turn.
+ *
+ * **It is still drawn without `TableMotion`**, whose flight layer portals to the
+ * body where this screen's transform cannot reach it. `TableFlights` below is
+ * this board's own, inside the transform and aimed in design coordinates — it
+ * shares `motion/plan.ts` and replaces only the anchor resolution (#200).
  *
  * **Every piece is placed against the design box rather than stacked in a
  * column** (#141), inside bands reserved for the seat names on all four sides.
@@ -416,7 +423,6 @@ function Playing({
     !finished &&
     seatOnClock !== undefined &&
     !seatOnClock.bot;
-  const latest = log[0]?.event ?? null;
 
   /** Off the same hook the phones read, so it is the same five seconds (#209). */
   const { drawPileSize: reshuffling } = useReshuffle(log);
@@ -457,17 +463,20 @@ function Playing({
       {view === "center" ? (
         <EdgeNames room={room} game={game} asking={asking} drag={fling} />
       ) : null}
-      <TableFlight
-        event={latest}
+      <TableFlights
         room={room}
-        from={deckPoint(pileRoom, pilesAt, "xl")}
+        game={game}
+        log={log}
+        places={{
+          seats: room.seats,
+          // The deck and the pile move with the view, and a card has to leave the
+          // one that is actually on screen (#164).
+          deck: deckPoint(pileRoom, pilesAt, "xl"),
+          pile: pilePoint(pileRoom, pilesAt, "xl"),
+          design: TABLE_DESIGN,
+        }}
         scale={fitScale(pileRoom, pileBox("xl"))}
-      />
-      <TableRecycle
-        running={reshuffling !== null}
-        from={pilePoint(pileRoom, pilesAt, "xl")}
-        to={deckPoint(pileRoom, pilesAt, "xl")}
-        scale={fitScale(pileRoom, pileBox("xl"))}
+        paint={boardScale}
       />
 
       {/* No name reaches the top corners, and the board is composed around the
@@ -702,99 +711,195 @@ function EdgeNames({
   );
 }
 
+/** Anything older than this already happened somewhere else — the same rule the
+ * phone's flight layer keeps, so a screen joining mid-game does not replay the
+ * hand at whoever just walked up to it. */
+const STALE_MS = 1500;
+
+/** How long a card coming off the deck spends turning over before it travels.
+ * In step with `--flip` in `index.css`. */
+const FLIP_MS = 240;
+
 /**
- * A card leaving the deck for whoever drew it. It used to be one of four fixed
- * vectors from the middle of the design box — which is not where the deck is,
- * and an edge holds two seats on any table of five or more, so it was thrown at
- * the midpoint between two people (#164). Both ends come from the same
- * arithmetic that draws the board.
+ * Added to every planned duration. The plan's figures are tuned for a phone,
+ * where the longest trip is a hand's width; here the same flight crosses a board
+ * somebody is reading from across a room, and at 220ms that is a flicker rather
+ * than a card going somewhere. It is added rather than replacing them so the
+ * *relationships* the plan sets — a recycle card slower and flatter than a draw
+ * — survive.
  */
-/**
- * The pile going back into the deck, on the one screen with no flight layer, so
- * it does its own arithmetic (#209). **Face down, all of them**: the recycled
- * pile is shuffled and its order *is* deck order, which `redact.ts` guards. It
- * gates nothing — the draw pile under it stays tappable.
- */
-function TableRecycle({
-  running,
-  from,
-  to,
-  scale,
-}: {
-  /** Whether the beat is on. */
-  running: boolean;
+const TABLE_TRIP_MS = 260;
+
+/** Long enough after the last flight has finished for its fade to be over. */
+const SWEEP_GRACE_MS = 200;
+
+/** A plan with both ends resolved to points on the board. */
+interface LiveFlight extends Omit<FlightPlan, "from" | "to"> {
   from: Point;
   to: Point;
+  /** Off the deck with a face on it, so it turns over before it goes. */
+  turns: boolean;
+}
+
+/**
+ * Everything that changes place, seen changing place (#200).
+ *
+ * Almost nothing moved on this board before: cards appeared in hands, appeared
+ * on the pile, and vanished off the deck. At a table of six with a tablet in the
+ * middle that is hard to follow, which is the one job this screen has.
+ *
+ * **The planning is `motion/plan.ts`, shared with the phone rather than written
+ * again.** It is pure and tested and already turns a batch of events into
+ * ordered flights — the deal the engine emits no events for, the hold a peel is
+ * entitled to, the recycle's nine face-down cards, the compression that stops a
+ * burst narrating a queue it has already left behind. What this adds is the
+ * anchor resolution: `tablePoint` puts an `AnchorKey` in **design coordinates**
+ * instead of reading a DOM rect, so a flight lives inside the board's own
+ * transform and survives the quarter turn and every scale without one of its
+ * own (#141).
+ *
+ * **Nothing waits for it.** There is no `dealing` here and no gate on anything:
+ * the prompt says what it says, the deck stays tappable, and a ruling lands when
+ * the ruling lands. It is drawn last and `pointer-events-none`.
+ *
+ * **Reduced motion plans nothing**, and the board is correct with no flights at
+ * all — every count, the pile and the prompt are read from the state.
+ */
+function TableFlights({
+  room,
+  game,
+  log,
+  places,
+  scale,
+  paint,
+}: {
+  room: RoomView;
+  game: GameView;
+  log: LoggedEvent[];
+  places: TablePlaces;
+  /** What the piles were fitted at, so a card in the air matches them. */
   scale: number;
+  /** The board's own scale, for `--paint-scale`: a card back's thread is a screen
+   * measurement and must not grow with the board (#169). */
+  paint: number;
 }) {
-  if (!running) return null;
+  const reduced = usePrefersReducedMotion();
+  const seen = useRef(0);
+  const sequence = useRef(0);
+  /** One per batch, so a second batch arriving does not cancel the first one's
+   * sweep and leave its cards in the DOM forever. */
+  const sweeps = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const [flights, setFlights] = useState<LiveFlight[]>([]);
+
+  useEffect(() => {
+    const timers = sweeps.current;
+    return () => {
+      for (const timer of timers) clearTimeout(timer);
+      timers.clear();
+    };
+  }, []);
+
+  // `places` and `game` are deliberately not watched: they are read at the moment
+  // a batch arrives, and re-planning a landed flight because the board resized
+  // would fly every card again.
+  useEffect(() => {
+    const fresh = log.filter((entry) => entry.id > seen.current);
+    if (fresh.length === 0) return;
+    seen.current = fresh[0]?.id ?? seen.current;
+    if (reduced) return;
+
+    // The table acts out what just happened, never what it is only now being
+    // shown: a screen propped up mid-game does not replay the hand at whoever
+    // just walked over to it.
+    const now = Date.now();
+    const recent = fresh.filter((entry) => now - entry.at < STALE_MS);
+    if (recent.length === 0) return;
+
+    // Game events only: the log also carries what happens to the table, and a
+    // seat leaving puts no card in the air (#256).
+    const { flights: plans } = planFlights(
+      recent.toReversed().map((entry) => entry.event).filter(isGameEvent),
+      game,
+      () => `t${(sequence.current += 1)}`,
+      TABLE_SCREEN,
+    );
+
+    const live: LiveFlight[] = [];
+    for (const plan of plans) {
+      const from = tablePoint(plan.from, places);
+      const to = tablePoint(plan.to, places);
+      // Nowhere to fly from or to — a seat that has left, most likely. The board
+      // is correct without it, which is the same answer the phone gives when a
+      // seat is off screen.
+      if (!from || !to) continue;
+      live.push({ ...plan, from, to, turns: plan.card !== null && plan.from[0] === DECK });
+    }
+    if (live.length === 0) return;
+
+    setFlights((current) => [...current, ...live]);
+    const last = Math.max(...live.map((flight) => flight.delay + flight.duration));
+    const ids = new Set(live.map((flight) => flight.id));
+    const sweep = setTimeout(() => {
+      sweeps.current.delete(sweep);
+      setFlights((current) => current.filter((flight) => !ids.has(flight.id)));
+    }, last + FLIP_MS + TABLE_TRIP_MS + SWEEP_GRACE_MS);
+    sweeps.current.add(sweep);
+  }, [log, reduced]);
 
   return (
     <>
-      {Array.from({ length: RESHUFFLE_CARDS }, (_, index) => (
+      {flights.map((flight) => (
         <div
-          key={index}
+          key={flight.id}
           style={
             {
-              left: from.x,
-              top: from.y,
-              "--dx": `${to.x - from.x}px`,
-              "--dy": `${to.y - from.y}px`,
-              "--delay": `${index * RESHUFFLE_BEAT_MS}ms`,
+              left: flight.from.x,
+              top: flight.from.y,
+              "--dx": `${flight.to.x - flight.from.x}px`,
+              "--dy": `${flight.to.y - flight.from.y}px`,
+              "--delay": `${flight.delay + (flight.turns ? FLIP_MS : 0)}ms`,
+              "--duration": `${flight.duration + TABLE_TRIP_MS}ms`,
             } as CSSProperties
           }
-          className="table-screen-recycle pointer-events-none absolute z-30"
+          className="table-screen-card pointer-events-none absolute z-30"
         >
-          <div style={{ transform: `scale(${scale})` }}>
-            <CardBack size="xl" />
+          <div
+            style={
+              {
+                transform: `scale(${scale})`,
+                // Multiplied by hand, for `ScaledPiles`' reason: a property that
+                // referred to itself would be a cycle and resolve to nothing (#169).
+                "--paint-scale": paint * scale,
+              } as CSSProperties
+            }
+          >
+            {flight.card === null ? (
+              <CardBack size="xl" />
+            ) : flight.turns ? (
+              /* Off the deck, so it turns over before it goes. Two children in one
+                 box, squashed against each other — the travel is on the parent
+                 and starts once this has finished, so they never fight over
+                 `transform`. */
+              <span className="relative block">
+                <span
+                  style={{ "--delay": `${flight.delay}ms` } as CSSProperties}
+                  className="table-screen-turn-back block"
+                >
+                  <CardBack size="xl" />
+                </span>
+                <span
+                  style={{ "--delay": `${flight.delay}ms` } as CSSProperties}
+                  className="table-screen-turn-face absolute inset-0 block"
+                >
+                  <PlayingCard card={flight.card} size="xl" mirrored={room.irl} />
+                </span>
+              </span>
+            ) : (
+              <PlayingCard card={flight.card} size="xl" mirrored={room.irl} />
+            )}
           </div>
         </div>
       ))}
     </>
-  );
-}
-
-function TableFlight({
-  event,
-  room,
-  from,
-  scale,
-}: {
-  event: FeedEvent | null;
-  room: RoomView;
-  /** Where the deck is, in design pixels — it moves with the view. */
-  from: Point;
-  /** What the piles were fitted at, so a card in the air matches them. */
-  scale: number;
-}) {
-  if (!event || event.type !== "drew") return null;
-
-  const seats = room.seats.length;
-  const index = Math.max(
-    0,
-    room.seats.findIndex((seat) => seat.id === event.playerId),
-  );
-  const spot = edgeSeats(seats)[index];
-  if (!spot) return null;
-
-  const to = seatPoint(spot, TABLE_DESIGN);
-
-  return (
-    <div
-      key={`${event.playerId}:${event.card.id}`}
-      style={
-        {
-          left: from.x,
-          top: from.y,
-          "--dx": `${to.x - from.x}px`,
-          "--dy": `${to.y - from.y}px`,
-        } as CSSProperties
-      }
-      className="table-screen-flight pointer-events-none absolute z-30"
-    >
-      <div style={{ transform: `scale(${scale})` }}>
-        <PlayingCard card={event.card} size="xl" mirrored={room.irl} />
-      </div>
-    </div>
   );
 }

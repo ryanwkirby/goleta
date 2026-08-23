@@ -73,6 +73,11 @@ export const FULL_TABLE: TableScale = { hand: "md", pile: "lg", seat: "sm" };
  * and is dropped. */
 export const PEEK_TABLE: TableScale = { hand: "2xl", pile: "sm", seat: "sm" };
 
+/** The shared screen (#200): one size, because everything on that board is drawn
+ * at the piles' size and then fitted by `fitScale`, and because there are no
+ * hands on it for a card to be a different size in. */
+export const TABLE_SCREEN: TableScale = { hand: "xl", pile: "xl", seat: "xl" };
+
 const isYou = (game: GameView, playerId: PlayerId): boolean => game.you === playerId;
 
 /** Where a player's cards live on screen. */

@@ -92,7 +92,22 @@
    **Opacity, not the shadows.** Animating `box-shadow` repaints the whole
    viewport every frame; opacity on a fixed overlay composites, and it takes both
    shadows down together rather than inventing a second design at the dim end.
-   The dim end is half, so the edge never goes away.
+
+   The figures moved once, in #295. Three seconds each way between full and half
+   did stop the edge becoming furniture, but slowly and shallowly enough that the
+   movement itself was easy to miss — and what this is fighting is a phone flat
+   on the felt being *glanced* at, not stared at. Two seconds each way to a
+   quarter: half again as deep a swing in two thirds of the time, so the edge
+   moves better than twice as fast.
+
+   **A quarter rather than the 5% #295 asked for, and that is the eyeball it
+   asked for too.** This ink is a soft inset wash, so opacity takes it away far
+   quicker than the number reads: at 5% there is nothing on the screen at all,
+   and `ease-in-out` on an `alternate` rests at both ends, so *nothing at all* is
+   where it sits for about half a second of every cycle. That is the glow
+   answering **no** to its own question — is it me — for a quarter of the time
+   somebody might look down. A quarter is the deepest end that still has an edge
+   at it.
 
    The two shadows differ in spread as well as blur. A positive spread on an
    inset shadow contracts the rectangle the light falls from, so the wash reaches
@@ -102,10 +117,10 @@
   box-shadow:
     inset 0 0 1rem 0 color-mix(in oklab, var(--color-amber-300) 42%, transparent),
     inset 0 0 3.5rem 0.5rem color-mix(in oklab, var(--color-amber-300) 18%, transparent);
-  /* `alternate` at 3s rather than a 6s cycle, because the two halves are the two
-     figures anybody would name: three seconds down, three seconds back. It
-     starts at the bright end, so the turn arriving is announced at full. */
-  animation: turn-breathe 3s ease-in-out infinite alternate;
+  /* `alternate` at 2s rather than a 4s cycle, because the two halves are the two
+     figures anybody would name: two seconds down, two seconds back. It starts at
+     the bright end, so the turn arriving is announced at full. */
+  animation: turn-breathe 2s ease-in-out infinite alternate;
   will-change: opacity;
 }
 
@@ -114,7 +129,7 @@
     opacity: 1;
   }
   to {
-    opacity: 0.5;
+    opacity: 0.25;
   }
 }
 

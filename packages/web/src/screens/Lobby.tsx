@@ -470,8 +470,20 @@ export function Lobby({
         </div>
 
         {orderable ? (
+          /*
+            It says which way round, because that is the half a host has to guess
+            (#288). "The order you're sitting" has two answers at a round table
+            and the app has a preference: `edgeFor` walks top → right → bottom →
+            left as the index rises, so a rising seat index is clockwise on the
+            shared screen. Ordered the other way, the board runs backwards past
+            everybody sitting at it and nothing says so until three turns in.
+
+            The arrows lose their mention and stay exactly as they are — they and
+            the grip are both on screen next to this sentence, and what the line
+            has room to carry is the thing that is not visible.
+          */
           <p className="mt-1 text-xs text-white/40">
-            Put these in the order you're sitting — drag a name, or use the arrows.
+            Drag these names to match how you're seated in real life (clockwise)
           </p>
         ) : null}
 

@@ -13,7 +13,9 @@
  *
  * Both answers name themselves, the shape the lobby's seat-order check already
  * uses. A bare Cancel/OK asks somebody to work out which one is which while
- * looking at a sentence about losing their seat.
+ * looking at a sentence about losing their seat. **Stay** and **Leave** do that
+ * in a third of the width of *No, I'll stay* / *Yes, I'm going*, and they are
+ * the words the question is already in (#292).
  */
 
 import { useState } from "react";
@@ -44,13 +46,22 @@ function DoorGlyph() {
  *
  * A watcher is warned about nothing they have, because they have nothing: no
  * seat, and nothing in `localStorage` to forget.
+ *
+ * Both seated strings used to end "This browser can't take it back", and
+ * **"for good" already says it** (#292). That sentence explained the
+ * *mechanism* — the token in `localStorage` that proved the seat was yours is
+ * thrown away — and somebody deciding whether to stand up needs the cost rather
+ * than the mechanism. It was also the sentence most likely to be read as a bug
+ * report about the browser. The mid-hand line stays: that the cards keep playing
+ * without you is genuinely surprising, and it is what stops somebody thinking
+ * they vanish with them.
  */
 const cost = (watching: boolean, underWay: boolean): string => {
   if (watching) return "You're watching rather than playing, so there's no seat to give up.";
   if (underWay) {
-    return "Your hand stays in the game and plays itself out, so the table can finish — but the seat is gone for good. This browser can't take it back.";
+    return "Your hand stays in the game and plays itself out, so the table can finish — but the seat is gone for good.";
   }
-  return "Your seat goes with you, for good. This browser can't take it back.";
+  return "Your seat goes with you, for good.";
 };
 
 export function LeaveControl({
@@ -123,10 +134,10 @@ export function LeaveControl({
             <div className="mt-4 flex gap-2">
               {/* Dismissing changes nothing at all — the seat is exactly as it was. */}
               <Button variant="primary" className="flex-1" onClick={() => setAsking(false)}>
-                No, I'll stay
+                Stay
               </Button>
               <Button variant="secondary" className="flex-1" onClick={onLeave}>
-                Yes, I'm going
+                Leave
               </Button>
             </div>
           </Panel>

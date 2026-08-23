@@ -3,7 +3,19 @@ import { Button } from "../ui.tsx";
 
 /** Shown the first time the rule touches you, which is how you are meant to
  * learn it. It waits behind the announcement so you know what you are being
- * taught about. */
+ * taught about.
+ *
+ * **It opens on the rule, not on the offence** (#293). The emphasis is on
+ * *have*, because that word is the whole rule: drawing is the reward, and you
+ * only get it when you are stuck. "Anyone can call you on it" is not lost — the
+ * first bullet under it is **To call it**, and the two below that are what
+ * happens either way.
+ *
+ * It used to close on "Nothing here will tell you whether you're right." The
+ * property is not going anywhere: nothing on any client knows whether a call
+ * would land, and nothing ever will (#50). What went is the app pointing at its
+ * own absence, on the one panel somebody reads while they are already confused
+ * about what just happened to them. */
 export function SunnyExplainer({ onDone }: { onDone: () => void }) {
   return (
     <div
@@ -17,7 +29,7 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
         <div className="overflow-y-auto p-5 pb-4">
           <h2 className="text-xl font-semibold text-amber-300">☀️ The Sunny Rule</h2>
           <p className="mt-2 text-sm leading-relaxed text-white/80">
-            Drawing a card when you had one you could have played is against the rules — and anyone can call you on it.
+            It's against the rules to draw a card when you don't <em>have</em> to.
           </p>
           <ul className="ml-1.5 mt-3 list-inside list-disc space-y-1.5 text-sm leading-relaxed text-white/80 marker:text-white/40">
             <li>
@@ -30,9 +42,6 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
               <strong className="text-white">Wrong:</strong> nobody loses a card, but you can't call again for three draws.
             </li>
           </ul>
-          <p className="mt-3 text-sm leading-relaxed text-white/80">
-            Nothing here will tell you whether you're right. That's what the face-up hands are for.
-          </p>
         </div>
         <div className="shrink-0 p-5 pt-0">
           <Button variant="primary" full onClick={onDone}>

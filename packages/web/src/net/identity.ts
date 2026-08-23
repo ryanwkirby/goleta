@@ -163,10 +163,16 @@ export const setWantsHints = (wanted: boolean): void =>
 const SORT_KEY = "goleta:hand-sort";
 
 /** Kept because having to set it again every reload is exactly the sort of
- * small annoyance nobody reports. */
+ * small annoyance nobody reports.
+ *
+ * **`suit` is the fallback, not `dealt`** (#258). Deal order is the honest
+ * default in the abstract and the wrong one here: the question this game asks
+ * every turn is *do I hold this suit*, and grouped pips read as blocks at the
+ * sliver `fan.ts` floors at, where a shuffled hand does not. `dealt` is still
+ * two taps away and a stored preference still wins. */
 export const loadHandSort = (): HandSort => {
   const raw = readLocal(SORT_KEY);
-  return raw === "rank" || raw === "suit" ? raw : "dealt";
+  return raw === "rank" || raw === "dealt" ? raw : "suit";
 };
 
 export const saveHandSort = (sort: HandSort): void => writeLocal(SORT_KEY, sort);

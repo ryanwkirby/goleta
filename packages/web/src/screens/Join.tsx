@@ -70,10 +70,16 @@ export function Join({
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 p-5">
       <header className="text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
-        <p className="mt-2 text-balance text-white/60">
-          It's Crazy Eights, reversed. Hold on to your cards — when you're out of cards, you're out
-          of the game. Last man standing wins.
-        </p>
+        {/* Three facts, three lines — the third is the win condition, and run
+            together at `text-balance` all three read as a blurb to skim past
+            (#242). Block children rather than `<br>`: the middle line wraps on a
+            phone, and each sentence still starts on its own line at every
+            width. */}
+        <div className="mt-2 text-balance text-white/60">
+          <p>It's Crazy Eights, reversed.</p>
+          <p>Hold on to your cards — when you're out of cards, you're out of the game.</p>
+          <p>Last man standing wins.</p>
+        </div>
       </header>
 
       <Panel>

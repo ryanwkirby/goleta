@@ -232,8 +232,8 @@ describe("your own preferences", () => {
     expect(raw("goleta:first-game-hints")).toBe("0");
   });
 
-  it("leaves the hand in dealt order until you sort it", () => {
-    expect(loadHandSort()).toBe("dealt");
+  it("groups the hand by suit until you sort it", () => {
+    expect(loadHandSort()).toBe("suit");
   });
 
   it("round-trips every sort", () => {
@@ -246,9 +246,9 @@ describe("your own preferences", () => {
     expect(raw("goleta:hand-sort")).toBe("dealt");
   });
 
-  it("reads an unknown sort as dealt", () => {
+  it("reads an unknown sort as suit", () => {
     globalThis.localStorage.setItem("goleta:hand-sort", "sideways");
-    expect(loadHandSort()).toBe("dealt");
+    expect(loadHandSort()).toBe("suit");
   });
 });
 
@@ -269,7 +269,7 @@ describe("a browser that refuses to remember anything", () => {
     expect(hasSeenSunny()).toBe(false);
     expect(gamesFinished()).toBe(0);
     expect(gamesSeen("abcd")).toBeNull();
-    expect(loadHandSort()).toBe("dealt");
+    expect(loadHandSort()).toBe("suit");
   });
 
   it("still gives you the hints, which is the kinder default", () => {

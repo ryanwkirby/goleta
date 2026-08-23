@@ -126,3 +126,27 @@ export function CodeButton({
     </button>
   );
 }
+
+/**
+ * One item in the upright table's header: a drawn glyph with a word under it
+ * (#330).
+ *
+ * That row was two glyphs, a word and a picture of a door, all in the same small
+ * grey print, so nothing in it said which of them were the same kind of thing —
+ * and hosts did not find the cog until it was made 44px (#194). The target was
+ * never what was missing; legibility was.
+ *
+ * The shape lives here rather than in the header because two of the four items
+ * draw their own trigger: `SettingsCog` and `LeaveControl` each hold a dialog
+ * open, so they take the class from here instead of being wrapped in it.
+ *
+ * Still comfortably over 44px in both directions — the word is what makes it
+ * taller, and in the upright column that comes out of the felt between the seat
+ * strip and the piles, which is `flex-1` and centred, rather than out of the
+ * cards.
+ */
+export const headerItem =
+  "flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 " +
+  "min-w-11 text-[0.7rem] leading-none text-white/60 transition-colors " +
+  "hover:bg-white/5 hover:text-white " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300";

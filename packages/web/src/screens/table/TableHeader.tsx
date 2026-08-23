@@ -3,13 +3,50 @@ import type { ClientMessage, PlayerId, RoomView } from "@goleta/engine";
 import { LeaveControl } from "../../components/Leave.tsx";
 import { QrGlyph } from "../../components/QrCode.tsx";
 import { SettingsCog } from "../../components/Settings.tsx";
-import { Button } from "../../components/ui.tsx";
+import { headerItem } from "../../components/ui.tsx";
+
+/** The open book, drawn to match the cog, the QR and the door. An emoji among
+ * drawn glyphs is what #296 took out of the cog, and this row is now four of
+ * them side by side. */
+function BookGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden
+    >
+      <path d="M12 7.2v12.3" />
+      <path d="M12 7.2C10.4 5.8 8.4 5 6 5H3.5v12.3H6c2.4 0 4.4.8 6 2.2" />
+      <path d="M12 7.2C13.6 5.8 15.6 5 18 5h2.5v12.3H18c-2.4 0-4.4.8-6 2.2" />
+    </svg>
+  );
+}
 
 /**
- * The row of small grey print across the top of the upright table: the cog, the
- * way in, whether the socket is up, and the two ways out. It is the upright
- * view's only header — `HandView` has none, which is why the cog and the rules
- * link have to be reachable from the peek strip as well (#194, #195).
+ * The row across the top of the upright table: settings, the way in, whether the
+ * socket is up, the rules and the way out. It is the upright view's only header —
+ * `HandView` has none, which is why the cog and the rules link have to be
+ * reachable from the peek strip as well (#194, #195).
+ *
+ * **Four icons with a word under each** (#330). It was two glyphs, a word and a
+ * picture of a door, all in the same small grey print, and nothing in it said
+ * which of them were the same kind of thing. Every item already cleared 44px, so
+ * the target was never what was missing — legibility was.
+ *
+ * `settings · join` lead and `rules · leave` sit at the far end, which keeps the
+ * way out at the edge and leaves the middle of the row clear. The word is what
+ * makes the row taller, and what pays for it is the felt between the seat strip
+ * and the piles: that block is `flex-1` and `justify-center`, so it gives up the
+ * few pixels and the cards are untouched.
+ *
+ * The words are one each and nothing else joins them. **Landscape is not
+ * this**: the peek strip's left cluster is the only part of that row allowed to
+ * take width, and words there would push the pile onto a second line.
  */
 export function TableHeader({
   room,
@@ -49,6 +86,7 @@ export function TableHeader({
           status somebody had left switched on (#134). */}
       {seated ? (
         <SettingsCog
+          label="settings"
           isHost={isHost}
           hints={hints}
           onHints={onChooseHints}
@@ -62,9 +100,7 @@ export function TableHeader({
           onIrl={(on) => send({ t: "setIrl", on })}
           onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
           onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
-          // Pulled back over the column's own padding: it leads the row. The row
-          // was already this tall — every `Button` is `min-h-11` — so the target
-          // costs the header nothing.
+          // Pulled back over the column's own padding: it leads the row.
           className="-ml-2"
         />
       ) : null}
@@ -79,26 +115,36 @@ export function TableHeader({
         aria-haspopup="dialog"
         title={`Invite to room ${room.code}`}
         onClick={onShowInvite}
-        className={[
-          "-m-1 flex shrink-0 items-center rounded-lg p-1 text-base text-white/70",
-          "transition-colors hover:text-white",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-        ].join(" ")}
+        className={headerItem}
       >
-        <QrGlyph />
+        {/* Sized to the other three by the one dial `QrGlyph` has: it is drawn at
+            `1em`, and the `em` here is the word underneath it rather than the
+            20px the three drawn glyphs are. */}
+        <span className="text-[1.25rem] leading-none">
+          <QrGlyph />
+        </span>
+        <span>join</span>
       </button>
       {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
       {/* No way back to the hand here, and none needed: at an IRL table the phone
           is the toggle, and turning it is a gesture the table can see you make. */}
-      <Button variant="ghost" className="ml-auto px-2 py-1 text-xs" onClick={onShowRules}>
-        rules
-      </Button>
+      <button
+        type="button"
+        aria-label="How to play"
+        title="How to play"
+        onClick={onShowRules}
+        className={[headerItem, "ml-auto"].join(" ")}
+      >
+        <BookGlyph />
+        <span>rules</span>
+      </button>
       {/* A door rather than the word it was (#255). Two small grey words an inch
           apart, one of which opens a panel and one of which drops you out of the
           game, and the second fired instantly. It asks first now, and the copy
           says what leaving actually costs. */}
       <LeaveControl
         compact
+        label="leave"
         watching={!seated}
         underWay={room.status === "playing"}
         onLeave={onLeave}

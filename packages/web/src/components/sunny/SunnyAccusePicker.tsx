@@ -64,8 +64,23 @@ export function SunnyAccusePicker({
         compact ? "p-2" : "sticky bottom-2 p-3",
       ].join(" ")}
     >
+      {/* **The heading wraps rather than truncating** (#294). `truncate` ate the
+          tail, and the tail is where the name is — so against a longer one the
+          question came out as "What should Clockwork have p…", a sentence about
+          nobody. The name is the one word in it carrying information: everything
+          else is the same every time.
+
+          The worry about wrapping is that a docked picker is paid for in card
+          size (#166), and measured, it isn't. This row is already 36px tall
+          because `never mind` is a `Button` and carries `min-h-11`, so a second
+          line of a 20px heading overshoots it by eleven pixels rather than by a
+          row — and it only ever happens **upright**, where the hand is on the
+          fixed ladder (#191) and pays nothing at all. The compact picker spans a
+          landscape phone: at the narrowest one, with the worst insets, that
+          leaves the heading about 340px, and the longest sentence a room can
+          produce measures 278 (`NAME_LIMIT` is 10). It does not wrap there. */}
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="truncate text-sm font-semibold text-amber-300">
+        <h2 className="text-sm font-semibold text-amber-300">
           <span aria-hidden>☀️</span> What should {targetName} have played?
         </h2>
         <Button variant="ghost" className="-my-1 shrink-0 px-2 py-1 text-xs" onClick={onCancel}>

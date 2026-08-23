@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import type { Card } from "@goleta/engine";
 
 import { SUIT_GLYPH } from "../../lib/cardShape.ts";
+import { LAYER } from "../../lib/layers.ts";
 
 /** Said out loud to the whole table before anybody gets an explanation: the rule
  * reads very differently once you have seen it land on someone. */
@@ -33,7 +34,7 @@ export function SunnyAnnounce({
       // The one announcement nobody may miss, so it clears the island at both ends as
       // well as the top.
       className={[
-        "pointer-events-none fixed inset-x-0 top-0 z-30 flex justify-center p-4",
+        `pointer-events-none fixed inset-x-0 top-0 ${LAYER.overlay} flex justify-center p-4`,
         "pt-[max(1rem,env(safe-area-inset-top))]",
         "pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]",
       ].join(" ")}

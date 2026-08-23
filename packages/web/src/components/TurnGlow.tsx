@@ -18,8 +18,16 @@
  *
  * Driven by `waitingOn`, so it covers naming a suit under Power of Eights and
  * the card owed after a landed call. **It goes to the physical edge, not the
- * safe area** (#124), and `z-20` puts it under every dialog.
+ * safe area** (#124), and `LAYER.glow` puts it under the cards and under
+ * every panel over them.
  */
+import { LAYER } from "../lib/layers.ts";
+
 export function TurnGlow() {
-  return <div aria-hidden className="turn-glow pointer-events-none fixed inset-0 z-20" />;
+  return (
+    <div
+      aria-hidden
+      className={`turn-glow pointer-events-none fixed inset-0 ${LAYER.glow}`}
+    />
+  );
 }

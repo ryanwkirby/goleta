@@ -26,6 +26,7 @@ import { TwoWay } from "../components/TwoWay.tsx";
 import { Button, CodeButton, Panel } from "../components/ui.tsx";
 import { loadName } from "../net/identity.ts";
 import { joinLink } from "../net/route.ts";
+import { LAYER } from "../lib/layers.ts";
 
 /** The QR used to grow out of the middle of this and push the copy button down
  * the moment the host said the table was in person. See `JoinQr`.
@@ -92,7 +93,7 @@ function SharedScreenInvite({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
+      className={`fixed inset-0 ${LAYER.dialog} flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm`}
       role="dialog"
       aria-modal="true"
       aria-label="Add a shared screen"

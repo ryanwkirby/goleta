@@ -3,6 +3,7 @@ import type { Card } from "@goleta/engine";
 
 import { isRed, SUIT_GLYPH, SUIT_LABEL } from "../../lib/cardShape.ts";
 import { Button } from "../ui.tsx";
+import { LAYER } from "../../lib/layers.ts";
 
 /** A card named inline, in the suit's colour, the way the log names it. */
 function CardChip({ card }: { card: Card }) {
@@ -55,7 +56,7 @@ export function SunnyCaught({
       aria-modal
       aria-label="Caught by the Sunny Rule"
       className={[
-        "fixed inset-0 z-40 flex items-end justify-center bg-black/70 sm:items-center",
+        `fixed inset-0 ${LAYER.alert} flex items-end justify-center bg-black/70 sm:items-center`,
         "pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]",
         "pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]",
       ].join(" ")}

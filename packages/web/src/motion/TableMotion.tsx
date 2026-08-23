@@ -31,6 +31,7 @@ import { resolveAnchor, type AnchorGeometry, type AnchorKey } from "../lib/ancho
 import { MotionContext, type MotionApi } from "../lib/motion.ts";
 import { FULL_TABLE, planFlights, type FlightPlan, type TableScale } from "./plan.ts";
 import { usePrefersReducedMotion } from "./reducedMotion.ts";
+import { LAYER } from "../lib/layers.ts";
 
 /** Anything older than this already happened somewhere else. */
 const STALE_MS = 1500;
@@ -224,7 +225,10 @@ function FlightLayer({
 }) {
   if (flights.length === 0) return null;
   return createPortal(
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+    <div
+      aria-hidden
+      className={`pointer-events-none fixed inset-0 overflow-hidden ${LAYER.flights}`}
+    >
       {flights.map((flight) => (
         <FlightCard key={flight.id} flight={flight} onLanded={onLanded} />
       ))}

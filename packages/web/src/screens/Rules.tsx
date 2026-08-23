@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { DEFAULT_HOUSE_RULES, type HouseRules } from "@goleta/engine";
 
-import { HintsToggle } from "../components/Help.tsx";
+import { HintsQuestion } from "../components/Help.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 
 /** Headlines carry the game on their own — read as a list they are the whole
@@ -197,7 +197,7 @@ export function Rules({
           fold — with the way out under it rather than instead of it. It used to
           replace the continue button, which made it read as a fork (#187). */}
       <div className="shrink-0 border-t border-white/10 pt-4">
-        <HintsToggle on={hints} onChange={onChooseHints} />
+        <HintsQuestion on={hints} onChange={onChooseHints} />
         <Button variant="primary" full className="mt-4" onClick={onDone}>
           {ctaLabel}
         </Button>

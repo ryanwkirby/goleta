@@ -118,7 +118,29 @@ export function HelpAsk({
 }
 
 /**
- * Whether the table marks up your playable cards, as a switch you can find.
+ * Whether the table marks up your playable cards. **The same preference, asked
+ * for in two different places, so it is drawn twice** (#290).
+ *
+ * `HintsQuestion` is the one below the rules — the last decision before
+ * somebody's first hand, where the honest thing to ask is whether they are
+ * still confused. `HintsRow` is the one in the cog, where they came to change a
+ * setting and the question is not being asked of them. Both write the same
+ * preference through the same `onChange`; there is no second piece of state and
+ * no second source of truth.
+ *
+ * **What neither of them changes** (`AGENTS.md`, the hints bullet): switching it
+ * **on** is still shouted, the seat still carries a standing mark for as long as
+ * it lasts, switching it **off** is still silent, and it still never expires. It
+ * is presentation — `packages/engine` never learns it exists, it is not on
+ * `GameOptions` or `HouseRules`, and no bot reads it.
+ */
+const HINTS = [
+  { value: "yes", label: "Yes, guide me" },
+  { value: "no", label: "I think I've got it" },
+] as const;
+
+/**
+ * The first-run question, at the foot of the rules screen.
  *
  * **Written from the player's side of the question** (#251): *Still confused?*
  * is what somebody actually has when they reach this, and both answers sound
@@ -129,13 +151,13 @@ export function HelpAsk({
  * it. It no longer says the table can see it either: the shout still happens
  * and the seat still carries the mark (#187), so the sentence was one of three
  * places that is said rather than the only one.
+ *
+ * **This is the "before" of #187's three moments** — before the first hand,
+ * after the first finished game, and in the cog at any time. Taking it off the
+ * rules screen would delete the first one, which is why #290 split the control
+ * rather than replacing it.
  */
-const HINTS = [
-  { value: "yes", label: "Yes, guide me" },
-  { value: "no", label: "I think I've got it" },
-] as const;
-
-export function HintsToggle({
+export function HintsQuestion({
   on,
   onChange,
 }: {
@@ -157,8 +179,42 @@ export function HintsToggle({
       <p className="mt-2 text-xs text-white/40">
         {on
           ? "Tutorial mode. Each turn, we'll show you which cards are playable. (You can turn this off in the settings when you're ready.)"
-          : "You won't be helped automatically. (Help will still be available if you request it.)"}
+          : (
+            <>
+              You won't be helped automatically. <em>(But you can ask!)</em>
+            </>
+          )}
       </p>
+    </div>
+  );
+}
+
+/**
+ * The same preference as a settings row, for the *yours* half of the cog.
+ *
+ * The cog is opened mid-game by somebody who came to change a setting, and
+ * *Still confused?* answered by *Yes, guide me* / *I think I've got it* is a
+ * question nobody there is asking — worse, it never said what the setting was
+ * called. So: the name it is known by, four words of what it does, and the plain
+ * On/Off the house-rules rows beside it already use.
+ */
+export function HintsRow({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white">Tutorial mode</p>
+        <p className="text-xs text-white/40">Marks up your playable cards.</p>
+      </div>
+      <Button
+        variant={on ? "primary" : "secondary"}
+        className="min-w-16 px-3 py-1.5 text-xs"
+        role="switch"
+        aria-checked={on}
+        aria-label="Tutorial mode"
+        onClick={() => onChange(!on)}
+      >
+        {on ? "On" : "Off"}
+      </Button>
     </div>
   );
 }

@@ -15,7 +15,10 @@ import { useIsShort } from "../lib/viewport.ts";
 const RULES: {
   key: string;
   headline: ReactNode;
-  detail: ReactNode;
+  /** A function where the table can change what the rule *is* — the variation
+   * belongs in the line it changes rather than as a line of exceptions (#221).
+   * A `ReactNode` is never callable, so the union needs no discriminator. */
+  detail: ReactNode | ((rules: HouseRules) => ReactNode);
   when?: (rules: HouseRules) => boolean;
 }[] = [
   {
@@ -83,12 +86,36 @@ const RULES: {
     // The hint is set apart because it is the one sentence on this screen that
     // says how to play *well* rather than what is legal, and it should not be
     // read as part of the rule it hangs off (#305).
-    detail: (
-      <>
-        An 8 plays on anything, and after playing one, you get to choose the suit.{" "}
-        <em>(Hint: Look at your neighbors' hands first!)</em>
-      </>
-    ),
+    //
+    // **It is the one line a house rule rewrites** (#221). Under the Power of
+    // Eights the standard sentence is not merely incomplete, it is false: you do
+    // not choose the suit, the seat after you does. A player briefed only by this
+    // screen played an 8, waited for the picker, and watched it open on somebody
+    // else's phone with nothing anywhere saying why.
+    //
+    // **The hint has to turn over with it**, which is the part that is easy to
+    // miss. *Look at your neighbours' hands first* is advice about a choice you
+    // are no longer making, so left standing it would be the same failure one
+    // sentence later. What replaces it is `docs/RULES.md` § The Power of Eights,
+    // which is emphatic that this hands the next player something good: they
+    // "will name something they can't follow and draw off the back of it".
+    //
+    // Dealer's Choice is deliberately **not** in here. It only does anything when
+    // the opening card happens to be an 8, and briefing every new player on that
+    // in advance costs more attention than the case is worth; `docs/RULES.md`
+    // stays canonical and answers it at the table.
+    detail: (rules) =>
+      rules.eights === "nextPlayerNames" ? (
+        <>
+          An 8 plays on anything, but the <em>next</em> player chooses the suit — and then
+          has to follow it. <em>(Hint: they'll name a suit they can't play, so they get to draw.)</em>
+        </>
+      ) : (
+        <>
+          An 8 plays on anything, and after playing one, you get to choose the suit.{" "}
+          <em>(Hint: Look at your neighbors' hands first!)</em>
+        </>
+      ),
   },
   {
     key: "sunny",
@@ -221,7 +248,12 @@ export function Rules({
         <ol className="mt-4">
           {rules.map((rule) => (
             <li key={rule.key}>
-              <Rule headline={rule.headline} detail={rule.detail} />
+              <Rule
+                headline={rule.headline}
+                detail={
+                  typeof rule.detail === "function" ? rule.detail(houseRules) : rule.detail
+                }
+              />
             </li>
           ))}
         </ol>

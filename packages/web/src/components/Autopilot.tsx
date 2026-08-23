@@ -12,34 +12,40 @@
 
 import type { AutopilotMode } from "@goleta/engine";
 
+import { TwoWay } from "./TwoWay.tsx";
 import { Button } from "./ui.tsx";
 
-/** What each mode is called, and what it actually does. Written from the
- * player's side: the question somebody has is *am I going to hold this up*. */
-const MODES: { value: AutopilotMode; label: string; blurb: string; mark: string }[] = [
-  {
-    value: "off",
-    label: "I'm here",
-    blurb: "You play your own turns.",
-    mark: "",
-  },
-  {
-    value: "forced",
-    label: "Only when forced",
-    blurb:
-      "Your seat plays for you when there's exactly one legal move, and waits for you on anything that's a real choice — naming a suit, or picking a card to give up.",
-    mark: "auto",
-  },
-  {
-    value: "bot",
-    label: "Play for me",
-    blurb:
-      "Your seat plays like a bot at this table would, which by the reversed logic is rather well. It never calls the Sunny Rule on anybody.",
-    mark: "auto+",
-  },
-];
+/**
+ * **Two answers, because the heading asks a yes/no question** (#291). It used to
+ * offer three — *I'm here* / *Only when forced* / *Play for me* — two of which
+ * are the same answer at different strengths, sharing the panel's width at
+ * `text-xs` on a phone. Whether you are stepping away is the question; how far
+ * the seat should go while you are is a second one, and it is only worth asking
+ * once the first has been answered.
+ *
+ * The engine's three modes are untouched, and so is every message on the wire.
+ * This is the control, not the state behind it.
+ */
+const ANSWERS = [
+  { value: "off", label: "I'm here" },
+  { value: "on", label: "Autoplay" },
+] as const;
 
-const modeOf = (mode: AutopilotMode) => MODES.find((option) => option.value === mode) ?? MODES[0]!;
+/** Written from the player's side: the question somebody has is *am I going to
+ * hold this up*. Two blurbs for two answers, plus the switch's own line. */
+const BLURB: Record<"off" | "on", string> = {
+  off: "You play your own turns.",
+  on: "Your seat plays for you when there's exactly one legal move, and waits for you on anything that's a real choice — naming a suit, or picking a card to give up. It never calls the Sunny Rule on anybody.",
+};
+
+/** One character's difference on screen, a whole sentence to a screen reader —
+ * see `AutopilotMark`. Keyed by the engine's mode rather than by the control's
+ * answer, because that is what a seat actually carries. */
+const MARK: Record<AutopilotMode, string> = {
+  off: "",
+  forced: "auto",
+  bot: "auto+",
+};
 
 /** Said out loud rather than shortened, because a mark on somebody else's seat
  * has to be readable by somebody who has never turned it on. */
@@ -102,7 +108,7 @@ export function AutopilotMark({
         className,
       ].join(" ")}
     >
-      <span aria-hidden>{modeOf(mode).mark}</span>
+      <span aria-hidden>{MARK[mode]}</span>
     </span>
   );
 }
@@ -111,9 +117,25 @@ export function AutopilotMark({
  * The control, for the *yours* half of the cog (#253): it belongs to one player
  * and changes nothing about the room.
  *
- * Three answers, so it is not `TwoWay` — that component is for a question with
- * exactly two named answers and none of these is the other's opposite. Off leads
- * because it is where everybody starts and where coming back puts you.
+ * **Two answers and then, if you took the second, one more question** (#291).
+ * *Stepping away?* is a yes/no, so it is drawn with `TwoWay` — the same sliding
+ * switch the other named pairs in this app use, which reads as the two ends of
+ * one thing rather than as three buttons one of which is pressed. It was three
+ * `Button`s until then, and #244's argument against them applies here as it did
+ * everywhere else.
+ *
+ * **Autoplay engages `forced`, never `bot`.** A seat that plays only when there
+ * is exactly one lawful move has decided nothing in anybody's name; *Make
+ * decisions* is what asks for that, it appears only once Autoplay is on, and it
+ * is off when Autoplay is engaged. So nothing is decided for somebody until they
+ * ask for it.
+ *
+ * The three modes underneath (`off` / `forced` / `bot`) and every message on the
+ * wire are exactly as they were — and everything in the autopilot bullet holds:
+ * it runs on the server with the bots through `decideBotIntent`, so an
+ * autopiloted seat can never reach for the deck holding a play; **it never
+ * accuses**; the mark is public and standing; nobody may set it for anybody
+ * else, because the server stamps the seat from the connection.
  */
 export function AutopilotPicker({
   mode,
@@ -122,30 +144,48 @@ export function AutopilotPicker({
   mode: AutopilotMode;
   onChange: (mode: AutopilotMode) => void;
 }) {
+  const away = mode !== "off";
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
         Stepping away?
       </p>
-      <div className="mt-2 flex gap-2" role="group" aria-label="Stepping away?">
-        {MODES.map((option) => (
-          <Button
-            key={option.value}
-            variant={option.value === mode ? "primary" : "secondary"}
-            className="flex-1 px-2 text-xs"
-            aria-pressed={option.value === mode}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-white/40">{modeOf(mode).blurb}</p>
-      {mode === "off" ? null : (
-        <p className="mt-1 text-xs text-white/40">
-          The table can see this, and it stops the moment you play a card yourself.
-        </p>
-      )}
+      <TwoWay
+        label="Stepping away?"
+        options={ANSWERS}
+        value={away ? "on" : "off"}
+        // Engaging it lands on `forced`; coming back is `off` whichever of the
+        // two the seat was in.
+        onChange={(answer) => onChange(answer === "on" ? "forced" : "off")}
+        className="mt-2"
+      />
+      <p className="mt-2 text-xs text-white/40">{BLURB[away ? "on" : "off"]}</p>
+      {away ? (
+        <>
+          <div className="mt-3 flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">Make decisions</p>
+              <p className="text-xs text-white/40">
+                On, it chooses too. Off, it waits at every real choice.
+              </p>
+            </div>
+            <Button
+              variant={mode === "bot" ? "primary" : "secondary"}
+              className="min-w-16 px-3 py-1.5 text-xs"
+              role="switch"
+              aria-checked={mode === "bot"}
+              aria-label="Make decisions"
+              onClick={() => onChange(mode === "bot" ? "forced" : "bot")}
+            >
+              {mode === "bot" ? "On" : "Off"}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-white/40">
+            The table can see this, and it stops the moment you play a card yourself.
+          </p>
+        </>
+      ) : null}
     </div>
   );
 }

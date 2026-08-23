@@ -762,9 +762,14 @@ Things that will read as oversights in that view and are not:
   the rule above it is that two lines of small print stay shorter than the pile
   card beside them, and what a full-height line would spend the difference out
   of is the hand. The rules link opens the same screen the upright header does,
-  **without** the first-run hints question: that belongs to the first time
-  through, not to a mid-hand look-up, and nothing pauses behind it — a
-  challenge window can close while you read, exactly as it always could.
+  hints question and all — that was the *first-run* question when this was
+  written, and #301 made it a standing preference the screen carries every time.
+  Nothing pauses behind it: a challenge window can close while you read, exactly
+  as it always could. **On a short screen the question is the last thing in the
+  scroll rather than pinned under it** (#305) — #187 pinned it so the last
+  decision before the first hand could never be below the fold, and in landscape
+  the pin was costing the rules themselves about 160px of a 300px panel, which is
+  burying the thing it was protecting.
 - **The room code is the invite, on every screen, and tapping it is how (#135).**
   A code is the address of the room, and the two things that can arrive at one
   are a **person** and a **shared screen**: same code, different link, which is

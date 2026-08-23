@@ -88,7 +88,7 @@ const asks = (game: GameView, dealing?: boolean): string =>
 describe("what the table is waiting for", () => {
   it("asks the namer for a suit, and tells everyone else who is naming it", () => {
     const suit = { kind: "suit", playerId: "p1" } as const;
-    expect(asks(table({ phase: suit }))).toBe("Name a suit.");
+    expect(asks(table({ phase: suit }))).toBe("Choose a suit.");
     expect(asks(table({ phase: suit, you: "p2" }))).toBe("Ana is naming a suit.");
   });
 
@@ -134,8 +134,8 @@ describe("what the table is waiting for", () => {
   // Reduced motion plans no flights at all, so nothing is ever mid-deal there —
   // and the default is what every caller outside the motion layer gets.
   it("asks for the suit straight away when nothing is in the air", () => {
-    expect(asks(table({ phase: { kind: "suit", playerId: "p1" } }))).toBe("Name a suit.");
-    expect(asks(table({ phase: { kind: "suit", playerId: "p1" } }), false)).toBe("Name a suit.");
+    expect(asks(table({ phase: { kind: "suit", playerId: "p1" } }))).toBe("Choose a suit.");
+    expect(asks(table({ phase: { kind: "suit", playerId: "p1" } }), false)).toBe("Choose a suit.");
   });
 });
 

@@ -204,7 +204,10 @@ export function HintsRow({ on, onChange }: { on: boolean; onChange: (on: boolean
     <div className="flex items-center gap-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-white">Tutorial mode</p>
-        <p className="text-xs text-white/40">Marks up your playable cards.</p>
+        {/* What you get rather than the mechanism — and the *always* is what
+            separates the standing preference from the two kinds of help you can
+            have a single turn of (#305). */}
+        <p className="text-xs text-white/40">Always show which cards are playable.</p>
       </div>
       <Button
         variant={on ? "primary" : "secondary"}

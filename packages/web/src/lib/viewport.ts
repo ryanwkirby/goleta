@@ -47,3 +47,15 @@ export const useIsPhone = (): boolean => {
 };
 
 export const useIsPortrait = (): boolean => useMedia(PORTRAIT);
+
+/**
+ * A screen with no height to spare — a phone held sideways, and a laptop window
+ * dragged short.
+ *
+ * Asked on height rather than on orientation because height is what the callers
+ * are short of: a panel that pins a footer under a scrolling body has the same
+ * problem in a 420px browser window as it does in landscape, and
+ * `(orientation: landscape)` would answer *no* to one of those and *yes* to a
+ * 1200px-tall desktop with room for everything (#305).
+ */
+export const useIsShort = (): boolean => useMedia(SHORT);

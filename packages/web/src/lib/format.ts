@@ -149,7 +149,10 @@ export const turnPrompt = (
       if (dealing) return "Dealing…";
       // The namer, not the player to move — under Power of Eights the suit is owed by
       // the next seat, and under Dealer's Choice by the dealer.
-      return mine ? "Name a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
+      // *Choose* to the person doing it, which is the picker's own heading
+      // (#305); *naming* about somebody else, which is what the table says and
+      // what `docs/RULES.md` calls it.
+      return mine ? "Choose a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
     case "sunnyPlay":
       return mine
         ? "☀️ Step 1 of 3 — make the play you skipped. Tap it twice."

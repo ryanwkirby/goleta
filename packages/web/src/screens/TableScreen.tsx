@@ -40,6 +40,7 @@ import {
 import { ANNOUNCE_MS } from "../lib/beats.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useDeparture } from "../lib/departure.ts";
+import { useSeatFling, type SeatFling } from "../lib/seatFling.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
 import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
@@ -117,6 +118,25 @@ export function TableScreen({
   const quarter = shouldTurn(box);
   const scale = fitScale(quarter ? turned(box) : box);
 
+  /**
+   * Dragging a name to the edge its player is sitting at (#201). The board is the
+   * element carrying the transform, so a pointer can be put back into design
+   * coordinates — the arithmetic is in `designPoint`, which is pure and tested.
+   *
+   * **An IRL room, between games.** The server checks both again, and refuses an
+   * online room outright exactly as it refuses the shared-screen draw: those are
+   * strangers, and none of them get to reorder a stranger's table.
+   */
+  const board = useRef<HTMLDivElement>(null);
+  const fling = useSeatFling({
+    board,
+    scale,
+    quarter,
+    seats: room.seats,
+    send,
+    enabled: room.irl && room.status !== "playing",
+  });
+
   // The inset goes on the frame, so `fitScale` fits the design into the *safe* box
   // without learning that hardware exists. It matters most here: the seat names
   // sit on the very edges of the design box, so a propped tablet would lose a
@@ -145,10 +165,12 @@ export function TableScreen({
           } as CSSProperties
         }
         className="relative shrink-0"
+        ref={board}
       >
         {game ? (
           <Playing
             room={room}
+            fling={fling}
             boardScale={scale}
             game={game}
             nameOf={nameOf}
@@ -168,7 +190,7 @@ export function TableScreen({
             }
           />
         ) : (
-          <Waiting room={room} />
+          <Waiting room={room} fling={fling} />
         )}
 
         {/* A screen that has lost touch with its table should say so rather than
@@ -308,12 +330,12 @@ function HandsIcon() {
 }
 
 /** Between games, and before the first one: the way in, at the size of a room. */
-function Waiting({ room }: { room: RoomView }) {
+function Waiting({ room, fling }: { room: RoomView; fling: SeatFling | null }) {
   const link = joinLink(room.code);
 
   return (
     <>
-      <EdgeNames room={room} />
+      <EdgeNames room={room} drag={fling} />
 
       {/* Stacked, a code worth crossing a room for plus the room code under it came
           to more than the board is tall. */}
@@ -349,6 +371,7 @@ function Waiting({ room }: { room: RoomView }) {
 /** A game in progress: the two piles, whose turn it is, and what everyone holds. */
 function Playing({
   room,
+  fling,
   boardScale,
   game,
   nameOf,
@@ -363,6 +386,9 @@ function Playing({
   onDraw,
 }: {
   room: RoomView;
+  /** Null unless the table may be reordered from here — an IRL room, between
+   * games (#201). */
+  fling: SeatFling | null;
   /** What the board is scaled by, for anything that has to divide it out. */
   boardScale: number;
   game: GameView;
@@ -429,7 +455,7 @@ function Playing({
     <>
       {/* The hand strip names everybody itself. */}
       {view === "center" ? (
-        <EdgeNames room={room} game={game} asking={asking} />
+        <EdgeNames room={room} game={game} asking={asking} drag={fling} />
       ) : null}
       <TableFlight
         event={latest}
@@ -554,20 +580,42 @@ function Playing({
  * carrying its own count — two lists of the same players was most of what used
  * to overflow. Placed by their own centre point, so the turn happens about the
  * middle of the label rather than swinging it into the board.
+ *
+ * **A name can be dragged to the edge its player is actually sitting at** (#201),
+ * which reorders the table — position on this board *is* seat order, and seat
+ * order is turn order, so there is no separate "where the name is drawn" to
+ * change. It is the shared-screen twin of the lobby's arrows and sends the same
+ * `moveSeat` hops underneath, for the reason `docs/PROTOCOL.md` gives: a whole
+ * posted order can arrive stale, a swap cannot.
+ *
+ * `drag` is null wherever it isn't offered, which the caller decides: **an IRL
+ * room, between games**, both of which the server checks again. The threshold is
+ * deliberate — this screen is propped in the middle of a table where somebody
+ * will put a drink down on it.
+ *
+ * The label keeps **its own angle while in flight**, and settles into the new
+ * edge's on the drop. Turning it mid-drag would mean re-aiming the thing under
+ * somebody's finger at every frame, and a name being read at a slant on the way
+ * across is not the confusion — where it lands is.
  */
 function EdgeNames({
   room,
   game = null,
   asking = new Map<PlayerId, ShoutKind>(),
+  drag = null,
 }: {
   room: RoomView;
   game?: GameView | null;
   asking?: ReadonlyMap<PlayerId, ShoutKind>;
+  drag?: SeatFling | null;
 }) {
   const placed = edgeSeats(room.seats.length);
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0">
+    <div
+      aria-hidden
+      className={["absolute inset-0", drag ? "" : "pointer-events-none"].join(" ")}
+    >
       {room.seats.map((seat, index) => {
         const spot = placed[index];
         if (!spot) return null;
@@ -577,6 +625,7 @@ function EdgeNames({
         // aiming at a seat should not each have their own idea of where it is.
         const at = seatPoint(spot, TABLE_DESIGN);
         const anchor: CSSProperties = { left: at.x, top: at.y };
+        const flung = drag?.holding === seat.id ? drag.offset : null;
 
         return (
           /* The anchor has no size of its own, which is load-bearing: sized by its
@@ -589,7 +638,17 @@ function EdgeNames({
               count and ask were three type sizes on one baseline — coming down
               to `text-2xl` is also what lets a ten-character name fit whole. */}
             <div
-              style={{ transform: `translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)` }}
+              onPointerDown={drag ? (event) => drag.onGrab(event, seat.id) : undefined}
+              onPointerMove={drag?.onDrag}
+              onPointerUp={drag?.onDrop}
+              onPointerCancel={drag?.onDrop}
+              style={{
+                // The drag rides *outside* the turn, so the name follows the
+                // pointer across the board rather than along its own axis.
+                transform: flung
+                  ? `translate(${flung.x}px, ${flung.y}px) translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)`
+                  : `translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)`,
+              }}
               className={[
                 "absolute left-0 top-0 flex w-max max-w-54 items-center gap-2",
                 "whitespace-nowrap rounded-full px-3 py-1 ring-1",
@@ -598,6 +657,10 @@ function EdgeNames({
                   ? "bg-amber-300/15 text-amber-300 ring-amber-300/40"
                   : "bg-felt-950/40 text-white/60 ring-white/10",
                 player?.eliminated ? "opacity-45" : "",
+                // `touch-none` is load-bearing on a touch screen: without it a drag
+                // across the board is the browser's own pan gesture.
+                drag ? "cursor-grab touch-none select-none" : "",
+                flung ? "z-10 cursor-grabbing ring-amber-300/60" : "",
               ].join(" ")}
             >
               <span className="min-w-0 truncate">{seat.name}</span>

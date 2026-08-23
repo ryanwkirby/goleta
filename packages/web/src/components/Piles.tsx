@@ -19,7 +19,7 @@
 
 import type { Card, GameView, SunnyEvidence } from "@goleta/engine";
 
-import { pileSuit, type PileSuit } from "../lib/pile.ts";
+import { pileSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
@@ -33,19 +33,6 @@ export interface Peel {
   callerName: string;
   targetName: string;
 }
-
-/**
- * A word under a pile, or the room one would take. The captions come and go and
- * the row is `items-center`, so one appearing would shove its column's card
- * upwards; the space is held whether or not there is anything to say.
- */
-function Caption({ children }: { children?: string }) {
-  return <span className="h-4 text-xs leading-4 text-white/40">{children}</span>;
-}
-
-/** Written as a pair so the two cannot drift: a caption with no badge is a stray
- * word, and a badge with no caption is a mark nobody can read (#76). */
-const CAPTION: Record<PileSuit["kind"], string> = { owed: "naming", named: "showing" };
 
 export function Piles({
   game,
@@ -108,7 +95,7 @@ export function Piles({
         deckSide === "right" ? "flex-row-reverse" : "",
       ].join(" ")}
     >
-      <div className={["flex flex-col items-center gap-1.5", aside].join(" ")}>
+      <div className={["flex flex-col items-center", aside].join(" ")}>
         {/* Tappable whenever it's your turn, playable card in hand or not. First
             rule in the header above, and the one most often "fixed". */}
         <button
@@ -138,37 +125,39 @@ export function Piles({
             </span>
           </span>
         </button>
-        {/* No `draw` caption: the button says so where it counts. */}
-        <Caption />
       </div>
 
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="relative">
-          {face ? (
-            <PlayingCard card={face} size={size} anchor={anchor(PILE)} mirrored={irl} />
-          ) : (
-            <div
-              ref={anchor(PILE)}
-              aria-hidden
-              className={[pileBox, "border border-dashed border-white/15"].join(" ")}
+      <div className="relative">
+        {face ? (
+          <PlayingCard card={face} size={size} anchor={anchor(PILE)} mirrored={irl} />
+        ) : (
+          <div
+            ref={anchor(PILE)}
+            aria-hidden
+            className={[pileBox, "border border-dashed border-white/15"].join(" ")}
+          />
+        )}
+        {peel ? <SunnyPeel {...peel} irl={irl} deckSide={deckSide} /> : null}
+        {/* One badge, two things it can say, in the same place either way — so an
+            answer arriving fills the mark in rather than putting a badge on the
+            board out of nowhere. At the pile because that is where the decision
+            is made.
+
+            **It stands on its own** (#335). It was written as a pair with a
+            caption underneath — *naming* / *showing* — on the reasoning that a
+            mark with no word is a mark nobody can read. The word went: the badge
+            is at the corner of the same card, and the prompt line already says
+            "Ryan is naming a suit." in words. `SuitMark`'s `sr-only` text is
+            what carries it to a screen reader. */}
+        {suit && !peel ? (
+          <div className="absolute -bottom-3 -right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-felt-900 shadow-xl ring-2 ring-white/10">
+            <SuitMark
+              mark={suit}
+              className="text-2xl"
+              style={{ transform: `rotate(${turn}deg)` }}
             />
-          )}
-          {peel ? <SunnyPeel {...peel} irl={irl} deckSide={deckSide} /> : null}
-          {/* One badge, two things it can say, in the same place either way — so an
-              answer arriving fills the mark in rather than putting a badge on the
-              board out of nowhere. At the pile because that is where the decision
-              is made. */}
-          {suit && !peel ? (
-            <div className="absolute -bottom-3 -right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-felt-900 shadow-xl ring-2 ring-white/10">
-              <SuitMark
-                mark={suit}
-                className="text-2xl"
-                style={{ transform: `rotate(${turn}deg)` }}
-              />
-            </div>
-          ) : null}
-        </div>
-        <Caption>{suit && !peel ? CAPTION[suit.kind] : undefined}</Caption>
+          </div>
+        ) : null}
       </div>
     </div>
   );

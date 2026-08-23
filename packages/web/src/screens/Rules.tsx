@@ -4,6 +4,7 @@ import { DEFAULT_HOUSE_RULES, type HouseRules } from "@goleta/engine";
 
 import { HintsQuestion } from "../components/Help.tsx";
 import { Button, Panel } from "../components/ui.tsx";
+import { useIsShort } from "../lib/viewport.ts";
 
 /** Headlines carry the game on their own — read as a list they are the whole
  * thing in six lines. The sentence under each is for the second read, or when
@@ -42,8 +43,16 @@ const RULES: {
         If you <em>can</em> play, you <em>must</em>.
       </>
     ),
-    detail:
-      "Match the card showing by rank or suit, and you have no choice — you play it.",
+    // The reversal is the whole game, so the clause carrying it is the one with
+    // the emphasis on it (#305). "Match the card showing by rank or suit" read
+    // as an instruction to go looking for a match, which is the opposite of what
+    // a player wants and is the mistake the Sunny Rule feeds on.
+    detail: (
+      <>
+        If you have a card that matches the center card (by suit or by rank), you have no
+        choice — you <em>have to</em> play it.
+      </>
+    ),
   },
   {
     key: "stuck",
@@ -70,8 +79,16 @@ const RULES: {
     // confuses people again the answer is a line at the pile, where the
     // confusion happens — `lib/pile.ts` already tells *named* from *owed* — not
     // this sentence coming back.
-    detail:
-      "An 8 plays on anything, and after playing one, you get to name the suit. Hint: Look at the cards of the players next to you before choosing.",
+    //
+    // The hint is set apart because it is the one sentence on this screen that
+    // says how to play *well* rather than what is legal, and it should not be
+    // read as part of the rule it hangs off (#305).
+    detail: (
+      <>
+        An 8 plays on anything, and after playing one, you get to choose the suit.{" "}
+        <em>(Hint: Look at your neighbors' hands first!)</em>
+      </>
+    ),
   },
   {
     key: "sunny",
@@ -148,17 +165,31 @@ function Rule({ headline, detail }: { headline: ReactNode; detail: ReactNode }) 
  * nothing about the mechanism and says the one thing that matters: switching it
  * on is something the table can see.
  *
- * **The panel scrolls inside itself**, with the last decision pinned under it —
- * this is opened mid-hand from a sideways phone now (#195).
+ * **The panel scrolls inside itself**, with the last decision under it — this is
+ * opened mid-hand from a sideways phone now (#195).
+ *
+ * **On a short screen the question is the end of the scroll rather than a pinned
+ * footer** (#305). Pinned costs about 160px — a heading, a 44px switch, its
+ * blurb and the button — and a landscape phone gives the whole panel
+ * `100dvh - 2.5rem`, so what was left for the rules themselves was under 200px:
+ * two collapsed headlines and the top of a third. #187 pinned it so that the
+ * last decision before the first hand could never be below the fold, which holds
+ * wherever there is a fold to be below; here the pin was burying the thing it
+ * was protecting. The button stays pinned either way — it is the way out, and it
+ * costs one row.
  */
 export function Rules({
   onDone,
-  ctaLabel = "Got it",
+  ctaLabel = "Continue",
   hints,
   onChooseHints,
   houseRules = DEFAULT_HOUSE_RULES,
 }: {
   onDone: () => void;
+  /** **Continue in both states** (#305). It said *Play* over a running game,
+   * which is the one place it is not a play button: this screen is opened
+   * mid-hand from the header now, and what is under it is a turn that is already
+   * somebody's. */
   ctaLabel?: string;
   /** Whether the table is marking up your playable cards right now. */
   hints: boolean;
@@ -168,6 +199,10 @@ export function Rules({
   houseRules?: HouseRules;
 }) {
   const rules = RULES.filter((rule) => !rule.when || rule.when(houseRules));
+  // Height, not orientation: it is the room under the list that runs out. See
+  // `useIsShort`.
+  const short = useIsShort();
+  const hintsQuestion = <HintsQuestion on={hints} onChange={onChooseHints} />;
 
   return (
     <Panel
@@ -191,14 +226,19 @@ export function Rules({
           ))}
         </ol>
 
+        {short ? (
+          <div className="mt-4 border-t border-white/10 pb-5 pt-4">{hintsQuestion}</div>
+        ) : null}
       </div>
 
-      {/* The last decision before the first hand, so it must never be below the
-          fold — with the way out under it rather than instead of it. It used to
-          replace the continue button, which made it read as a fork (#187). */}
+      {/* The last decision before the first hand, so it is never below the fold
+          on a screen that has one — with the way out under it rather than
+          instead of it. It used to replace the continue button, which made it
+          read as a fork (#187). On a short screen it has moved up into the
+          scroll above and only the button is left here (#305). */}
       <div className="shrink-0 border-t border-white/10 pt-4">
-        <HintsQuestion on={hints} onChange={onChooseHints} />
-        <Button variant="primary" full className="mt-4" onClick={onDone}>
+        {short ? null : hintsQuestion}
+        <Button variant="primary" full className={short ? "" : "mt-4"} onClick={onDone}>
           {ctaLabel}
         </Button>
       </div>

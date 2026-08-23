@@ -88,7 +88,6 @@ export function App() {
         <div className="flex flex-1 items-start justify-center p-5 sm:items-center">
           <Rules
             onDone={dismissRules}
-            ctaLabel={room.status === "lobby" ? "Continue" : "Play"}
             hints={hints}
             onChooseHints={chooseHints}
             // So the screen never describes a rule this table has switched off

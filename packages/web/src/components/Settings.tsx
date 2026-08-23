@@ -26,6 +26,38 @@ function SectionHeading({ children }: { children: string }) {
   );
 }
 
+/**
+ * Drawn rather than typed (#296). `⚙` is a character, so what it looked like was
+ * whatever the platform's font decided — on most of them a shaded, bevelled,
+ * faintly three-dimensional gear that belonged next to nothing else in the app.
+ * This is `DoorGlyph`'s terms exactly: 24-unit box, `1.8` stroke in
+ * `currentColor`, round caps and joins, `h-5 w-5`, so the two marks in that row
+ * of small print are drawn by the same hand.
+ *
+ * Six teeth with generous gaps rather than the eight a gear usually gets: at
+ * 20px the gaps are what the eye reads, and a tighter tooth count closes them to
+ * less than the stroke is wide and the whole thing blobs into a disc. The teeth
+ * are trapezoids rather than radial ticks on a ring, which would have drawn a
+ * sun — and the sun means the Sunny Rule on every surface in this app.
+ */
+function CogGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden
+    >
+      <path d="M10.15 6.29L10.4 2.94A9.2 9.2 0 0 1 13.6 2.94L13.85 6.29A6 6 0 0 1 16.01 7.54L19.05 6.09A9.2 9.2 0 0 1 20.65 8.85L17.87 10.75A6 6 0 0 1 17.87 13.25L20.65 15.15A9.2 9.2 0 0 1 19.05 17.91L16.01 16.46A6 6 0 0 1 13.85 17.71L13.6 21.06A9.2 9.2 0 0 1 10.4 21.06L10.15 17.71A6 6 0 0 1 7.99 16.46L4.95 17.91A9.2 9.2 0 0 1 3.35 15.15L6.13 13.25A6 6 0 0 1 6.13 10.75L3.35 8.85A9.2 9.2 0 0 1 4.95 6.09L7.99 7.54A6 6 0 0 1 10.15 6.29Z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  );
+}
+
 /** Silent when the table plays the game as written. */
 export const describeRules = (rules: HouseRules): string => {
   const on: string[] = [];
@@ -303,13 +335,13 @@ export function SettingsCog({
           // 44px square, and the glyph is drawn to fill it: a big target around a
           // small mark still reads as small print.
           "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
-          "text-xl leading-none text-white/60",
+          "text-white/60",
           "transition-colors hover:bg-white/5 hover:text-white",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
           className,
         ].join(" ")}
       >
-        <span aria-hidden>⚙</span>
+        <CogGlyph />
       </button>
 
       {open ? (

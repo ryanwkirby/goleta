@@ -37,7 +37,8 @@ interface CardProps {
   height?: number;
   /** In-person cards need to be readable from both sides of the table. */
   mirrored?: boolean;
-  /** Dimmed but still legible: you can see it, you just can't play it. */
+  /** Dimmed but still legible, and still opaque: you can see it, you just can't
+   * play it — and it must not show its neighbours through it (#331). */
   dimmed?: boolean;
   selected?: boolean;
   onClick?: () => void;
@@ -93,7 +94,13 @@ export function PlayingCard({
         // spill past the card's edge.
         "relative flex shrink-0 flex-col items-start overflow-hidden bg-white font-semibold leading-none shadow-lg",
         "ring-1 ring-black/10 transition-transform duration-150",
-        dimmed ? "opacity-45 saturate-50" : "",
+        // Dimmed, never translucent (#331). The hand fans with a step well under a
+        // card's width, so 25–41px of every card is overlapped by the next one —
+        // and at 45% opacity you read straight through each card to the edges and
+        // ranks behind it. Worst exactly where it was reported: a lot of cards
+        // and none playable, so there is no opaque card left to read the stack
+        // against. A filter takes the ink down and leaves the card opaque.
+        dimmed ? "brightness-75 saturate-50" : "",
         selected ? "z-20 -translate-y-3 ring-2 ring-amber-400" : "",
         onClick ? "cursor-pointer hover:-translate-y-2 focus-visible:-translate-y-2" : "",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",

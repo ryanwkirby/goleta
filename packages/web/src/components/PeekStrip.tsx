@@ -6,9 +6,8 @@ import { DECK, PILE } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
-import { HostSettingsCog } from "./HostSettings.tsx";
-import { PlayerSettingsCog } from "./PlayerSettings.tsx";
 import { QrGlyph } from "./QrCode.tsx";
+import { SettingsCog } from "./Settings.tsx";
 
 /**
  * The middle of the table, as much of it as a phone in landscape can spare — and,
@@ -91,15 +90,13 @@ export function PeekStrip({
         is the draw reach (#117).
       */}
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
-        {/* Yours first and the host's second, the same order and glyphs as the
-          upright header. They must stay legible as different things: a person
-          and a gear, one of which changes the game for everybody (#188). */}
+        {/* One cog, the same one the upright header draws, with a *yours* section
+          inside it and the host's below that (#253). A watcher gets none. */}
         {seated ? (
-          <PlayerSettingsCog hints={hints} onHints={onChooseHints} className="-my-1" />
-        ) : null}
-
-        {room.hostId === game.you ? (
-          <HostSettingsCog
+          <SettingsCog
+            isHost={room.hostId === game.you}
+            hints={hints}
+            onHints={onChooseHints}
             rules={room.houseRules}
             irl={room.irl}
             dealerMode={room.dealerMode}

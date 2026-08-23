@@ -1,12 +1,11 @@
 import type { ClientMessage, RoomView } from "@goleta/engine";
 
-import { HostSettingsCog } from "../../components/HostSettings.tsx";
-import { PlayerSettingsCog } from "../../components/PlayerSettings.tsx";
 import { QrGlyph } from "../../components/QrCode.tsx";
+import { SettingsCog } from "../../components/Settings.tsx";
 import { Button } from "../../components/ui.tsx";
 
 /**
- * The row of small grey print across the top of the upright table: two cogs, the
+ * The row of small grey print across the top of the upright table: the cog, the
  * way in, whether the socket is up, and the two ways out. It is the upright
  * view's only header — `HandView` has none, which is why the cog and the rules
  * link have to be reachable from the peek strip as well (#194, #195).
@@ -37,35 +36,30 @@ export function TableHeader({
 }) {
   return (
     <header className="flex items-center gap-2 text-xs text-white/50">
-      {/* Yours first, the host's second, and legible as different things: a
-          person and a gear, an inch apart, one of which changes the game for
-          everybody (#188). */}
+      {/* One cog, with a *yours* section inside it and the host's below that
+          (#253). It used to be two doors an inch apart, and the personal one held
+          a single control that is also the last thing on the rules screen — which
+          **rules**, two words along this same row, already opens. The rest of
+          this line is facts about the room rather than things to press. What used
+          to sit at the far end was a lone `in person: on` button, reading like a
+          status somebody had left switched on (#134). */}
       {seated ? (
-        <PlayerSettingsCog
+        <SettingsCog
+          isHost={isHost}
           hints={hints}
           onHints={onChooseHints}
-          className="-ml-2"
-        />
-      ) : null}
-      {/* Beside the player's, not in place of it: it is the host's way back to
-          everything the lobby held, and the rest of this line is facts about the
-          room rather than things to press. What used to sit at the far end was a
-          lone `in person: on` button, reading like a status somebody had left
-          switched on (#134). */}
-      {isHost ? (
-        <HostSettingsCog
           rules={room.houseRules}
           irl={room.irl}
           dealerMode={room.dealerMode}
-        shuffleSeats={room.shuffleSeats}
+          shuffleSeats={room.shuffleSeats}
           onRules={(rules) => send({ t: "setHouseRules", rules })}
           onIrl={(on) => send({ t: "setIrl", on })}
-          onDealerMode={(dealer) => send({ t: "setDealerMode", mode: dealer })}
-        onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
-          // Pulled back over the column's own padding only when it leads the row.
-          // The row was already this tall — every `Button` is `min-h-11` — so
-          // neither target costs the header anything.
-          className={seated ? "" : "-ml-2"}
+          onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
+          onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
+          // Pulled back over the column's own padding: it leads the row. The row
+          // was already this tall — every `Button` is `min-h-11` — so the target
+          // costs the header nothing.
+          className="-ml-2"
         />
       ) : null}
       {/* The code was four characters saying what the room was called and doing

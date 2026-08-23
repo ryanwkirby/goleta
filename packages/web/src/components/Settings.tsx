@@ -254,7 +254,11 @@ const PLACES = [
  * world. It comes before the seats because everything below hangs off it.
  */
 export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
-  const question = "Game mode (sitting together?)";
+  // No gloss on the question: since #305 both answers carry a line saying what
+  // they mean, and an aside under `uppercase tracking-wide` comes out the same
+  // size and weight as the heading it is qualifying (#316). One constant still,
+  // because it is the visible heading *and* `TwoWay`'s accessible name.
+  const question = "Game mode";
 
   return (
     <div>

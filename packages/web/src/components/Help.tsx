@@ -180,7 +180,12 @@ export function HintsQuestion({
       />
       <p className="mt-2 text-xs text-white/40">
         {on
-          ? "Tutorial mode. Each turn, we'll show you which cards are playable. (You can turn this off in the settings when you're ready.)"
+          ? (
+            <>
+              Tutorial mode. Each turn, we'll show you which cards are playable.{" "}
+              <em>(You can turn this off in the settings when you're ready.)</em>
+            </>
+          )
           : (
             <>
               You won't be helped automatically. <em>(But you can ask!)</em>

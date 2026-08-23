@@ -646,7 +646,7 @@ export function Lobby({
               </p>
               <div className="mt-3 flex gap-2">
                 <Button className="flex-1" onClick={() => setCheckingOrder(false)}>
-                  No, I'll fix it
+                  Go back
                 </Button>
                 <Button variant="primary" className="flex-1" onClick={dealNow}>
                   Yes, let's play

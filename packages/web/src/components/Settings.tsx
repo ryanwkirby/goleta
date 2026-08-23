@@ -1,16 +1,29 @@
 /**
- * The host's controls over the table, in one place so the lobby and the table
- * show the same switches rather than two drifting copies. **Where everybody is**
- * takes effect on the tap; **the house rules** take effect at the next deal,
- * because the game keeps its own copy from the moment it is dealt (#134).
+ * The table's settings, in one place so the lobby and the table show the same
+ * switches rather than two drifting copies. **Where everybody is** takes effect
+ * on the tap; **the house rules** take effect at the next deal, because the game
+ * keeps its own copy from the moment it is dealt (#134).
+ *
+ * It also holds the cog behind the table, which since #253 is **one door with
+ * two rooms** rather than two doors an inch apart — so the file is not the
+ * host's alone any more, which is why it is no longer called `HostSettings`.
  */
 
 import { useState } from "react";
 
 import type { DealerMode, HouseRules } from "@goleta/engine";
 
+import { HintsToggle } from "./Help.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, Panel } from "./ui.tsx";
+
+/** Both halves are headed, and the heading is what makes a host able to see at a
+ * glance which of them changes the game for everybody. */
+function SectionHeading({ children }: { children: string }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{children}</p>
+  );
+}
 
 /** Silent when the table plays the game as written. */
 export const describeRules = (rules: HouseRules): string => {
@@ -209,14 +222,41 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
 }
 
 /**
- * The host's way back to the table's settings once the cards are out (#134).
- * **The two settings inside answer at different times, and the panel says
- * which.** **Bot pace is deliberately not in here**: it reads live, so changing
- * it mid-game moves a challenge window somebody is watching. **44px in both
- * layouts, and it exists in both** (#194) — hosts did not find the 16px glyph,
- * and it rendered only in a header `HandView` does not have.
+ * The way back to the settings once the cards are out (#134), and since #253
+ * **one door with two rooms** rather than two doors an inch apart.
+ *
+ * #188 made the case for two — the host's cog says *table settings*, the
+ * player's said *yours*, and a gear and a person are legible as different things
+ * where two gears would not be. The reasoning was sound and the outcome was not:
+ * the player's door held exactly one control, that control is also the last
+ * thing on the rules screen, and **rules** is a labelled word in the same header.
+ * So the glyph nobody recognised led to the one setting everybody could already
+ * reach by pressing a word that says what it is.
+ *
+ * The distinction #188 was protecting survives as a **division inside one
+ * panel**: a headed *yours* section every seated player gets, and below it, only
+ * for the host, a headed *table settings* section — so a host can still see at a
+ * glance which half changes the game for everybody.
+ *
+ * **The bar for the personal half is unchanged**: it belongs to one player and
+ * changes nothing about the room. That rules out everything in the other half.
+ * It does **not** mean private — the hints toggle is announced when it goes on
+ * and marks the seat for as long as it lasts (#187), and sharing a roof with the
+ * host's settings must not start implying otherwise.
+ *
+ * **A watcher gets no cog at all**: the yours half is about cards they do not
+ * have and the table half is not theirs.
+ *
+ * **The two settings in the host's half answer at different times, and the panel
+ * says which.** **Bot pace is deliberately not in here**: it reads live, so
+ * changing it mid-game moves a challenge window somebody is watching. **44px in
+ * both layouts, and it exists in both** (#194) — hosts did not find the 16px
+ * glyph, and it rendered only in a header `HandView` does not have.
  */
-export function HostSettingsCog({
+export function SettingsCog({
+  isHost,
+  hints,
+  onHints,
   rules,
   irl,
   dealerMode,
@@ -227,6 +267,10 @@ export function HostSettingsCog({
   onShuffleSeats,
   className = "",
 }: {
+  /** Whether the table half is drawn at all. The personal half is everyone's. */
+  isHost: boolean;
+  hints: boolean;
+  onHints: (on: boolean) => void;
   rules: HouseRules;
   irl: boolean;
   dealerMode: DealerMode;
@@ -244,9 +288,9 @@ export function HostSettingsCog({
     <>
       <button
         type="button"
-        aria-label="Table settings"
+        aria-label="Settings"
         aria-expanded={open}
-        title="Table settings"
+        title="Settings"
         onClick={() => setOpen(true)}
         className={[
           // 44px square, and the glyph is drawn to fill it: a big target around a
@@ -266,30 +310,44 @@ export function HostSettingsCog({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
-          aria-label="Table settings"
+          aria-label="Settings"
           onClick={() => setOpen(false)}
         >
           <Panel
-            className="flex w-full max-w-sm flex-col gap-4"
+            className="flex w-full max-h-full max-w-sm flex-col gap-4 overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
           >
-            <IrlToggle on={irl} onChange={onIrl} />
-
-            <div className="flex flex-col gap-4 border-t border-white/10 pt-4">
-              <HouseRulesPicker rules={rules} onChange={onRules} />
-              {/* Above the starting player, and independent of it: where people sit
-                  is the bigger of the two and decides what the other is even
-                  about (#245). */}
-              <ShuffleSeatsToggle on={shuffleSeats} irl={irl} onChange={onShuffleSeats} />
-              {/* In here because of when it answers rather than what it is: read
-                  once, at the deal, exactly like the switches above it. */}
-              <DealerPicker mode={dealerMode} onChange={onDealerMode} />
-              {/* Said once, under everything it is true of: the same sentence four
-                  times is a warning, not a note. */}
-              <p className="text-xs text-white/40">
-                These apply at the next deal. This hand keeps the rules it was dealt under.
-              </p>
+            <div className="flex flex-col gap-2">
+              <SectionHeading>Yours</SectionHeading>
+              <HintsToggle on={hints} onChange={onHints} />
             </div>
+
+            {isHost ? (
+              <>
+                <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
+                  <SectionHeading>Table settings</SectionHeading>
+                  <IrlToggle on={irl} onChange={onIrl} />
+                </div>
+
+                {/* Still separated from the tap-to-take-effect switch above, because
+                    the note at the foot is true of these and not of that one. */}
+                <div className="flex flex-col gap-4">
+                  <HouseRulesPicker rules={rules} onChange={onRules} />
+                  {/* Above the starting player, and independent of it: where people
+                      sit is the bigger of the two and decides what the other is
+                      even about (#245). */}
+                  <ShuffleSeatsToggle on={shuffleSeats} irl={irl} onChange={onShuffleSeats} />
+                  {/* In here because of when it answers rather than what it is: read
+                      once, at the deal, exactly like the switches above it. */}
+                  <DealerPicker mode={dealerMode} onChange={onDealerMode} />
+                  {/* Said once, under everything it is true of: the same sentence
+                      four times is a warning, not a note. */}
+                  <p className="text-xs text-white/40">
+                    These apply at the next deal. This hand keeps the rules it was dealt under.
+                  </p>
+                </div>
+              </>
+            ) : null}
 
             <Button variant="secondary" full onClick={() => setOpen(false)}>
               Done

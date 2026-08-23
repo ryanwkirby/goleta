@@ -133,8 +133,8 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   once, on the way in, run for exactly one game and then stop — a fork in the
   road taken before you had seen a card, expiring on a schedule nobody chose.
   Now it is a preference: a toggle at the foot of the rules screen, a question
-  after your first finished game that offers rather than announces, and your own
-  cog at any time after that.
+  after your first finished game that offers rather than announces, and the
+  *yours* half of the cog at any time after that (#253).
 
   What makes that safe rather than a free silent switch is that **it is public,
   and it stays public**. `SeatView.hinted` carries it to the whole table,
@@ -454,14 +454,27 @@ that true and both are load-bearing: `setHouseRules` replaces `room.options`
 wholesale rather than editing it in place, and `beginGame` spreads it into a
 fresh object on the way to `startGame`. Don't make either of them share.
 
-**Your own cog is a different door (#188).** Every seated player has one, top
-left, beside the host's where you are the host. The bar for putting something in
-it is that it belongs to one player and changes nothing about the room — today
-that is the hints toggle and nothing else, and #202 is the other candidate. The
-host's cog says *table settings* and this one says *yours*, so they are a gear
-and a person rather than two gears: two doors an inch apart, one of which
-changes the game for everybody, want the difference to be legible. A watcher
-gets no cog, because the only thing in it is about cards they do not have.
+**One cog with two rooms in it (#253).** Every seated player gets the same gear,
+top left, in both layouts. Opened, it has a **yours** section — the hints toggle
+today, whatever #202 turns into later — and, below it and only for the host, a
+**table settings** section. Both halves are headed, so a host can see at a glance
+which one changes the game for everybody. A watcher gets no cog: the yours half
+is about cards they do not have and the table half is not theirs.
+
+**The bar for the personal half is that it belongs to one player and changes
+nothing about the room**, which rules out everything in the other half. That is
+#188's rule and it is the part worth keeping verbatim. What it does *not* mean is
+private: the hints toggle is announced when it goes on and marks the seat for as
+long as it lasts (#187), and sharing a roof with the host's settings must not
+start implying otherwise.
+
+It was two doors an inch apart until #253 — a gear and a person, on the argument
+that two gears would not read as different things. That argument was sound and
+the outcome was not: the personal door held exactly one control, that control is
+also the last thing on the rules screen, and **rules** is a labelled word in the
+same header. So the glyph nobody recognised led to the one setting everybody
+could already reach by pressing a word that says what it is. The distinction
+survives as a division inside one panel.
 
 **Bot speed is the one that stays frozen**, and it sits beside them in the lobby
 looking identical. It is read *live*, every time a bot is scheduled, so moving
@@ -610,18 +623,18 @@ Things that will read as oversights in that view and are not:
   *noticing* a reach is easier with, and turning the phone upright is the answer
   to that. A sliver too small to read a rank off is worse than nothing
   (`fan.ts` has a floor for exactly this).
-- **The host's cog and the way back to the rules are the other two, and they
-  are here because they were nowhere (#194, #195).** `HandView` has no header,
-  so the cog the upright table draws in its own simply did not exist in
-  landscape — and a host at an IRL table *is* a host holding a phone sideways,
-  which is the whole point of that view. The rules had the same gap and it is
+- **The cog and the way back to the rules are the other two, and they are here
+  because they were nowhere (#194, #195).** `HandView` has no header, so the cog
+  the upright table draws in its own simply did not exist in landscape — and an
+  IRL table *is* a table of phones held sideways, which is the whole point of
+  that view. The rules had the same gap and it is
   the worse one: landscape is the IRL view, an IRL table is where the new
   players are, and looking a rule up is a thing that happens mid-hand.
 
   Both live in the **small-print cluster at the left**, which is the only part
   of that row allowed to wrap and therefore the only place a new control may
-  take its width from. The right-hand end belongs to the prompt, the sun and
-  the deck, and the strip itself still never wraps.
+  take its width from. The right-hand end belongs to the card in play, the
+  prompt and the deck, and the strip itself still never wraps.
 
   The cog is **44px in both layouts and the same shape in both** — it was a
   16px glyph in a 24px box, in a header of small grey print, and hosts did not
@@ -790,7 +803,7 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Peek strip, left cluster | both cogs, rules, fullscreen offer, sort, help offer, missed-call count | **Yes — this is the place.** The only part of the row allowed to wrap, so the only one a new control may take its width from. `PeekStrip.tsx` states the rule in full, once, on the cluster element. |
+| Peek strip, left cluster | the cog, rules, fullscreen offer, sort, help offer, missed-call count | **Yes — this is the place.** The only part of the row allowed to wrap, so the only one a new control may take its width from. `PeekStrip.tsx` states the rule in full, once, on the cluster element. |
 | Peek strip, right end | the card in play, help asked for, prompt, draw pile | **No.** The pile has to stay reachable, and anything pushed off it wraps *the pile* onto a second row — a card's height off the hand. The sun is **not** here: #189 took it off the strip precisely because it was drawn immediately before the deck. |
 | Under the strip, left | `SunnyCallOffer` | **No.** Deliberately the far end from the deck: a fat target beside the pile is a mis-tap into the exact violation it accuses (#189). |
 | Bottom-left felt corner | the offer of help | **No** (#167). |
@@ -801,7 +814,7 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Header row (`TableHeader`) | both cogs, invite glyph, rules, leave | Yes, for a control rather than a table fact. |
+| Header row (`TableHeader`) | the cog, invite glyph, rules, leave | Yes, for a control rather than a table fact. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
 | Above the hand, right | `SunnyCallOffer` | **No** (#257). The middle of that box is where your own `HelpShout` rises, and the left is free. |
 | Top of the screen | the Sunny announcement | **Never.** It is the one thing at this table nobody may miss, which is exactly why a refused move answers against the hand instead (#99). |

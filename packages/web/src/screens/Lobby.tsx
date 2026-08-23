@@ -19,7 +19,7 @@ import {
   ShuffleSeatsToggle,
   HouseRulesPicker,
   IrlToggle,
-} from "../components/HostSettings.tsx";
+} from "../components/Settings.tsx";
 import { TwoWay } from "../components/TwoWay.tsx";
 import { Button, CodeButton, Panel } from "../components/ui.tsx";
 import { loadName } from "../net/identity.ts";

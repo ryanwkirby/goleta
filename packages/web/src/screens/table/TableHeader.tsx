@@ -39,8 +39,8 @@ function BookGlyph() {
  * which of them were the same kind of thing. Every item already cleared 44px, so
  * the target was never what was missing — legibility was.
  *
- * `settings · join` lead and `rules · leave` sit at the far end, which keeps the
- * way out at the edge and leaves the middle of the row clear. The word is what
+ * `settings · invite` lead and `rules · leave` sit at the far end, which keeps
+ * the way out at the edge and leaves the middle of the row clear. The word is what
  * makes the row taller, and what pays for it is the felt between the seat strip
  * and the piles: that block is `flex-1` and `justify-center`, so it gives up the
  * few pixels and the cards are untouched.
@@ -129,11 +129,14 @@ export function TableHeader({
       >
         {/* Sized to the other three by the one dial `QrGlyph` has: it is drawn at
             `1em`, and the `em` here is the word underneath it rather than the
-            20px the three drawn glyphs are. */}
+            20px the three drawn glyphs are. The glyph itself is a line drawing at
+            this row's weight since #353 — it was a solid grid, three times the
+            cog's ink and the only one of the four sitting flush to the bottom of
+            its box. */}
         <span className="text-[1.25rem] leading-none">
           <QrGlyph />
         </span>
-        <span>join</span>
+        <span>invite</span>
       </button>
       {offline ? <span className="text-amber-300">· reconnecting…</span> : null}
 

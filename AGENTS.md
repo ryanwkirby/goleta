@@ -1047,7 +1047,7 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Header row (`TableHeader`) | four icons with a word under each — settings, join, rules, leave (#330) — and **the sun**, centred, in a slot that is reserved whether or not a window is open (#329) | Yes, for a control rather than a table fact. A new item joins the four rather than being drawn some other way, and anything that comes and goes reserves its place. |
+| Header row (`TableHeader`) | four icons with a word under each — settings, invite, rules, leave (#330, renamed in #353) — and **the sun**, centred, in a slot that is reserved whether or not a window is open (#329) | Yes, for a control rather than a table fact. A new item joins the four rather than being drawn some other way, and anything that comes and goes reserves its place. |
 | Under the prompt | **I'm done** (#260) | **No.** A primary action, and the only thing the table is waiting for while it is up. Far from the piles above it. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
 | Above the hand, right | — | Free since #329 took the sun to the header. The middle of that box is still where your own `HelpShout` rises; the right and left are open. |

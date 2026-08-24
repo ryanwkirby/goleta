@@ -41,6 +41,7 @@ import {
 import { ANNOUNCE_MS } from "../lib/beats.ts";
 import { useJudgedCall } from "../lib/judgedCall.ts";
 import { useDeparture } from "../lib/departure.ts";
+import { ScrollRelease } from "../components/ScrollRelease.tsx";
 import { useSeatFling, type SeatFling } from "../lib/seatFling.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
@@ -160,82 +161,97 @@ export function TableScreen({
   // sit on the very edges of the design box, so a propped tablet would lose a
   // name rather than a margin.
   return (
-    <div
-      ref={frame}
-      className={[
-        "relative flex h-dvh w-full items-center justify-center overflow-hidden",
-        "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
-        "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
-      ].join(" ")}
-    >
-      <div
-        style={
-          {
-            width: TABLE_DESIGN.width,
-            height: TABLE_DESIGN.height,
-            // Read right to left: sized first, then turned.
-            transform: `${quarter ? "rotate(90deg) " : ""}scale(${scale})`,
-            // Nothing inside an element can see a transform on an ancestor, so the place
-            // that knows publishes it and `bee-back` divides its thread back down
-            // (#169). The quarter turn is not in it — turning changes nothing
-            // about how large a pixel is.
-            "--paint-scale": scale,
-          } as CSSProperties
-        }
-        className="relative shrink-0"
-        ref={board}
-      >
-        {game ? (
-          <Playing
-            room={room}
-            fling={fling}
-            boardScale={scale}
-            game={game}
-            nameOf={nameOf}
-            call={call}
-            peeling={peeling}
-            announcing={announcing}
-            shouts={shouts}
-            log={log}
-            view={view}
-            onToggleView={() => setView(view === "center" ? "hands" : "center")}
-            onShowInvite={() => setInviting(true)}
-            onDraw={() =>
-              send({
-                t: "intent",
-                intent: { type: "drawCard", playerId: game.waitingOn ?? "" },
-              })
-            }
-          />
-        ) : (
-          <Waiting room={room} fling={fling} />
-        )}
+    <>
+      {/* `sticky top-0`, and `ScrollRelease` at the foot of this fragment: this
+          screen has no fullscreen control outside the waiting state's install
+          pilot, so a drag that collapses the browser's chrome is the only way it
+          gets that height back (#327). Pinning is what keeps the board still
+          while that drag happens — and `contentBox` is a `ResizeObserver`, so
+          `fitScale` re-runs on the new height rather than fighting it (#285).
 
-        {/* A screen that has lost touch with its table should say so rather than
-            show a still life. */}
-        {offline ? (
-          <p
-            className="absolute left-1/2 top-1.5 -translate-x-1/2 text-xl text-amber-300"
-            role="status"
-          >
-            reconnecting…
-          </p>
+          It replaces `relative` rather than joining it: both set `position`, and
+          Tailwind emits `relative` last, so the two together are just `relative`
+          and the pin silently does nothing. `sticky` establishes a containing
+          block for the board and the panels above it exactly as `relative`
+          did. */}
+      <div
+        ref={frame}
+        className={[
+          "sticky top-0 flex h-dvh w-full items-center justify-center overflow-hidden",
+          "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+          "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
+        ].join(" ")}
+      >
+        <div
+          style={
+            {
+              width: TABLE_DESIGN.width,
+              height: TABLE_DESIGN.height,
+              // Read right to left: sized first, then turned.
+              transform: `${quarter ? "rotate(90deg) " : ""}scale(${scale})`,
+              // Nothing inside an element can see a transform on an ancestor, so the place
+              // that knows publishes it and `bee-back` divides its thread back down
+              // (#169). The quarter turn is not in it — turning changes nothing
+              // about how large a pixel is.
+              "--paint-scale": scale,
+            } as CSSProperties
+          }
+          className="relative shrink-0"
+          ref={board}
+        >
+          {game ? (
+            <Playing
+              room={room}
+              fling={fling}
+              boardScale={scale}
+              game={game}
+              nameOf={nameOf}
+              call={call}
+              peeling={peeling}
+              announcing={announcing}
+              shouts={shouts}
+              log={log}
+              view={view}
+              onToggleView={() => setView(view === "center" ? "hands" : "center")}
+              onShowInvite={() => setInviting(true)}
+              onDraw={() =>
+                send({
+                  t: "intent",
+                  intent: { type: "drawCard", playerId: game.waitingOn ?? "" },
+                })
+              }
+            />
+          ) : (
+            <Waiting room={room} fling={fling} />
+          )}
+
+          {/* A screen that has lost touch with its table should say so rather than
+              show a still life. */}
+          {offline ? (
+            <p
+              className="absolute left-1/2 top-1.5 -translate-x-1/2 text-xl text-amber-300"
+              role="status"
+            >
+              reconnecting…
+            </p>
+          ) : null}
+        </div>
+
+        {/* Outside the design box on purpose: both are about the device rather than
+            the board, and the invite is a panel somebody holds a camera up to. */}
+        <TableRotateNudge />
+
+        {inviting ? (
+          <RoomInvite
+            code={room.code}
+            underWay={game !== null && game.status !== "over"}
+            screens={room.tableScreens}
+            onClose={() => setInviting(false)}
+          />
         ) : null}
       </div>
-
-      {/* Outside the design box on purpose: both are about the device rather than
-          the board, and the invite is a panel somebody holds a camera up to. */}
-      <TableRotateNudge />
-
-      {inviting ? (
-        <RoomInvite
-          code={room.code}
-          underWay={game !== null && game.status !== "over"}
-          screens={room.tableScreens}
-          onClose={() => setInviting(false)}
-        />
-      ) : null}
-    </div>
+      <ScrollRelease />
+    </>
   );
 }
 

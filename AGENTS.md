@@ -629,23 +629,52 @@ that true and both are load-bearing: `setHouseRules` replaces `room.options`
 wholesale rather than editing it in place, and `beginGame` spreads it into a
 fresh object on the way to `startGame`. Don't make either of them share.
 
-**One cog with two rooms in it (#253).** Every seated player gets the same gear,
-top left, in both layouts. Opened, it has a **Your settings** section — the
-hints toggle and the autopilot (#202) — and, below it and only for the host, a
-**Room settings** section. A watcher gets no cog: the personal half is about
-cards they do not have and the room half is not theirs.
+**One cog with two rooms in it (#253), and they are two pages rather than two
+halves of a column (#313).** Every seated player gets the same gear, top left, in
+both layouts. It opens on **Your settings** — the hints toggle and the autopilot
+(#202) — and for a host, and only a host, that page ends with a row through to
+**Room settings**, with a way back where the row was and the same Done on both. A
+non-host sees one page and no navigation at all: nothing naming a room they cannot
+enter. A watcher gets no cog: the personal page is about cards they do not have
+and the room page is not theirs.
 
-**Both halves are headed, and the headings have to look like the level above
+**Which page you are on is not remembered.** Closing forgets it and the next open
+lands on *yours* — the reasoning that took `goleta:table-view` out: a preference
+the app would have to store to answer a question that is one tap to re-ask.
+
+**Not `TwoWay`, and that is the obvious wrong turn.** A tab pair on that track
+would put the panel's single loudest amber control on the one thing in here that
+changes nothing, and `TwoWay` says in its own header what it is for: two answers
+a person would *say*, to a question. *Which page am I looking at* is not a
+setting. It is a label and a `›`, the shape `Rule` in `screens/Rules.tsx` already
+uses for a drill, and a tab bar would be a third shape in a file that has exactly
+two and says not to add one.
+
+It was one scrolling column until #313, and scrolling was the wrong shape for it
+twice over: the room half is where a host goes to change one thing and get back
+to a hand that is still running, and the personal half's whole reason for
+existing is *I am stepping away*, pressed by somebody who has already stopped
+looking at the screen. Measured after the split: the personal page is 360px, 432
+with the autopilot on, which is the tallest it gets and fits any phone held
+upright. **The room page is about 736px and still scrolls on a short one**, and
+that is accepted — five groups and a note do not fit however they are arranged.
+The answer is the `overflow-y-auto` that is already there. **Do not add a third
+page, and do not split the pages differently by height**: two navigation models
+for one panel is worse than a scroll that engages on one device.
+
+**Both pages are headed, and the headings have to look like the level above
 the rows** (#289). That is the whole point of the division — a host seeing at a
 glance which half changes the game for everybody — and it was drawn in the exact
 five classes `DealerPicker`, `HouseRulesPicker`, `IrlToggle` and
 `AutopilotPicker` each use for their own headings, so the panel came out as a
 flat list of six identical ones. `SectionHeading` is bigger, brighter and not
-uppercase; the sub-headings did not move.
+uppercase; the sub-headings did not move. It is each page's title now rather
+than a divider in a column, and there is one on screen at a time.
 
-**The bar for the personal half is that it belongs to one player and changes
-nothing about the room**, which rules out everything in the other half. That is
-#188's rule and it is the part worth keeping verbatim. What it does *not* mean is
+**The bar for the personal page is that it belongs to one player and changes
+nothing about the room**, which rules out everything on the other one. That is
+#188's rule, it is the part worth keeping verbatim, and it matters more now that
+this is the page everybody lands on. What it does *not* mean is
 private: the hints toggle is announced when it goes on and marks the seat for as
 long as it lasts (#187), a seat on autopilot carries a standing mark for as long
 as *that* lasts (#202), and sharing a roof with the host's settings must not
@@ -657,7 +686,7 @@ the outcome was not: the personal door held exactly one control, that control is
 also the last thing on the rules screen, and **rules** is a labelled word in the
 same header. So the glyph nobody recognised led to the one setting everybody
 could already reach by pressing a word that says what it is. The distinction
-survives as a division inside one panel.
+survives as two pages behind one cog.
 
 **Bot speed is the one that stays frozen**, and it sits beside them in the lobby
 looking identical. It is read *live*, every time a bot is scheduled, so moving

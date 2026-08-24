@@ -16,6 +16,22 @@
  * **A stray touch cannot reorder the table.** The gesture has to travel
  * `THRESHOLD` design pixels before anything is sent, because this screen is
  * propped in the middle of a table where somebody will put a drink down on it.
+ *
+ * **It commits once, on the drop** (#321). It used to commit as it went: the
+ * moment the gesture passed `THRESHOLD` it posted its hops and reset the offset
+ * to zero, on the comment's reasoning that the label "is about to be redrawn at
+ * its new spot". It is redrawn there only when the server's broadcast lands, a
+ * round trip later — so until then the label was drawn at its **old** anchor with
+ * no offset, snapping back to where the drag started, and once the broadcast did
+ * land it was drawn at the *new* anchor plus everything the finger had travelled
+ * since. Every further hop compounded it, so the error grew for as long as the
+ * drag lasted and the name walked off the board. Measured at ×0.81: the label was
+ * 26px above the top of the screen while still being held.
+ *
+ * Committing once removes the whole class of problem, because there is no
+ * in-flight broadcast to be wrong about. It also means the hops can be counted
+ * from where the room says the seat is *now* rather than from an index remembered
+ * at the grab, which is strictly fresher.
  */
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
@@ -24,7 +40,7 @@ import type { ClientMessage } from "@goleta/engine";
 
 import { TABLE_DESIGN, designPoint, type Box, type Point } from "./fitScale.ts";
 import { hopsBetween } from "./seatDrag.ts";
-import { nearestSeat } from "./tableEdges.ts";
+import { edgeSeats, nearestSeat, seatPoint } from "./tableEdges.ts";
 
 /**
  * How far a finger has to travel before this is a drag rather than a tap. In
@@ -48,10 +64,42 @@ interface Held {
   id: string;
   /** Where the finger went down, in design coordinates. */
   from: Point;
-  /** Where we have told the server this seat should be — not where the room says
-   * it is. Those differ while a broadcast is in flight (`hopsBetween`). */
-  at: number;
+  /** Where the label is drawn at rest — the same point a card drawn by this seat
+   * is thrown at. The offset is worked out against this rather than against the
+   * grab, so the thing being kept on the board is the label rather than the
+   * finger. */
+  anchor: Point;
 }
+
+/** Where a name sits at rest, or null if the board has no such seat. */
+export const restingAt = (index: number, count: number, design: Box): Point | null => {
+  const spot = edgeSeats(count)[index];
+  return spot ? seatPoint(spot, design) : null;
+};
+
+/**
+ * How far to draw a held name from where it sits at rest, kept on the board
+ * (#321).
+ *
+ * Nothing clamped the label before, so "off the board" was "off the screen" — on
+ * the one surface in this app whose job is telling a table who is sitting where.
+ * It is the label's **centre** that is clamped, to the design box itself rather
+ * than to some inset of it: a name at rest is already centred on a point inside
+ * the bands at the very edge, so a name held against the edge overhangs by
+ * exactly as much as a name sitting there does, and no more.
+ *
+ * Pure, and in design coordinates throughout, so it holds with the board
+ * quarter-turned and at any `fitScale` — both of those live in `designPoint`,
+ * which has already run by the time anything here is called.
+ */
+export const flungOffset = (anchor: Point, grab: Point, pointer: Point, design: Box): Point => {
+  const wanted = { x: anchor.x + (pointer.x - grab.x), y: anchor.y + (pointer.y - grab.y) };
+  const on = {
+    x: Math.min(Math.max(wanted.x, 0), design.width),
+    y: Math.min(Math.max(wanted.y, 0), design.height),
+  };
+  return { x: on.x - anchor.x, y: on.y - anchor.y };
+};
 
 /**
  * `board` is the element carrying the transform, so the pointer can be put back
@@ -99,7 +147,7 @@ export const useSeatFling = ({
 
   const release = (event: ReactPointerEvent<HTMLElement>): void => {
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
     }
     held.current = null;
     setHolding(null);
@@ -113,12 +161,14 @@ export const useSeatFling = ({
       const from = at(event);
       const index = seats.findIndex((seat) => seat.id === seatId);
       if (!from || index === -1) return;
+      const anchor = restingAt(index, seats.length, design);
+      if (!anchor) return;
 
       // Stops the press becoming a text selection, and on touch the beginning of
       // a pan before `touch-action` has had its say.
       event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      held.current = { id: seatId, from, at: index };
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      held.current = { id: seatId, from, anchor };
       setHolding(seatId);
       setOffset({ x: 0, y: 0 });
     },
@@ -129,33 +179,41 @@ export const useSeatFling = ({
       const now = at(event);
       if (!now) return;
 
-      // The seat left mid-drag. Let go rather than post hops about somebody who
-      // is no longer at the table.
+      // The seat left mid-drag. Let go rather than hold a name nobody at the
+      // table has any more.
       if (!seats.some((seat) => seat.id === state.id)) {
         release(event);
         return;
       }
 
+      // Drawing only. Nothing is sent until the drop, so the label follows the
+      // finger for the whole gesture and there is never a broadcast in flight for
+      // it to be drawn wrongly against (#321).
+      setOffset(flungOffset(state.anchor, state.from, now, design));
+    },
+
+    onDrop: (event) => {
+      const state = held.current;
+      const now = state ? at(event) : null;
+      release(event);
+      if (!state || !now) return;
+
       const moved = { x: now.x - state.from.x, y: now.y - state.from.y };
-      setOffset(moved);
       if (Math.hypot(moved.x, moved.y) < THRESHOLD) return;
 
+      // From where the room says the seat is *now*, which is the freshest thing
+      // anybody here knows: nothing has been sent during this gesture, so there
+      // is no instruction of our own in flight to count from instead.
+      const from = seats.findIndex((seat) => seat.id === state.id);
+      if (from === -1) return;
+
       const want = nearestSeat(now, seats.length, design);
-      const { direction, count } = hopsBetween(state.at, want);
-      if (count === 0) return;
+      const { direction, count } = hopsBetween(from, want);
 
       // One message per place, exactly as the lobby's arrows send them.
       for (let hop = count; hop > 0; hop -= 1) {
         send({ t: "moveSeat", playerId: state.id, direction });
       }
-      state.at = want;
-      // The label is about to be redrawn at its new spot, so the offset restarts
-      // from here. Without this it would keep measuring from the grab point and
-      // the name would sit a whole edge away from the finger holding it.
-      state.from = now;
-      setOffset({ x: 0, y: 0 });
     },
-
-    onDrop: release,
   };
 };

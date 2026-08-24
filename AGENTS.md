@@ -1224,10 +1224,46 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   changes nothing about how large a pixel is.
 - **Nothing is stacked in a column, and nothing may be** (#141). Every piece is
   placed against the design box inside bands reserved for the seat names on all
-  four sides (`BAND` in `tableEdges.ts`). The board used to be a `flex-col`
-  whose children came to more than the height it had, and `justify-center`
-  pushed the surplus out of both ends and through the names pinned to the edges.
-  Adding anything back into a flow is how that returns.
+  four sides (`NameRung.band` in `tableEdges.ts`). The board used to be a
+  `flex-col` whose children came to more than the height it had, and
+  `justify-center` pushed the surplus out of both ends and through the names
+  pinned to the edges. Adding anything back into a flow is how that returns.
+
+  **The names are as big as the ring has room for, and the ring is measured
+  rather than written down** (#320). They were `text-2xl` in `text-white/60` on a
+  `bg-felt-950/40` pill — a phone's type size and a phone's contrast, on the one
+  surface in this app read from the far side of a table, over the shoulders of the
+  people sitting at it. The colour is lifted at every size, because that costs
+  nothing; the size is a **ladder chosen from the seat count**.
+
+  The places used to be four tables of fixed percentages, which worked only while
+  every name was the same small size — `24%`/`76%` along the top is a sentence
+  about a 216px label and says nothing about a 300px one. Each edge is now handed
+  the span it may use, the label's length comes off both ends, and what is left is
+  shared out. So a rung is a handful of numbers rather than four tables, and what
+  the tests hold — nothing overlaps anything, at every count from four to eight —
+  is the arithmetic itself rather than a coincidence between constants.
+
+  **What decides the rung is the side edges.** Seven and eight seats put two
+  names down one 560-pixel side less two bands, where two big labels do not fit;
+  four to six put at most one. So four to six take the large rung and a full table
+  keeps the board it already had, to the pixel. That is the honest answer rather
+  than a failure — a name too small to read is the thing this was fixing arriving
+  by another route — and it means a full table pays for its own crowding instead
+  of a table of four paying for it.
+
+  **The large rung is paid for twice over, and both are deliberate.** The prompt
+  comes down from 512 to 360, because the bottom names sit in the flanks either
+  side of it and the two are trading against one number; and the deeper bands cost
+  the centre piles about a tenth through `pileBox` and `fitScale`.
+  `pileBox.test.ts` holds that ratio, so a rung that got greedier would have to
+  argue with a test rather than quietly shrink the middle of the table.
+
+  **`facingTurn` reads the edge, not the point.** It used to ask which half of the
+  board a seat's point fell in, which gave the side seats an answer only because
+  they sat exactly on the midline — and they stopped doing that the moment the
+  places were computed, because the bottom band is deeper than the top one. A
+  pixel of asymmetry turned both side names upside down.
 
   Three placements in here look arbitrary and are load-bearing. **The counts are
   on the names**, because two lists of the same players is what there was too

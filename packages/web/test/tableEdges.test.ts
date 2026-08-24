@@ -2,35 +2,37 @@ import { describe, expect, it } from "vitest";
 
 import { TABLE_DESIGN } from "../src/lib/fitScale.ts";
 import {
-  BAND,
   edgeFor,
   edgeSeats,
-  LABEL,
+  nameRung,
   nearestSeat,
+  pillHeight,
   seatPoint,
+  seatsOn,
   TURN_FOR,
   type Edge,
   type EdgeSeat,
 } from "../src/lib/tableEdges.ts";
 
-/** The one measurement `TableScreen` owns: `max-w-128` on the prompt, centred.
- * Kept in step by hand, and worth a test — two labels and the prompt come to the
- * full width of the design, so widening a name has to be paid for by the prompt. */
-const PROMPT = 512;
-const promptSpan: [number, number] = [
-  (TABLE_DESIGN.width - PROMPT) / 2,
-  (TABLE_DESIGN.width + PROMPT) / 2,
-];
+/** The prompt is centred in the bottom band and the rung says how wide it may be
+ * — two labels and the prompt come to the full width of the design, so widening a
+ * name is paid for by the prompt (#320). */
+const promptSpan = (count: number): [number, number] => {
+  const { prompt } = nameRung(count);
+  return [(TABLE_DESIGN.width - prompt) / 2, (TABLE_DESIGN.width + prompt) / 2];
+};
 
 const MIN_SEATS = 4;
 const MAX_SEATS = 8;
 const everyTable = Array.from({ length: MAX_SEATS - MIN_SEATS + 1 }, (_, i) => MIN_SEATS + i);
 
-/** The span a label covers along its own edge, at its widest. */
-const span = (along: number, edge: Edge): [number, number] => {
+/** The span a label covers along its own edge, at its widest — which is the
+ * rung's cap, because the label truncates to it. */
+const span = (along: number, edge: Edge, count: number): [number, number] => {
   const length = edge === "top" || edge === "bottom" ? TABLE_DESIGN.width : TABLE_DESIGN.height;
   const middle = (along / 100) * length;
-  return [middle - LABEL / 2, middle + LABEL / 2];
+  const { label } = nameRung(count);
+  return [middle - label / 2, middle + label / 2];
 };
 
 const overlaps = ([a, b]: [number, number], [c, d]: [number, number]): boolean => a < d && c < b;
@@ -114,12 +116,22 @@ describe("naming the seats round a shared table screen", () => {
     }
   });
 
-  it("places a lone name in the middle of its edge, except along the top and bottom", () => {
+  it("places a lone name in the middle of the span it has", () => {
+    // Three of the edges have one span and a lone name centres in it. The bottom
+    // has two, either side of the prompt, and the walk reaches it from the right —
+    // so a table of four puts its bottom name in the right-hand flank rather than
+    // in the middle of the prompt.
     const four = edgeSeats(4);
-    expect(four[0]?.along).toBe(24);
-    expect(four[1]?.along).toBe(50);
-    expect(four[2]?.along).toBe(12);
-    expect(four[3]?.along).toBe(50);
+    expect(four.map((seat) => seat.edge)).toEqual(["top", "right", "bottom", "left"]);
+    // The top's span is symmetric, so its lone name lands on the middle of the
+    // board. The sides' is not — the bottom band is deeper than the top one,
+    // because it shares with the prompt — so the middle of the span is a little
+    // above the middle of the edge, which is where the name belongs.
+    expect(four[0]?.along).toBeCloseTo(50, 6);
+    expect(four[1]?.along).toBeGreaterThan(45);
+    expect(four[1]?.along).toBeLessThan(50);
+    expect(four[2]?.along).toBeGreaterThan(60);
+    expect(four[3]?.along).toBeCloseTo(four[1]?.along ?? 0, 6);
   });
 
   it("never lets two names on one edge touch", () => {
@@ -129,7 +141,10 @@ describe("naming the seats round a shared table screen", () => {
         const here = placed.filter((seat) => seat.edge === edge);
         for (const [index, seat] of here.entries()) {
           const next = here[index + 1];
-          if (next) expect(overlaps(span(seat.along, edge), span(next.along, edge))).toBe(false);
+          if (next)
+            expect(overlaps(span(seat.along, edge, count), span(next.along, edge, count))).toBe(
+              false,
+            );
         }
       }
     }
@@ -140,7 +155,7 @@ describe("naming the seats round a shared table screen", () => {
     // on the one screen whose job is telling the table who is sitting where.
     for (const count of everyTable) {
       for (const seat of edgeSeats(count)) {
-        const [from, to] = span(seat.along, seat.edge);
+        const [from, to] = span(seat.along, seat.edge, count);
         const length =
           seat.edge === "top" || seat.edge === "bottom"
             ? TABLE_DESIGN.width
@@ -157,9 +172,10 @@ describe("naming the seats round a shared table screen", () => {
     for (const count of everyTable) {
       for (const seat of edgeSeats(count)) {
         if (seat.edge !== "left" && seat.edge !== "right") continue;
-        const [from, to] = span(seat.along, seat.edge);
-        expect(from).toBeGreaterThanOrEqual(BAND.top);
-        expect(to).toBeLessThanOrEqual(TABLE_DESIGN.height - BAND.bottom);
+        const [from, to] = span(seat.along, seat.edge, count);
+        const { band } = nameRung(count);
+        expect(from).toBeGreaterThanOrEqual(band.top);
+        expect(to).toBeLessThanOrEqual(TABLE_DESIGN.height - band.bottom);
       }
     }
   });
@@ -170,9 +186,10 @@ describe("naming the seats round a shared table screen", () => {
     for (const count of everyTable) {
       for (const seat of edgeSeats(count)) {
         if (seat.edge !== "top") continue;
-        const [from, to] = span(seat.along, "top");
-        expect(from).toBeGreaterThanOrEqual(BAND.corner);
-        expect(to).toBeLessThanOrEqual(TABLE_DESIGN.width - BAND.corner);
+        const [from, to] = span(seat.along, "top", count);
+        const { band } = nameRung(count);
+        expect(from).toBeGreaterThanOrEqual(band.corner);
+        expect(to).toBeLessThanOrEqual(TABLE_DESIGN.width - band.corner);
       }
     }
   });
@@ -183,7 +200,80 @@ describe("naming the seats round a shared table screen", () => {
     for (const count of everyTable) {
       for (const seat of edgeSeats(count)) {
         if (seat.edge !== "bottom") continue;
-        expect(overlaps(span(seat.along, "bottom"), promptSpan)).toBe(false);
+        expect(overlaps(span(seat.along, "bottom", count), promptSpan(count))).toBe(false);
+      }
+    }
+  });
+
+  /**
+   * The names are read from the far side of a table, so they are as big as the
+   * ring has room for and no bigger (#320). The ladder is a property of the seat
+   * count, and these are the constraints that decide which rung a count can take
+   * — asked as arithmetic rather than as a table of expected sizes, so retuning a
+   * rung cannot quietly break the thing the rung exists for.
+   */
+  it("is bigger than it was wherever the ring has room", () => {
+    for (const count of [4, 5, 6]) expect(nameRung(count).size).toBeGreaterThan(24);
+  });
+
+  it("steps back down where two names share a side edge", () => {
+    // 560 less two bands, halved, is not a big label — and a name too small to read
+    // is the failure this was fixing, arriving by another route. A full table pays
+    // for its own crowding rather than making a table of four pay for it.
+    for (const count of everyTable) {
+      const crowded = seatsOn("left", count) > 1 || seatsOn("right", count) > 1;
+      expect(crowded).toBe(count >= 7);
+      expect(nameRung(count).size > 24).toBe(!crowded);
+    }
+  });
+
+  it("leaves a full table exactly where it was", () => {
+    // Seven and eight get the colour and nothing else, so nothing about the board
+    // they already had moves: same bands, same prompt, same label cap.
+    const full = nameRung(8);
+    expect(full).toEqual(nameRung(7));
+    expect(full.label).toBe(216);
+    expect(full.prompt).toBe(512);
+    expect(full.band).toEqual({ top: 48, bottom: 48, side: 56, corner: 120 });
+    expect(full.across).toEqual({ top: 24, bottom: 36, left: 28, right: 28 });
+  });
+
+  it("pays for a bigger name out of the prompt and the bands, and says so", () => {
+    const big = nameRung(4);
+    const small = nameRung(8);
+    // Both halves of the trade, stated: the prompt narrows and the bands deepen,
+    // which is what the centre piles give up through `pileBox` and `fitScale`.
+    expect(big.prompt).toBeLessThan(small.prompt);
+    expect(big.band.top).toBeGreaterThan(small.band.top);
+    expect(big.band.bottom).toBeGreaterThan(small.band.bottom);
+    expect(big.band.side).toBeGreaterThan(small.band.side);
+    // And the label has to fit the flank the narrower prompt leaves.
+    const flank = (TABLE_DESIGN.width - big.prompt) / 2;
+    expect(big.label).toBeLessThan(flank);
+  });
+
+  it("keeps every name's pill on the board and off the piles, at every rung", () => {
+    /**
+     * `across` is the centre line, so half the pill hangs either side of it. Two
+     * things can go wrong: a pill wider than its `across` runs off the outside of
+     * the board, and a pill deeper than its band reaches inwards over the piles.
+     *
+     * The inward check allows the `GUTTER` the piles already keep clear of the
+     * bands (#159) — the small rung spends 8 of those 10 at the bottom, which is
+     * exactly the board as it was and the reason that gutter is 10.
+     */
+    const GUTTER = 10;
+    for (const count of everyTable) {
+      const rung = nameRung(count);
+      const { band, across } = rung;
+      const half = pillHeight(rung) / 2;
+      expect(across.top - half).toBeGreaterThanOrEqual(0);
+      expect(across.top + half).toBeLessThanOrEqual(band.top + GUTTER);
+      expect(across.bottom - half).toBeGreaterThanOrEqual(0);
+      expect(across.bottom + half).toBeLessThanOrEqual(band.bottom + GUTTER);
+      for (const edge of ["left", "right"] as const) {
+        expect(across[edge] - half).toBeGreaterThanOrEqual(0);
+        expect(across[edge] + half).toBeLessThanOrEqual(band.side + GUTTER);
       }
     }
   });
@@ -191,7 +281,7 @@ describe("naming the seats round a shared table screen", () => {
   it("answers for a table too small to be dealt, rather than throwing", () => {
     // A lobby is a room before it is a game, and the board draws the names it has.
     expect(edgeSeats(0)).toEqual([]);
-    expect(edgeSeats(1)).toEqual([{ edge: "top", along: 24 }]);
+    expect(edgeSeats(1)).toEqual([{ edge: "top", along: 50, across: nameRung(1).across.top }]);
     expect(edgeFor(0, 0)).toBe("top");
   });
 });

@@ -10,8 +10,7 @@
 
 import type { GameView, RoomView } from "@goleta/engine";
 
-import { TABLE_DESIGN } from "./fitScale.ts";
-import { edgeSeats, seatPoint } from "./tableEdges.ts";
+import { edgeSeats } from "./tableEdges.ts";
 
 /**
  * Whose turn the board should be readable from — the seat on the clock, unless
@@ -37,17 +36,23 @@ export const seatToFace = (room: RoomView, game: GameView | null): number | null
 };
 
 /**
- * `180` for somebody across the table, `0` for somebody at this end. Decided by
- * which half of the board the seat's point falls in rather than by its edge,
- * which gives the sides a defined answer — they sit on the midline and get the
- * board upright, which is what the rest of the table is reading anyway.
+ * `180` for somebody across the table, `0` for somebody at this end.
+ *
+ * **Decided by the edge.** It used to ask which half of the board the seat's
+ * point fell in, which gave the sides an answer only because they sat exactly on
+ * the midline — and they stopped doing that the moment the places were computed
+ * from the label rather than written down, because the bottom band is deeper than
+ * the top one and the middle of a side's *span* is a little above the middle of
+ * its edge (#320). A pixel of asymmetry turned both side seats upside down.
+ *
+ * The edge says it outright and cannot drift: the top reads from across the
+ * table, everybody else reads from this end. The sides read at a slant either
+ * way, which was never the complaint, so they get what the rest of the table is
+ * reading anyway.
  */
 export const facingTurn = (room: RoomView, game: GameView | null): number => {
   const at = seatToFace(room, game);
   if (at === null) return 0;
 
-  const spot = edgeSeats(room.seats.length)[at];
-  if (!spot) return 0;
-
-  return seatPoint(spot, TABLE_DESIGN).y < TABLE_DESIGN.height / 2 ? 180 : 0;
+  return edgeSeats(room.seats.length)[at]?.edge === "top" ? 180 : 0;
 };

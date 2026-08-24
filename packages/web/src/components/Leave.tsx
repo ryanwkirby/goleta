@@ -11,11 +11,15 @@
  * away the token that proved it was yours. Mid-hand the cards do not vanish with
  * it: the autopilot plays them out and the table finishes the game (#202).
  *
- * Both answers name themselves, the shape the lobby's seat-order check already
- * uses. A bare Cancel/OK asks somebody to work out which one is which while
- * looking at a sentence about losing their seat. **Stay** and **Leave** do that
- * in a third of the width of *No, I'll stay* / *Yes, I'm going*, and they are
- * the words the question is already in (#292).
+ * Both answers name themselves. A bare Cancel/OK asks somebody to work out which
+ * one is which while looking at a sentence about losing their seat. **Stay** and
+ * **Leave** do that in a third of the width of *No, I'll stay* / *Yes, I'm
+ * going*, and they are the words the question is already in (#292).
+ *
+ * The lobby's seat-order check was cited here as the precedent and is no longer
+ * one: its dismissing answer is **Go back**, a direction rather than an answer
+ * (#316). That question is a glance at a list; this one is a seat that cannot be
+ * handed back, so the rule stays where the stakes are.
  */
 
 import { useState } from "react";

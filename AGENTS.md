@@ -455,12 +455,18 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   one of which drops you out of the game — and it fired instantly. The dialog
   says what leaving actually costs, which is more than people expect: this
   browser throws away the token that proved the seat was yours, so **a leave is
-  not a closed tab and cannot be undone**. Both answers name themselves, the
-  shape the lobby's seat-order check already uses; a bare Cancel/OK asks somebody
-  to work out which is which while reading a sentence about losing their seat.
-  The lobby keeps the *word*, because it is a screen with room, opposite **How to
-  play**, with nothing running — but it asks the same question, since the token
-  goes either way.
+  not a closed tab and cannot be undone**. Both answers name themselves; a bare
+  Cancel/OK asks somebody to work out which is which while reading a sentence
+  about losing their seat. The lobby keeps the *word*, because it is a screen
+  with room, opposite **How to play**, with nothing running — but it asks the
+  same question, since the token goes either way.
+
+  **The lobby's seat-order check was the precedent cited here and is not one any
+  more** (#316). Its dismissing answer is **Go back**, a direction rather than an
+  answer to *does this look correct?*, so the pair there is asymmetric on
+  purpose: that question is a glance at a list, and this one is a seat that
+  cannot be handed back. The rule survives where the stakes are; do not read the
+  lobby as a licence to relax it here.
 - **A seat somebody has left keeps its cards and is played out (#256).** The
   obvious answer — delete the seat — is ruled out by the first invariant this
   game has: hands plus deck plus pile come to 52, and a seat with a hand in it
@@ -1047,7 +1053,7 @@ cost this map only partly removes.
 
 | Where | What is there now | Free? |
 | --- | --- | --- |
-| Header row (`TableHeader`) | four icons with a word under each — settings, join, rules, leave (#330) — and **the sun**, centred, in a slot that is reserved whether or not a window is open (#329) | Yes, for a control rather than a table fact. A new item joins the four rather than being drawn some other way, and anything that comes and goes reserves its place. |
+| Header row (`TableHeader`) | four icons with a word under each — settings, invite, rules, leave (#330, renamed in #353) — and **the sun**, centred, in a slot that is reserved whether or not a window is open (#329) | Yes, for a control rather than a table fact. A new item joins the four rather than being drawn some other way, and anything that comes and goes reserves its place. |
 | Under the prompt | **I'm done** (#260) | **No.** A primary action, and the only thing the table is waiting for while it is up. Far from the piles above it. |
 | The `min-h-7` line above the hand (`OwnHand`) | help link, missed-call notice, sort | Yes. Kept clear either way, so the hand does not move under a thumb when something appears. |
 | Above the hand, right | — | Free since #329 took the sun to the header. The middle of that box is still where your own `HelpShout` rises; the right and left are open. |

@@ -130,6 +130,7 @@ export function Table({
     handRow,
     helpControls,
     invitePanel,
+    logSlack,
     me,
     mine,
     mode,
@@ -137,6 +138,8 @@ export function Table({
     namingCard,
     owesPunishment,
     peeling,
+    pilesBlock,
+    pilesContent,
     departed,
     reshuffling,
     route,
@@ -258,46 +261,51 @@ export function Table({
 
         <Seats room={room} game={game} shouts={shouts} />
 
-        <div className="flex flex-1 flex-col justify-center gap-4 py-2">
-          <Piles
-            game={game}
-            canDraw={canDraw}
-            onDraw={drawCard}
-            irl={room.irl}
-            // The deck is the only one of the two you touch, and upright it was
-            // under the hand holding the phone rather than the one tapping. The
-            // landscape strip already puts it at the right-hand end, so this
-            // makes the two phone layouts agree (#259).
-            deckSide="right"
-            peel={
-              peeling && call
-                ? {
-                    evidence: call.evidence,
-                    named: call.card,
-                    callerName: nameOf(call.callerId),
-                    targetName: nameOf(call.targetId),
-                  }
-                : null
-            }
-          />
+        {/* Two boxes rather than one, so the log can be told how much of this
+            the piles are not using (#352). The outer one is what the column
+            has left over; the inner one is what is actually in it. */}
+        <div ref={pilesBlock} className="flex flex-1 flex-col justify-center py-2">
+          <div ref={pilesContent} className="flex flex-col gap-4">
+            <Piles
+              game={game}
+              canDraw={canDraw}
+              onDraw={drawCard}
+              irl={room.irl}
+              // The deck is the only one of the two you touch, and upright it was
+              // under the hand holding the phone rather than the one tapping. The
+              // landscape strip already puts it at the right-hand end, so this
+              // makes the two phone layouts agree (#259).
+              deckSide="right"
+              peel={
+                peeling && call
+                  ? {
+                      evidence: call.evidence,
+                      named: call.card,
+                      callerName: nameOf(call.callerId),
+                      targetName: nameOf(call.targetId),
+                    }
+                  : null
+              }
+            />
 
-          <TurnPrompt
-            game={game}
-            nameOf={nameOf}
-            assist={assist}
-            reshuffling={reshuffling}
-            departed={departed}
-          />
+            <TurnPrompt
+              game={game}
+              nameOf={nameOf}
+              assist={assist}
+              reshuffling={reshuffling}
+              departed={departed}
+            />
 
-          {/* Under the prompt, which is the line already saying what the table is
-              waiting for — and this is the one moment it is waiting for something
-              with a button attached (#260). Nowhere near the draw pile, which is
-              the row above, and never under the cards. */}
-          {handControls.canEndTurn ? (
-            <div className="flex justify-center">
-              <EndTurnButton onEndTurn={handControls.onEndTurn} />
-            </div>
-          ) : null}
+            {/* Under the prompt, which is the line already saying what the table is
+                waiting for — and this is the one moment it is waiting for something
+                with a button attached (#260). Nowhere near the draw pile, which is
+                the row above, and never under the cards. */}
+            {handControls.canEndTurn ? (
+              <div className="flex justify-center">
+                <EndTurnButton onEndTurn={handControls.onEndTurn} />
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {finished ? (
@@ -356,7 +364,7 @@ export function Table({
             log is every play in the game in words, which is the board a call is
             judged against written out at the one moment they are being asked to
             remember it (#319). It keeps its space and says so. */}
-        <EventLog log={log} nameOf={nameOf} concealed={namingCard} />
+        <EventLog log={log} nameOf={nameOf} concealed={namingCard} slack={logSlack} />
 
         <TableOverlays
           nameOf={nameOf}

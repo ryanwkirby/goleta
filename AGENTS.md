@@ -455,12 +455,18 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   one of which drops you out of the game — and it fired instantly. The dialog
   says what leaving actually costs, which is more than people expect: this
   browser throws away the token that proved the seat was yours, so **a leave is
-  not a closed tab and cannot be undone**. Both answers name themselves, the
-  shape the lobby's seat-order check already uses; a bare Cancel/OK asks somebody
-  to work out which is which while reading a sentence about losing their seat.
-  The lobby keeps the *word*, because it is a screen with room, opposite **How to
-  play**, with nothing running — but it asks the same question, since the token
-  goes either way.
+  not a closed tab and cannot be undone**. Both answers name themselves; a bare
+  Cancel/OK asks somebody to work out which is which while reading a sentence
+  about losing their seat. The lobby keeps the *word*, because it is a screen
+  with room, opposite **How to play**, with nothing running — but it asks the
+  same question, since the token goes either way.
+
+  **The lobby's seat-order check was the precedent cited here and is not one any
+  more** (#316). Its dismissing answer is **Go back**, a direction rather than an
+  answer to *does this look correct?*, so the pair there is asymmetric on
+  purpose: that question is a glance at a list, and this one is a seat that
+  cannot be handed back. The rule survives where the stakes are; do not read the
+  lobby as a licence to relax it here.
 - **A seat somebody has left keeps its cards and is played out (#256).** The
   obvious answer — delete the seat — is ruled out by the first invariant this
   game has: hands plus deck plus pile come to 52, and a seat with a hand in it

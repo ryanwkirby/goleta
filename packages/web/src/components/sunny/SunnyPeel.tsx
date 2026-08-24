@@ -9,20 +9,31 @@ import { SUIT_LABEL, type CardSize } from "../../lib/cardShape.ts";
 const spoken = (card: Card): string => `${card.rank} of ${SUIT_LABEL[card.suit]}`;
 
 /**
- * A card the evidence points at: the table's amber ring, plus a word for what it
- * is. `lift` raises it clear of whatever it sits on, which is what pulls a named
+ * A card the evidence points at: the table's amber ring, and nothing else.
+ * `lift` raises it clear of whatever it sits on, which is what pulls a named
  * card back out of the faded pile when they have already played it. The card in
  * play doesn't take it — lifting it would show a second card's edge underneath.
+ *
+ * **The `was in play` / `named` chips are gone** (#324). The pairing is the
+ * message and the ruling is a comparison: the whole of what the table has to do
+ * here is see whether the two ringed cards match, and for that a caption saying
+ * which is which is not doing work the marks and their places aren't. One is on
+ * the pile, which is where the board is; the other is held out beside it, which
+ * is where a card being claimed about is. The announcement a beat later says the
+ * rest in words, and the `sr-only` paragraph below carries the narrative
+ * unchanged for anybody who is not reading the cards at all.
+ *
+ * Still **two cards and no others** — never the one they should have named,
+ * which would answer the question the ruling deliberately leaves open and make
+ * the next call automatic (#63).
  */
 function Marked({
   card,
-  label,
   size,
   lift = false,
   irl = false,
 }: {
   card: Card;
-  label: string;
   size: CardSize;
   lift?: boolean;
   irl?: boolean;
@@ -35,14 +46,6 @@ function Marked({
         lift ? "-translate-y-3" : "",
       ].join(" ")}
     >
-      <span
-        className={[
-          "absolute -top-4 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full",
-          "bg-felt-950/90 px-1.5 text-[0.6rem] font-semibold uppercase tracking-wider text-amber-300",
-        ].join(" ")}
-      >
-        {label}
-      </span>
       <PlayingCard card={card} size={size} mirrored={irl} />
     </span>
   );
@@ -99,7 +102,7 @@ export function SunnyPeel({
           that landed they are already the same card, which is what lets the peel
           hand off into the rewind without the pile jumping. */}
       <span aria-hidden className="pointer-events-none absolute left-0 top-0">
-        <Marked card={inPlay} label="was in play" size="lg" irl={irl} />
+        <Marked card={inPlay} size="lg" irl={irl} />
       </span>
 
       {/* Played since the offence, fanned off the top, oldest first. The window
@@ -133,7 +136,7 @@ export function SunnyPeel({
             }
           >
             {card.id === named.id ? (
-              <Marked card={card} label="named" size="md" lift irl={irl} />
+              <Marked card={card} size="md" lift irl={irl} />
             ) : (
               <PlayingCard card={card} size="md" mirrored={irl} />
             )}
@@ -158,7 +161,7 @@ export function SunnyPeel({
             away === 1 ? "right-full mr-6" : "left-full ml-6",
           ].join(" ")}
         >
-          <Marked card={named} label="named" size="md" lift irl={irl} />
+          <Marked card={named} size="md" lift irl={irl} />
         </span>
       )}
     </>

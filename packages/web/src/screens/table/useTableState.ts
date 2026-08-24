@@ -92,6 +92,17 @@ export function useTableState({
   const [stalled, setStalled] = useState(false);
   const [handSort, setHandSort] = useState<HandSort>(loadHandSort);
   /**
+   * The two below are the same kind of thing and share a hazard: each is *this
+   * phone* remembering it has been shown something once this deal, which is not a
+   * lifetime and cannot be recovered from when an event landed — somebody may sit
+   * looking at `takeYourSeat` for a minute before pressing Done. So neither
+   * survives this hook being mounted afresh, and a screen that unmounted the
+   * table put both back up in the middle of a hand (#360). Nothing does that any
+   * more — the rules are drawn over the table rather than instead of it — and
+   * anything added here meaning "already seen" inherits the same requirement.
+   */
+
+  /**
    * The deal rather than a bare flag: a boolean reset by an effect would put the
    * rotate panel back up for a frame at the top of every hand.
    */

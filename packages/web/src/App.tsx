@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { MOVE_MS, SESSION_MS, SessionError } from "./components/Refusal.tsx";
+import { LAYER } from "./lib/layers.ts";
 import { hasSeenRules, markRulesSeen, setWantsHints, wantsHints } from "./net/identity.ts";
 import { useGoleta } from "./net/useGoleta.ts";
 import { Join } from "./screens/Join.tsx";
@@ -83,21 +84,6 @@ export function App() {
         <Join send={send} connecting={status !== "open"} underWay={error?.code === "gameUnderWay"} />
       );
     }
-    if (showRules) {
-      return (
-        <div className="flex flex-1 items-start justify-center p-5 sm:items-center">
-          <Rules
-            onDone={dismissRules}
-            hints={hints}
-            onChooseHints={chooseHints}
-            // So the screen never describes a rule this table has switched off
-            // (#249). Reachable only with a room today, and the default is the
-            // game as written for when it isn't.
-            houseRules={room.houseRules}
-          />
-        </div>
-      );
-    }
     // Takes the room in every state — lobby, game and finished alike — because it
     // is the one screen nobody walks over to touch.
     if (mode === "table") {
@@ -146,6 +132,39 @@ export function App() {
   return (
     <div className="flex flex-1 flex-col bg-felt-950 bg-[radial-gradient(120%_80%_at_50%_0%,var(--color-felt-900),var(--color-felt-950))] text-white">
       {body}
+
+      {/* Laid **over** whatever is behind it rather than swapped in for it (#360).
+          The swap was the root of a class of bug rather than a bug: `Table`
+          unmounted, so every `useState` in `useTableState` meaning "this phone has
+          already been shown that" was thrown away, and closing the rules put the
+          "take your seat" list and the rotate prompt back up in the middle of a
+          hand. #357 was the same cause with a different symptom.
+
+          It is opaque, and paints the same felt the root does, so it looks exactly
+          like the screen it replaces. What is different is behind it: the table is
+          still running, so a hints toggle flipped in here is announced when it is
+          flipped rather than when the panel closes, and a Sunny ruling draws over
+          this rather than waiting to be replayed. `LAYER.reading` is where that
+          argument lives. */}
+      {showRules && room ? (
+        <div
+          className={[
+            "fixed inset-0 flex items-start justify-center p-5 sm:items-center",
+            LAYER.reading,
+            "bg-felt-950 bg-[radial-gradient(120%_80%_at_50%_0%,var(--color-felt-900),var(--color-felt-950))]",
+          ].join(" ")}
+        >
+          <Rules
+            onDone={dismissRules}
+            hints={hints}
+            onChooseHints={chooseHints}
+            // So the screen never describes a rule this table has switched off
+            // (#249). Reachable only with a room today, and the default is the
+            // game as written for when it isn't.
+            houseRules={room.houseRules}
+          />
+        </div>
+      ) : null}
 
       {/* The move refusal is drawn by the table, against the hand it answers. This
           is everything else. */}

@@ -1417,6 +1417,18 @@ npm workspaces monorepo, one Docker image, one process.
   screen: `TableFlights` lives inside the board's transform and is ordered
   against the board's own pieces (#200).
 
+  **The rules screen is drawn over the table rather than instead of it (#360),
+  and that is a mounting decision before it is a stacking one.** `App.tsx` used
+  to swap the whole table out for it, so every `useState` in `useTableState`
+  meaning "this phone has already been shown that" was thrown away on the way
+  back: closing the rules mid-hand put the "take your seat" list and the rotate
+  prompt up again, both of them once-per-deal promises. #357 was the same cause
+  with a different symptom, and so is the next such flag anybody adds. The
+  consequence to know about is that the table is **live** behind the panel — a
+  hints toggle flipped in there is announced when it is flipped, and a Sunny
+  ruling draws over the reader rather than waiting to be replayed. `LAYER.reading`
+  carries why that rung sits above the cards and below everything that announces.
+
 **`packages/engine/src/redact.ts` is the security boundary.** Nothing outside it
 decides what a client may see. Hands are not what it guards — every hand is face
 up — but `state.challenge`, `state.sunny` and the deck are, and there is a test

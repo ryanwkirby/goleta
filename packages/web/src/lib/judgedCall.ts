@@ -45,8 +45,8 @@ export const useJudgedCall = (log: LoggedEvent[]): JudgedCall => {
   const [announcing, setAnnouncing] = useState(false);
   /**
    * The call this screen took up, which is not the same as the newest one in the
-   * log: the log outlives the table, and closing the rules screen mounts a fresh
-   * one (#357). Kept here rather than derived on every render because the answer
+   * log: the log outlives every screen that reads it (#357), and this one is read
+   * by two. Kept here rather than derived on every render because the answer
    * has to stop moving once the beat has started — a ruling that vanished
    * mid-sentence the moment the window passed would be a worse bug than the one
    * this fixes.

@@ -27,8 +27,8 @@ export const useDeparture = (log: LoggedEvent[]): string | null => {
   const playerId = entry?.event.type === "left" ? entry.event.playerId : null;
 
   useEffect(() => {
-    // Said once, when it happens — not again every time the table is mounted
-    // afresh, which closing the rules screen does (#357).
+    // Said once, when it happens — not again every time a screen that reads the
+    // log is mounted afresh (#357).
     if (!stillNews(entry, DEPARTURE_MS, Date.now())) return;
     setRunning(true);
     const timer = setTimeout(() => setRunning(false), DEPARTURE_MS);

@@ -36,8 +36,8 @@ export const useReshuffle = (log: LoggedEvent[]): Reshuffle => {
 
   useEffect(() => {
     // The newest recycle in the log is not necessarily one that just happened:
-    // the log outlives this screen, and closing the rules screen mounts it again
-    // (#357). Held for as long as the hold itself lasts, and asked once.
+    // the log outlives every screen that reads it (#357). Held for as long as the
+    // hold itself lasts, and asked once.
     if (!stillNews(entry, RESHUFFLE_MS, Date.now())) return;
     setRunning(true);
     const timer = setTimeout(() => setRunning(false), RESHUFFLE_MS);

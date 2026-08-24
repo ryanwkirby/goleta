@@ -43,17 +43,22 @@ export interface GoletaError {
  * back. `TableMotion` has had this rule since the flights were written — "the
  * table acts out what just happened, never what it is only now being shown" —
  * and the three moment hooks did not, so every one of them replayed on a
- * remount: closing the rules screen swaps the whole table back in (`App.tsx`),
- * and a Sunny call judged minutes earlier announced itself again (#357).
+ * remount: a Sunny call judged minutes earlier announced itself again (#357).
  *
- * A bookmark would have been the wrong shape. Anything remembering "seen this
- * one" has to outlive the thing that unmounts, and a bookmark taken at mount
- * swallows a call that landed while the rules screen was open — which is the
- * case that most needs saying. Freshness needs nothing remembered by anybody: a
- * moment is news for as long as the moment itself lasts, so `lasts` is the
- * beat's own figure from `beats.ts` rather than a number tuned here. Come back
- * part-way through one and you are owed it from the top; come back after it and
- * the log is where it lives.
+ * The remount that produced it is gone — the rules screen used to swap the whole
+ * table out and is drawn over it now (#360) — and the rule stands on its own
+ * without that example. The log outlives every screen reading it, this one is
+ * read by two (`Table` and the shared `TableScreen`), and a hook that acts on the
+ * newest matching entry is acting on whatever the log happens to hold whenever
+ * anything mounts it.
+ *
+ * A bookmark would have been the wrong shape even then. Anything remembering
+ * "seen this one" has to outlive the thing that unmounts, which is the trap #360
+ * came out of. Freshness needs nothing remembered by anybody: a moment is news
+ * for as long as the moment itself lasts, so `lasts` is the beat's own figure
+ * from `beats.ts` rather than a number tuned here. Come back part-way through one
+ * and you are owed it from the top; come back after it and the log is where it
+ * lives.
  *
  * It is asked **once, when the beat would start**, and never again while it
  * runs: a screen that re-read it every render would drop the ruling on the floor

@@ -42,6 +42,76 @@ function SectionHeading({ children }: { children: string }) {
 }
 
 /**
+ * Which of the panel's two pages is showing (#313).
+ *
+ * #253 put both settings rooms under one cog and #289 gave each a heading big
+ * enough to see the division at a glance. Both were right and neither solved
+ * what a host actually meets opening it mid-game: one column holding two
+ * unrelated jobs, taller than the screen it is drawn on. For a host that came to
+ * roughly 600px of content in a 640px box — it scrolls on a short portrait phone
+ * and is nowhere near fitting a landscape one — and a non-host with the autopilot
+ * on could still be asked to scroll to reach the second of their two controls.
+ *
+ * Scrolling is the wrong shape for this panel twice over. The room half is where
+ * a host goes to change one thing and get back to a hand that is still running,
+ * and the personal half's whole reason for existing is *I am stepping away*,
+ * pressed by somebody who has already stopped looking at the screen.
+ *
+ * **Landscape may still scroll the room page and that is accepted.** Five groups
+ * and a note do not fit in 300px however they are arranged, and the answer is the
+ * `overflow-y-auto` that is already there — not a third page and not a
+ * short-screen variant. Two navigation models for one panel is worse than a
+ * scroll that engages on one device.
+ */
+type SettingsPage = "yours" | "room";
+
+/**
+ * The way between the two pages: a label and a chevron, the shape `Rule` in
+ * `screens/Rules.tsx` already uses for a drill.
+ *
+ * **Deliberately not `TwoWay`**, which is the obvious wrong turn. A tab pair on
+ * that track would put the panel's single loudest amber control on the one thing
+ * in here that changes nothing, and `TwoWay` says in its own header what it is
+ * for: two answers a person would *say*, to a question. *Which page am I looking
+ * at* is not a setting and must not be drawn as one — and a tab bar would be a
+ * third shape in a file that already has exactly two and says not to add one.
+ */
+function PageLink({
+  label,
+  back = false,
+  onGo,
+}: {
+  label: string;
+  /** The chevron points the way you are going. */
+  back?: boolean;
+  onGo: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onGo}
+      className={[
+        "flex min-h-11 w-full items-center gap-3 border-t border-white/10 pt-4 text-sm font-semibold",
+        "text-white transition-colors hover:text-amber-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+      ].join(" ")}
+    >
+      {back ? (
+        <span aria-hidden className="shrink-0 text-white/30">
+          ‹
+        </span>
+      ) : null}
+      <span className="min-w-0 flex-1 text-left">{label}</span>
+      {back ? null : (
+        <span aria-hidden className="shrink-0 text-white/30">
+          ›
+        </span>
+      )}
+    </button>
+  );
+}
+
+/**
  * Drawn rather than typed (#296). `⚙` is a character, so what it looked like was
  * whatever the platform's font decided — on most of them a shaded, bevelled,
  * faintly three-dimensional gear that belonged next to nothing else in the app.
@@ -287,10 +357,16 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
  * So the glyph nobody recognised led to the one setting everybody could already
  * reach by pressing a word that says what it is.
  *
- * The distinction #188 was protecting survives as a **division inside one
- * panel**: a headed *yours* section every seated player gets, and below it, only
- * for the host, a headed *table settings* section — so a host can still see at a
- * glance which half changes the game for everybody.
+ * The distinction #188 was protecting survives as **two pages behind one cog**
+ * (#313). It opens on *Your settings* for everybody seated, and a host — and only
+ * a host — gets a row at the foot of that page through to *Room settings*, in the
+ * shape `Rule` uses for a drill. A non-host sees one page and no navigation at
+ * all: nothing naming a room they cannot enter.
+ *
+ * It was one scrolling column until then, headed in two halves. Splitting is what
+ * buys a panel that fits: ~250–310px for the personal page and ~410 for the room
+ * page, against ~560 of usable height on the shortest portrait phone worth
+ * supporting. See `SettingsPage` for the measurements it was wrong at.
  *
  * **The bar for the personal half is unchanged**: it belongs to one player and
  * changes nothing about the room. That rules out everything in the other half.
@@ -352,6 +428,15 @@ export function SettingsCog({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  /** Which page is showing. Not remembered: closing forgets it and the next open
+   * lands on *yours*, the reasoning that took `goleta:table-view` out — a
+   * preference the app would have to store to answer a question that is one tap
+   * to re-ask. */
+  const [page, setPage] = useState<SettingsPage>("yours");
+  const close = (): void => {
+    setOpen(false);
+    setPage("yours");
+  };
 
   return (
     <>
@@ -384,26 +469,19 @@ export function SettingsCog({
           className={`fixed inset-0 ${LAYER.dialog} flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm`}
           role="dialog"
           aria-modal="true"
-          aria-label="Settings"
-          onClick={() => setOpen(false)}
+          aria-label={page === "room" ? "Room settings" : "Your settings"}
+          onClick={close}
         >
           <Panel
             className="flex w-full max-h-full max-w-sm flex-col gap-4 overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex flex-col gap-4">
-              <SectionHeading>Your settings</SectionHeading>
-              <HintsRow on={hints} onChange={onHints} />
-              {/* Both halves of *yours* clear the bar #188 set: they belong to one
-                  player and change nothing about the room. Neither is private —
-                  hints are shouted (#187) and an autopiloted seat carries a
-                  standing mark (#202). */}
-              <AutopilotPicker mode={autopilot} onChange={onAutopilot} />
-            </div>
-
-            {isHost ? (
+            {page === "room" ? (
               <>
-                <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
+                <div className="flex flex-col gap-2">
+                  {/* The heading is the page's title now rather than a divider in a
+                      column. Same component and same size: a page still has to say
+                      which room you are standing in (#289). */}
                   <SectionHeading>Room settings</SectionHeading>
                   <IrlToggle on={irl} onChange={onIrl} />
                 </div>
@@ -430,10 +508,29 @@ export function SettingsCog({
                     These apply at the next deal. This hand keeps the rules it was dealt under.
                   </p>
                 </div>
-              </>
-            ) : null}
 
-            <Button variant="secondary" full onClick={() => setOpen(false)}>
+                <PageLink label="Your settings" back onGo={() => setPage("yours")} />
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col gap-4">
+                  <SectionHeading>Your settings</SectionHeading>
+                  <HintsRow on={hints} onChange={onHints} />
+                  {/* Both halves of *yours* clear the bar #188 set: they belong to one
+                      player and change nothing about the room. Neither is private —
+                      hints are shouted (#187) and an autopiloted seat carries a
+                      standing mark (#202). */}
+                  <AutopilotPicker mode={autopilot} onChange={onAutopilot} />
+                </div>
+
+                {/* Only a host is told the other page exists. A non-host sees one
+                    page and no navigation — nothing naming a room they cannot
+                    enter. */}
+                {isHost ? <PageLink label="Room settings" onGo={() => setPage("room")} /> : null}
+              </>
+            )}
+
+            <Button variant="secondary" full onClick={close}>
               Done
             </Button>
           </Panel>

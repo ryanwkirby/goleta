@@ -3,22 +3,37 @@ import { describe, expect, it } from "vitest";
 import { CARD_HEIGHT_PX, type CardSize } from "../src/lib/cardShape.ts";
 import { TABLE_DESIGN, fitScale } from "../src/lib/fitScale.ts";
 import { deckPoint, pileBox, pilePoint } from "../src/lib/pileBox.ts";
-import { BAND, edgeSeats, seatPoint } from "../src/lib/tableEdges.ts";
+import { edgeSeats, nameRung, seatPoint } from "../src/lib/tableEdges.ts";
 
 /** The two boxes `TableScreen` gives the piles, kept in step with the constants
- * there by hand. */
+ * there by hand.
+ *
+ * The bands move with the seat count now (#320), so the centre box does too — a
+ * table of four gives the piles up to make room for names anybody can read. Both
+ * rungs are checked, and the crowded one is the board exactly as it was. */
 const GUTTER = 10;
-const CENTRE = {
-  width: TABLE_DESIGN.width - BAND.side * 2 - GUTTER * 2,
-  height: TABLE_DESIGN.height - BAND.top - BAND.bottom - GUTTER * 2,
+const centre = (count: number) => {
+  const { band } = nameRung(count);
+  return {
+    width: TABLE_DESIGN.width - band.side * 2 - GUTTER * 2,
+    height: TABLE_DESIGN.height - band.top - band.bottom - GUTTER * 2,
+  };
 };
+/** A full table, which is the board before any of this. */
+const CENTRE = centre(8);
+/** The roomiest names, and therefore the tightest centre. */
+const BIG_NAMES = centre(4);
 const HANDS = { width: TABLE_DESIGN.width - 40, height: 240 };
 
 /** The point the centre view centres its piles on — symmetric, so the middle. */
-const CENTRE_AT = {
-  x: TABLE_DESIGN.width / 2,
-  y: (BAND.top + (TABLE_DESIGN.height - BAND.bottom)) / 2,
+const centreAt = (count: number) => {
+  const { band } = nameRung(count);
+  return {
+    x: TABLE_DESIGN.width / 2,
+    y: (band.top + (TABLE_DESIGN.height - band.bottom)) / 2,
+  };
 };
+const CENTRE_AT = centreAt(8);
 
 const EVERY_SIZE: CardSize[] = ["sm", "md", "lg", "xl", "2xl"];
 
@@ -34,20 +49,36 @@ describe("fitting the centre piles into the room the board has", () => {
     // The bug this exists for: `scale-[2.5]` is a paint transform, so the piles were
     // laid out at 198px, centred in the full height of the design, and the ink then
     // grew into the top band under somebody's name (#159). Asked at every card
-    // size, because the guarantee is about the arithmetic.
-    for (const size of EVERY_SIZE) {
-      const { width, height } = painted(CENTRE, size);
-      expect(height).toBeLessThanOrEqual(CENTRE.height + 0.001);
-      expect(width).toBeLessThanOrEqual(CENTRE.width + 0.001);
+    // size, because the guarantee is about the arithmetic — and at both rungs,
+    // because the bands move with the seat count (#320).
+    for (const room of [CENTRE, BIG_NAMES]) {
+      for (const size of EVERY_SIZE) {
+        const { width, height } = painted(room, size);
+        expect(height).toBeLessThanOrEqual(room.height + 0.001);
+        expect(width).toBeLessThanOrEqual(room.width + 0.001);
+      }
     }
   });
 
   it("leaves the piles clear of the names rather than flush against them", () => {
     // Fitted to the band edge exactly, the piles start at y=48 and the top name ends
     // at 46.5 — which across a room reads as the collision this was meant to fix.
-    const { height } = painted(CENTRE, "xl");
-    const clearOfBand = (TABLE_DESIGN.height - height) / 2 - BAND.top;
-    expect(clearOfBand).toBeGreaterThanOrEqual(GUTTER - 0.001);
+    for (const count of [8, 4]) {
+      const { height } = painted(centre(count), "xl");
+      const clearOfBand = (TABLE_DESIGN.height - height) / 2 - nameRung(count).band.top;
+      expect(clearOfBand).toBeGreaterThanOrEqual(GUTTER - 0.001);
+    }
+  });
+
+  it("gives the piles up for names anybody can read, and says how much", () => {
+    // The trade #320 makes, stated so it can be argued with rather than
+    // rediscovered: deeper bands and a narrower prompt buy a name nearly twice the
+    // size, and the piles pay for it.
+    const full = painted(CENTRE, "xl");
+    const roomy = painted(BIG_NAMES, "xl");
+    expect(roomy.height).toBeLessThan(full.height);
+    // About a tenth, and not more than that without a fresh argument.
+    expect(roomy.height / full.height).toBeGreaterThan(0.85);
   });
 
   it("keeps the hands view's piles inside the slot above the seat strip", () => {

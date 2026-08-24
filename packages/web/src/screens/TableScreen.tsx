@@ -45,7 +45,7 @@ import { ScrollRelease } from "../components/ScrollRelease.tsx";
 import { useSeatFling, type SeatFling } from "../lib/seatFling.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
-import { BAND, edgeSeats, seatPoint, TURN_FOR } from "../lib/tableEdges.ts";
+import { edgeSeats, nameRung, seatPoint, TURN_FOR, type NameRung } from "../lib/tableEdges.ts";
 import { tablePoint, type TablePlaces } from "../lib/tableFlight.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { planFlights, TABLE_SCREEN, type FlightPlan } from "../motion/plan.ts";
@@ -280,22 +280,24 @@ const contentBox = (element: HTMLElement): Box => {
  * which across a room reads as the collision this was fixing. */
 const GUTTER = 10;
 
-const CENTRE_PILE_ROOM = {
-  width: TABLE_DESIGN.width - BAND.side * 2 - GUTTER * 2,
-  height: TABLE_DESIGN.height - BAND.top - BAND.bottom - GUTTER * 2,
-};
+/** The room between the bands, which moves with them: the large rung's deeper
+ * bands are what the centre piles give up for a name anybody can read (#320). */
+const centrePileRoom = (band: NameRung["band"]) => ({
+  width: TABLE_DESIGN.width - band.side * 2 - GUTTER * 2,
+  height: TABLE_DESIGN.height - band.top - band.bottom - GUTTER * 2,
+});
 const HANDS_PILE_ROOM = { width: TABLE_DESIGN.width - 40, height: 240 };
 
 /** Derived rather than written down: the centre view's container is symmetric,
  * and the hands view keeps its slot directly under the top band. */
-const CENTRE_PILES_AT = {
+const centrePilesAt = (band: NameRung["band"]) => ({
   x: TABLE_DESIGN.width / 2,
-  y: (BAND.top + (TABLE_DESIGN.height - BAND.bottom)) / 2,
-};
-const HANDS_PILES_AT = {
+  y: (band.top + (TABLE_DESIGN.height - band.bottom)) / 2,
+});
+const handsPilesAt = (band: NameRung["band"]) => ({
   x: TABLE_DESIGN.width / 2,
-  y: BAND.top + HANDS_PILE_ROOM.height / 2,
-};
+  y: band.top + HANDS_PILE_ROOM.height / 2,
+});
 
 /**
  * The piles at whatever size the room they were given will take. `scale-[2.5]`
@@ -385,6 +387,7 @@ function HandsIcon() {
 /** Between games, and before the first one: the way in, at the size of a room. */
 function Waiting({ room, fling }: { room: RoomView; fling: SeatFling | null }) {
   const link = joinLink(room.code);
+  const { band } = nameRung(room.seats.length);
 
   return (
     <>
@@ -393,7 +396,7 @@ function Waiting({ room, fling }: { room: RoomView; fling: SeatFling | null }) {
       {/* Stacked, a code worth crossing a room for plus the room code under it came
           to more than the board is tall. */}
       <div
-        style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
+        style={{ top: band.top, bottom: band.bottom, left: band.side, right: band.side }}
         className="absolute flex items-center justify-center gap-10"
       >
         <QrCode
@@ -478,9 +481,14 @@ function Playing({
    * see `facing.ts` for why the prompt cannot be stood on its end. */
   const turn = facingTurn(room, game);
 
+  /** How big the names are, and therefore how deep the bands and how wide the
+   * prompt (#320). A property of the seat count, so every screen looking at this
+   * room draws the same board. */
+  const rung = nameRung(room.seats.length);
+
   // A card in the air has to leave the deck that is actually on screen.
-  const pileRoom = view === "hands" ? HANDS_PILE_ROOM : CENTRE_PILE_ROOM;
-  const pilesAt = view === "hands" ? HANDS_PILES_AT : CENTRE_PILES_AT;
+  const pileRoom = view === "hands" ? HANDS_PILE_ROOM : centrePileRoom(rung.band);
+  const pilesAt = view === "hands" ? handsPilesAt(rung.band) : centrePilesAt(rung.band);
 
   const piles = (
     <Piles
@@ -558,7 +566,7 @@ function Playing({
 
       {view === "hands" ? (
         <div
-          style={{ top: BAND.top, bottom: BAND.bottom, left: 20, right: 20 }}
+          style={{ top: rung.band.top, bottom: rung.band.bottom, left: 20, right: 20 }}
           className="absolute flex flex-col items-center gap-4"
         >
           <div className="flex h-60 shrink-0 items-center justify-center">
@@ -581,7 +589,12 @@ function Playing({
         </div>
       ) : (
         <div
-          style={{ top: BAND.top, bottom: BAND.bottom, left: BAND.side, right: BAND.side }}
+          style={{
+            top: rung.band.top,
+            bottom: rung.band.bottom,
+            left: rung.band.side,
+            right: rung.band.side,
+          }}
           className="absolute flex items-center justify-center"
         >
           <ScaledPiles room={pileRoom} outer={boardScale}>
@@ -592,7 +605,13 @@ function Playing({
 
       {/* A floating pill, so it costs the board no height, and it reads from
           whichever end of the table is playing (#160). */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex max-w-128 justify-center">
+      {/* Its width is the rung's, because it and the bottom names are trading
+          against one number: the names sit in the flanks either side of it, so a
+          bigger name is paid for here (#320, #141). */}
+      <div
+        style={{ maxWidth: rung.prompt }}
+        className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex justify-center"
+      >
         <p
           style={{ transform: `rotate(${turn}deg)` }}
           className="rounded-2xl bg-felt-950/80 px-6 py-3 text-balance text-center text-2xl font-semibold leading-tight shadow-2xl backdrop-blur-sm"
@@ -665,6 +684,10 @@ function EdgeNames({
   drag?: SeatFling | null;
 }) {
   const placed = edgeSeats(room.seats.length);
+  /** How big a name is, and how long it may be. Both come off the seat count, so
+   * a table of four gets names anybody can read across a room and a full table
+   * gets the board it always had (#320). */
+  const rung = nameRung(room.seats.length);
 
   return (
     <div
@@ -690,8 +713,19 @@ function EdgeNames({
             {/* Every seat is a pill and the seat on the clock is a brighter one; only
               the active seat used to have a shape at all, so the highlight was a
               background appearing rather than a change of emphasis (#165). Name,
-              count and ask were three type sizes on one baseline — coming down
-              to `text-2xl` is also what lets a ten-character name fit whole. */}
+              count and ask are one type size on one baseline.
+
+              **Sized and capped by the rung, not by a class** (#320). It was
+              `text-2xl` in a `max-w-54` box — a phone's type size on the one
+              surface in this app read from the far side of a table — and the
+              numbers now come off the seat count, because a bigger name has to
+              be paid for out of the bands and the prompt and only some tables
+              have it to spend.
+
+              **And it is no longer a grey whisper on green.** The resting pill
+              carries its own dark and its name is white; the seat on the clock is
+              amber and stays the loudest thing on the board. That half costs
+              nothing and every rung gets it. */}
             <div
               onPointerDown={drag ? (event) => drag.onGrab(event, seat.id) : undefined}
               onPointerMove={drag?.onDrag}
@@ -703,14 +737,17 @@ function EdgeNames({
                 transform: flung
                   ? `translate(${flung.x}px, ${flung.y}px) translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)`
                   : `translate(-50%, -50%) rotate(${TURN_FOR[spot.edge]}deg)`,
+                fontSize: rung.size,
+                lineHeight: `${rung.line}px`,
+                maxWidth: rung.label,
               }}
               className={[
-                "absolute left-0 top-0 flex w-max max-w-54 items-center gap-2",
+                "absolute left-0 top-0 flex w-max items-center gap-2",
                 "whitespace-nowrap rounded-full px-3 py-1 ring-1",
-                "text-2xl font-semibold transition-colors",
+                "font-semibold transition-colors",
                 onClock
-                  ? "bg-amber-300/15 text-amber-300 ring-amber-300/40"
-                  : "bg-felt-950/40 text-white/60 ring-white/10",
+                  ? "bg-amber-300/20 text-amber-300 ring-amber-300/50"
+                  : "bg-felt-950/75 text-white ring-white/20",
                 player?.eliminated ? "opacity-45" : "",
                 // `touch-none` is load-bearing on a touch screen: without it a drag
                 // across the board is the browser's own pan gesture.
@@ -722,11 +759,11 @@ function EdgeNames({
               {player ? (
                 player.eliminated ? (
                   /* Being out is a state rather than a very small hand. */
-                  <span className="shrink-0 text-sm uppercase tracking-widest">out</span>
+                  <span className="shrink-0 text-[0.55em] uppercase tracking-widest">out</span>
                 ) : (
                   <span
                     className={[
-                      "shrink-0 font-mono text-xl tabular-nums",
+                      "shrink-0 font-mono text-[0.8em] tabular-nums",
                       /* Marked whether or not it is their turn: it used to carry `!onClock`,
                          so the seat about to play the turn that could finish
                          them was drawn as ordinary text (#170). */
@@ -739,12 +776,12 @@ function EdgeNames({
               ) : null}
               {/* Both, because they answer different questions: one lasts, the other
                   is *they just said something*. */}
-              {seat.hinted ? <HintedMark name={seat.name} className="text-lg" /> : null}
+              {seat.hinted ? <HintedMark name={seat.name} className="text-[0.7em]" /> : null}
               <AutopilotMark
                 mode={seat.autopilot}
                 left={seat.left}
                 name={seat.name}
-                className="text-sm"
+                className="text-[0.55em]"
               />
               {asking.get(seat.id) ? (
                 <HelpAsk kind={asking.get(seat.id)} className="shrink-0 text-lg" />

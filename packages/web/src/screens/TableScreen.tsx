@@ -757,8 +757,21 @@ const FLIP_MS = 240;
  * than a card going somewhere. It is added rather than replacing them so the
  * *relationships* the plan sets — a recycle card slower and flatter than a draw
  * — survive.
+ *
+ * **620 rather than 260** (#325). A draw was `FLIGHT_MS` + this = 480ms on a
+ * board people are looking at from a metre away and mostly not looking at at all;
+ * it is 840 now, which is a card you can follow across a table. It is also what
+ * turns the deal back into a deal: fifteen cards start inside `DEAL_WINDOW_MS`
+ * and each one used to be gone before the next few had left, so the whole thing
+ * was a flicker — at 840 apiece there are cards in the air together and it reads
+ * as a shower.
+ *
+ * The sweep timer is `last + FLIP_MS + TABLE_TRIP_MS + SWEEP_GRACE_MS` and
+ * therefore moves with this by construction. That is load-bearing: a longer
+ * animation without a longer sweep takes the element out of the DOM mid-flight
+ * and the card vanishes.
  */
-const TABLE_TRIP_MS = 260;
+const TABLE_TRIP_MS = 620;
 
 /** Long enough after the last flight has finished for its fade to be over. */
 const SWEEP_GRACE_MS = 200;

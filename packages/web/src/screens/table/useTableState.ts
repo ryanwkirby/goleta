@@ -111,6 +111,21 @@ export function useTableState({
    */
   const handRow = useRef<HTMLDivElement>(null);
   const handBox = useBox(handRow);
+  /**
+   * The felt the piles are sitting in that they are not using (#352). Upright
+   * only — landscape draws no log, so neither of these attaches there and the
+   * log's floor is what comes out.
+   *
+   * The piles' block is `flex-1 justify-center`, so it is holding whatever the
+   * column has left over; `pilesContent` is what is actually in it. The log is
+   * offered the difference, and `lib/logRoom.ts` is why it may only be read
+   * while the log is shut.
+   */
+  const pilesBlock = useRef<HTMLDivElement>(null);
+  const pilesContent = useRef<HTMLDivElement>(null);
+  const pilesBox = useBox(pilesBlock);
+  const pilesInner = useBox(pilesContent);
+  const logSlack = pilesBox.height - pilesInner.height;
   const phone = useIsPhone();
   const portrait = useIsPortrait();
   const nameOf = namerFor(room);
@@ -443,6 +458,7 @@ export function useTableState({
     handRow,
     helpControls,
     invitePanel,
+    logSlack,
     me,
     mine,
     mode,
@@ -450,6 +466,8 @@ export function useTableState({
     namingCard,
     owesPunishment,
     peeling,
+    pilesBlock,
+    pilesContent,
     departed,
     reshuffling,
     route,

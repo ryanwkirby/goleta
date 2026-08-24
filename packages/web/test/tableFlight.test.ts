@@ -12,8 +12,11 @@ import { TABLE_DESIGN } from "../src/lib/fitScale.ts";
 import { edgeSeats, seatPoint } from "../src/lib/tableEdges.ts";
 import { seatExit, tablePoint } from "../src/lib/tableFlight.ts";
 
-const seats = (count: number): { id: string }[] =>
-  Array.from({ length: count }, (_, index) => ({ id: `p${index + 1}` }));
+/** A table nobody has arranged — evenly round the circle, in join order (#320). */
+const seats = (count: number): { id: string; spot: number }[] =>
+  Array.from({ length: count }, (_, index) => ({ id: `p${index + 1}`, spot: index / count }));
+
+const sitting = (count: number): number[] => seats(count).map((seat) => seat.spot);
 
 const places = (count = 4) => ({
   seats: seats(count),
@@ -24,7 +27,7 @@ const places = (count = 4) => ({
 
 describe("a seat's own edge, just off the board", () => {
   it("leaves the board on the side that seat is sitting on", () => {
-    const spots = edgeSeats(4);
+    const spots = edgeSeats(sitting(4));
     for (const spot of spots) {
       const exit = seatExit(spot, TABLE_DESIGN);
       const name = seatPoint(spot, TABLE_DESIGN);
@@ -49,7 +52,7 @@ describe("resolving a flight's ends on the board", () => {
 
   it("sends a seat's card off that seat's own edge", () => {
     const at = places();
-    const spots = edgeSeats(4);
+    const spots = edgeSeats(sitting(4));
     for (const [index, spot] of spots.entries()) {
       const key = seatAnchor(`p${index + 1}`);
       expect(tablePoint([key], at)).toEqual(seatExit(spot, TABLE_DESIGN));

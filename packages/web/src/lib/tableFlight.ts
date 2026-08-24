@@ -19,7 +19,7 @@
 
 import { DECK, HAND, PILE, type AnchorKey } from "./anchors.ts";
 import type { Box, Point } from "./fitScale.ts";
-import { edgeSeats, seatPoint, type EdgeSeat } from "./tableEdges.ts";
+import { edgeSeats, seatPoint, spotsOf, type EdgeSeat } from "./tableEdges.ts";
 
 /**
  * How far past the board's own edge a card carries on. The hands are not on this
@@ -54,7 +54,7 @@ export const seatExit = (spot: EdgeSeat, design: Box): Point => {
 
 export interface TablePlaces {
   /** The table in the order it is sitting, which is the order it plays in. */
-  seats: readonly { id: string }[];
+  seats: readonly { id: string; spot: number }[];
   deck: Point;
   pile: Point;
   design: Box;
@@ -78,7 +78,7 @@ export const tablePoint = (keys: readonly AnchorKey[], at: TablePlaces): Point |
     const id = key.slice("seat:".length);
     const index = at.seats.findIndex((seat) => seat.id === id);
     if (index === -1) continue;
-    const spot = edgeSeats(at.seats.length)[index];
+    const spot = edgeSeats(spotsOf(at.seats))[index];
     if (spot) return seatExit(spot, at.design);
   }
   return null;

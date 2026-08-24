@@ -15,7 +15,7 @@ import { createStore, pruneRooms } from "./rooms.ts";
 // 17: `totalDraws` -> `totalReaches` and `sunny.lockoutDraws` -> `lockoutReaches`
 // (#222). Both are on the persisted shape, so old snapshots are discarded on
 // boot rather than migrated, per `AGENTS.md`.
-const SNAPSHOT_VERSION = 17;
+const SNAPSHOT_VERSION = 18;
 
 interface Snapshot {
   version: number;

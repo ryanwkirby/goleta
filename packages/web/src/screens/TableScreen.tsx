@@ -45,7 +45,14 @@ import { ScrollRelease } from "../components/ScrollRelease.tsx";
 import { useSeatFling, type SeatFling } from "../lib/seatFling.ts";
 import { useReshuffle } from "../lib/reshuffle.ts";
 import { deckPoint, pileBox, pilePoint } from "../lib/pileBox.ts";
-import { edgeSeats, nameRung, seatPoint, TURN_FOR, type NameRung } from "../lib/tableEdges.ts";
+import {
+  edgeSeats,
+  nameRung,
+  seatPoint,
+  spotsOf,
+  TURN_FOR,
+  type NameRung,
+} from "../lib/tableEdges.ts";
 import { tablePoint, type TablePlaces } from "../lib/tableFlight.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { planFlights, TABLE_SCREEN, type FlightPlan } from "../motion/plan.ts";
@@ -387,7 +394,7 @@ function HandsIcon() {
 /** Between games, and before the first one: the way in, at the size of a room. */
 function Waiting({ room, fling }: { room: RoomView; fling: SeatFling | null }) {
   const link = joinLink(room.code);
-  const { band } = nameRung(room.seats.length);
+  const { band } = nameRung(spotsOf(room.seats));
 
   return (
     <>
@@ -484,7 +491,7 @@ function Playing({
   /** How big the names are, and therefore how deep the bands and how wide the
    * prompt (#320). A property of the seat count, so every screen looking at this
    * room draws the same board. */
-  const rung = nameRung(room.seats.length);
+  const rung = nameRung(spotsOf(room.seats));
 
   // A card in the air has to leave the deck that is actually on screen.
   const pileRoom = view === "hands" ? HANDS_PILE_ROOM : centrePileRoom(rung.band);
@@ -683,11 +690,11 @@ function EdgeNames({
   asking?: ReadonlyMap<PlayerId, ShoutKind>;
   drag?: SeatFling | null;
 }) {
-  const placed = edgeSeats(room.seats.length);
+  const placed = edgeSeats(spotsOf(room.seats));
   /** How big a name is, and how long it may be. Both come off the seat count, so
    * a table of four gets names anybody can read across a room and a full table
    * gets the board it always had (#320). */
-  const rung = nameRung(room.seats.length);
+  const rung = nameRung(spotsOf(room.seats));
 
   return (
     <div

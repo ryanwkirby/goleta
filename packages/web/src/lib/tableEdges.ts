@@ -18,12 +18,20 @@ import { TABLE_DESIGN, type Box, type Point } from "./fitScale.ts";
 
 export type Edge = "top" | "right" | "bottom" | "left";
 
-export const edgeFor = (index: number, count: number): Edge => {
-  const t = count <= 1 ? 0 : index / count;
-  if (t < 0.25) return "top";
-  if (t < 0.5) return "right";
-  if (t < 0.75) return "bottom";
-  return "left";
+export const EDGES: Edge[] = ["top", "right", "bottom", "left"];
+
+/**
+ * Which edge a seat sitting at `spot` belongs to — a quarter of the ring each,
+ * clockwise from the top-left (#320).
+ *
+ * It used to take an index and a count, which is the same thing for a table laid
+ * out by formula and nothing like it for one that has arranged itself round a
+ * room: six seats were always two along the top, one right, two along the
+ * bottom, one left, so a table with three people down one side could not say so.
+ */
+export const edgeAt = (spot: number): Edge => {
+  const at = spot - Math.floor(spot);
+  return EDGES[Math.min(3, Math.floor(at * 4))] ?? "top";
 };
 
 export const TURN_FOR: Record<Edge, number> = { bottom: 0, left: 90, top: 180, right: -90 };
@@ -113,18 +121,8 @@ const PILL_PAD = 8;
  * `py-1` comes out at exactly 40 design pixels on the board. */
 export const pillHeight = (rung: NameRung): number => rung.line + PILL_PAD;
 
-/** How many of `count` seats land on `edge`. */
-export const seatsOn = (edge: Edge, count: number): number =>
-  Array.from({ length: Math.max(count, 0) }, (_, index) => edgeFor(index, count)).filter(
-    (candidate) => candidate === edge,
-  ).length;
-
-/**
- * The largest rung this many seats leave room for. A property of the count alone,
- * so every screen looking at the same room draws the same board.
- */
-export const nameRung = (count: number): NameRung =>
-  seatsOn("left", count) > 1 || seatsOn("right", count) > 1 ? SMALL : LARGE;
+/** Largest first, because the rung is chosen by trying them in order. */
+const RUNGS: NameRung[] = [LARGE, SMALL];
 
 export interface EdgeSeat {
   edge: Edge;
@@ -208,13 +206,85 @@ export const seatPoint = (spot: EdgeSeat, design: Box): Point => {
   }
 };
 
-export const edgeSeats = (count: number, design: Box = TABLE_DESIGN): EdgeSeat[] => {
-  const rung = nameRung(count);
-  const edges = Array.from({ length: Math.max(count, 0) }, (_, index) => edgeFor(index, count));
+/** How many labels an edge will take at this rung: each span holds as many as
+ * fit end to end, and the bottom has two of them. */
+const roomFor = (edge: Edge, rung: NameRung, design: Box): number =>
+  spansOf(edge, rung, design).reduce(
+    (total, [from, to]) => total + Math.max(0, Math.floor((to - from) / rung.label)),
+    0,
+  );
+
+/**
+ * Which edge each seat is drawn on: the one its spot falls in, spilling round
+ * the corner only when that edge cannot hold it (#320).
+ *
+ * **Order-preserving, so ring order and therefore turn order survive.** The
+ * seats arrive sorted by spot, so their wanted edges never go backwards, and the
+ * walk only ever moves forwards — which is what makes a spill a seat sitting
+ * just round the corner from where it asked rather than a reshuffle.
+ *
+ * `null` when it could not do it: without `spill`, that means somebody would
+ * have had to be drawn on an edge they are not sitting at, which is how the rung
+ * below gets chosen. With it, it means the ring cannot hold them at all.
+ */
+const assignEdges = (
+  spots: readonly number[],
+  rung: NameRung,
+  design: Box,
+  spill: boolean,
+): Edge[] | null => {
+  const used = [0, 0, 0, 0];
+  const out: Edge[] = [];
+  let at = 0;
+  for (const spot of spots) {
+    const wanted = EDGES.indexOf(edgeAt(spot));
+    at = Math.max(at, wanted);
+    while (at < 4 && (used[at] ?? 0) >= roomFor(EDGES[at] ?? "top", rung, design)) at += 1;
+    const edge = EDGES[at];
+    if (!edge) return null;
+    if (!spill && at !== wanted) return null;
+    used[at] = (used[at] ?? 0) + 1;
+    out.push(edge);
+  }
+  return out;
+};
+
+/**
+ * The largest rung this table's arrangement leaves room for.
+ *
+ * Tried rather than looked up, because the two questions are circular: how big a
+ * name may be depends on how many share an edge, and how many share an edge
+ * depends on how many fit.
+ *
+ * **A rung is only allowed if every name can be drawn at the edge its player is
+ * actually sitting at.** That is the whole point of a seat carrying where it
+ * sits: a table with three people along one side has to be able to *say* so, and
+ * a big rung that pushed the third of them round the corner would be drawing
+ * somebody where they are not. Spilling is the last resort, not the price of the
+ * larger type — so a table that crowds one side steps down instead, which is the
+ * same answer a full table already gets.
+ */
+export const nameRung = (spots: readonly number[], design: Box = TABLE_DESIGN): NameRung =>
+  RUNGS.find((rung) => assignEdges(spots, rung, design, false) !== null) ?? SMALL;
+
+/** The spots of a room's seats, in the order the server keeps them — which is
+ * ring order, because it sorts by exactly this. */
+export const spotsOf = (seats: readonly { spot: number }[]): number[] =>
+  seats.map((seat) => seat.spot);
+
+export const edgeSeats = (spots: readonly number[], design: Box = TABLE_DESIGN): EdgeSeat[] => {
+  const rung = nameRung(spots, design);
+  // Strict first, so nobody is moved round a corner they did not need to go
+  // round; spilling only for an arrangement no rung can draw honestly.
+  const edges =
+    assignEdges(spots, rung, design, false) ??
+    assignEdges(spots, rung, design, true) ??
+    spots.map((spot) => edgeAt(spot));
   const filled = new Map<Edge, number>();
 
   return edges.map((edge) => {
-    const places = alongEdge(edge, seatsOn(edge, count), rung, design);
+    const here = edges.filter((candidate) => candidate === edge).length;
+    const places = alongEdge(edge, here, rung, design);
     const slot = filled.get(edge) ?? 0;
     filled.set(edge, slot + 1);
     return { edge, along: places[slot] ?? 50, across: rung.across[edge] };
@@ -232,11 +302,11 @@ export const edgeSeats = (count: number, design: Box = TABLE_DESIGN): EdgeSeat[]
  * Never -1: dropping outside the board is dropping on the nearest edge, which is
  * the same answer `moveSeat` gives for a hop off either end.
  */
-export const nearestSeat = (point: Point, count: number, design: Box): number => {
-  const spots = edgeSeats(count, design);
+export const nearestSeat = (point: Point, spots: readonly number[], design: Box): number => {
+  const placed = edgeSeats(spots, design);
   let best = 0;
   let closest = Infinity;
-  for (const [index, spot] of spots.entries()) {
+  for (const [index, spot] of placed.entries()) {
     const at = seatPoint(spot, design);
     const distance = (at.x - point.x) ** 2 + (at.y - point.y) ** 2;
     if (distance < closest) {

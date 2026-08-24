@@ -41,6 +41,7 @@ import {
   normaliseCode,
   randomIndex,
 } from "./ids.ts";
+import { clearOf, evenlySpaced, evenSpots, spotForNewSeat } from "./spots.ts";
 
 export interface Seat {
   id: PlayerId;
@@ -62,6 +63,14 @@ export interface Seat {
   /** They said they were going (#256). Kept rather than deleted while a hand is
    * out, because a seat with cards in it cannot vanish — see `leaveSeat`. */
   left: boolean;
+  /**
+   * Where this seat is sitting, `[0, 1)` clockwise round the edge of the shared
+   * screen's board (#320). **`room.seats` is kept sorted by it**, so seat order —
+   * which is turn order — is the ring order for free, and nothing that reads the
+   * order has to learn this exists. Every mutation that touches a spot calls
+   * `reseat` before it returns.
+   */
+  spot: number;
 }
 
 /**
@@ -168,7 +177,7 @@ export const roomStatus = (room: Room): RoomView["status"] => {
   return room.game.status === "over" ? "finished" : "playing";
 };
 
-const newSeatFor = (name: string, bot: boolean): Seat => ({
+const newSeatFor = (name: string, bot: boolean, spot: number): Seat => ({
   id: newPlayerId(),
   name,
   token: newToken(),
@@ -178,10 +187,38 @@ const newSeatFor = (name: string, bot: boolean): Seat => ({
   hinted: false,
   autopilot: "off",
   left: false,
+  spot,
 });
 
+/** The one invariant `spot` carries: the array is the ring. Called after every
+ * mutation that touches one, so no reader has to sort. */
+const reseat = (room: Room): void => {
+  room.seats.sort((a, b) => a.spot - b.spot);
+};
+
+/**
+ * Sit somebody down (#320).
+ *
+ * At a table nobody has arranged, the whole ring is simply re-spaced in the
+ * order people sat down — which is exactly what the board did before spots
+ * existed. Once a table *has* arranged itself, the newcomer takes the middle of
+ * the largest gap and nobody else moves: a leaver leaves a gap, at a real table
+ * nobody shuffles up, and this is also what fills one back in.
+ */
+const seatArrives = (room: Room, seat: Seat): void => {
+  const before = room.seats.map((sitting) => sitting.spot);
+  room.seats.push(seat);
+  if (evenlySpaced(before)) {
+    const spaced = evenSpots(room.seats.length);
+    for (const [index, sitting] of room.seats.entries()) sitting.spot = spaced[index] ?? 0;
+  } else {
+    seat.spot = spotForNewSeat(before);
+  }
+  reseat(room);
+};
+
 export const createRoom = (store: RoomStore, name: string): { room: Room; seat: Seat } => {
-  const seat = newSeatFor(cleanName(name), false);
+  const seat = newSeatFor(cleanName(name), false, 0);
   const room: Room = {
     code: newRoomCode((code) => store.has(code)),
     hostId: seat.id,
@@ -222,8 +259,8 @@ export const joinRoom = (
   }
   if (room.seats.length >= MAX_TABLE_PLAYERS) fail("That room is full");
 
-  const seat = newSeatFor(cleanName(name), false);
-  room.seats.push(seat);
+  const seat = newSeatFor(cleanName(name), false, 0);
+  seatArrives(room, seat);
   touch(room);
   return { room, seat };
 };
@@ -334,7 +371,7 @@ export const addBot = (room: Room, byPlayerId: PlayerId): void => {
 
   const taken = new Set(room.seats.map((s) => s.name));
   const name = BOT_NAMES.find((candidate) => !taken.has(candidate)) ?? "Bot";
-  room.seats.push(newSeatFor(name, true));
+  seatArrives(room, newSeatFor(name, true, 0));
   touch(room);
 };
 
@@ -505,8 +542,40 @@ const shiftSeat = (room: Room, target: PlayerId, direction: "up" | "down"): void
   const moved = room.seats[from];
   if (!neighbour || !moved) return;
 
-  room.seats[to] = moved;
-  room.seats[from] = neighbour;
+  // The two swap **chairs** rather than places in a list (#320): position on the
+  // board is seat order, so moving a seat one place along is the pair trading
+  // where they are sitting. `reseat` then puts the array back in ring order,
+  // which is the same swap the list used to do by hand.
+  [moved.spot, neighbour.spot] = [neighbour.spot, moved.spot];
+  reseat(room);
+  touch(room);
+};
+
+/**
+ * Put a seat where its player is actually sitting (#320) — the drop at the end
+ * of a drag on the shared screen, which is a *place* rather than a distance and
+ * so is one message rather than a run of hops.
+ *
+ * Gated exactly as `moveSeatFromTable` is, and for #201's reasons: an **IRL
+ * room**, checked here, and between games. An online room is strangers, and none
+ * of them get to move a stranger's table.
+ *
+ * Nobody else moves. A seat dropped between two others simply sits between them,
+ * and the gap it left stays open — at a real table nobody shuffles up.
+ */
+export const placeSeat = (room: Room, target: PlayerId, spot: number): void => {
+  if (!room.irl) fail("That screen can only watch this table");
+  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
+  if (typeof spot !== "number") fail("A seat sits somewhere round the table");
+
+  const seat = room.seats.find((candidate) => candidate.id === target);
+  if (!seat) fail("Nobody by that id is at this table");
+
+  seat.spot = clearOf(
+    spot,
+    room.seats.filter((other) => other.id !== target).map((other) => other.spot),
+  );
+  reseat(room);
   touch(room);
 };
 
@@ -547,7 +616,15 @@ export const beginGame = (room: Room, byPlayerId: PlayerId): GameEvent[] => {
    * wherever they landed, and only their neighbours change.
    */
   const shuffled = room.shuffleSeats && room.seats.length > 1;
-  if (shuffled) [room.seats] = shuffle(room.seats, newSeed());
+  if (shuffled) {
+    // **The chairs stay where they are and who sits in them changes** (#199,
+    // #320). Reordering the array alone would leave everybody's `spot` behind
+    // and the next `reseat` would undo the shuffle; moving the spots as well
+    // would send a table that has arranged itself round a room back to a formula.
+    const chairs = room.seats.map((seat) => seat.spot);
+    [room.seats] = shuffle(room.seats, newSeed());
+    for (const [index, seat] of room.seats.entries()) seat.spot = chairs[index] ?? seat.spot;
+  }
 
   const dealerIndex = nextDealerIndex(room);
   room.dealerId = room.seats[dealerIndex]?.id ?? null;
@@ -786,6 +863,7 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
     hinted: seat.hinted,
     autopilot: seat.autopilot,
     left: seat.left,
+    spot: seat.spot,
   })),
   status: roomStatus(room),
   gamesPlayed: room.gamesPlayed,

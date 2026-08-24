@@ -10,7 +10,7 @@
 
 import type { GameView, RoomView } from "@goleta/engine";
 
-import { edgeSeats } from "./tableEdges.ts";
+import { edgeSeats, spotsOf } from "./tableEdges.ts";
 
 /**
  * Whose turn the board should be readable from — the seat on the clock, unless
@@ -54,5 +54,5 @@ export const facingTurn = (room: RoomView, game: GameView | null): number => {
   const at = seatToFace(room, game);
   if (at === null) return 0;
 
-  return edgeSeats(room.seats.length)[at]?.edge === "top" ? 180 : 0;
+  return edgeSeats(spotsOf(room.seats))[at]?.edge === "top" ? 180 : 0;
 };

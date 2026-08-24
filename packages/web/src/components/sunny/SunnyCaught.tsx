@@ -30,6 +30,14 @@ function CardChip({ card }: { card: Card }) {
  * expired on a timer while the forced play sat one tap away. Only the offender
  * sees it, and it gives nothing away — the play named is one they have already
  * been caught not making.
+ *
+ * **Three steps are three steps** (#324). This was the wordiest thing in the
+ * app: a four-sentence paragraph and then a numbered list whose every item was
+ * itself a full sentence, put in front of somebody who has just been caught and
+ * wants to know what it costs. The paragraph is one line and each step is a
+ * fragment. What is *said* has not changed — the same three things happen in the
+ * same order, and the two cases that are not the ordinary one, a last card and an
+ * empty deck, still say so rather than promising a step that will not come.
  */
 export function SunnyCaught({
   callerName,
@@ -67,9 +75,8 @@ export function SunnyCaught({
             <span aria-hidden>☀️</span> Caught by the Sunny Rule
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-white/80">
-            <strong className="text-white">{callerName}</strong> called it on you — and they were
-            right. You drew with a card you could have played. Your turn is forfeit; here's what it
-            costs.
+            <strong className="text-white">{callerName}</strong> was right — you drew holding a
+            play. Your turn is forfeit.
           </p>
 
           <ol className="mt-4 space-y-2 text-sm leading-relaxed text-white/80">
@@ -78,10 +85,10 @@ export function SunnyCaught({
               <span>
                 {only ? (
                   <>
-                    Play the <CardChip card={only} /> you skipped.
+                    Play the <CardChip card={only} />.
                   </>
                 ) : (
-                  "Make the play you skipped — you had more than one."
+                  "Play the card you skipped."
                 )}
               </span>
             </li>
@@ -89,8 +96,8 @@ export function SunnyCaught({
               <span className="font-semibold text-amber-300">2.</span>
               <span>
                 {owesPunishment
-                  ? "Give up a punishment card. Any card — it doesn't have to match."
-                  : "That was your last card, so there's no punishment to pay — it puts you out of the game instead."}
+                  ? "Give up any card."
+                  : "That was your last card — no punishment to pay. It puts you out."}
               </span>
             </li>
             <li className="flex gap-2.5">
@@ -98,18 +105,18 @@ export function SunnyCaught({
               <span>
                 {returned.length > 0 ? (
                   <>
-                    You lose the{" "}
+                    Lose{" "}
                     {returned.map((card, index) => (
                       <span key={card.id}>
                         {index > 0 ? ", " : null}
                         <CardChip card={card} />
                       </span>
-                    ))}{" "}
-                    you reached for. {returned.length > 1 ? "They go" : "It goes"} face up, and
-                    that's the card everyone matches next.
+                    ))}
+                    . {returned.length > 1 ? "They turn" : "It turns"} face up, and that's what
+                    everyone matches next.
                   </>
                 ) : (
-                  "You reached for an empty deck, so there's nothing to turn up. Your punishment card stays in play."
+                  "You reached for an empty deck — nothing to turn up."
                 )}
               </span>
             </li>

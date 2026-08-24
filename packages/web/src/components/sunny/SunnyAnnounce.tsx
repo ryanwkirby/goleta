@@ -2,11 +2,24 @@ import { useEffect } from "react";
 
 import type { Card } from "@goleta/engine";
 
-import { SUIT_GLYPH } from "../../lib/cardShape.ts";
+import { PlayingCard } from "../Card.tsx";
 import { LAYER } from "../../lib/layers.ts";
 
-/** Said out loud to the whole table before anybody gets an explanation: the rule
- * reads very differently once you have seen it land on someone. */
+/**
+ * Said out loud to the whole table before anybody gets an explanation: the rule
+ * reads very differently once you have seen it land on someone.
+ *
+ * **A card and a word** (#324). It was two sentences carrying four facts — who
+ * called it on whom, which card they named, and whether they were right — and
+ * the second of them, *"Said they should have played the 7♣. They were right."*,
+ * spelled out a card this app draws everywhere else and turned a verdict into a
+ * sentence. The card is drawn now and the verdict is one word.
+ *
+ * It goes to **everyone**, offender and spectators included, because the verdict
+ * is already public in `sunnyCalled.correct` (#63). Nothing here varies with
+ * whether the call landed except the word itself: a wrong call is announced in
+ * the same shape, in the same place, for the same length of time.
+ */
 export function SunnyAnnounce({
   callerName,
   targetName,
@@ -43,14 +56,17 @@ export function SunnyAnnounce({
         <p className="text-base font-semibold text-amber-300">
           <span aria-hidden>☀️</span> {callerName} called the Sunny Rule on {targetName}
         </p>
-        <p className="mt-0.5 text-sm text-white/60">
-          Said they should have played the{" "}
-          <span className="font-semibold text-white/80">
-            {card.rank}
-            {SUIT_GLYPH[card.suit]}
-          </span>
-          . {correct ? "They were right." : "They were wrong."}
-        </p>
+        {/* The card, then the verdict. `PlayingCard` carries its own `aria-label`,
+            so a screen reader hears the rank and suit rather than nothing at all.
+
+            Not `mirrored`, deliberately, and for `CardChip`'s reason rather than
+            against #332's: this is a card *named in a message on somebody's own
+            phone*, not a card at rest on the felt that a table reads from both
+            ends. */}
+        <div className="mt-2 flex items-center justify-center gap-3">
+          <PlayingCard card={card} size="md" />
+          <span className="text-lg font-semibold text-white">{correct ? "Right" : "Wrong"}</span>
+        </div>
       </div>
     </div>
   );

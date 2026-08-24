@@ -139,7 +139,7 @@ export const turnPrompt = (
       const yours = game.phase.playerId === game.you;
       const who = yours ? "You" : nameOf(game.phase.playerId);
       return yours
-        ? "☀️ Step 2 of 3 — the punishment card. Any card in your hand; it doesn't have to match."
+        ? "☀️ Step 2 of 3 — give up any card."
         : `${who} owes a punishment card — step 2 of 3.`;
     }
     case "suit":
@@ -155,7 +155,7 @@ export const turnPrompt = (
       return mine ? "Choose a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
     case "sunnyPlay":
       return mine
-        ? "☀️ Step 1 of 3 — make the play you skipped. Tap it twice."
+        ? "☀️ Step 1 of 3 — play the card you skipped."
         : `${nameOf(game.turnPlayerId)} has to make the play they skipped — step 1 of 3.`;
     case "action":
       if (!mine) return `${nameOf(game.turnPlayerId)}'s turn.`;

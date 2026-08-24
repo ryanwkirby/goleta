@@ -371,6 +371,21 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   marked** — never the card they should have named, which would answer the
   question the ruling deliberately leaves open and make the next call automatic.
 
+  **The marks carry no words** (#324). The two ringed cards wore `was in play`
+  and `named` chips until then, and the pairing is the message: the whole of what
+  the table does here is see whether they match, and for that a caption saying
+  which is which is not doing work the marks and their places aren't. One is on
+  the pile, which is where the board is; the other is held out beside it, which is
+  where a card being claimed about is. The `sr-only` paragraph carries the
+  narrative unchanged.
+
+  **The ruling that follows it is a card and a word.** It was two sentences
+  carrying four facts, the second of which spelled out a card this app draws
+  everywhere else and turned a verdict into a sentence. Both beats are also
+  longer than they were — `PEEL_MS` and `ANNOUNCE_MS` in `lib/beats.ts`, where
+  they are because a call is watched on a phone and on the screen in the middle
+  of the table and has to be the same length on both (#185).
+
   It is derived on the way out and never held on the state. `Challenge` carries
   `reachPile` — the pile frozen at the same instant as `reach`, and by the same
   rule — because the offender may play on top of the card they reached against

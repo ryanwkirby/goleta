@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react";
 
 import { DEPARTURE_MS } from "./beats.ts";
-import type { LoggedEvent } from "./feed.ts";
+import { type LoggedEvent, stillNews } from "./feed.ts";
 
 /** The player who has just gone, or null the rest of the time — which every
  * caller reads as "say nothing". */
@@ -23,14 +23,17 @@ export const useDeparture = (log: LoggedEvent[]): string | null => {
   // The log is newest first, so this is the most recent departure.
   const entry = log.find((logged) => logged.event.type === "left");
   const id = entry?.id;
+  const at = entry?.at;
   const playerId = entry?.event.type === "left" ? entry.event.playerId : null;
 
   useEffect(() => {
-    if (id === undefined) return;
+    // Said once, when it happens — not again every time the table is mounted
+    // afresh, which closing the rules screen does (#357).
+    if (!stillNews(entry, DEPARTURE_MS, Date.now())) return;
     setRunning(true);
     const timer = setTimeout(() => setRunning(false), DEPARTURE_MS);
     return () => clearTimeout(timer);
-  }, [id]);
+  }, [id, at]);
 
   return running ? playerId : null;
 };

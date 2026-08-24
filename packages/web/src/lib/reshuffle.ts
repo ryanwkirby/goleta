@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import type { GameEvent } from "@goleta/engine";
 
 import { RESHUFFLE_MS } from "./beats.ts";
-import type { LoggedEvent } from "./feed.ts";
+import { type LoggedEvent, stillNews } from "./feed.ts";
 
 /** The event itself, narrowed to the one variant this is about. */
 export type Reshuffled = Extract<GameEvent, { type: "reshuffled" }>;
@@ -31,14 +31,18 @@ export const useReshuffle = (log: LoggedEvent[]): Reshuffle => {
   // The log is newest first, so this is the latest reshuffle.
   const entry = log.find((logged) => logged.event.type === "reshuffled");
   const id = entry?.id;
+  const at = entry?.at;
   const event = entry?.event.type === "reshuffled" ? entry.event : null;
 
   useEffect(() => {
-    if (id === undefined) return;
+    // The newest recycle in the log is not necessarily one that just happened:
+    // the log outlives this screen, and closing the rules screen mounts it again
+    // (#357). Held for as long as the hold itself lasts, and asked once.
+    if (!stillNews(entry, RESHUFFLE_MS, Date.now())) return;
     setRunning(true);
     const timer = setTimeout(() => setRunning(false), RESHUFFLE_MS);
     return () => clearTimeout(timer);
-  }, [id]);
+  }, [id, at]);
 
   return { drawPileSize: running && event ? event.drawPileSize : null };
 };

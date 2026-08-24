@@ -7,7 +7,7 @@
  * are not phones, and neither is anything that merely *says* it is.
  */
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 /** Three plain queries rather than one with `and`/`or`: `matchMedia` answers a
  * query it can't parse with a flat "no", which would quietly turn IRL mode off
@@ -59,3 +59,53 @@ export const useIsPortrait = (): boolean => useMedia(PORTRAIT);
  * 1200px-tall desktop with room for everything (#305).
  */
 export const useIsShort = (): boolean => useMedia(SHORT);
+
+/**
+ * How much room to leave below a screen that fills the viewport, so a downward
+ * drag has somewhere to go and the browser's own chrome retracts (#327).
+ *
+ * On Chrome for Android the URL bar never collapsed in this app, so every screen
+ * was permanently short by its height — and in landscape that comes straight off
+ * the cards, since `handHeight` returns the room the row is left (#131, #166).
+ * The bar collapses on a user scroll of the **root scroller**, and nothing here
+ * scrolls: the two screens are `h-dvh` with `overflow-hidden`, `#root` is a
+ * `min-height: 100%` flex column, and an inner `overflow-y: auto` will not do it.
+ *
+ * Comfortably more than a URL bar, because the browser retracts its chrome in
+ * proportion to the scroll and a spacer exactly its height would need the gesture
+ * run to the very end.
+ */
+export const SCROLL_RELEASE_PX = 72;
+
+/** `100svh` is the viewport with the browser's bars showing and `100lvh` is the
+ * viewport without them. */
+const viewportUnit = (unit: string): number => {
+  const probe = document.createElement("div");
+  probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;top:0;left:0;width:0;height:100${unit}`;
+  document.body.append(probe);
+  const height = probe.getBoundingClientRect().height;
+  probe.remove();
+  return height;
+};
+
+/**
+ * Whether this browser has chrome that retracts on a scroll at all.
+ *
+ * A **capability**, asked of the viewport rather than of a user agent (#124):
+ * a browser whose bars never move answers the two questions above with the same
+ * number, and gets no spacer — so a laptop does not grow 72px of scrollable felt
+ * to solve a problem it does not have. iOS Safari's bars behave differently from
+ * Chrome's and this says nothing about how well the trick works there; what it
+ * rules out is doing it where it cannot possibly help.
+ *
+ * Measured once. Whether a browser has a retracting bar is a property of the
+ * browser, not of the moment — and asking again on every resize would be asking
+ * during the very animation this is about.
+ */
+export const useRetractableChrome = (): boolean => {
+  const [retracts, setRetracts] = useState(false);
+  useLayoutEffect(() => {
+    setRetracts(viewportUnit("lvh") - viewportUnit("svh") > 1);
+  }, []);
+  return retracts;
+};

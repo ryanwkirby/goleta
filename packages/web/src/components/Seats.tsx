@@ -39,6 +39,14 @@ const nameFor = (room: RoomView, id: string): string =>
  * **Every out seat is the same width**, handed in rather than found per seat: the
  * chips came out different sizes from each other, which reads as three different
  * kinds of thing rather than three people who are out.
+ *
+ * **The word sits in the middle of what the name leaves, not in the corner of
+ * it** (#351). #334 put it "where the cards would be", which meant `mt-1.5` —
+ * the live seat's gap between its name row and its hand, so the two lined up
+ * down the strip. In an 80×98 chip that left the word at the top left with 48px,
+ * half the chip, empty underneath it, which reads as something that failed to
+ * render rather than as a seat with nothing in it. Lining up with the top of the
+ * neighbours' cards is what that costs, and it is worth it.
  */
 function OutSeat({
   playerId,
@@ -65,9 +73,10 @@ function OutSeat({
       ].join(" ")}
     >
       <span className="whitespace-nowrap text-sm font-semibold text-white/70">{name}</span>
-      {/* Where the cards used to be. `mt-1.5` is the live seat's gap between its
-          name row and its hand, so the two line up down the strip. */}
-      <span className="mt-1.5 text-xs text-white/50">out</span>
+      {/* Where the cards used to be — centred in it rather than parked at the top
+          of it, on both axes. `flex-1` is what claims the room the name leaves;
+          the chip itself is stretched to the tallest seat in the strip. */}
+      <span className="flex flex-1 items-center justify-center text-xs text-white/50">out</span>
     </li>
   );
 }

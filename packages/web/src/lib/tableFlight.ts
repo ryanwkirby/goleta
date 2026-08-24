@@ -26,8 +26,15 @@ import { edgeSeats, seatPoint, type EdgeSeat } from "./tableEdges.ts";
  * screen, so there is nothing for a flight to land *in*: a drawn card flies out
  * to its player and off, which reads as the card going to them rather than as a
  * card stopping on a name.
+ *
+ * **It is also where the fade happens** (#325). `table-screen-card` holds the
+ * card opaque until the last fifth of its trip, so this has to be far enough that
+ * the last fifth is spent off the board — otherwise a card would dissolve in
+ * front of the person it is going to, which is the thing that made these flights
+ * unwatchable in the first place. At 160 the fade starts about 80px above the top
+ * edge and 40 past a side one.
  */
-const BEYOND = 90;
+const BEYOND = 160;
 
 /** A seat's own edge, just off the board. Measured off `seatPoint` so it is the
  * same place the name is, pushed outwards along that edge's normal. */

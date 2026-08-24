@@ -391,20 +391,38 @@
 @keyframes table-screen-card {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.85);
+    transform: translate(-50%, -50%) scale(0.82);
   }
-  12% {
+  /* Slightly *bigger* than the card it is leaving, which is what separates it
+     from one (#325). It leaves from underneath a 300px pile card at the same
+     size, so the first third of every trip was camouflaged against the thing it
+     came off — the card was already moving and nothing said so. */
+  10% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+  /* Opaque for the whole of the journey anybody is watching. It used to take
+     opacity 1 → 0 across the entire trip, so the card was a ghost by mid-board
+     and gone well before it reached the name — which is why this was reported as
+     the cards not moving at all. The fade is the last fifth, and `BEYOND` is far
+     enough past the edge that it happens off the board. */
+  82% {
+    opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.8);
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.96);
   }
 }
 
+/* Gentler than the phone's ease-out, and that is the other half of #325. At
+   `cubic-bezier(0.2, 0.82, 0.25, 1)` the card was 87% of the way across at 40%
+   of its time — so however long the animation ran, the part anybody could
+   *follow* was over in the first third and the rest was a card hovering near the
+   edge. This spreads the travel over the whole trip, which is what makes a longer
+   duration buy anything. */
 .table-screen-card {
-  animation: table-screen-card var(--duration, 620ms) cubic-bezier(0.2, 0.82, 0.25, 1)
+  animation: table-screen-card var(--duration, 620ms) cubic-bezier(0.35, 0.06, 0.4, 1)
     var(--delay, 0ms) both;
 }
 

@@ -39,8 +39,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent, type RefObjec
 import type { ClientMessage } from "@goleta/engine";
 
 import { TABLE_DESIGN, designPoint, type Box, type Point } from "./fitScale.ts";
-import { hopsBetween } from "./seatDrag.ts";
-import { edgeSeats, nearestSeat, seatPoint } from "./tableEdges.ts";
+import { edgeSeats, seatPoint, spotsOf } from "./tableEdges.ts";
 
 /**
  * How far a finger has to travel before this is a drag rather than a tap. In
@@ -72,9 +71,39 @@ interface Held {
 }
 
 /** Where a name sits at rest, or null if the board has no such seat. */
-export const restingAt = (index: number, count: number, design: Box): Point | null => {
-  const spot = edgeSeats(count)[index];
+export const restingAt = (
+  index: number,
+  spots: readonly number[],
+  design: Box,
+): Point | null => {
+  const spot = edgeSeats(spots, design)[index];
   return spot ? seatPoint(spot, design) : null;
+};
+
+/**
+ * Where a point on the board is, as a spot: how far clockwise round the
+ * perimeter, `[0, 1)` from the top-left corner (#320).
+ *
+ * The **direction** is what matters rather than the distance, because a drop
+ * lands somewhere over the felt rather than exactly on an edge. So the point is
+ * read as an angle from the middle of the board and turned into a place on the
+ * ring — which means a name dropped anywhere in the top-right quadrant means
+ * *between the top edge and the right one*, wherever in it the finger let go.
+ *
+ * Squared to the design box first, so the same gesture on a board that is wider
+ * than it is tall lands where it looks like it lands: without it a drop straight
+ * up from the centre and one straight out to the right are the same angle at
+ * different distances, and the corners come out in the wrong quarters.
+ */
+export const spotAt = (point: Point, design: Box): number => {
+  const dx = (point.x - design.width / 2) / (design.width / 2);
+  const dy = (point.y - design.height / 2) / (design.height / 2);
+  if (dx === 0 && dy === 0) return 0;
+  // `atan2(dx, -dy)` is clockwise from straight up. The ring starts at the
+  // **top-left corner**, though — `edgeAt` gives the top edge the first quarter —
+  // so straight up is an eighth of the way round, and that is the offset.
+  const angle = Math.atan2(dx, -dy);
+  return (angle / (2 * Math.PI) + 0.125 + 1) % 1;
 };
 
 /**
@@ -119,8 +148,9 @@ export const useSeatFling = ({
   board: RefObject<HTMLElement | null>;
   scale: number;
   quarter: boolean;
-  /** The table in the order it is sitting, which is the order it plays in. */
-  seats: readonly { id: string }[];
+  /** The table in the order it is sitting, which is the order it plays in, with
+   * where each of them is sitting. */
+  seats: readonly { id: string; spot: number }[];
   send: (message: ClientMessage) => void;
   /** An IRL room, between games. The server checks both again. */
   enabled: boolean;
@@ -161,7 +191,7 @@ export const useSeatFling = ({
       const from = at(event);
       const index = seats.findIndex((seat) => seat.id === seatId);
       if (!from || index === -1) return;
-      const anchor = restingAt(index, seats.length, design);
+      const anchor = restingAt(index, spotsOf(seats), design);
       if (!anchor) return;
 
       // Stops the press becoming a text selection, and on touch the beginning of
@@ -200,20 +230,20 @@ export const useSeatFling = ({
 
       const moved = { x: now.x - state.from.x, y: now.y - state.from.y };
       if (Math.hypot(moved.x, moved.y) < THRESHOLD) return;
+      if (!seats.some((seat) => seat.id === state.id)) return;
 
-      // From where the room says the seat is *now*, which is the freshest thing
-      // anybody here knows: nothing has been sent during this gesture, so there
-      // is no instruction of our own in flight to count from instead.
-      const from = seats.findIndex((seat) => seat.id === state.id);
-      if (from === -1) return;
-
-      const want = nearestSeat(now, seats.length, design);
-      const { direction, count } = hopsBetween(from, want);
-
-      // One message per place, exactly as the lobby's arrows send them.
-      for (let hop = count; hop > 0; hop -= 1) {
-        send({ t: "moveSeat", playerId: state.id, direction });
-      }
+      /**
+       * **One message, and it says a place rather than a distance** (#320).
+       *
+       * It used to be a run of `moveSeat` hops, which is the right shape for the
+       * lobby's arrows — a nudge of one place — and the wrong one for a drop: a
+       * drop is *here*, and turning it into a number of hops means first working
+       * out which existing seat it landed nearest, which is a question about
+       * everybody else. `placeSeat` says only where this seat now is, so it
+       * cannot arrive stale in a way that needs reconciling, and nobody else
+       * moves.
+       */
+      send({ t: "placeSeat", playerId: state.id, spot: spotAt(now, design) });
     },
   };
 };

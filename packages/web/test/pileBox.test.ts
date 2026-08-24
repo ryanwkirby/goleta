@@ -5,6 +5,10 @@ import { TABLE_DESIGN, fitScale } from "../src/lib/fitScale.ts";
 import { deckPoint, pileBox, pilePoint } from "../src/lib/pileBox.ts";
 import { edgeSeats, nameRung, seatPoint } from "../src/lib/tableEdges.ts";
 
+/** A table nobody has arranged — evenly round the circle, in join order. */
+const sitting = (count: number): number[] =>
+  Array.from({ length: count }, (_, index) => index / count);
+
 /** The two boxes `TableScreen` gives the piles, kept in step with the constants
  * there by hand.
  *
@@ -13,7 +17,7 @@ import { edgeSeats, nameRung, seatPoint } from "../src/lib/tableEdges.ts";
  * rungs are checked, and the crowded one is the board exactly as it was. */
 const GUTTER = 10;
 const centre = (count: number) => {
-  const { band } = nameRung(count);
+  const { band } = nameRung(sitting(count));
   return {
     width: TABLE_DESIGN.width - band.side * 2 - GUTTER * 2,
     height: TABLE_DESIGN.height - band.top - band.bottom - GUTTER * 2,
@@ -27,7 +31,7 @@ const HANDS = { width: TABLE_DESIGN.width - 40, height: 240 };
 
 /** The point the centre view centres its piles on — symmetric, so the middle. */
 const centreAt = (count: number) => {
-  const { band } = nameRung(count);
+  const { band } = nameRung(sitting(count));
   return {
     x: TABLE_DESIGN.width / 2,
     y: (band.top + (TABLE_DESIGN.height - band.bottom)) / 2,
@@ -65,7 +69,7 @@ describe("fitting the centre piles into the room the board has", () => {
     // at 46.5 — which across a room reads as the collision this was meant to fix.
     for (const count of [8, 4]) {
       const { height } = painted(centre(count), "xl");
-      const clearOfBand = (TABLE_DESIGN.height - height) / 2 - nameRung(count).band.top;
+      const clearOfBand = (TABLE_DESIGN.height - height) / 2 - nameRung(sitting(count)).band.top;
       expect(clearOfBand).toBeGreaterThanOrEqual(GUTTER - 0.001);
     }
   });
@@ -108,7 +112,7 @@ describe("fitting the centre piles into the room the board has", () => {
     const from = deckPoint(CENTRE, CENTRE_AT, "xl");
 
     for (const count of [4, 5, 6, 7, 8]) {
-      for (const spot of edgeSeats(count)) {
+      for (const spot of edgeSeats(sitting(count))) {
         const to = seatPoint(spot, TABLE_DESIGN);
         const dx = to.x - from.x;
         const dy = to.y - from.y;
@@ -126,7 +130,7 @@ describe("fitting the centre piles into the room the board has", () => {
     const from = deckPoint(CENTRE, CENTRE_AT, "xl");
     const seen = new Map<string, string[]>();
 
-    for (const spot of edgeSeats(8)) {
+    for (const spot of edgeSeats(sitting(8))) {
       const to = seatPoint(spot, TABLE_DESIGN);
       const vector = `${(to.x - from.x).toFixed(1)},${(to.y - from.y).toFixed(1)}`;
       seen.set(spot.edge, [...(seen.get(spot.edge) ?? []), vector]);

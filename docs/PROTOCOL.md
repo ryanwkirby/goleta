@@ -108,7 +108,8 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `intent` | seated, plus shared table draw | `playCard`, `drawCard`, `chooseSuit`, `callSunny`, `surrenderCard`. A `table: true` watcher may send only `drawCard`, only in IRL mode, and the server stamps it as the current player. |
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round — or draws for it, if the table has asked for that. |
 | `addBot` / `removeSeat` | host | Between games only. |
-| `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order. Off either end does nothing rather than refusing. The lobby's drag handle sends a run of these — one per place — rather than a whole order; see below. |
+| `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order — the pair trade chairs. Off either end does nothing rather than refusing. The lobby's drag handle sends a run of these — one per place — rather than a whole order; see below. |
+| `placeSeat` | shared screen, IRL room | Between games only. Puts one seat at `spot`, `[0, 1)` clockwise round the edge of the board (#320). Nobody else moves. A phone is refused: dragging a name round the board is a gesture that only exists on that screen. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
 | `setIrl` | host | **Any time, including mid-game.** "Real life" rather than "remote play"; carried back to everyone on `RoomView`. |
@@ -308,14 +309,45 @@ set to.
 ## Reordering the table from the shared screen
 
 The shared table screen's second auxiliary action (#201). In an **IRL** room,
-**between games**, it may send `moveSeat` — the same message the lobby's arrows
-send, one hop at a time.
+**between games**, a **drop** sends one `placeSeat` — where that seat now is,
+`[0, 1)` clockwise round the edge of the board (#320).
 
 Position on that board *is* seat order, and seat order is turn order, so a name
-dragged to another edge is a seat moved. There is no separate "where the name is
-drawn" to change, and no new `order:` field: a whole posted order can arrive
-after a seat has left, and a stale permutation is a worse thing to reconcile than
-a swap that no longer applies.
+dragged round the edge is a seat moved. There is no separate "where the name is
+drawn" to change.
+
+**A drop is a place rather than a distance**, which is why it is not the run of
+`moveSeat` hops it was until #320. Turning a drop into hops means first working
+out which existing seat it landed nearest — a question about everybody else —
+and then posting a number of moves that is only right if nobody moved in
+between. `placeSeat` says one thing about one seat: it cannot be stale about
+anybody, and nobody else moves. A seat dropped between two others simply sits
+between them, and the gap it left stays open — at a real table nobody shuffles
+up.
+
+It is still not an `order: PlayerId[]`, for the reason it never was: a whole
+posted order can arrive after a seat has left, and a stale permutation is a worse
+thing to reconcile than one seat that has moved.
+
+`moveSeat` from this screen stays. It is what the lobby's arrows send, it is the
+right shape for a nudge of one place, and a screen built before #320 has no
+reason to stop working.
+
+**`spot` is on `SeatView` and `room.seats` is kept sorted by it**, so the ring
+order *is* the array order and nothing downstream learns any of this exists.
+Everything that already moved seats keeps working by moving spots: `moveSeat`
+swaps two neighbours' chairs, a joiner takes a free one, a leaver leaves a gap,
+and `shuffleSeats` permutes the *players* across the chairs that are already
+there — the chairs stay where they are and who sits in them changes, which is
+what the "take your seat" screen is already telling everybody (#199).
+
+**A table nobody has arranged is simply re-spaced as it fills**, evenly round the
+circle in the order people sat down. Without that, a joiner taking the middle of
+the largest gap would reorder an *online* room — a host adding four bots would
+watch them appear in the wrong order for a reason to do with a board they are not
+using. The gap rule takes over the moment somebody has dragged a name, and there
+is no extra state to carry: a table that has been arranged is not evenly spaced,
+and that is the whole of the question.
 
 The gate is the same as the draw's and works the same way. The `table` bit is the
 client's own word for what it is, so it narrows rather than grants; **`irl` is

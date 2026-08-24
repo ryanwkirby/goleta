@@ -22,6 +22,7 @@ import {
   markDisconnected,
   moveSeat,
   moveSeatFromTable,
+  placeSeat,
   nextBotMove,
   rejoinRoom,
   roomView,
@@ -1069,5 +1070,110 @@ describe("moving a seat from the shared table screen", () => {
     moveSeatFromTable(room, room.seats[0]?.id ?? "", "up");
     moveSeatFromTable(room, room.seats[room.seats.length - 1]?.id ?? "", "down");
     expect(seatOrder(room)).toEqual(before);
+  });
+});
+
+/**
+ * Where a seat is sitting, and what that has to leave alone (#320). Position on
+ * the shared screen's board *is* seat order, so a spot is a place in the turn
+ * order — which makes the interesting cases the ones where nothing should move.
+ */
+const spotsOf = (room: Room): number[] => room.seats.map((seat) => seat.spot);
+
+describe("where the seats are sitting", () => {
+  it("seats people in the order they sat down, evenly round the table", () => {
+    // The property that matters most, because it is the one an online room —
+    // which never sees a board at all — would otherwise lose: adding four bots
+    // must put them in the order they were added.
+    const room = seatedRoom();
+    expect(seatOrder(room)).toEqual(["Ryan", "Robot", "Clockwork", "Tinny"]);
+    expect(spotsOf(room)).toEqual([0, 0.25, 0.5, 0.75]);
+  });
+
+  it("re-spaces as a table fills, while nobody has arranged it", () => {
+    const room = seatedRoom();
+    addBot(room, room.hostId);
+    expect(seatOrder(room)).toEqual(["Ryan", "Robot", "Clockwork", "Tinny", "Gizmo"]);
+    for (const [index, at] of spotsOf(room).entries()) expect(at).toBeCloseTo(index / 5, 9);
+  });
+
+  it("moves a seat by trading chairs, so the order follows the board", () => {
+    const room = seatedRoom();
+    const before = spotsOf(room);
+    moveSeat(room, room.hostId, room.seats[1]?.id ?? "", "up");
+    expect(seatOrder(room)[0]).toBe("Robot");
+    // The pair swapped where they sit; nobody else moved, and the chairs are the
+    // same chairs.
+    expect(spotsOf(room)).toEqual(before);
+  });
+
+  it("puts a seat where it was dropped, and leaves everybody else alone", () => {
+    const room = seatedRoom();
+    setIrl(room, room.hostId, true);
+    const moved = room.seats[3]?.id ?? "";
+    const others = room.seats.filter((seat) => seat.id !== moved).map((seat) => seat.spot);
+
+    // Dropped between the first and second seats, which is where it now plays.
+    placeSeat(room, moved, 0.1);
+    expect(room.seats[1]?.id).toBe(moved);
+    expect(room.seats[1]?.spot).toBeCloseTo(0.1, 9);
+    expect(room.seats.filter((seat) => seat.id !== moved).map((seat) => seat.spot)).toEqual(others);
+  });
+
+  it("stops re-spacing once a table has arranged itself", () => {
+    const room = seatedRoom();
+    setIrl(room, room.hostId, true);
+    placeSeat(room, room.seats[3]?.id ?? "", 0.1);
+    const arranged = spotsOf(room);
+
+    // A newcomer takes the free chair rather than sending everybody round the
+    // table again.
+    addBot(room, room.hostId);
+    expect(spotsOf(room)).toEqual(expect.arrayContaining(arranged));
+    expect(room.seats).toHaveLength(5);
+  });
+
+  it("is an IRL room's to place, and only between games", () => {
+    const online = seatedRoom();
+    expect(() => placeSeat(online, online.seats[1]?.id ?? "", 0.4)).toThrow(/only watch/);
+
+    const room = seatedRoom();
+    setIrl(room, room.hostId, true);
+    beginGame(room, room.hostId);
+    expect(() => placeSeat(room, room.seats[1]?.id ?? "", 0.4)).toThrow(/Wait for this game/);
+  });
+
+  it("refuses a seat that isn't at this table, and a spot that isn't a number", () => {
+    const room = seatedRoom();
+    setIrl(room, room.hostId, true);
+    expect(() => placeSeat(room, "someone-who-left", 0.4)).toThrow(/Nobody by that id/);
+    expect(() => placeSeat(room, room.seats[1]?.id ?? "", "half" as unknown as number)).toThrow(
+      /sits somewhere/,
+    );
+  });
+
+  it("never seats two people in the same chair", () => {
+    // Two seats on one point have no order between them, which would be a turn
+    // order that depended on a sort's stability.
+    const room = seatedRoom();
+    setIrl(room, room.hostId, true);
+    placeSeat(room, room.seats[2]?.id ?? "", 0.25);
+    const spots = spotsOf(room);
+    expect(new Set(spots).size).toBe(spots.length);
+    for (let i = 1; i < spots.length; i += 1) expect(spots[i]!).toBeGreaterThan(spots[i - 1]!);
+  });
+
+  it("shuffles the players across the chairs rather than the chairs themselves", () => {
+    // #199 says the chairs stay where they are and who sits in them changes,
+    // which is what the "take your seat" screen is already telling everybody.
+    const room = seatedRoom();
+    setIrl(room, room.hostId, true);
+    placeSeat(room, room.seats[3]?.id ?? "", 0.1);
+    const chairs = spotsOf(room);
+
+    setShuffleSeats(room, room.hostId, true);
+    beginGame(room, room.hostId);
+    expect(spotsOf(room)).toEqual(chairs);
+    expect(room.seats).toHaveLength(chairs.length);
   });
 });

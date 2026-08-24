@@ -10,7 +10,13 @@ import { facingTurn, seatToFace } from "../src/lib/facing.ts";
  */
 const roomOf = (...seats: [string, boolean][]): RoomView =>
   ({
-    seats: seats.map(([name, bot]) => ({ id: name, name, bot, connected: true }) as SeatView),
+    // `spot` is where each of them is sitting, evenly round the circle in the
+    // order they sat down — which is what the server hands out until somebody
+    // drags a name (#320), and what decides the edge this reads.
+    seats: seats.map(
+      ([name, bot], index) =>
+        ({ id: name, name, bot, connected: true, spot: index / seats.length }) as SeatView,
+    ),
   }) as RoomView;
 
 const gameOf = (waitingOn: string | null, out: string[] = []): GameView =>

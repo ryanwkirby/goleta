@@ -73,6 +73,25 @@ export interface SeatView {
    * gone by the next deal.
    */
   left: boolean;
+  /**
+   * Where this seat is sitting, as a fraction `[0, 1)` clockwise round the edge
+   * of the shared screen's board (#320).
+   *
+   * **Seat order is turn order and stays so for free**: `room.seats` is kept
+   * sorted by this, so the ring order *is* the array order and nothing
+   * downstream learns it exists. #186's clockwise walk is preserved by
+   * construction rather than by a spreading table.
+   *
+   * `edgeSeats(count)` used to decide the arrangement outright — six seats were
+   * always two along the top, one right, two along the bottom, one left, at fixed
+   * marks — so a table with three people down one side could not say so, and a
+   * drag could only pick which of those fixed marks a name occupied.
+   *
+   * Presentation on every screen but the shared one: a phone has no board to sit
+   * round. It is on the wire because the shared screen needs it and there is only
+   * one `RoomView`.
+   */
+  spot: number;
 }
 
 /** How fast the bots play. A table setting — bots are timed on the server. */
@@ -135,6 +154,17 @@ export type ClientMessage =
    * after a seat has left and a stale permutation is worse to reconcile.
    */
   | { t: "moveSeat"; playerId: PlayerId; direction: "up" | "down" }
+  /**
+   * Between games: put a seat where its player is actually sitting (#320). One
+   * message on the drop rather than a run of hops, because a drop is a place
+   * rather than a distance — and unlike a posted `order` it says nothing about
+   * anybody else, so it cannot arrive stale in a way that needs reconciling.
+   *
+   * Gated the way `moveSeat` from the shared screen is: an **IRL room**, checked
+   * on the server. An online room is strangers and none of them get to move a
+   * stranger's table.
+   */
+  | { t: "placeSeat"; playerId: PlayerId; spot: number }
   /** Host only, between games: how fast the bots at this table play. */
   | { t: "setBotSpeed"; speed: BotSpeed }
   /**

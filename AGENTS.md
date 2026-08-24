@@ -1099,12 +1099,41 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   dragged to the edge its player is actually sitting at** (#201). It cannot play,
   name a suit, call Sunny, surrender or end a turn.
 
-  **A name dragged to another edge is a seat moved in the order**, not a label
+  **A name dragged round the edge is a seat moved in the order**, not a label
   repositioned: position on this board *is* seat order, and seat order is turn
-  order (#186). So it is the shared-screen twin of the lobby's arrows (#197) and
-  sends the same `moveSeat` hops underneath, for the same reason — a whole posted
-  order can arrive stale, a swap cannot. The alternative was finding the host's
-  phone and nudging names with arrows while looking at a different screen.
+  order (#186). The alternative was finding the host's phone and nudging names
+  with arrows while looking at a different screen.
+
+  **A seat carries where it sits** (#320). `SeatView.spot` is `[0, 1)` clockwise
+  round the edge and `room.seats` is kept sorted by it, so the ring order *is*
+  the array order and nothing downstream learns it exists — #186's clockwise walk
+  is preserved by construction rather than by a spreading table. `edgeSeats`
+  used to decide the arrangement outright, so a table with three people down one
+  side could not say so and a drag could only pick which of six fixed marks a
+  name occupied.
+
+  A **drop sends one `placeSeat`** rather than the run of `moveSeat` hops it was:
+  a drop is a place rather than a distance, turning it into hops means first
+  asking which existing seat it landed nearest — a question about everybody else
+  — and one message about one seat cannot arrive stale about anybody. Nobody else
+  moves; a seat dropped between two others sits between them, and the gap it left
+  stays open. `moveSeat` stays for the lobby's arrows, and swaps two neighbours'
+  chairs.
+
+  **A table nobody has arranged is re-spaced as it fills**, evenly round the
+  circle in the order people sat down, and only then does a newcomer take the
+  middle of the largest gap. That is not tidiness: without it an IRL-only feature
+  would quietly reorder every *online* room, because the middle of the largest gap
+  is not where join order puts somebody, and a host adding four bots would watch
+  them come out in the wrong order. There is no flag to carry — a table that has
+  been arranged is not evenly spaced, and that is the whole of the question.
+
+  **The rung follows the arrangement, and spilling is a last resort.** A name is
+  drawn on the edge its spot falls in; if that edge cannot hold it, the *type*
+  steps down before anybody is pushed round a corner, because drawing somebody
+  where they are not sitting is the thing this feature exists to stop. Only an
+  arrangement no rung can draw honestly — four people down one side — spills, and
+  it spills forwards, so ring order survives.
 
   **Not host-only, deliberately.** The arrows exist because a table wants its
   seating right, and the person who can see the room is whoever is standing next

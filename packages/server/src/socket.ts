@@ -30,6 +30,7 @@ import {
   markDisconnected,
   moveSeatFromTable,
   moveSeat,
+  placeSeat,
   nextBotMove,
   createRoom,
   rejoinRoom,
@@ -281,10 +282,19 @@ export const attachSockets = (
     /**
      * The shared table screen's second auxiliary action (#201), and the same
      * shape as the first: an **IRL** room only, checked on the server, and
-     * between games only, which `moveSeatFromTable` enforces. Position on that
-     * board *is* seat order, so a name dragged to another edge is a seat moved —
-     * one `moveSeat` hop at a time, exactly as the lobby's arrows send them.
+     * between games only, which the room functions enforce. Position on that
+     * board *is* seat order, so a name dragged round the edge is a seat moved.
+     *
+     * A **drop** is a place rather than a distance, so it is one `placeSeat`
+     * (#320). `moveSeat` from this screen stays: it is what the lobby's arrows
+     * send, it is still the right shape for a nudge of one place, and a screen
+     * built before #320 has no reason to stop working.
      */
+    if (!playerId && client.table && message.t === "placeSeat" && room.irl) {
+      placeSeat(room, message.playerId, message.spot);
+      broadcast(room);
+      return;
+    }
     if (!playerId && client.table && message.t === "moveSeat" && room.irl) {
       moveSeatFromTable(room, message.playerId, message.direction);
       broadcast(room);
@@ -373,6 +383,15 @@ export const attachSockets = (
       case "moveSeat":
         moveSeat(room, playerId, message.playerId, message.direction);
         return broadcast(room);
+      /**
+       * Not a seated player's to send (#320). Dragging a name round the board is
+       * a gesture that only exists on the shared screen, which is handled above;
+       * a phone reorders with the lobby's arrows, which is `moveSeat`. Named
+       * rather than left to fall through, so it is a refusal somebody can read
+       * instead of a message that quietly does nothing.
+       */
+      case "placeSeat":
+        throw new RoomError("Seats are placed from the table screen");
     }
   };
 

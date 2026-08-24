@@ -43,6 +43,24 @@ export const LAYER = {
    */
   flights: "z-25",
 
+  /**
+   * A screen opened **over** the table rather than instead of it: the rules
+   * (#360). It has a rung of its own because the table is still running
+   * underneath, and both of its neighbours have a claim on it.
+   *
+   * Above `flights`, because #297's rule is that cards fly over the table and
+   * under everything laid on top of it, and this is now something laid on top of
+   * it. Below `overlay`, because the table can still need to say something while
+   * somebody reads: a Sunny ruling is the one thing nobody may miss, and it is
+   * drawn by the table this is covering.
+   *
+   * **Not `dialog`.** That rung is the top of the stack and is for something
+   * opened over a screen — a cog, an invite, a confirmation. This *is* a screen,
+   * and the whole point of giving it a rung down here is that it can be
+   * interrupted.
+   */
+  reading: "z-28",
+
   /** Full-screen panels that announce, teach or ask: the Sunny announcement and
    * explainer, the graduation question, the leave dialog. */
   overlay: "z-30",

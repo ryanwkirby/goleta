@@ -17,20 +17,47 @@ import { qrSymbol } from "../lib/qr.ts";
  * whole of every game; #135 gave it a job and #162 gave back the space. Drawn
  * rather than typed — a Unicode square is a gamble on the device's font, and
  * this has to read as *a QR* at three type sizes and again on a television.
+ *
+ * **A line drawing at the row's weight, not a filled grid** (#353). It was a
+ * solid 7×7 running edge to edge — thirty-two of forty-nine cells, roughly three
+ * times the ink of the cog beside it in `TableHeader` and the only one of those
+ * four glyphs with no whitespace under it, so it read as heavier *and* a step
+ * lower than its neighbours. Same construction as the cog, the book and the door
+ * now: a 24 viewBox, `fill="none"`, 1.8 strokes, round caps and joins, with the
+ * ink inset to y 4.5 → 19.5 — the band the book and the door already occupy, so
+ * the gap under it matches their 3px.
+ *
+ * The three finder squares are what the eye reads as a QR and outlined they
+ * still are. **The payload is the part to spend carefully**: a cell drawn solid
+ * is a 3px blob at header size, so there is one hook and one dot rather than the
+ * eight cells that were there, and anything added here puts the weight back.
+ *
+ * **The dial is `1em`, and it belongs to the call sites.** This is drawn at 20px
+ * in the header, 14 on the peek strip and 30 on the shared screen, and inset ink
+ * is a smaller fraction of the box at each — so a call site that reads too light
+ * bumps its own `em`. Don't put the weight back into the drawing to fix a size
+ * somewhere else.
  */
 export function QrGlyph({ className = "" }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 7 7"
+      viewBox="0 0 24 24"
       aria-hidden
-      shapeRendering="crispEdges"
-      fill="currentColor"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={["h-[1em] w-[1em]", className].join(" ")}
     >
       {/* The three finder squares, which are what the eye reads as a QR. */}
-      <path d="M0 0h3v3H0zM1 1v1h1V1zM4 0h3v3H4zM5 1v1h1V1zM0 4h3v3H0zM1 5v1h1V5z" />
-      {/* Enough of a payload not to look like three boxes. */}
-      <path d="M4 4h1v1H4zM6 4h1v1H6zM5 5h1v1H5zM4 6h1v1H4zM6 6h1v1H6zM3 1h1v1H3zM3 3h1v1H3zM1 3h1v1H1z" />
+      <rect x="4.5" y="4.5" width="5" height="5" rx="0.8" />
+      <rect x="14.5" y="4.5" width="5" height="5" rx="0.8" />
+      <rect x="4.5" y="14.5" width="5" height="5" rx="0.8" />
+      {/* Enough of a payload not to look like three boxes, in the one corner a
+          QR has no finder in. */}
+      <path d="M19.5 15.3h-2.5a1.7 1.7 0 0 0-1.7 1.7v2.5" />
+      <path d="M19.5 19.5h.01" />
     </svg>
   );
 }

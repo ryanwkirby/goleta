@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { RULING_HOLD_MS } from "../src/rooms.ts";
+import { RESHUFFLE_HOLD_MS, RULING_HOLD_MS } from "../src/rooms.ts";
 import { DEFAULT_BOT_TIMING, botPace, type BotMoveShape } from "../src/socket.ts";
 
 const ordinary: BotMoveShape = { call: false, midTurn: false };
@@ -66,7 +66,7 @@ describe("a bot's pace", () => {
  * `RULING_HOLD_MS` is `PEEL_MS + ANNOUNCE_MS` written out a second time, on the
  * far side of a boundary the server may not import across: the browser bundle is
  * not the server's to reach into, and `packages/engine` is rules — a beat is
- * neither (#356).
+ * neither (#356). `RESHUFFLE_HOLD_MS` is `RESHUFFLE_MS` the same way (#383).
  *
  * So the duplication is paid for here rather than assumed. The figures are read
  * out of `beats.ts` as text, which is crude and is the point: change one and this
@@ -88,5 +88,20 @@ describe("the hold on a judged ruling", () => {
     expect(PEEL_MS).toBeGreaterThan(0);
     expect(ANNOUNCE_MS).toBeGreaterThan(0);
     expect(RULING_HOLD_MS).toBe((PEEL_MS ?? 0) + (ANNOUNCE_MS ?? 0));
+  });
+});
+
+describe("the hold on the deck running out", () => {
+  it("is exactly as long as the animation all three screens draw", () => {
+    const { RESHUFFLE_MS } = beats();
+    expect(RESHUFFLE_MS).toBeGreaterThan(0);
+    expect(RESHUFFLE_HOLD_MS).toBe(RESHUFFLE_MS);
+  });
+
+  it("is shorter than the ruling, which is the order the two go in", () => {
+    // Not a rule the code enforces — `Math.max` takes the later deadline
+    // whichever it is — but a recycle that outlasted a ruling would mean a beat
+    // #209 says queues behind the peel outliving the peel itself.
+    expect(RESHUFFLE_HOLD_MS).toBeLessThan(RULING_HOLD_MS);
   });
 });

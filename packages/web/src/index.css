@@ -466,6 +466,13 @@
 html,
 body {
   height: 100%;
+  /* No rubber-banding at the edges; the table should feel like a surface. On
+     `html` rather than on `body` alone (#358): per spec `body`'s value reaches
+     the viewport only while `html` has not spoken, Safari has been unreliable
+     about that, and a rubber-band caught in a screenshot of a scrolling table
+     looks exactly like a column that has overrun. Same declaration, on the
+     element that is not conditional. */
+  overscroll-behavior-y: none;
 }
 
 #root {
@@ -486,7 +493,5 @@ body {
      inset, not by the address bar sliding away mid-scroll. The screens paint
      their own gradient on top; this is only what's behind them. */
   background-color: var(--color-felt-950);
-  /* No rubber-banding at the edges; the table should feel like a surface. */
-  overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }

@@ -4,6 +4,8 @@ import {
   SUNNY_LOCKOUT_REACHES,
   applyIntent,
   currentPlayer,
+  isPlayable,
+  legalCards,
   topCard,
   type GameState,
   type SunnyEvidence,
@@ -83,11 +85,14 @@ describe("a correct call", () => {
       reason: "sunnyPunishment",
     });
 
-    // Any card at all — 2C doesn't match the 5H it lands on.
+    // Any card at all — legality is irrelevant to a card that is being lost.
     state = surrender(state, "a", "2C");
 
-    // Skipped play, punishment, then the touched card on top of both.
-    expect(pileFromTop(state).slice(0, 3)).toEqual(["KD#1", "2C#1", "5H#1"]);
+    // Skipped play, then the touched card on top of it. The punishment card is
+    // not between them: since #364 it goes to the *bottom* of the pile (below
+    // the 5S the game opened on), so it is never the card anybody matches.
+    expect(pileFromTop(state).slice(0, 3)).toEqual(["KD#1", "5H#1", "5S#1"]);
+    expect(pileFromTop(state).at(-1)).toBe("2C#1");
     expect(topCard(state).id).toBe("KD#1");
     expect(state.activeSuit).toBe("D");
     expect(handOf(state, "a")).toEqual([]);
@@ -146,7 +151,8 @@ describe("a correct call", () => {
     state = play(state, "a", "7S");
     state = surrender(state, "a", "2C");
     expect(topCard(state).id).toBe("KD#1");
-    expect(pileFromTop(state).slice(0, 3)).toEqual(["KD#1", "2C#1", "7S#1"]);
+    expect(pileFromTop(state).slice(0, 3)).toEqual(["KD#1", "7S#1", "5S#1"]);
+    expect(pileFromTop(state).at(-1)).toBe("2C#1");
   });
 
   it("turns up every illegally drawn card, the last one landing on top", () => {
@@ -164,7 +170,8 @@ describe("a correct call", () => {
     state = call(state, "b", "5H");
     state = play(state, "a", "5H");
     state = surrender(state, "a", "2C");
-    expect(pileFromTop(state).slice(0, 4)).toEqual(["KD#1", "3H#1", "2C#1", "5H#1"]);
+    expect(pileFromTop(state).slice(0, 4)).toEqual(["KD#1", "3H#1", "5H#1", "5S#1"]);
+    expect(pileFromTop(state).at(-1)).toBe("2C#1");
     expect(state.activeSuit).toBe("D");
   });
 
@@ -916,5 +923,59 @@ describe("ending a turn you should have played on", () => {
     const after = must(before, { type: "endTurn", playerId: "a" });
     // A lockout is measured in reaches at the table. Ending a turn is not one.
     expect(after.totalReaches).toBe(before.totalReaches);
+  });
+
+  it("leaves a board the next player can read, with the punishment card buried", () => {
+    // The path #364 was filed about, and the one case where nothing lands on the
+    // punishment card: they drew nothing illegally, so `finishSunny` has nothing
+    // to turn up. Pushed on top of the pile it was the card everybody could see
+    // while `activeSuit` still answered to the card underneath it.
+    let state = must(drawnOutHoldingAPlay(), { type: "endTurn", playerId: "a" });
+    const total = allCardIds(state).length;
+
+    state = call(state, "b", "5D");
+    state = play(state, "a", "5D");
+    state = surrender(state, "a", "2C");
+
+    // The card in play is the play they were forced to make — one the table
+    // watched land — and the suit agrees with it.
+    expect(topCard(state).id).toBe("5D#1");
+    expect(state.activeSuit).toBe("D");
+    expect(state.namedSuit).toBeNull();
+
+    // The 2C is in the pile and at the bottom of it, so it is neither showing nor
+    // gone: it comes back the way any face-up card does, in a recycle.
+    expect(pileFromTop(state)).toContain("2C#1");
+    expect(pileFromTop(state).at(-1)).toBe("2C#1");
+
+    // Which is the whole point: what `b` may play is what the board they can see
+    // implies. A diamond or a 5, nothing else.
+    expect(currentPlayer(state).id).toBe("b");
+    const legal = legalCards(state, state.players.find((p) => p.id === "b")!);
+    for (const playable of legal) {
+      expect(isPlayable(playable, state.activeSuit, topCard(state).rank)).toBe(true);
+    }
+
+    expect(allCardIds(state)).toHaveLength(total);
+    expect(new Set(allCardIds(state)).size).toBe(total);
+  });
+
+  it("does not let the offender choose what the table matches next", () => {
+    // The same complaint from the other side, and the one `finishSunny`'s
+    // empty-deck branch was already written against — the guard there is
+    // `drawPile.length === 0`, so this path went straight past it. Whichever card
+    // `a` gives up, the board `b` is handed is the same one.
+    const resolve = (given: string): GameState => {
+      let state = must(drawnOutHoldingAPlay(), { type: "endTurn", playerId: "a" });
+      state = call(state, "b", "5D");
+      state = play(state, "a", "5D");
+      return surrender(state, "a", given);
+    };
+
+    for (const given of ["2C", "JC", "10H"]) {
+      const state = resolve(given);
+      expect(topCard(state).id).toBe("5D#1");
+      expect(state.activeSuit).toBe("D");
+    }
   });
 });

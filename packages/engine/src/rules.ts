@@ -191,8 +191,11 @@ const handlePlay = (
     return "Doesn't match";
   }
 
-  // An 8 played to settle a call names nothing: the punishment card and the
-  // touched card land straight after, so it would be buried before anyone saw it.
+  // An 8 played to settle a call names nothing. The touched cards land straight
+  // after and bury it; on the press path (#260) nothing lands on it at all —
+  // since #364 the punishment card is tucked under the pile rather than played on
+  // it — and the 8 stands as the card in play with its printed suit, which is an
+  // ordinary natural 8 and the right outcome.
   const settlingSunny = s.sunny !== null;
 
   player.hand.splice(index, 1);
@@ -465,9 +468,11 @@ const finishSunny = (s: GameState, events: GameEvent[]): string | null => {
   if (touched.length > 0) {
     turnUp(s, touched, "sunnyTouched", events);
   } else if (s.drawPile.length === 0) {
-    // Caught reaching for an empty deck, so nothing was touched — but the reach still
-    // has to produce a card in play. Leaving the punishment card showing handed the
-    // offender the choice of what the table matches next. The guard matters:
+    // Nothing was touched and there is no deck left to draw from, so it has to be
+    // refilled before anybody can take a turn. That is the whole of what this
+    // branch is for since #364 — the punishment card no longer lands on top of
+    // the pile, so the card in play is already the one the offender was forced to
+    // play and needs no replacing. The guard matters either way:
     // `recycleFaceUpPile` assigns the draw pile outright.
     recycleFaceUpPile(s, events);
   }
@@ -493,9 +498,30 @@ const handleSurrender = (
   const { reason } = s.phase;
   const [card] = player.hand.splice(index, 1) as [Card];
 
-  // Needn't be legal and sets no suit: the touched card lands on it a moment later.
-  s.discardPile.push(card);
-  s.namedSuit = null;
+  // **Tucked into the bottom of the pile, not played on top of it** (#364). It
+  // needn't be legal and it names no suit, and the old reasoning for pushing it
+  // was that whatever was drawn illegally lands on top of it a moment later and
+  // buries it. Since #260 there is a path where nothing lands on it: a player
+  // caught for pressing "I'm done" drew nothing illegally, so `finishSunny` has
+  // nothing to turn up. The card was then left showing over the card that
+  // decides the suit — `activeSuit` is untouched here, and always was — so the
+  // board handed to the next player was half the card they could see and half
+  // the card underneath it. It also let the offender pick what the table matched
+  // next, by choosing which card to give up.
+  //
+  // The tuck is the gesture from a real table and settles all of it: the card in
+  // play stays the card they were forced to play, which the table watched land
+  // and which `activeSuit` already agrees with. Nothing anybody could see
+  // changes in the ordinary case, because the touched cards were landing on top
+  // of this anyway. The card is still gone from their hand, which is the whole
+  // of the punishment, and it comes back the way any face-up card does — in a
+  // recycle.
+  //
+  // No `s.namedSuit = null` here any more. It was a no-op (an 8 played to settle
+  // a call names nothing, so it is already null by now), and the rule it belongs
+  // to is "cleared wherever the card in play changes" (#114) — which a tucked
+  // card does not do.
+  s.discardPile.unshift(card);
   events.push({ type: "surrendered", playerId, card, reason });
 
   eliminateIfEmpty(s, player, events);

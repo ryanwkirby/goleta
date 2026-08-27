@@ -81,7 +81,9 @@ export interface PlayerState {
 }
 
 export type SurrenderReason =
-  /** The extra card a caught player gives up, played on top of the pile. */
+  /** The extra card a caught player gives up, tucked into the bottom of the
+   * face-up pile (#364) — it is lost, not played, and it must not become the
+   * card the table matches next. */
   "sunnyPunishment";
 
 /** Anything but `action` means one player owes one decision before play

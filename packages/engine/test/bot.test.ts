@@ -130,8 +130,9 @@ describe("a bot choosing which card to play", () => {
     const view = redact(caught, "a");
     expect(view.phase).toEqual({ kind: "sunnyPlay" });
     // KD answers the 5D and nothing about the 9S, so the reading rule would reach
-    // for it — but the punishment card and every card `a` drew land on top of
-    // this one before `b` ever plays against it.
+    // for it — but every card `a` drew lands on top of this one before `b` ever
+    // plays against it. (The punishment card no longer does: since #364 it is
+    // tucked under the pile. The forced play is still buried either way.)
     expect(decideBotIntent(view)).toEqual({
       type: "playCard",
       playerId: "a",

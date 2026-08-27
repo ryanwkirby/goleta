@@ -52,6 +52,7 @@ const called = (overrides: Partial<Extract<GameEvent, { type: "sunnyCalled" }>> 
     correct: true,
     returned: [],
     evidence: { inPlay: card("top"), activeSuit: "H", since: [] },
+    via: "draw",
     ...overrides,
   }) satisfies GameEvent;
 

@@ -2,6 +2,7 @@
 import type { Card } from "@goleta/engine";
 
 import { isRed, SUIT_GLYPH, SUIT_LABEL } from "../../lib/cardShape.ts";
+import type { CaughtNarration } from "../../lib/sunnyOffer.ts";
 import { Button } from "../ui.tsx";
 import { LAYER } from "../../lib/layers.ts";
 
@@ -35,28 +36,47 @@ function CardChip({ card }: { card: Card }) {
  * app: a four-sentence paragraph and then a numbered list whose every item was
  * itself a full sentence, put in front of somebody who has just been caught and
  * wants to know what it costs. The paragraph is one line and each step is a
- * fragment. What is *said* has not changed — the same three things happen in the
- * same order, and the two cases that are not the ordinary one, a last card and an
- * empty deck, still say so rather than promising a step that will not come.
+ * fragment. Nothing here gets its words back: the cases that are not the
+ * ordinary one say so rather than promising a step that will not come, and they
+ * say it as briefly as the rest.
+ *
+ * **It was written for one offence and there are two** (#260, #363). A player
+ * who drew three times legally, was handed a play by the third card, pressed
+ * **I'm done** and got called on it was told that they drew when they hadn't and
+ * that they had reached for an empty deck when the deck was full — the only two
+ * sentences on the screen that say what happened, both wrong. The line and the
+ * third step are `caughtNarration` in `lib/sunnyOffer.ts` now, with tests, since
+ * nothing in this repo renders a component in a test and this file is where both
+ * mistakes had been living.
+ *
+ * **This does not relax #260.** Nothing on any screen may separate an honest end
+ * from a dishonest one *before* a call: no disabled state, no hint, nothing in
+ * the prompt or the log while the window is open. This is drawn after one has
+ * landed, to the offender alone, about an offence the table has already been
+ * told about — the announcement and the peel rule identically either way.
  */
 export function SunnyCaught({
   callerName,
   skipped,
-  returned,
+  narration,
   owesPunishment,
+  nameOf,
   onDone,
 }: {
   callerName: string;
   /** The plays that were open to you. Usually one; occasionally a choice. */
   skipped: Card[];
-  /** What the rewind took back, and what step three will turn up. */
-  returned: Card[];
+  /** Which offence it was, and which of the four things step three does — both
+   * decided in `lib/sunnyOffer.ts`, neither inferred here. */
+  narration: CaughtNarration;
   /** False when the skipped play is your last card: it eliminates you on the spot,
    * so promising a step that will never come would be its own small lie. */
   owesPunishment: boolean;
+  nameOf: (playerId: string) => string;
   onDone: () => void;
 }) {
   const only = skipped.length === 1 ? skipped[0] : null;
+  const step3 = narration.step3;
 
   return (
     <div
@@ -71,12 +91,17 @@ export function SunnyCaught({
     >
       <div className="flex w-full max-h-full max-w-md flex-col overflow-hidden rounded-2xl bg-felt-900 ring-1 ring-amber-300/40">
         <div className="overflow-y-auto p-5 pb-4">
+          {/* The sun and the line under it both carry the rule, so the title
+              need not name it a third time. */}
           <h2 className="text-xl font-semibold text-amber-300">
-            <span aria-hidden>☀️</span> Caught by the Sunny Rule
+            <span aria-hidden>☀️</span> You were caught!
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-white/80">
-            <strong className="text-white">{callerName}</strong> was right — you drew holding a
-            play. Your turn is forfeit.
+            <strong className="text-white">{callerName}</strong> was right —{" "}
+            {narration.offence === "endTurn"
+              ? 'you said you were "done" when you had a playable card'
+              : "you drew a card illegally"}
+            . Your turn is forfeit.
           </p>
 
           <ol className="mt-4 space-y-2 text-sm leading-relaxed text-white/80">
@@ -103,20 +128,24 @@ export function SunnyCaught({
             <li className="flex gap-2.5">
               <span className="font-semibold text-amber-300">3.</span>
               <span>
-                {returned.length > 0 ? (
+                {step3.kind === "returned" ? (
                   <>
                     Lose{" "}
-                    {returned.map((card, index) => (
+                    {step3.cards.map((card, index) => (
                       <span key={card.id}>
                         {index > 0 ? ", " : null}
                         <CardChip card={card} />
                       </span>
                     ))}
-                    . {returned.length > 1 ? "They turn" : "It turns"} face up, and that's what
+                    . {step3.cards.length > 1 ? "They turn" : "It turns"} face up, and that's what
                     everyone matches next.
                   </>
+                ) : step3.kind === "recycled" ? (
+                  "The deck is empty — the pile is shuffled back and a fresh card turned up."
+                ) : step3.kind === "resumes" ? (
+                  <>The game resumes: it's {nameOf(step3.playerId)}'s turn.</>
                 ) : (
-                  "You reached for an empty deck — nothing to turn up."
+                  "Nothing to turn up."
                 )}
               </span>
             </li>

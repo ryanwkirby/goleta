@@ -30,6 +30,7 @@ const namingCards: GameEvent[] = [
     correct: true,
     returned: [],
     evidence: { inPlay: card("5S"), activeSuit: "S", since: [] },
+    via: "draw",
   },
 ];
 

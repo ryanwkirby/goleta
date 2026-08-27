@@ -200,6 +200,20 @@ card in `evidence` went face up in front of the table when it was played, so
 none of it is a disclosure; nothing from the deck is reachable through it, and
 there is no version of it for a window still open.
 
+`sunnyCalled` also carries **`via`**, which says which of the two offences it
+was — a reach for the deck, or **I'm done** pressed on a hand with a play in it
+(#260). Nothing else on the wire distinguishes them: a press emits `turnChanged`
+and nothing else, so the offender's dialog was inferring it, and inference is
+how it came to tell people they had drawn when they had not (#363). It is read
+off `challenge.violation` at the moment of judging.
+
+**It is null unless the call landed**, for the reason `returned` is empty unless
+the call landed. A violation can sit behind a call that missed — the offender
+held a legal card and the caller named a different, illegal one — and naming the
+offence there would tell a caller who has just been told they were wrong that
+there was something to catch. That is the tell #50 removed, and there is a test
+holding it shut.
+
 ## House rules
 
 `RoomView.houseRules` carries what the table is playing: `sunny` (a boolean),

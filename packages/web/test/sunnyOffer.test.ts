@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { GameView } from "@goleta/engine";
+import type { Card, GameView, SunnyOffence } from "@goleta/engine";
 
 import type { SunnyCalled } from "../src/lib/judgedCall.ts";
 import {
   accusePickerOpen,
+  caughtNarration,
   caughtState,
   stillAccusable,
   sunnyTarget,
@@ -167,5 +168,106 @@ describe("having a call land on you", () => {
     // null `you` can never match one.
     const state = caughtState(called({ targetId: "angela" }), 3, null, false, null);
     expect(state.caughtYou).toBe(false);
+  });
+});
+
+/** Three seats in turn order, a deck with cards in it, and you in the first. */
+const board = (over: Partial<GameView> = {}): GameView =>
+  ({
+    drawPileSize: 12,
+    players: [
+      { id: "me", cardCount: 3, eliminated: false, hand: [] },
+      { id: "angela", cardCount: 4, eliminated: false, hand: [] },
+      { id: "bo", cardCount: 4, eliminated: false, hand: [] },
+    ],
+    ...over,
+  }) as unknown as GameView;
+
+const drawn = { id: "7D#1", rank: "7", suit: "D" } as unknown as Card;
+
+/**
+ * What the offender is told, which was written for one offence when there are
+ * two (#363). The trap this file exists to hold shut is inference: nothing
+ * returned plus a deck that is not empty is *almost* the press, and "almost" is
+ * how the dialog came to tell people they had drawn when they had not.
+ */
+describe("what the offender's dialog says", () => {
+  it("names the offence the ruling names, rather than working it out", () => {
+    const of = (via: SunnyOffence): string =>
+      caughtNarration(called({ via, returned: [] }), board(), true).offence;
+    expect(of("draw")).toBe("draw");
+    expect(of("endTurn")).toBe("endTurn");
+  });
+
+  it("says a card was drawn when a ruling arrives without an offence on it", () => {
+    // Every ruling this app has ever sent before #363 was the original offence.
+    expect(caughtNarration(called({ via: null, returned: [] }), board(), true).offence).toBe(
+      "draw",
+    );
+  });
+
+  it("does not read the offence off the deck or the cards taken back", () => {
+    // The press with an empty deck: `turnDrawnOut` is true because the deck
+    // cannot be refilled, so somebody can press the button holding a play having
+    // drawn nothing at all. Inference calls this a draw; the ruling does not.
+    const narration = caughtNarration(
+      called({ via: "endTurn", returned: [] }),
+      board({ drawPileSize: 0 }),
+      true,
+    );
+    expect(narration.offence).toBe("endTurn");
+  });
+
+  it("turns up what was drawn illegally, when anything was", () => {
+    const narration = caughtNarration(called({ via: "draw", returned: [drawn] }), board(), true);
+    expect(narration.step3).toEqual({ kind: "returned", cards: [drawn] });
+  });
+
+  it("shuffles the pile back when there is nothing to turn up and no deck", () => {
+    // What actually happens: `finishSunny` calls `recycleFaceUpPile`, which turns
+    // a card up. "Nothing to turn up" was never quite right here either.
+    const narration = caughtNarration(
+      called({ via: "draw", returned: [] }),
+      board({ drawPileSize: 0 }),
+      true,
+    );
+    expect(narration.step3).toEqual({ kind: "recycled" });
+  });
+
+  it("names the seat that is up next when nothing is turned up at all", () => {
+    // The press, with a deck still in front of them. This is the case that used
+    // to be told it had reached for an empty deck.
+    const narration = caughtNarration(called({ via: "endTurn", returned: [] }), board(), true);
+    expect(narration.step3).toEqual({ kind: "resumes", playerId: "angela" });
+  });
+
+  it("skips a seat that is already out when it names the next one", () => {
+    const narration = caughtNarration(
+      called({ via: "endTurn", returned: [] }),
+      board({
+        players: [
+          { id: "me", cardCount: 3, eliminated: false, hand: [] },
+          { id: "angela", cardCount: 0, eliminated: true, hand: [] },
+          { id: "bo", cardCount: 4, eliminated: false, hand: [] },
+        ] as unknown as GameView["players"],
+      }),
+      true,
+    );
+    expect(narration.step3).toEqual({ kind: "resumes", playerId: "bo" });
+  });
+
+  it("names no turn at all when the forced play is their last card", () => {
+    // It puts them out on the spot, and if that leaves one player standing the
+    // game is over — there is no next turn to promise. Say something true or say
+    // nothing.
+    const narration = caughtNarration(called({ via: "endTurn", returned: [] }), board(), false);
+    expect(narration.step3).toEqual({ kind: "nothing" });
+  });
+
+  it("still turns up the drawn cards when the forced play puts them out", () => {
+    // Being eliminated does not change what step three does with cards that were
+    // drawn illegally: `demandPunishment` skips step two and goes straight to it.
+    const narration = caughtNarration(called({ via: "draw", returned: [drawn] }), board(), false);
+    expect(narration.step3).toEqual({ kind: "returned", cards: [drawn] });
   });
 });

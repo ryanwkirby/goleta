@@ -188,6 +188,19 @@ export function useTableState({
     game.you,
   );
 
+  /**
+   * A judged call is being watched: the pile peeling back, the ruling being said,
+   * and — for the one seat it landed on — the dialog on the end of it.
+   *
+   * It decides three things that all have to agree. Which of five screens this is
+   * (`lib/tableRoute.ts`), because a peel cannot play out in a 40px strip; what
+   * the prompt says, which read the phase and so gave the verdict away 2.6
+   * seconds early; and whether the highlights are up, which did the same thing
+   * without words (#382). One value, computed once, because a screen that decides
+   * it three times is a screen that can get it two-thirds right.
+   */
+  const judging = peeling || announcing || caughtHold;
+
   // Taught to players by having it happen to them. A spectator has no call to
   // make and a table screen has nobody to read it, so neither is stopped to be
   // taught the rule, and neither writes the "seen it" flag on the way past.
@@ -352,7 +365,6 @@ export function useTableState({
   /** Which of five screens this is, worked out in one place (#225). These were
    * four early returns spread across eighty lines; `lib/tableRoute.ts` has the
    * order, the reasoning and the tests. */
-  const judging = peeling || announcing || caughtHold;
   const situation: TableSituation = {
     irl: room.irl,
     gamesPlayed: room.gamesPlayed,
@@ -420,6 +432,7 @@ export function useTableState({
     offline,
     reshuffling,
     departed,
+    judging,
   };
   const handControls: HandControls = {
     cards: handCards,
@@ -474,6 +487,7 @@ export function useTableState({
     handRow,
     helpControls,
     invitePanel,
+    judging,
     logSlack,
     me,
     mine,

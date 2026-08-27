@@ -113,6 +113,21 @@ export const turnPrompt = (
   /** The cards are still going out; see `MotionApi.dealing`. */
   dealing = false,
   /**
+   * A judged call is being watched — the pile peeling back, and then the ruling
+   * (#382). It outranks everything below it, including the reshuffle, which
+   * #209 already says queues behind the peel.
+   *
+   * **The line it returns is the same line either way**, because `handleCallSunny`
+   * moves the phase to `sunnyPlay` the instant a call is judged correct and
+   * leaves it at `action` when it is not. Reading the phase during the peel put
+   * the verdict on every screen at the table 2.6 seconds before the announcement
+   * read it out, and left it there through the announcement — the evidence still
+   * fanning aside underneath a line that had already ruled on it. #50 and #63 are
+   * explicit that a wrong call peels identically to a right one, and this line is
+   * inside that rule rather than beside it.
+   */
+  judging = false,
+  /**
    * How many cards there are to draw, while a reshuffle is being watched (#209).
    * The words go here because this line is the one surface all three screens
    * have. It outranks what the table is waiting for — for those five seconds the
@@ -127,6 +142,9 @@ export const turnPrompt = (
   departed: PlayerId | null = null,
 ): string => {
   const mine = game.waitingOn === game.you;
+  // Said rather than shown: what the ruling *is* the table reads off the peel and
+  // the announcement, which are the two things this holds the line still for.
+  if (judging && game.phase.kind !== "over") return "☀️ The Sunny Rule was called.";
   if (reshuffling !== null && game.phase.kind !== "over") {
     return `Deck ran out — shuffling the pile back in, ${reshuffling} to draw.`;
   }

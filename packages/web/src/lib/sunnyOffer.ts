@@ -8,7 +8,7 @@
  * succeed would hand over the answer, which is the tell #50 removed.
  */
 
-import type { GameView } from "@goleta/engine";
+import type { Card, GameView, PlayerId, SunnyOffence } from "@goleta/engine";
 
 import type { SunnyCalled } from "./judgedCall.ts";
 
@@ -68,4 +68,85 @@ export const caughtState = (
   const caughtYou = call !== null && call.correct && call.targetId === you;
   const caughtHold = caughtYou && (peeling || ackedCall !== lastCallId);
   return { caughtYou, caughtHold, showCaught: caughtHold && !peeling };
+};
+
+/**
+ * What the offender's dialog says about the offence and about its third step.
+ *
+ * It is here rather than as ternaries inside `SunnyCaught.tsx` because nothing
+ * in this repo renders a React component in a test, so a decision left in a
+ * screen is a decision nothing checks — and this one had been wrong in two
+ * places at once since #260 (#363). The dialog was written for one offence when
+ * there are two: a player who drew three times legally, was handed a play by the
+ * third card, pressed **I'm done** and got called on it was told that they drew
+ * when they didn't, and that they had reached for an empty deck when the deck
+ * was full.
+ *
+ * **The offence is read, never inferred.** `sunnyCalled.via` carries it, and the
+ * near-miss that produced the wrong sentence — nothing returned plus a deck that
+ * is not empty — is *almost* the press: `turnDrawnOut` is also true when the deck
+ * cannot be refilled, so a player can press the button holding a play having
+ * drawn nothing, with the deck empty, and the inference then accuses them of
+ * drawing illegally.
+ *
+ * **It does not relax #260.** Nothing on any screen may separate an honest end
+ * from a dishonest one *before* a call. This is drawn after one has landed, to
+ * the offender alone, about an offence the whole table has already been told
+ * about — the one place the distinction may appear.
+ *
+ * And it still gives nothing away: the play named is one they have already been
+ * caught not making, and nothing here says anything about whether a call would
+ * land.
+ */
+export type CaughtStep3 =
+  /** Cards were drawn illegally: they go face up and the last is the new board. */
+  | { kind: "returned"; cards: Card[] }
+  /** Nothing to take back and no deck either, so the pile is shuffled back and a
+   * fresh card turned up. Not "nothing to turn up", which is what it used to say
+   * — `finishSunny` calls `recycleFaceUpPile`, and that *does* turn one up. */
+  | { kind: "recycled" }
+  /** The press, with a deck still in front of them: nothing is turned up at all,
+   * so the only true thing left to say is who is up next. */
+  | { kind: "resumes"; playerId: PlayerId }
+  /** The same, but with no next turn that can honestly be named — the forced play
+   * is their last card, so they are out and the game may be over with it. Say
+   * something true or say nothing (#363). */
+  | { kind: "nothing" };
+
+export interface CaughtNarration {
+  /** How the line under the heading describes what they did. */
+  offence: SunnyOffence;
+  step3: CaughtStep3;
+}
+
+export const caughtNarration = (
+  call: SunnyCalled,
+  game: GameView,
+  /** False when the skipped play is their last card, which is also what step 2
+   * is drawn on: it eliminates them on the spot. */
+  owesPunishment: boolean,
+): CaughtNarration => ({
+  // A ruling from a server that has not learned to say which offence it was
+  // describes the original one, which is what every such ruling was.
+  offence: call.via ?? "draw",
+  step3:
+    call.returned.length > 0
+      ? { kind: "returned", cards: call.returned }
+      : game.drawPileSize === 0
+        ? { kind: "recycled" }
+        : owesPunishment
+          ? { kind: "resumes", playerId: nextUp(game, call.targetId) }
+          : { kind: "nothing" },
+});
+
+/** The seat up once the penalty is paid: the offender's left, eliminated seats
+ * skipped. `players` is in seat order, which is turn order. */
+const nextUp = (game: GameView, offenderId: PlayerId): PlayerId => {
+  const seats = game.players;
+  const at = seats.findIndex((player) => player.id === offenderId);
+  for (let step = 1; step <= seats.length; step += 1) {
+    const seat = seats[(at + step) % seats.length];
+    if (seat && !seat.eliminated && seat.id !== offenderId) return seat.id;
+  }
+  return offenderId;
 };

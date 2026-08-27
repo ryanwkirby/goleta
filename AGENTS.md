@@ -35,6 +35,36 @@ and design trade-offs can be discussed first; once the ask is firm, follow this.
 End commit messages with a `Co-Authored-By` trailer and PR bodies with a
 generation note identifying the agent.
 
+### Working a milestone, or "all the open issues"
+
+The seven steps above are written for one ask. The ask that actually arrives here
+most often is a batch — *resume M5*, *work through the open issues* — and a batch
+needs an order and a PR shape on top of the process, or every session invents its
+own. Both failure modes are real: one PR carrying six unrelated issues, which is
+unreviewable and unrevertible, and six PRs for six one-line string changes, which
+is six rounds of CI and six deploys for ten minutes of work.
+
+- **Read the whole milestone first, then work simplest to hardest.** The reading
+  is what tells you which issues touch the same file, and the small ones land
+  while the picture is still forming.
+- **The extremely small ones ride together in one PR** — a string, a constant, a
+  deleted line — with one commit each and every issue named in the body.
+  **Anything with a decision in it gets its own PR.** If you cannot describe a PR
+  in one sentence without the word "and", it is two.
+- **Read the neighbours.** Issues filed in one milestone routinely rule on the
+  same moment and say so (#363 and #364 each ask the other to be re-read).
+  Whichever lands second re-reads the first, and says in its PR what it found.
+- **Some issues say not to start them.** #356 was filed on explicit instruction
+  to leave it unresolved. A sweep of a milestone must not quietly pick one of
+  those up: ask, and carry on with the rest meanwhile.
+- **One PR at a time, all the way through.** Merge, let the deploy finish, confirm
+  its health check, *then* branch the next. The runner force-checks-out `main` in
+  this working tree, so a branch checked out here while a run is in flight is the
+  thing the section below already says not to do.
+- **Report what you did not do.** An issue you skipped, deferred or found already
+  fixed is part of the answer. Say which and why rather than leaving the
+  milestone's count to explain it.
+
 ## Deploy
 
 Merging to `main` deploys. A repo-scoped self-hosted runner on the Mac mini —

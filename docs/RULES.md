@@ -234,31 +234,41 @@ moment they reached. The offender, in this order:
 1. **Makes the play they skipped**, choosing among the cards that were legal
    before they reached for the deck. They are not held to the card you named —
    naming one only had to prove they had one.
-2. **Plays a punishment card** — any one card from the rest of their hand, their
-   choice. It does not have to be legal. It goes face up on the pile like any
-   other play.
+2. **Gives up a punishment card** — any one card from the rest of their hand,
+   their choice. It does not have to be legal, because it is not a play: it is
+   slid **under** the pile, face up with the rest of it. It never becomes the
+   card in play, and nobody ever matches it. It comes back the way any face-up
+   card does, in a [reshuffle](#when-the-deck-runs-out).
+
+   Under the pile rather than on it, because being caught must never hand you a
+   free placement of a card you picked out of your own hand: whichever card they
+   give up, the board the next player reads is the same one.
 3. **Turns up the card they touched.** Every card they drew illegally goes face
    up on the pile, and the last of them becomes the new card in play. It is
    turned up off the deck, so [natural eights](#natural-eights) applies.
 
    If they were caught reaching for an **empty** deck there is nothing they
-   touched to turn up. The deck is then answered the way an empty deck always
-   is: the whole pile — punishment card and all — is
-   [shuffled back](#when-the-deck-runs-out) and a fresh card is turned up to
-   start it again. Nobody chooses that card, which is the point. Reaching for
-   the deck costs you control of the board; it must never hand you a free
-   placement of a card you picked out of your own hand.
+   touched to turn up, and no deck for the next player to reach for either. The
+   deck is answered the way an empty deck always is: the whole pile — punishment
+   card and all — is [shuffled back](#when-the-deck-runs-out) and a fresh card is
+   turned up to start it again. Nobody chooses that card, which is the point.
+
+   And if they were caught for **saying they were done** rather than for a
+   reach, they touched nothing at all: nothing is turned up, and the card they
+   were made to play at step 1 stands as the card in play.
 
 Then their turn is over.
 
 So a caught player made the play they were dodging anyway, paid a second card
-on top of it, lost whatever they had illegally drawn, and changed the card in
-play underneath everyone. An honest turn would have cost them one card.
+on top of it, and lost whatever they had illegally drawn. An honest turn would
+have cost them one card.
 
 If the skipped play empties their hand they are eliminated on the spot and there
-is no punishment card to give. An 8 played at step 1 or 2 does **not** get to
-name a suit — the card turned up at step 3 lands on top of it immediately, so
-anything named would be erased before it could matter.
+is no punishment card to give. An 8 given up at step 2 names no suit, because a
+card slid under the pile is not in play. An 8 played at step 1 names none
+either: where something is turned up at step 3 it lands on top immediately, and
+where nothing is, the 8 simply stands as the card in play with its own printed
+suit, exactly as a [natural eight](#natural-eights) does.
 
 ### If the call is wrong
 

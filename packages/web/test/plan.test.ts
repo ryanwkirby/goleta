@@ -81,9 +81,10 @@ describe("what moves", () => {
     expect(flights[0]?.size).toBe("lg");
   });
 
-  it("lands a punishment card face up on the pile", () => {
-    // The only way a card leaves a hand without being played. A wrong call
-    // costs no card at all now, so nothing is ever buried under the pile.
+  it("flies a punishment card to the pile", () => {
+    // The only way a card leaves a hand without being played, and since #364 it
+    // is tucked into the bottom of the pile rather than landing on top of it —
+    // so the flight is unchanged and the pile's top card is not.
     const { flights } = plan([
       { type: "surrendered", playerId: "me", card: card("m1"), reason: "sunnyPunishment" },
     ]);

@@ -173,8 +173,12 @@ export const planFlights = (
       }
 
       case "surrendered": {
-        // The punishment card is played face up like any other card: there is no
-        // longer any way for a card to leave a hand and not land on the pile.
+        // It still flies to the pile — there is no way for a card to leave a hand
+        // and not land there — but since #364 it is tucked into the *bottom* of
+        // the pile rather than played onto the top, so the top card does not
+        // change when it arrives. The movement is the whole explanation and
+        // there is no caption to add; whether it should read as sliding
+        // underneath is a presentation question this does not answer.
         add({
           card: event.card,
           from: isYou(game, event.playerId)

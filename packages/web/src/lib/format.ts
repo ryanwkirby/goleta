@@ -34,8 +34,11 @@ export const namerFor = (room: RoomView | null): NameOf => {
   return (playerId) => names.get(playerId) ?? "Someone";
 };
 
+/** Not "played" (#364): since the card is tucked into the bottom of the pile
+ * rather than pushed onto the top of it, the log would be the only thing at the
+ * table claiming it landed somewhere anybody can see. */
 const surrenderPhrase: Record<SurrenderReason, string> = {
-  sunnyPunishment: "played the punishment card",
+  sunnyPunishment: "gave up the punishment card",
 };
 
 /** One event, as a sentence for the table log. */

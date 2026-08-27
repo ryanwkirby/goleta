@@ -436,10 +436,17 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   comes back. The old preference — shed your scarcest suit, name the suit you
   hold least of — survives underneath as the tiebreak, and still decides
   outright in the two places the reading rule has nothing to say: the play owed
-  for a landed call, which is buried under the punishment card and the turned-up
-  draws before anyone plays against it, and a suit named under **Power of
-  Eights**, where the namer is the player who then has to follow it and the rule
-  would have a bot name a suit against its own hand.
+  for a landed call, which is buried under the turned-up draws before anyone
+  plays against it, and a suit named under **Power of Eights**, where the namer
+  is the player who then has to follow it and the rule would have a bot name a
+  suit against its own hand.
+
+  The first of those is **narrower since #364** and the bullet is left honest
+  about it: the punishment card no longer buries anything, so on the press path
+  (#260) — where nothing was drawn illegally and nothing is turned up — the
+  forced play *is* the card the next seat answers. The tiebreak still decides it.
+  Widening the reading rule to cover that case is a bot-quality question and not
+  a correctness one; it is not part of #364.
 - **A seat on autopilot never calls the Sunny Rule, and never could commit a
   violation either (#202).** A player can hand their seat over for a while —
   `forced`, which acts only when there is exactly one lawful thing to do, or
@@ -547,6 +554,31 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   digital-era invention to stop free guessing; the game's original written rules
   never had any wrong-call penalty, and naming the card does that job now. The
   lockout is visible only to the player serving it.
+- **The punishment card goes under the pile, not on it (#364).** It reads as a
+  play and it is not one: `handleSurrender` does `s.discardPile.unshift(card)`,
+  so the card is lost to the hand, face up with the rest of the pile, and never
+  the card anybody matches.
+
+  It was pushed on top for as long as there was no path where nothing landed on
+  it — whatever had been drawn illegally buried it a moment later, so the choice
+  was invisible. #260 opened one: a player caught for pressing **I'm done** drew
+  nothing illegally, so `finishSunny` has nothing to turn up, and the card was
+  left showing over the card that decides the suit. `activeSuit` is untouched
+  here and always was, so the board the next player was handed was half the card
+  they could see and half the card underneath it — #150's failure with the
+  volume up, settled rather than about to be replaced. And it let **the offender
+  pick what the table matches next**, by choosing which card to give up, which
+  is the exact outcome `finishSunny`'s empty-deck branch already existed to
+  prevent and whose guard (`drawPile.length === 0`) this path went straight past.
+
+  Three things follow. The empty-deck branch **stays** — the deck still has to be
+  refilled — but it is now about the deck and nothing else. `s.namedSuit = null`
+  came out of `handleSurrender`: it was a no-op, and the rule it belongs to is
+  "cleared wherever the card in play changes" (#114), which a tucked card does
+  not do. And the log says *gave up*, not *played*, because the log would
+  otherwise be the only thing at the table claiming it landed where anybody can
+  see it. The flight still aims at `PILE`; whether it should read as sliding
+  underneath is a presentation question nobody has answered.
 - **`namedSuit` is on the game state and no rule reads it.** That is not dead
   state. `activeSuit` says which suit must be matched; `namedSuit` says a person
   *chose* it, and the second is not recoverable from the first. A namer who picks

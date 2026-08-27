@@ -147,8 +147,8 @@ function CogGlyph() {
 export const describeRules = (rules: HouseRules): string => {
   const on: string[] = [];
   if (!rules.sunny) on.push("no Sunny Rule");
-  if (rules.eights === "nextPlayerNames") on.push("the Power of Eights");
-  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice on Eight");
+  if (rules.eights === "nextPlayerNames") on.push("the Power of 8s");
+  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice on 8");
   if (on.length === 0) return "Playing the standard rules.";
   return `House rules: ${on.join(", ")}.`;
 };
@@ -259,7 +259,7 @@ export function HouseRulesPicker({
     },
     {
       key: "eights",
-      label: "The Power of Eights",
+      label: "The Power of 8s",
       blurb: "The next player names the suit, not whoever played the 8.",
       on: rules.eights === "nextPlayerNames",
       toggle: {
@@ -269,7 +269,7 @@ export function HouseRulesPicker({
     },
     {
       key: "seedEight",
-      label: "Dealer's Choice on Eight",
+      label: "Dealer's Choice on 8",
       blurb: "If the first card of the game is an 8, the dealer gets to choose the suit.",
       on: rules.seedEight === "dealerNames",
       toggle: {
@@ -304,17 +304,20 @@ export function HouseRulesPicker({
 /** Real life leads, because it is the answer that changes the most. Remote play
  * is still what a new room *is* — see `createRoom`.
  *
- * **Both answers carry a line saying what they mean for the evening** (#305).
- * The labels say where everybody is and nothing about what follows from it, and
- * what follows is most of this app: which view the phones come up in, whether
- * the seat order is worth getting right, whether a propped-up screen can draw
- * for the seat on the clock. It is drawn for whichever answer is standing, in
- * the shape `AutopilotPicker` and `BotSpeedPicker` already use — one line under
- * the switch rather than two beside each other, because the track is one control
- * and a phone gives each half about half a sentence's width. */
+ * **Neither answer carries a line under it, and that reverses #305** (#365).
+ * The case for one was that the labels say where everybody is and nothing about
+ * what follows from it, and what follows is most of this app: which view the
+ * phones come up in, whether the seat order is worth getting right, whether a
+ * propped-up screen can draw for the seat on the clock. All true, and none of it
+ * was in the line it bought — *Play against people at a table, in real life* is
+ * *Real life* again in a different order, spent on the first thing a host reads
+ * on the way into a new room. The rows below this one keep theirs because they
+ * are **names of rules**, and a name is not a description of what the rule does;
+ * these two answers are the description already. If the consequences are worth
+ * saying, they want a line that says one of them. */
 const PLACES = [
-  { value: "irl", label: "Real life", blurb: "Play against people at a table, in real life." },
-  { value: "remote", label: "Remote play", blurb: "Play with your friends online, remotely." },
+  { value: "irl", label: "Real life" },
+  { value: "remote", label: "Remote play" },
 ] as const;
 
 /**
@@ -324,10 +327,11 @@ const PLACES = [
  * world. It comes before the seats because everything below hangs off it.
  */
 export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
-  // No gloss on the question: since #305 both answers carry a line saying what
-  // they mean, and an aside under `uppercase tracking-wide` comes out the same
-  // size and weight as the heading it is qualifying (#316). One constant still,
-  // because it is the visible heading *and* `TwoWay`'s accessible name.
+  // No gloss on the question, and since #365 none under the answers either: an
+  // aside under `uppercase tracking-wide` comes out the same size and weight as
+  // the heading it is qualifying (#316), and the labels are the sentence. One
+  // constant still, because it is the visible heading *and* `TwoWay`'s
+  // accessible name.
   const question = "Game mode";
 
   return (
@@ -340,7 +344,6 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
         onChange={(place) => onChange(place === "irl")}
         className="mt-2"
       />
-      <p className="mt-2 text-xs text-white/40">{PLACES[on ? 0 : 1].blurb}</p>
     </div>
   );
 }

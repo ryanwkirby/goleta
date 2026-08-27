@@ -51,10 +51,12 @@ export const loadRooms = (dataDir: string, maxIdleMs: number): RoomStore => {
     for (const room of snapshot.rooms) {
       // Nobody is connected to a process that has only just started.
       for (const seat of room.seats) seat.connected = false;
-      // A deadline measured against a clock this process was not running on, and
-      // about a moment nobody watched. Cleared for `seat.connected`'s reason
-      // rather than versioned, since it means nothing after a restart (#356).
+      // Deadlines measured against a clock this process was not running on, and
+      // about moments nobody watched. Cleared for `seat.connected`'s reason
+      // rather than versioned, since they mean nothing after a restart (#356,
+      // #383).
       room.ruling = 0;
+      room.reshuffle = 0;
       store.set(room.code, room);
     }
     pruneRooms(store, maxIdleMs);

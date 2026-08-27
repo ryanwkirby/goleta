@@ -23,6 +23,7 @@ import {
   applySeatIntent,
   beginGame,
   callHeldUntil,
+  reshuffleHeldUntil,
   rulingHeldUntil,
   findRoom,
   gameViewFor,
@@ -170,9 +171,18 @@ export const attachSockets = (
 
     // Somebody has the picker open, so the table waits rather than letting a bot
     // shut the window they're deciding in — or a call has just been judged, and
-    // the table is watching it (#356). Re-checked when the wait is up: the first
-    // may have been lifted and replaced since, and the second may have started.
-    const heldUntil = Math.max(callHeldUntil(room), rulingHeldUntil(room));
+    // the table is watching it (#356), or the deck has run out and it is watching
+    // that (#383). Re-checked when the wait is up: the first may have been lifted
+    // and replaced since, and the others may have started.
+    //
+    // Three deadlines and the latest of them, rather than one field they take
+    // turns writing: `finishSunny` can rewind a recycle *and* rule on the call in
+    // one outcome, and the peel goes first, always (#209).
+    const heldUntil = Math.max(
+      callHeldUntil(room),
+      rulingHeldUntil(room),
+      reshuffleHeldUntil(room),
+    );
     if (heldUntil > 0) {
       const wait = setTimeout(() => {
         botTimers.delete(room.code);

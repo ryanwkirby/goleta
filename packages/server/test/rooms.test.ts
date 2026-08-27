@@ -4,12 +4,19 @@
  * `integration.test.ts`; this is the store itself.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_TABLE_PLAYERS, MIN_TABLE_PLAYERS, rollSunnyCall, type Card } from "@goleta/engine";
+import {
+  MAX_TABLE_PLAYERS,
+  MIN_TABLE_PLAYERS,
+  isPlayable,
+  rollSunnyCall,
+  type Card,
+} from "@goleta/engine";
 
 import {
   CALL_HOLD_MS,
+  RULING_HOLD_MS,
   addBot,
   applySeatIntent,
   beginGame,
@@ -26,6 +33,7 @@ import {
   nextBotMove,
   rejoinRoom,
   roomView,
+  rulingHeldUntil,
   setAutopilot,
   setBotSpeed,
   setDealerMode,
@@ -650,6 +658,89 @@ describe("bots and the Sunny Rule", () => {
     game.challenge = null;
     nextBotMove(room);
     expect(room.sunnyVerdict).toBeNull();
+  });
+});
+
+/**
+ * The other hold (#356). A judged Sunny call is the one moment the whole table
+ * watches, and until now the bots played straight through it — #209's note about
+ * the reshuffle applied to a moment with a different requirement. A reshuffle is
+ * scenery; a ruling is the table being told what just happened, and cards moving
+ * underneath it are both a distraction and how the live top card came to
+ * disagree with the evidence drawn over it.
+ */
+describe("holding the table while a ruling is watched", () => {
+  /** A landed call, made by the human host against a bot that reached. */
+  const callLands = (room: Room, at: number): void => {
+    const drawer = botDrawsWithAPlay(room);
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    const legal = game.challenge?.reach.hand.find((one) =>
+      isPlayable(one, game.challenge!.reach.activeSuit, game.challenge!.reach.topRank),
+    );
+    if (!legal) throw new Error("nothing legal to name");
+    vi.setSystemTime(at);
+    const outcome = applySeatIntent(room, room.hostId, {
+      type: "callSunny",
+      playerId: room.hostId,
+      cardId: legal.id,
+    });
+    expect(outcome.ok).toBe(true);
+    expect(outcome.events.some((event) => event.type === "sunnyCalled")).toBe(true);
+    expect(drawer).not.toBe(room.hostId);
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("holds nothing while nothing has been judged", () => {
+    const room = seatedRoom();
+    botDrawsWithAPlay(room);
+    expect(rulingHeldUntil(room)).toBe(0);
+  });
+
+  it("holds for the length of the beat both screens draw", () => {
+    vi.useFakeTimers();
+    const room = seatedRoom();
+    callLands(room, 5000);
+    expect(rulingHeldUntil(room, 5000)).toBe(5000 + RULING_HOLD_MS);
+  });
+
+  it("lets go on its own, and prunes as it is read", () => {
+    vi.useFakeTimers();
+    const room = seatedRoom();
+    callLands(room, 5000);
+
+    expect(rulingHeldUntil(room, 5000 + RULING_HOLD_MS - 1)).toBeGreaterThan(0);
+    expect(rulingHeldUntil(room, 5000 + RULING_HOLD_MS)).toBe(0);
+    expect(room.ruling).toBe(0);
+  });
+
+  it("holds a call that missed for exactly as long", () => {
+    // A wrong call peels and rules identically to a right one, at the same speed
+    // for the same length of time — a shorter hold would be the tell #50 removed
+    // arriving as pacing.
+    vi.useFakeTimers();
+    const room = seatedRoom();
+    const drawer = botDrawsWithAPlay(room);
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    const wrong = game.challenge?.reach.hand.find(
+      (miss) => !isPlayable(miss, game.challenge!.reach.activeSuit, game.challenge!.reach.topRank),
+    );
+    if (!wrong) throw new Error("nothing illegal to name");
+
+    vi.setSystemTime(5000);
+    const outcome = applySeatIntent(room, room.hostId, {
+      type: "callSunny",
+      playerId: room.hostId,
+      cardId: wrong.id,
+    });
+    expect(outcome.ok).toBe(true);
+    expect(outcome.events.find((event) => event.type === "sunnyCalled")?.correct).toBe(false);
+    expect(drawer).not.toBe(room.hostId);
+    expect(rulingHeldUntil(room, 5000)).toBe(5000 + RULING_HOLD_MS);
   });
 });
 

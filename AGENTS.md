@@ -401,6 +401,26 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   marked** — never the card they should have named, which would answer the
   question the ruling deliberately leaves open and make the next call automatic.
 
+  **"Identically" covers the words on the rest of the screen too** (#382). The
+  peel and the announcement were even-handed from #63; the **turn prompt** was
+  not. `handleCallSunny` sets `s.phase = { kind: "sunnyPlay" }` the moment a call
+  is judged correct and leaves it at `action` when it is not, so a line reading
+  the phase said *"step 1 of 3"* from the first frame of the peel — the verdict
+  on every screen at the table 2.6 seconds before the announcement read it out,
+  and still there underneath it. The offender's own screen said it twice: their
+  legal cards lit up as well, before they had been told they were caught.
+
+  Both are held now, on the one value `useTableState` already computed for the
+  route: `turnPrompt` takes `judging` and outranks everything with it — above the
+  reshuffle, which #209 already says queues behind the peel — and `assisting`'s
+  `sunnyPlay` source waits for it. Three constraints on anything that touches
+  this. **The held line is the same line either way**, or the tell has moved
+  rather than gone. **Only the `sunnyPlay` source is gated**: a highlight that was
+  already up does not change when a call lands, so taking somebody's standing
+  preference off them for seven seconds would be a tell of its own. And **it holds
+  words, never actions** — the draw pile stays tappable throughout, exactly as
+  #356 says of the bot hold.
+
   **The marks carry no words** (#324). The two ringed cards wore `was in play`
   and `named` chips until then, and the pairing is the message: the whole of what
   the table does here is see whether they match, and for that a caption saying

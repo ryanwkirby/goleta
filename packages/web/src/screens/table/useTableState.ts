@@ -251,7 +251,7 @@ export function useTableState({
     if (accusing !== null && !accusable) stopAccusing();
   }, [accusing, accusable, stopAccusing]);
 
-  const assist = assisting(game, hints, helpedTurn);
+  const assist = assisting(game, hints, helpedTurn, judging);
 
   /**
    * The preference is the browser's and the mark is the room's, and this is the

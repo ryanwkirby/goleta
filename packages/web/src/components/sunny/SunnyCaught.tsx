@@ -26,6 +26,24 @@ function CardChip({ card }: { card: Card }) {
 }
 
 /**
+ * The cards as a list — `2♣, 10♦ and 2♥`. Written out rather than joined with
+ * commas throughout, because this is a sentence and the last card in it is about
+ * to be named again on its own.
+ */
+function CardList({ cards }: { cards: Card[] }) {
+  return (
+    <>
+      {cards.map((card, index) => (
+        <span key={card.id}>
+          {index === 0 ? null : index === cards.length - 1 ? " and " : ", "}
+          <CardChip card={card} />
+        </span>
+      ))}
+    </>
+  );
+}
+
+/**
  * A call rewinds the game, takes two cards off you and hands everyone a new card
  * to match, and until #66 the table narrated none of it: the announcement
  * expired on a timer while the forced play sat one tap away. Only the offender
@@ -48,6 +66,23 @@ function CardChip({ card }: { card: Card }) {
  * third step are `caughtNarration` in `lib/sunnyOffer.ts` now, with tests, since
  * nothing in this repo renders a component in a test and this file is where both
  * mistakes had been living.
+ *
+ * **The three steps are one thread, not three losses** (#381). Step 1 put a card
+ * on the pile and step 3 said a *different* card was what everyone matched, with
+ * nothing in between to say why — so the first instruction read as pointless.
+ * What actually happens is a stack, and `docs/RULES.md` has had it all along:
+ * the forced play lands, the punishment card is tucked **under** the pile (#364),
+ * and then every illegally drawn card goes face up **on top of** the forced play.
+ * So step 2 says where its card goes, which is the one difference between it and
+ * step 3 that matters, and step 3 gives the cards back rather than losing them
+ * again.
+ *
+ * **And it names the one card that ends up in play.** "That's what everyone
+ * matches next" pointed at all three at once, where `turnUp` does
+ * `s.activeSuit = last.suit` and the other two are simply gone — two answers in
+ * three wrong, for the player least able to shrug it off. Which card that is is
+ * `caughtNarration`'s to decide, not this file's, for the reason the offence and
+ * the third step already are.
  *
  * **This does not relax #260.** Nothing on any screen may separate an honest end
  * from a dishonest one *before* a call: no disabled state, no hint, nothing in
@@ -121,7 +156,7 @@ export function SunnyCaught({
               <span className="font-semibold text-amber-300">2.</span>
               <span>
                 {owesPunishment
-                  ? "Give up any card."
+                  ? "Give up any card — it goes under the pile, out of play."
                   : "That was your last card — no punishment to pay. It puts you out."}
               </span>
             </li>
@@ -130,15 +165,15 @@ export function SunnyCaught({
               <span>
                 {step3.kind === "returned" ? (
                   <>
-                    Lose{" "}
-                    {step3.cards.map((card, index) => (
-                      <span key={card.id}>
-                        {index > 0 ? ", " : null}
-                        <CardChip card={card} />
-                      </span>
-                    ))}
-                    . {step3.cards.length > 1 ? "They turn" : "It turns"} face up, and that's what
-                    everyone matches next.
+                    Give back the <CardList cards={step3.cards} /> you drew.{" "}
+                    {step3.cards.length > 1 ? (
+                      <>
+                        They go face up on top, and the <CardChip card={step3.board} /> is what
+                        everyone matches next.
+                      </>
+                    ) : (
+                      <>It goes face up on top, and that's what everyone matches next.</>
+                    )}
                   </>
                 ) : step3.kind === "recycled" ? (
                   "The deck is empty — the pile is shuffled back and a fresh card turned up."

@@ -652,6 +652,15 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   otherwise be the only thing at the table claiming it landed where anybody can
   see it. The flight still aims at `PILE`; whether it should read as sliding
   underneath is a presentation question nobody has answered.
+
+  **The offender's own dialog says where it goes as well** (#381). It read *Give
+  up any card.* and then, one line down, *Lose 2♣, 10♦, 2♥ — that's what everyone
+  matches next*: two steps whose verbs both mean *a card leaves your hand*, and
+  neither of which said which way it went. The tuck and the turn-up are the whole
+  difference between them, and a caught player working out what this costs is
+  exactly who needs it. Step 2 names the under, step 3 names the on-top, and step
+  1 stops reading as pointless because the stack now explains why the card it
+  played is not the card anybody matches.
 - **`namedSuit` is on the game state and no rule reads it.** That is not dead
   state. `activeSuit` says which suit must be matched; `namedSuit` says a person
   *chose* it, and the second is not recoverable from the first. A namer who picks

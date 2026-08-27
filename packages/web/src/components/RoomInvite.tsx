@@ -14,7 +14,7 @@ import { useState } from "react";
 
 import { QrCode } from "./QrCode.tsx";
 import { TwoWay } from "./TwoWay.tsx";
-import { Button, CodeButton, Panel } from "./ui.tsx";
+import { Button, CodeRow, Panel } from "./ui.tsx";
 import { useCopyLink } from "../lib/copy.ts";
 import { useDismissOnScreenJoin } from "../lib/sharedScreens.ts";
 import { joinLink } from "../net/route.ts";
@@ -27,19 +27,16 @@ const INVITES: {
   label: string;
   /** What scanning it gets you, said as the thing that arrives. */
   blurb: string;
-  copy: string;
 }[] = [
   {
     value: "player",
     label: "New player",
     blurb: "Point a camera at it, or read the code out.",
-    copy: "Copy invite link",
   },
   {
     value: "screen",
     label: "Shared screen",
     blurb: "A spare phone, tablet or TV showing the middle of the table.",
-    copy: "Copy shared-screen link",
   },
 ];
 
@@ -95,16 +92,20 @@ export function RoomInvite({
         />
 
         {/* Above the QR, at the size it is read out at — and, since #243, the
-            control that copies whichever link is showing. */}
-        <CodeButton
+            control that copies whichever link is showing. The glyph beside it is
+            the second trigger (#366); its label still branches, because this
+            panel copies whichever of the two links the toggle is standing on. */}
+        <CodeRow
           code={code}
           label={
             kind === "screen"
               ? `Copy the shared-screen link for room ${code}`
               : `Copy the invite link for room ${code}`
           }
+          copied={copied}
           onCopy={copy}
-          className="mt-4 font-mono text-2xl tracking-[0.3em] text-white"
+          className="mt-4"
+          codeClassName="font-mono text-2xl tracking-[0.3em] text-white"
         />
 
         <div className="mt-3 flex justify-center">
@@ -134,9 +135,6 @@ export function RoomInvite({
           </p>
         ) : null}
 
-        <Button variant="ghost" className="mt-3" onClick={copy}>
-          {copied ? "Link copied" : invite.copy}
-        </Button>
         <Button variant="secondary" full className="mt-3" onClick={onClose}>
           Done
         </Button>

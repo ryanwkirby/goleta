@@ -134,6 +134,20 @@ export interface ReachPile {
  * turn — a late call rewinds it. `redact.ts` drops this whole object: a client
  * learns only that a call is possible.
  */
+/**
+ * Which of the two ways the offence was committed (#363). Reaching for the deck
+ * holding a play is the original; pressing **I'm done** holding one is the
+ * second, and has existed since #260.
+ *
+ * **It is recorded, never inferred.** The near-miss is tempting — an offence
+ * with nothing to take back and a deck still full really is the press, *almost*
+ * — and it is how the dialog came to tell people they had drawn when they had
+ * not: `turnDrawnOut` is also true when the deck cannot be refilled, so a player
+ * can press the button holding a play having drawn nothing at all, with the deck
+ * empty. Rare, and exactly the kind of rare this app takes seriously.
+ */
+export type SunnyOffence = "draw" | "endTurn";
+
 export interface Challenge {
   drawerId: PlayerId;
   drawnIds: CardId[];
@@ -147,6 +161,9 @@ export interface Challenge {
      * already played on. */
     snapshot: GameState;
     touchedIds: CardId[];
+    /** Frozen with the rest of it: a later press by an already-caught player does
+     * not rewrite what they were first caught doing. */
+    via: SunnyOffence;
   } | null;
   /** Only the first call is judged; the rest are too late. */
   resolved: boolean;
@@ -250,6 +267,16 @@ export type GameEvent =
       correct: boolean;
       returned: Card[];
       evidence: SunnyEvidence;
+      /**
+       * Which offence it was — and **null unless the call landed** (#363).
+       *
+       * A violation can exist behind a call that missed: the offender held a
+       * legal card and the caller named a different, illegal one. Sending `via`
+       * there would say *there was something to catch* on a call that was told
+       * it was wrong, which is precisely the tell #50 removed. It is gated on
+       * `correct` for the same reason `returned` is, and there is a test.
+       */
+      via: SunnyOffence | null;
     }
   | { type: "surrendered"; playerId: PlayerId; card: Card; reason: SurrenderReason }
   | { type: "eliminated"; playerId: PlayerId }

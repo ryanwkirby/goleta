@@ -311,7 +311,24 @@ describe("a wrong call", () => {
       // The same evidence a landed call shows: the table reads the verdict off the
       // two cards rather than off the wording.
       evidence: { inPlay: card("5S"), activeSuit: "S", since: [] },
+      // And no offence named. There was no violation behind this one, but there
+      // can be — see the test below (#363).
+      via: null,
     });
+  });
+
+  it("names no offence on a call that missed, even when there was one to catch", () => {
+    // `a` holds a playable 5H and reaches anyway, so a violation is on the state.
+    // `b` names the 2C, which was never legal, so the call is wrong. Saying
+    // *which* offence it was here would tell a caller who has just been told they
+    // were wrong that there was something to catch — the tell #50 removed.
+    const state = caughtInTheAct();
+    expect(state.challenge?.violation).not.toBeNull();
+
+    const result = applyIntent(state, { type: "callSunny", playerId: "b", cardId: card("2C").id });
+    if (!result.ok) throw new Error(result.error);
+    const called = result.events.find((event) => event.type === "sunnyCalled");
+    expect(called).toMatchObject({ correct: false, via: null });
   });
 
   it("locks the caller out until three more reaches happen at the table", () => {
@@ -923,6 +940,38 @@ describe("ending a turn you should have played on", () => {
     const after = must(before, { type: "endTurn", playerId: "a" });
     // A lockout is measured in reaches at the table. Ending a turn is not one.
     expect(after.totalReaches).toBe(before.totalReaches);
+  });
+
+  it("says which offence it was, so nothing downstream has to guess", () => {
+    // The three facts the dialog was inferring from and getting wrong: nothing
+    // taken back, a deck that is not empty, and — the part that cannot be
+    // inferred — that this was a press rather than a reach (#363).
+    const state = must(drawnOutHoldingAPlay(), { type: "endTurn", playerId: "a" });
+    const result = applyIntent(state, { type: "callSunny", playerId: "b", cardId: card("5D").id });
+    if (!result.ok) throw new Error(result.error);
+    const called = result.events.find((event) => event.type === "sunnyCalled");
+
+    expect(called).toMatchObject({ correct: true, returned: [], via: "endTurn" });
+    expect(state.drawPile.length).toBeGreaterThan(0);
+  });
+
+  it("keeps the offence it was first caught for, if the same player presses on", () => {
+    // 5H is playable on 5S throughout, so all three reaches are offences and the
+    // violation is a reach. `endTurn` afterwards goes through `recordReach`
+    // again, and must not rewrite what they were caught doing — the violation is
+    // frozen with its snapshot.
+    let state = table({
+      hands: { a: ["5H", "2C"], b: ["9H"], c: ["4D"] },
+      top: "5S",
+      drawPile: ["QD", "KD", "3D"],
+    });
+    state = draw(state, "a");
+    state = draw(state, "a");
+    state = draw(state, "a");
+    expect(state.challenge?.violation?.via).toBe("draw");
+
+    state = must(state, { type: "endTurn", playerId: "a" });
+    expect(state.challenge?.violation?.via).toBe("draw");
   });
 
   it("leaves a board the next player can read, with the punishment card buried", () => {

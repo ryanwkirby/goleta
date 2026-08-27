@@ -21,6 +21,7 @@ import {
   type Challenge,
   type ReachPile,
   type SunnyEvidence,
+  type SunnyOffence,
   type SunnyReach,
   type TurnUpReason,
 } from "./types.ts";
@@ -322,6 +323,7 @@ const handleEndTurn = (s: GameState, playerId: PlayerId, events: GameEvent[]): s
       // No card: nothing was drawn, so there is nothing to take back and nothing
       // to count against anybody's lockout.
       null,
+      "endTurn",
     );
   }
 
@@ -390,6 +392,11 @@ const handleCallSunny = (
   // Both read before the rewind, which is about to move the touched cards and take
   // the cards played since the offence back off the pile.
   const returned = correct && challenge.violation ? findCards(s, challenge.violation.touchedIds) : [];
+  // Gated on `correct` for the reason `returned` is: a violation can sit behind a
+  // call that missed — they held a legal card and the caller named a different,
+  // illegal one — and naming the offence there would say *there was something to
+  // catch* to somebody who has just been told they were wrong (#50, #363).
+  const via = correct ? (challenge.violation?.via ?? null) : null;
   const evidence = sunnyEvidence(s, challenge);
   events.push({
     type: "sunnyCalled",
@@ -399,6 +406,7 @@ const handleCallSunny = (
     correct,
     returned,
     evidence,
+    via,
   });
 
   if (!correct) {
@@ -547,6 +555,10 @@ const recordReach = (
   inViolation: boolean,
   snapshot: GameState | null,
   card: Card | null,
+  /** Which offence this would be, recorded rather than left to be inferred
+   * later (#363). Frozen with the violation: an already-caught player pressing
+   * the button does not rewrite what they were first caught doing. */
+  via: SunnyOffence,
 ): void => {
   if (!s.challenge || s.challenge.drawerId !== playerId) {
     s.challenge = {
@@ -570,7 +582,7 @@ const recordReach = (
   if (challenge.violation) {
     if (card) challenge.violation.touchedIds.push(card.id);
   } else if (inViolation && snapshot) {
-    challenge.violation = { snapshot, touchedIds: card ? [card.id] : [] };
+    challenge.violation = { snapshot, touchedIds: card ? [card.id] : [], via };
   }
 };
 
@@ -591,7 +603,7 @@ const recordDraw = (
   reachPile: ReachPile,
 ): void => {
   s.totalReaches += 1;
-  recordReach(s, playerId, reach, reachPile, inViolation, snapshot, card);
+  recordReach(s, playerId, reach, reachPile, inViolation, snapshot, card, "draw");
 };
 
 /** In the rewound state these are normally still in the deck, but a recycle

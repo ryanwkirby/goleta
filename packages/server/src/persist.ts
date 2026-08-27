@@ -15,7 +15,10 @@ import { createStore, pruneRooms } from "./rooms.ts";
 // 17: `totalDraws` -> `totalReaches` and `sunny.lockoutDraws` -> `lockoutReaches`
 // (#222). Both are on the persisted shape, so old snapshots are discarded on
 // boot rather than migrated, per `AGENTS.md`.
-const SNAPSHOT_VERSION = 18;
+// 19: `Challenge.violation` gained `via`, which says which of the two offences
+// was recorded (#363). A restored snapshot would carry a violation with no
+// answer, and the ruling drawn from it would describe the wrong offence.
+const SNAPSHOT_VERSION = 19;
 
 interface Snapshot {
   version: number;

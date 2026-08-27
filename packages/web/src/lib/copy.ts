@@ -3,13 +3,12 @@
  *
  * **Two triggers, one piece of state** (#243). A code is the address of a room,
  * and the two places one is drawn — the lobby and the in-game invite — each draw
- * it twice: the characters, and a labelled button under them saying what tapping
- * them does. Whichever is pressed, the button reads *Link copied* for the same
- * moment, because two independent copies of that state would let the label
- * disagree with what just happened.
+ * it twice: the characters, and a copy glyph beside them (#366). Whichever is
+ * pressed, the glyph shows a tick for the same moment, because two independent
+ * copies of that state would let the feedback disagree with what just happened.
  *
- * **A clipboard that refuses is swallowed.** `copied` stays false, so the label
- * never claims something that did not happen — `navigator.clipboard` throws on
+ * **A clipboard that refuses is swallowed.** `copied` stays false, so nothing
+ * ever claims something that did not happen — `navigator.clipboard` throws on
  * an insecure origin and on a browser that has not granted it.
  */
 

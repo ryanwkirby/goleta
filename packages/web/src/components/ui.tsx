@@ -92,11 +92,12 @@ export const inputClass =
  * **A real button, not a click handler on some text**: keyboard reachable, and
  * labelled with what it copies rather than with the four characters it draws,
  * which a screen reader would otherwise spell out as the whole of what pressing
- * it means. The labelled button stays beside it, because it is the path that
- * says out loud what tapping the code does.
+ * it means. The second trigger stays beside it and is `CopyControl` — see
+ * `CodeRow`, which is what both places draw.
  *
  * The size and colour are the caller's — a lobby draws this at reading-across-a-
- * room size and the in-game panel at reading-out size.
+ * room size and the in-game panel at reading-out size. It is `block` and **not**
+ * `w-full`: it sits in a centred row now rather than filling a column.
  */
 export function CodeButton({
   code,
@@ -117,13 +118,142 @@ export function CodeButton({
       title={label}
       onClick={onCopy}
       className={[
-        "block w-full rounded-xl transition-colors hover:brightness-110",
+        "block rounded-xl px-1 transition-colors hover:brightness-110",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
         className,
       ].join(" ")}
     >
       {code}
     </button>
+  );
+}
+
+/**
+ * Two sheets, one behind the other. Drawn on the same terms as `CogGlyph`,
+ * `BookGlyph` and `QrGlyph` — 24-unit box, `fill="none"`, 1.8 strokes in
+ * `currentColor`, round caps and joins — because a character would be whatever
+ * the platform's font decided, which is the argument that took the emoji out of
+ * the cog (#296).
+ */
+function CopyGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+    >
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M15 5.8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h.8" />
+    </svg>
+  );
+}
+
+/** The same box, so the swap does not move anything beside it. */
+function TickGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+    >
+      <path d="M5 12.5 10 17.5 19 6.5" />
+    </svg>
+  );
+}
+
+/**
+ * The second trigger on a room code, drawn where every other app in the world
+ * draws one (#366).
+ *
+ * It was a full-width word — *Copy invite link* — sitting directly under the one
+ * thing on the panel that is meant to be read out across a table. A copy control
+ * belongs **beside the value it copies**, on the same line, because that
+ * adjacency is what says *this text is the thing that gets copied* — which is
+ * exactly the fact #243 established and then drew as a caption.
+ *
+ * **The sentence is not lost, it moves.** It is the same one `CodeButton`
+ * already carries, into `aria-label` and `title`, and the words *Link copied*
+ * into an `sr-only` live region — because a glyph that changes silently is not
+ * feedback for anybody who is not looking at it. A clipboard that throws leaves
+ * the glyph alone: `copied` never goes true, so the app never claims something
+ * that did not happen (#243).
+ *
+ * 44px, in a panel held out to somebody at arm's length.
+ */
+export function CopyControl({
+  label,
+  copied,
+  onCopy,
+}: {
+  /** What pressing it does, said as a sentence — the same one the code carries. */
+  label: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onCopy}
+      className={[
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+        copied ? "text-amber-300" : "text-white/50 hover:bg-white/10 hover:text-white",
+        "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+      ].join(" ")}
+    >
+      {copied ? <TickGlyph /> : <CopyGlyph />}
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Link copied" : ""}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * A room code and the glyph that copies its link, on one row.
+ *
+ * **The code stays optically centred**, which is the one piece of arithmetic in
+ * here: hanging a control off the right of a centred code shifts the characters
+ * left by half an icon, and the code is what somebody reads out. The control's
+ * width is reserved on the other side of it too.
+ *
+ * Both triggers share one `useCopyLink` with each other, so either tap copies
+ * and either tap lights the same feedback (#243). That is the caller's to hold —
+ * this draws what it is given.
+ */
+export function CodeRow({
+  code,
+  label,
+  copied,
+  onCopy,
+  className = "",
+  codeClassName = "",
+}: {
+  code: string;
+  label: string;
+  copied: boolean;
+  onCopy: () => void;
+  className?: string;
+  /** Size and colour of the characters. A lobby and a held-out panel differ. */
+  codeClassName?: string;
+}) {
+  return (
+    <div className={["flex items-center justify-center gap-1", className].join(" ")}>
+      <span aria-hidden className="h-11 w-11 shrink-0" />
+      <CodeButton code={code} label={label} onCopy={onCopy} className={codeClassName} />
+      <CopyControl label={label} copied={copied} onCopy={onCopy} />
+    </div>
   );
 }
 

@@ -23,7 +23,7 @@ import {
   IrlToggle,
 } from "../components/Settings.tsx";
 import { TwoWay } from "../components/TwoWay.tsx";
-import { Button, CodeButton, Panel } from "../components/ui.tsx";
+import { Button, CodeRow, Panel } from "../components/ui.tsx";
 import { loadName } from "../net/identity.ts";
 import { joinLink } from "../net/route.ts";
 import { LAYER } from "../lib/layers.ts";
@@ -39,15 +39,14 @@ function RoomCode({ code }: { code: string }) {
   return (
     <div className="text-center">
       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Room code</p>
-      <CodeButton
+      <CodeRow
         code={code}
         label={`Copy the invite link for room ${code}`}
+        copied={copied}
         onCopy={copy}
-        className="mt-1 font-mono text-5xl font-semibold tracking-[0.3em] text-amber-300"
+        className="mt-1"
+        codeClassName="font-mono text-5xl font-semibold tracking-[0.3em] text-amber-300"
       />
-      <Button variant="ghost" className="mt-1" onClick={copy}>
-        {copied ? "Link copied" : "Copy invite link"}
-      </Button>
     </div>
   );
 }

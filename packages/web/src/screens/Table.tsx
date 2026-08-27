@@ -33,12 +33,15 @@ function TurnPrompt({
   game,
   nameOf,
   assist,
+  judging,
   reshuffling,
   departed,
 }: {
   game: GameView;
   nameOf: NameOf;
   assist: boolean;
+  /** A judged call is being watched, and the line holds still for it (#382). */
+  judging: boolean;
   /** Cards to draw, while the deck running out is being watched (#209). */
   reshuffling: number | null;
   departed: PlayerId | null;
@@ -50,14 +53,15 @@ function TurnPrompt({
       className={[
         "text-center text-sm",
         // The reshuffle line takes the emphasis whoever the table is waiting on: for
-        // those five seconds it is the more important of the two.
-        reshuffling !== null || departed !== null || (mine && game.status !== "over")
+        // those five seconds it is the more important of the two. A ruling being
+        // watched is the bigger of the same argument.
+        judging || reshuffling !== null || departed !== null || (mine && game.status !== "over")
           ? "font-semibold text-amber-300"
           : "text-white/60",
       ].join(" ")}
       aria-live="polite"
     >
-      {turnPrompt(game, nameOf, assist, dealing, reshuffling, departed)}
+      {turnPrompt(game, nameOf, assist, dealing, judging, reshuffling, departed)}
     </p>
   );
 }
@@ -130,6 +134,7 @@ export function Table({
     handRow,
     helpControls,
     invitePanel,
+    judging,
     logSlack,
     me,
     mine,
@@ -293,6 +298,7 @@ export function Table({
               game={game}
               nameOf={nameOf}
               assist={assist}
+              judging={judging}
               reshuffling={reshuffling}
               departed={departed}
             />

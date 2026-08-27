@@ -484,6 +484,19 @@ function Playing({
   const { drawPileSize: reshuffling } = useReshuffle(log);
   const departed = useDeparture(log);
 
+  /**
+   * The ruling being watched, which this screen holds the bottom band still for
+   * (#382). No `caughtHold` in it: there is no "you" here to catch, so it is the
+   * peel and the announcement and nothing else.
+   */
+  const judging = peeling || announcing;
+
+  /** One reading of the line, styled three ways below rather than computed three
+   * times — the two quiet branches used to call this without the arguments that
+   * outrank the turn, which is only harmless while their own conditions rule
+   * those arguments out. */
+  const prompt = turnPrompt(game, nameOf, false, false, judging, reshuffling, departed);
+
   /** Which way up the board says things (#160). Two positions rather than four —
    * see `facing.ts` for why the prompt cannot be stood on its end. */
   const turn = facingTurn(room, game);
@@ -633,21 +646,21 @@ function Playing({
               {SUIT_GLYPH[call.card.suit]}.{" "}
               <span className="text-white/70">{call.correct ? "Right." : "Wrong."}</span>
             </span>
-          ) : reshuffling !== null || departed !== null ? (
+          ) : judging || reshuffling !== null || departed !== null ? (
             // This screen has no log, so without it a reshuffle was a number changing
             // (#209) and a departure was nothing at all (#256). After the ruling,
-            // for the reason the peel comes first.
-            <span className="text-amber-300">
-              {turnPrompt(game, nameOf, false, false, reshuffling, departed)}
-            </span>
+            // for the reason the peel comes first — which is also what `judging`
+            // leads with here: while the pile is peeling this band used to say
+            // "step 1 of 3", the ruling, then "step 1 of 3" again (#382).
+            <span className="text-amber-300">{prompt}</span>
           ) : finished ? (
-            <span className="text-amber-300">{turnPrompt(game, nameOf, false)}</span>
+            <span className="text-amber-300">{prompt}</span>
           ) : (
             <span className="text-white/60">
               <span aria-hidden className="text-amber-300">
                 ▸{" "}
               </span>
-              {turnPrompt(game, nameOf, false)}
+              {prompt}
             </span>
           )}
         </p>

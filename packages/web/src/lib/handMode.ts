@@ -19,12 +19,29 @@ export type HandMode = "play" | "forced" | "surrender" | "idle";
  * An app that points at the answer never lets anyone be caught, which is why
  * turning this on is public (`SeatView.hinted`). **Presentation, never a rule**:
  * the engine does not learn it exists and no bot may read it.
+ *
+ * **The `sunnyPlay` source waits for the ruling to have been watched** (#382).
+ * The phase moves the instant a call is judged correct, so the highlights came
+ * up on the first frame of the peel — announcing the verdict, on every screen at
+ * the table, 2.6 seconds before the announcement did, and on the offender's own
+ * screen before they had been told they were caught. `judging` is the beat
+ * itself, so a right call and a wrong one look identical for the whole of it.
+ * The other two sources are deliberately untouched: help that was already on
+ * stays on, and a highlight that does not change when the call lands is no tell.
+ *
+ * There is nothing to point at in the meantime either — the forced play cannot
+ * be made until the dialog is dismissed, which is the same span for the one
+ * person who has one.
  */
 export const assisting = (
   game: GameView,
   hints: boolean,
   helpedTurn: number | null,
-): boolean => game.phase.kind === "sunnyPlay" || hints || helpedTurn === game.turnNumber;
+  /** The peel and the ruling, and for the offender their dialog on the end of
+   * it: `judging` in `useTableState`. */
+  judging = false,
+): boolean =>
+  (game.phase.kind === "sunnyPlay" && !judging) || hints || helpedTurn === game.turnNumber;
 
 /**
  * The first branch is the one worth knowing about: the hand goes **dead** from

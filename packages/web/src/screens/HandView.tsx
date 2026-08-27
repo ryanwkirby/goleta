@@ -47,7 +47,7 @@ export interface HandViewProps {
  * size: a sliver too small to read a rank off is worse than nothing.
  */
 export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }: HandViewProps) {
-  const { room, game, nameOf, send, offline, reshuffling, departed } = table;
+  const { room, game, nameOf, send, offline, reshuffling, departed, judging } = table;
   const { cards, mode, assist, onChooseCard, refusal, canDraw, onDraw, mine } = hand;
   const { handSort, onCycleSort } = hand;
   const { stalled, onAskForHelp, hints, onChooseHints, shouting, helpFrom } = help;
@@ -64,7 +64,7 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
    * column while the cards were still going out (#75).
    */
   const { dealing } = useMotion();
-  const prompt = turnPrompt(game, nameOf, assist, dealing, reshuffling, departed);
+  const prompt = turnPrompt(game, nameOf, assist, dealing, judging, reshuffling, departed);
 
   // The row is the only thing with padding, so this is the width the cards get.
   const height = handHeight(box.height);
@@ -95,7 +95,7 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
           prompt={prompt}
           // Loud for your own turn, and for the deck running out — which is nobody's
           // turn and is the more important of the two while it lasts.
-          loud={mine || reshuffling !== null || departed !== null}
+          loud={mine || judging || reshuffling !== null || departed !== null}
           onShowInvite={onShowInvite}
           onShowRules={onShowRules}
           hints={hints}

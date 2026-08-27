@@ -37,6 +37,25 @@ describe("whether the app is pointing at the answer", () => {
       .toBe(true);
   });
 
+  it("waits for the ruling to have been watched before it comes on", () => {
+    // The phase moves the instant a call is judged correct, so the marks used to
+    // come up on the first frame of the peel — the verdict, without words, 2.6
+    // seconds before the announcement said it, and on the offender's own screen
+    // before they had been told they were caught (#382).
+    const forced = view({ phase: { kind: "sunnyPlay" } as GameView["phase"] });
+
+    expect(assisting(forced, false, null, true)).toBe(false);
+    expect(assisting(forced, false, null, false)).toBe(true);
+  });
+
+  it("leaves the other two sources alone while a ruling is watched", () => {
+    // A highlight that was already up does not change when the call lands, so it
+    // tells the table nothing. Taking it away would be its own tell, and would
+    // take somebody's standing preference off them for seven seconds.
+    expect(assisting(view(), true, null, true)).toBe(true);
+    expect(assisting(view({ turnNumber: 5 }), false, 5, true)).toBe(true);
+  });
+
   it("is on for the single turn bought with `want help?`", () => {
     expect(assisting(view({ turnNumber: 5 }), false, 5)).toBe(true);
   });

@@ -161,9 +161,67 @@ describe("what the table is waiting for", () => {
   });
 });
 
+/**
+ * The verdict is what the peel and the announcement are for, and the prompt was
+ * giving it away 2.6 seconds before either of them (#382). `handleCallSunny`
+ * moves the phase to `sunnyPlay` the instant a call is judged correct and leaves
+ * it at `action` when it is not, so the line read the answer straight off the
+ * state while the evidence was still fanning aside underneath it.
+ *
+ * The property to hold is not "it says something else" — it is that it says the
+ * **same** something either way. A prompt that went quiet for a landed call and
+ * stayed "Bo's turn." for a missed one would be the tell #50 removed, moved
+ * rather than gone.
+ */
+describe("what the table is told while a ruling is being watched", () => {
+  const landed = table({ you: null, waitingOn: "p2", turnPlayerId: "p2", phase: { kind: "sunnyPlay" } });
+  const missed = table({ you: null, waitingOn: "p2", turnPlayerId: "p2" });
+
+  it("says the same thing whether the call landed or missed", () => {
+    const held = turnPrompt(landed, nameOf, false, false, true);
+
+    expect(held).toBe(turnPrompt(missed, nameOf, false, false, true));
+    expect(held).toBe("☀️ The Sunny Rule was called.");
+  });
+
+  it("says nothing about the play the ruling would force", () => {
+    // Both halves: the offender's own screen and everybody else's.
+    const yours = table({ you: "p1", waitingOn: "p1", turnPlayerId: "p1", phase: { kind: "sunnyPlay" } });
+
+    expect(turnPrompt(yours, nameOf, true, false, true)).not.toContain("Step 1 of 3");
+    expect(turnPrompt(landed, nameOf, false, false, true)).not.toContain("step 1 of 3");
+  });
+
+  it("gives the line back the moment the beat is over", () => {
+    expect(turnPrompt(landed, nameOf, false)).toBe(
+      "Bo has to make the play they skipped — step 1 of 3.",
+    );
+    expect(turnPrompt(missed, nameOf, false)).toBe("Bo's turn.");
+  });
+
+  it("outranks the reshuffle, which already queues behind the peel", () => {
+    // A recycle can land in the same breath as a call, and #209 rules on the
+    // order: the peel goes first, always.
+    expect(turnPrompt(landed, nameOf, false, false, true, 31)).toBe(
+      "☀️ The Sunny Rule was called.",
+    );
+    expect(turnPrompt(landed, nameOf, false, false, true, null, "p2")).toBe(
+      "☀️ The Sunny Rule was called.",
+    );
+  });
+
+  it("does not outrank the game being over", () => {
+    // A wrong call is judged mid-turn and the accused may play their last card
+    // while the announcement is still up.
+    const over = table({ status: "over", winnerId: "p1", phase: { kind: "over" } });
+
+    expect(turnPrompt(over, nameOf, false, false, true)).toContain("wins");
+  });
+});
+
 describe("what the table is told when the deck runs out", () => {
   it("says it in words, with the count that came on the wire", () => {
-    const line = turnPrompt(table(), nameOf, false, false, 31);
+    const line = turnPrompt(table(), nameOf, false, false, false, 31);
 
     expect(line).toContain("Deck ran out");
     expect(line).toContain("31");
@@ -175,7 +233,7 @@ describe("what the table is told when the deck runs out", () => {
     const waiting = table({ waitingOn: "p1", you: "p1" });
 
     expect(turnPrompt(waiting, nameOf, false)).toBe("Your turn.");
-    expect(turnPrompt(waiting, nameOf, false, false, 31)).toContain("Deck ran out");
+    expect(turnPrompt(waiting, nameOf, false, false, false, 31)).toContain("Deck ran out");
   });
 
   it("does not outrank the game being over", () => {
@@ -185,11 +243,11 @@ describe("what the table is told when the deck runs out", () => {
       phase: { kind: "over" },
     });
 
-    expect(turnPrompt(over, nameOf, false, false, 31)).toContain("wins");
+    expect(turnPrompt(over, nameOf, false, false, false, 31)).toContain("wins");
   });
 
   it("says nothing at all the rest of the time", () => {
     expect(turnPrompt(table(), nameOf, false)).not.toContain("Deck ran out");
-    expect(turnPrompt(table(), nameOf, false, false, null)).not.toContain("Deck ran out");
+    expect(turnPrompt(table(), nameOf, false, false, false, null)).not.toContain("Deck ran out");
   });
 });

@@ -31,6 +31,13 @@ export interface TableContext {
   reshuffling: number | null;
   /** Whoever has just left the table, while it is worth saying (#256). */
   departed: PlayerId | null;
+  /**
+   * A judged call is being watched, so the prompt holds still for it (#382).
+   * Always false in `HandView`, which the route hands aside to the full table
+   * for exactly this beat — carried anyway so the two layouts compute one line
+   * rather than two that happen to agree.
+   */
+  judging: boolean;
 }
 
 export interface HandControls {

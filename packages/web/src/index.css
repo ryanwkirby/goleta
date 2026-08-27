@@ -36,11 +36,6 @@
   /* The phone on the rotate panel, showing which way it wants to go. */
   --animate-rotate-hint: rotate-hint 2.6s ease-in-out infinite;
 
-  /* The pile peeling back off a Sunny call. `forwards` on both: the evidence
-     has to stay up and stay legible for the rest of the beat, not spring back
-     the moment it has finished arriving. */
-  --animate-peel-aside: peel-aside 420ms cubic-bezier(0.22, 0.72, 0.3, 1) forwards;
-  --animate-peel-mark: peel-mark 340ms cubic-bezier(0.22, 0.72, 0.3, 1) 200ms both;
 }
 
 /* A Bee deck's woven diamond lattice, near enough: two repeating gradients
@@ -240,6 +235,27 @@
   }
 }
 
+/* The pile peeling back off a Sunny call. `forwards` on both: the evidence has
+   to stay up and stay legible for the rest of the beat, not spring back the
+   moment it has finished arriving.
+
+   **Their figures come from the call site** (#356), which is why these are plain
+   classes rather than `@theme` animations now: how long a card takes to slide
+   and when the next one starts is a schedule, worked out in `lib/peel.ts` from
+   how many cards landed since the reach, and handed down as custom properties.
+   The defaults here are the one-card case, so a call site that sets nothing
+   still gets the beat rather than a jump. Same shape as
+   `.table-screen-turn-back` above, which takes its `--flip` the same way. */
+.peel-aside {
+  animation: peel-aside var(--peel-ms, 620ms) cubic-bezier(0.22, 0.72, 0.3, 1)
+    var(--peel-delay, 0ms) forwards;
+}
+
+.peel-mark {
+  animation: peel-mark var(--peel-mark-ms, 520ms) cubic-bezier(0.22, 0.72, 0.3, 1)
+    var(--peel-mark-delay, 880ms) both;
+}
+
 /* A card played on top of a Sunny offence, sliding off the pile to uncover what
    was really in play underneath. It starts stacked on the pile — `--peel-from`
    is how far left of its fanned place that is — and ends near-transparent,
@@ -352,6 +368,15 @@
       opacity: 1;
       transform: translateY(-50%);
     }
+  }
+
+  /* The keyframes above are flat, so a delay would be invisible rather than a
+     jump — but the schedule is a sequence and a sequence is the thing that was
+     asked not to arrive here in pieces (#356). Zeroed, so the whole tableau is
+     simply *there*: arrived at rather than travelled to. */
+  .peel-aside,
+  .peel-mark {
+    animation-delay: 0ms;
   }
 
   /* The heading says it in words. Anyone who asked for less movement gets the

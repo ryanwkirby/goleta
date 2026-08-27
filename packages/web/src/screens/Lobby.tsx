@@ -125,7 +125,7 @@ function SharedScreenInvite({
 
 const SPEEDS: { value: BotSpeed; label: string; blurb: string }[] = [
   { value: "human", label: "Human-like", blurb: "A few seconds a turn, like people play." },
-  { value: "lightning", label: "Lightning", blurb: "As fast as the server can deal them." },
+  { value: "lightning", label: "Lightning", blurb: "Bots play as quickly as possible." },
 ];
 
 const describeTable = (room: RoomView, anyBots: boolean): string => {

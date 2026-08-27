@@ -15,6 +15,7 @@ import { useReshuffle } from "../../lib/reshuffle.ts";
 import { NEXT_SORT, sortHand, type HandSort } from "../../lib/sort.ts";
 import {
   accusePickerOpen,
+  caughtNarration,
   caughtState,
   stillAccusable,
   sunnyTarget,
@@ -343,6 +344,10 @@ export function useTableState({
   const legal = new Set(game.legalCardIds);
   const skipped = you?.hand.filter((card) => legal.has(card.id)) ?? [];
   const owesPunishment = (you?.hand.length ?? 0) > 1;
+  // Which offence it was and what step three actually does — read off the ruling
+  // and the board rather than inferred in the dialog, which is how it came to
+  // describe the wrong offence and promise a card that never came (#363).
+  const narration = call ? caughtNarration(call, game, owesPunishment) : null;
 
   /** Which of five screens this is, worked out in one place (#225). These were
    * four early returns spread across eighty lines; `lib/tableRoute.ts` has the
@@ -475,6 +480,7 @@ export function useTableState({
     mode,
     nameOf,
     namingCard,
+    narration,
     owesPunishment,
     peeling,
     pilesBlock,

@@ -136,6 +136,7 @@ export function Table({
     mode,
     nameOf,
     namingCard,
+    narration,
     owesPunishment,
     peeling,
     pilesBlock,
@@ -375,8 +376,10 @@ export function Table({
           invite={invitePanel}
           announce={announcing && call && !caughtYou ? { call, onDone: announcementOver } : null}
           caught={
-            showCaught && call
-              ? { call, skipped, owesPunishment, onDone: acknowledgeCaught }
+            // `narration` is non-null exactly when `call` is; the pair is checked
+            // together so the dialog cannot be raised without what it says.
+            showCaught && call && narration
+              ? { call, skipped, narration, owesPunishment, onDone: acknowledgeCaught }
               : null
           }
         />

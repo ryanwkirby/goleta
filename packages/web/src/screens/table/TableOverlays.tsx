@@ -7,6 +7,7 @@ import { SunnyCaught } from "../../components/sunny/SunnyCaught.tsx";
 import { SunnyExplainer } from "../../components/sunny/SunnyExplainer.tsx";
 import { ANNOUNCE_MS } from "../../lib/beats.ts";
 import type { SunnyCalled } from "../../lib/judgedCall.ts";
+import type { CaughtNarration } from "../../lib/sunnyOffer.ts";
 
 /**
  * Everything the table draws *over* itself: a ruling, a punishment, an
@@ -28,6 +29,8 @@ export interface CaughtDialog {
   call: SunnyCalled;
   /** The play they were dodging, still in hand because the rewind left it. */
   skipped: Card[];
+  /** Which offence and which third step, decided in `lib/sunnyOffer.ts` (#363). */
+  narration: CaughtNarration;
   owesPunishment: boolean;
   onDone: () => void;
 }
@@ -80,8 +83,9 @@ export function TableOverlays({
         <SunnyCaught
           callerName={nameOf(caught.call.callerId)}
           skipped={caught.skipped}
-          returned={caught.call.returned}
+          narration={caught.narration}
           owesPunishment={caught.owesPunishment}
+          nameOf={nameOf}
           onDone={caught.onDone}
         />
       ) : null}

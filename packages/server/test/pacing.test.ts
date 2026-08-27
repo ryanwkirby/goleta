@@ -6,8 +6,12 @@
  * made just reads as lag.
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
+import { RULING_HOLD_MS } from "../src/rooms.ts";
 import { DEFAULT_BOT_TIMING, botPace, type BotMoveShape } from "../src/socket.ts";
 
 const ordinary: BotMoveShape = { call: false, midTurn: false };
@@ -55,5 +59,34 @@ describe("a bot's pace", () => {
     expect(botPace(human, { ...ordinary, call: true })).toBeGreaterThan(
       botPace(human, ordinary),
     );
+  });
+});
+
+/**
+ * `RULING_HOLD_MS` is `PEEL_MS + ANNOUNCE_MS` written out a second time, on the
+ * far side of a boundary the server may not import across: the browser bundle is
+ * not the server's to reach into, and `packages/engine` is rules — a beat is
+ * neither (#356).
+ *
+ * So the duplication is paid for here rather than assumed. The figures are read
+ * out of `beats.ts` as text, which is crude and is the point: change one and this
+ * fails, loudly, in the package that would otherwise let bots move under the tail
+ * of an announcement nobody had finished watching.
+ */
+const beats = (): Record<string, number> => {
+  const source = readFileSync(resolve(import.meta.dirname, "../../web/src/lib/beats.ts"), "utf8");
+  const found: Record<string, number> = {};
+  for (const [, name, value] of source.matchAll(/export const (\w+) = (\d+);/g)) {
+    found[name as string] = Number(value);
+  }
+  return found;
+};
+
+describe("the hold on a judged ruling", () => {
+  it("is exactly as long as the beat both screens draw", () => {
+    const { PEEL_MS, ANNOUNCE_MS } = beats();
+    expect(PEEL_MS).toBeGreaterThan(0);
+    expect(ANNOUNCE_MS).toBeGreaterThan(0);
+    expect(RULING_HOLD_MS).toBe((PEEL_MS ?? 0) + (ANNOUNCE_MS ?? 0));
   });
 });

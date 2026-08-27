@@ -81,7 +81,9 @@ export function Piles({
   // named card over whichever column the deck is in, which is why it is handed
   // `deckSide` too. Nothing here moves or unmounts, so every anchor stays where
   // it was.
-  const aside = peel ? "opacity-25 transition-opacity duration-300" : "transition-opacity";
+  // The fade is part of the wind-back rather than a state change under it, so it
+  // takes the peel's own pace rather than a UI transition's (#356).
+  const aside = peel ? "opacity-25 transition-opacity duration-700" : "transition-opacity";
   const pileBox = size === "xl" ? "h-44 w-33 rounded-2xl" : "h-32 w-24 rounded-xl";
 
   return (
@@ -137,7 +139,10 @@ export function Piles({
             className={[pileBox, "border border-dashed border-white/15"].join(" ")}
           />
         )}
-        {peel ? <SunnyPeel {...peel} irl={irl} deckSide={deckSide} /> : null}
+        {/* `size` goes down with it: the mark over the card in play has to be
+            exactly the size the pile is drawn at, or the live top card shows
+            around the edges of the evidence (#356). */}
+        {peel ? <SunnyPeel {...peel} irl={irl} size={size} deckSide={deckSide} /> : null}
         {/* One badge, two things it can say, in the same place either way — so an
             answer arriving fills the mark in rather than putting a badge on the
             board out of nowhere. At the pile because that is where the decision

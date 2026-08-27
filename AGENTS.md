@@ -416,6 +416,34 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   they are because a call is watched on a phone and on the screen in the middle
   of the table and has to be the same length on both (#185).
 
+  **The length of the hold is now the length of the movement, which it was not**
+  (#356). #324 made the beat longer and cut the words, and both were right, and
+  the peel still read as *flash, then wait*: every card played since the reach
+  slid aside **at once** in 420ms and the named card arrived 200ms into that, so
+  everything was over inside the first fifth of 2600 and the screen was a
+  photograph for two seconds. The hold was never what people missed; the
+  transition was. It winds back **one card at a time, oldest first**, and only
+  once the board is at the reach does the named card arrive — its own beat rather
+  than an overlap.
+
+  That schedule is `lib/peel.ts` and it is arithmetic, so it is tested. Three
+  things hold it: **it takes a count and nothing else**, so a wrong call peels at
+  exactly the speed a right one does and the pacing cannot become the tell #50
+  removed; **the settle at the end is a floor rather than the leftover**, so a
+  long queue of cards tightens the stagger instead of arriving as the
+  announcement does; and **the whole of it fits inside `PEEL_MS`**, so
+  `compress`'s `floor` in `motion/plan.ts` — set off the cursor past that hold —
+  still clears it. Under reduced motion the keyframes are flat *and the delays
+  are zeroed*: a stagger there would be a sequence of jumps.
+
+  **The mark over the card in play is drawn at the size the pile is.** It was
+  hard-coded to `lg` while `TableScreen` draws the pile at `xl`, so 96×128 sat
+  pinned to the top left of 132×176 and a strip of the **live** top card showed
+  down the right and along the bottom of the evidence — a different card from the
+  one being ruled on, on the one screen the whole table is looking at. The cards
+  held out beside it stay a rung down at `md`, because their fan offsets are
+  written for that rung.
+
   It is derived on the way out and never held on the state. `Challenge` carries
   `reachPile` — the pile frozen at the same instant as `reach`, and by the same
   rule — because the offender may play on top of the card they reached against
@@ -538,6 +566,31 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   and they don't. `DEFAULT_BOT_TIMING` is untouched by any of it: the fix is
   stopping the clock, not stretching every figure at the table to fit the
   slowest possible call. (#73)
+- **And they wait out a ruling, which is the third hold and the only one that is
+  nobody's choice (#356).** `RULING_HOLD_MS` in `rooms.ts` — `PEEL_MS +
+  ANNOUNCE_MS`, the beat both screens already draw (#185) — starts the moment the
+  server emits `sunnyCalled`, and `scheduleBots` takes the later of it and
+  `callHeldUntil`. It is not #56 coming back for the same reason #73 isn't: that
+  grace was bots idling on the *possibility* of a call, on every draw, all game.
+  This hangs off a call that has actually landed, is a fixed length, and ends.
+
+  **Bots are all that stops, and the draw pile is the thing to check that
+  against.** It stays tappable throughout, with no warning and no disabled state
+  — a ruling that greyed the deck out for seven seconds would be the first rule
+  in this section broken under another name, and seven seconds is a far more
+  tempting place to do it than five (#209's note about the reshuffle). What was
+  stalling the moment was bots; bots are what stop.
+
+  It is also what closes the last of the wrong-card problem: `SunnyPeel` draws
+  the evidence off the **event** while `Piles` draws the live top card
+  underneath, so a bot playing on mid-peel put a card on the board that the
+  ruling above it was not about. Sizing the mark to the pile (below) hides it;
+  stopping the bots means there is nothing to hide.
+
+  The figure is written out on the server rather than imported: the browser
+  bundle is not the server's to reach into and `packages/engine` is rules.
+  `pacing.test.ts` reads `beats.ts` as text and fails if the two drift, which is
+  how that duplication is paid for rather than assumed.
 - **A hold is never broadcast, and it can't be leaned on.** That somebody is
   weighing a call is not something the table gets told — it would be a tell
   about a verdict nothing else here gives away. Bots going quiet is visible, and
@@ -625,8 +678,11 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   recycled pile is shuffled and its order *is* deck order, which `redact.ts`
   guards, and the only face this moment shows is the card turned up at the end.
   **It is presentation, never rules** — no server change, no engine event, and
-  `DEFAULT_BOT_TIMING` untouched, so bots may well move underneath it exactly as
-  they do under the peel. **It is not a gate on anything, least of all the draw
+  `DEFAULT_BOT_TIMING` untouched, so bots may well move underneath it. **They no
+  longer do under the peel**, and that is #356 rather than this changing: a
+  reshuffle is scenery and may be played through, a ruling is the table being
+  told what just happened. The two are not the same kind of moment and only one
+  of them stops the room. **It is not a gate on anything, least of all the draw
   pile**, which stays tappable throughout with no warning and no disabled state;
   five seconds of animation is a tempting place to quietly break the first rule
   in this section. And **it queues behind a judged call rather than racing one**,

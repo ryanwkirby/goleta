@@ -115,6 +115,9 @@ export interface Room {
   /** One table, one thread of luck. */
   botSeed: number;
   callHolds: Record<PlayerId, CallHold>;
+  /** When the bots may move again after a judged call, or 0. See
+   * `rulingHeldUntil`. */
+  ruling: number;
   sunnyVerdict: SunnyVerdict | null;
   game: GameState | null;
   gamesPlayed: number;
@@ -232,6 +235,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     options: DEFAULT_OPTIONS,
     botSeed: newSeed(),
     callHolds: {},
+    ruling: 0,
     sunnyVerdict: null,
     game: null,
     gamesPlayed: 0,
@@ -665,6 +669,12 @@ export const applySeatIntent = (
     room.lastWinnerId = result.state.winnerId;
     clearAutopilots(room);
   }
+  // The table watches a ruling; the bots wait it out (#356). Set here rather
+  // than on a message from a browser, because the server is what knows when it
+  // said it.
+  if (result.events.some((event) => event.type === "sunnyCalled")) {
+    room.ruling = Date.now() + RULING_HOLD_MS;
+  }
   touch(room);
   return { ok: true, events: result.events };
 };
@@ -672,6 +682,31 @@ export const applySeatIntent = (
 /** A backstop, not a timer anybody is meant to meet: submitting, cancelling and
  * the window closing all lift the hold before this ever fires. */
 export const CALL_HOLD_MS = 30_000;
+
+/**
+ * How long the table is watching a judged call, and therefore how long the bots
+ * wait it out (#356).
+ *
+ * **`PEEL_MS + ANNOUNCE_MS`**, the two figures in `packages/web/src/lib/beats.ts`
+ * that both screens already share (#185). It is written out here rather than
+ * imported because the server may not reach into the browser bundle, and
+ * `packages/engine` is rules — a beat is neither. `pacing.test.ts` reads that
+ * file and fails if the two drift, which is the price of the duplication being
+ * paid rather than assumed.
+ *
+ * **Bots are all this stops**, exactly as `CALL_HOLD_MS` is. Nothing on any
+ * screen is gated on it — least of all the draw pile, which stays tappable
+ * throughout with no warning and no disabled state. A ruling that greyed the
+ * deck out for seven seconds would be the guard rail the first rule in
+ * `AGENTS.md` exists to refuse, arriving under another name. What was stalling
+ * the moment was bots; bots are what stop.
+ *
+ * It is #209's note about the reshuffle answered rather than contradicted: a
+ * reshuffle is scenery and may be played through, a ruling is the table being
+ * told what just happened. Cards moving under it are both a distraction and how
+ * the live top card came to disagree with the evidence drawn over it.
+ */
+export const RULING_HOLD_MS = 6800;
 
 /** Same identity `sunnyVerdict` uses: two reaches by the same player are one
  * window, somebody else's is a different one, and holds do not carry over. */
@@ -721,6 +756,21 @@ export const holdCall = (
  * goes. **Bots are all this stops** — a person's tap is never swallowed because
  * somebody else is thinking.
  */
+/**
+ * When the bots may move again after a judged call, or 0. Pruned as it is read,
+ * the way the call holds are: a deadline in the past is nothing.
+ *
+ * Room-wide and keyed on nothing, unlike `callHeldUntil` — the challenge it came
+ * from is resolved by the time this is set, so there is no window to hang it off.
+ */
+export const rulingHeldUntil = (room: Room, now = Date.now()): number => {
+  if (room.ruling <= now) {
+    room.ruling = 0;
+    return 0;
+  }
+  return room.ruling;
+};
+
 export const callHeldUntil = (room: Room, now = Date.now()): number => {
   const window = challengeKey(room);
   let until = 0;

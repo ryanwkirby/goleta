@@ -4,9 +4,21 @@ import type { Card, SunnyEvidence } from "@goleta/engine";
 
 import { PlayingCard } from "../Card.tsx";
 import { SUIT_LABEL, type CardSize } from "../../lib/cardShape.ts";
+import { peelSchedule } from "../../lib/peel.ts";
 
 /** A card said aloud, for the one caption a screen reader gets. */
 const spoken = (card: Card): string => `${card.rank} of ${SUIT_LABEL[card.suit]}`;
+
+/** The card's own corner at every rung. It was a two-way on `lg` while there
+ * were only two rungs in play, and the shared screen's `xl` fell through it to
+ * `rounded-lg` (#356). */
+const RING_RADIUS: Record<CardSize, string> = {
+  sm: "rounded-md",
+  md: "rounded-lg",
+  lg: "rounded-xl",
+  xl: "rounded-2xl",
+  "2xl": "rounded-3xl",
+};
 
 /**
  * A card the evidence points at: the table's amber ring, and nothing else.
@@ -42,7 +54,7 @@ function Marked({
     <span
       className={[
         "relative inline-flex ring-2 ring-amber-400",
-        size === "lg" ? "rounded-xl" : "rounded-lg",
+        RING_RADIUS[size],
         lift ? "-translate-y-3" : "",
       ].join(" ")}
     >
@@ -68,6 +80,7 @@ export function SunnyPeel({
   callerName,
   targetName,
   irl = false,
+  size = "lg",
   deckSide = "left",
 }: {
   evidence: SunnyEvidence;
@@ -76,6 +89,18 @@ export function SunnyPeel({
   callerName: string;
   targetName: string;
   irl?: boolean;
+  /**
+   * The size the pile itself is drawn at, from `Piles`. **The mark over the card
+   * in play has to be exactly it** (#356): this was hard-coded to `lg` while
+   * `TableScreen` drew the pile at `xl`, so 96×128 sat pinned to the top left of
+   * 132×176 and a 36px strip down the right and a 48px strip along the bottom of
+   * the **live** top card showed around the evidence — a different card from the
+   * one being ruled on, on the one screen the whole table is looking at.
+   *
+   * The cards held out beside it stay a rung down at `md`: their fan offsets are
+   * written for that rung, and moving them is a separate, visual change.
+   */
+  size?: Extract<CardSize, "lg" | "xl">;
   /**
    * Which column the deck is in, from `Piles`. Everything below hangs off the
    * card in play, so both pieces have to mirror when the columns do (#259).
@@ -88,6 +113,9 @@ export function SunnyPeel({
   const suitNote = activeSuit === inPlay.suit ? "" : `, with ${SUIT_LABEL[activeSuit]} called`;
   // Away from the deck for the cards played since, over it for the card named.
   const away = deckSide === "right" ? -1 : 1;
+  // When each piece moves. A count and nothing else goes in, so a wrong call
+  // peels at exactly the speed a right one does (#50, #356).
+  const beat = peelSchedule(since.length);
 
   return (
     <>
@@ -102,7 +130,7 @@ export function SunnyPeel({
           that landed they are already the same card, which is what lets the peel
           hand off into the rewind without the pile jumping. */}
       <span aria-hidden className="pointer-events-none absolute left-0 top-0">
-        <Marked card={inPlay} size="lg" irl={irl} />
+        <Marked card={inPlay} size={size} irl={irl} />
       </span>
 
       {/* Played since the offence, fanned off the top, oldest first. The window
@@ -124,13 +152,17 @@ export function SunnyPeel({
           <span
             key={card.id}
             className={[
-              "relative animate-peel-aside",
+              "relative peel-aside",
               index === 0 ? "" : since.length > 2 ? "-ml-16" : "-ml-14",
             ].join(" ")}
             style={
               {
                 "--peel-from": `calc(${away * -3}rem - ${away * index} * 0.75rem)`,
                 "--peel-tilt": `${away * (index + 1) * 5}deg`,
+                "--peel-ms": `${beat.asideMs}ms`,
+                // Oldest first, so the pile is watched winding back rather than
+                // handed a fan that has already arrived.
+                "--peel-delay": `${index * beat.staggerMs}ms`,
                 ...(card.id === named.id ? { "--peel-opacity": 1 } : {}),
               } as CSSProperties
             }
@@ -157,9 +189,17 @@ export function SunnyPeel({
         <span
           aria-hidden
           className={[
-            "pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 animate-peel-mark",
+            "pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 peel-mark",
             away === 1 ? "right-full mr-6" : "left-full ml-6",
           ].join(" ")}
+          style={
+            {
+              "--peel-mark-ms": `${beat.markMs}ms`,
+              // Its own beat rather than a 200ms overlap with the slide: it may
+              // not arrive until the board is back to the reach.
+              "--peel-mark-delay": `${beat.markDelayMs}ms`,
+            } as CSSProperties
+          }
         >
           <Marked card={named} size="md" lift irl={irl} />
         </span>

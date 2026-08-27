@@ -118,6 +118,10 @@ export interface Room {
   /** When the bots may move again after a judged call, or 0. See
    * `rulingHeldUntil`. */
   ruling: number;
+  /** The same for the deck running out, and a separate field rather than one
+   * deadline shared with the ruling: two holds that can overlap must not be able
+   * to shorten each other. See `reshuffleHeldUntil` (#383). */
+  reshuffle: number;
   sunnyVerdict: SunnyVerdict | null;
   game: GameState | null;
   gamesPlayed: number;
@@ -236,6 +240,7 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     botSeed: newSeed(),
     callHolds: {},
     ruling: 0,
+    reshuffle: 0,
     sunnyVerdict: null,
     game: null,
     gamesPlayed: 0,
@@ -672,8 +677,15 @@ export const applySeatIntent = (
   // The table watches a ruling; the bots wait it out (#356). Set here rather
   // than on a message from a browser, because the server is what knows when it
   // said it.
+  const now = Date.now();
   if (result.events.some((event) => event.type === "sunnyCalled")) {
-    room.ruling = Date.now() + RULING_HOLD_MS;
+    room.ruling = now + RULING_HOLD_MS;
+  }
+  // And the deck running out, second verse (#383). Its own field, so a recycle
+  // arriving in the same breath as a call — which `finishSunny` can do — cannot
+  // shorten the ruling hold it is queued behind.
+  if (result.events.some((event) => event.type === "reshuffled")) {
+    room.reshuffle = now + RESHUFFLE_HOLD_MS;
   }
   touch(room);
   return { ok: true, events: result.events };
@@ -701,12 +713,47 @@ export const CALL_HOLD_MS = 30_000;
  * `AGENTS.md` exists to refuse, arriving under another name. What was stalling
  * the moment was bots; bots are what stop.
  *
- * It is #209's note about the reshuffle answered rather than contradicted: a
+ * It was #209's note about the reshuffle answered rather than contradicted — a
  * reshuffle is scenery and may be played through, a ruling is the table being
- * told what just happened. Cards moving under it are both a distraction and how
- * the live top card came to disagree with the evidence drawn over it.
+ * told what just happened — and #383 has since decided that distinction does not
+ * survive the length: `RESHUFFLE_HOLD_MS` below is this same shape, second
+ * verse. What is still only true here is the wrong-card half: `SunnyPeel` draws
+ * the evidence off the event while `Piles` draws the live top card underneath,
+ * so a bot playing on mid-peel put a card on the board the ruling above it was
+ * not about.
  */
 export const RULING_HOLD_MS = 6800;
+
+/**
+ * How long the deck running out holds the table, and therefore how long the bots
+ * wait it out (#383).
+ *
+ * **`RESHUFFLE_MS`**, matched exactly, the way the ruling hold matches the beat
+ * it is about. Written out here rather than imported for that hold's reason, and
+ * checked against `beats.ts` by the same test.
+ *
+ * It reverses the half of #209 that said bots may move underneath this, and the
+ * argument is length rather than kind. At lightning speed (`botPace` → 700ms)
+ * nearly five seconds is up to seven bot moves landing during a hold that exists
+ * so people can see **one** thing happen: the moment narrated over by the next
+ * moment, which is the failure #209 was filed about arriving from the other
+ * side. If it is worth 4.8 seconds of everybody's time it is worth not talking
+ * over. What is *not* reversed is that the reshuffle is presentation — no engine
+ * event, no rule, and `DEFAULT_BOT_TIMING` untouched.
+ *
+ * **Bots are all this stops**, and the draw pile is the thing to check that
+ * against: it stays tappable throughout with no warning and no disabled state.
+ * #209 names this exact five seconds as a tempting place to put a guard rail,
+ * and it is not one. A person's tap is never swallowed because the deck is being
+ * shuffled.
+ *
+ * It is a **separate deadline** from the ruling rather than one field shared.
+ * `finishSunny` can emit both in one outcome, and #209 rules on that order: the
+ * peel goes first, always. Two deadlines and a `Math.max` give that for free,
+ * and — the part that matters — a recycle can never *shorten* a ruling hold that
+ * is already running.
+ */
+export const RESHUFFLE_HOLD_MS = 4800;
 
 /** Same identity `sunnyVerdict` uses: two reaches by the same player are one
  * window, somebody else's is a different one, and holds do not carry over. */
@@ -769,6 +816,18 @@ export const rulingHeldUntil = (room: Room, now = Date.now()): number => {
     return 0;
   }
   return room.ruling;
+};
+
+/**
+ * When the bots may move again after the deck ran out, or 0 (#383). Pruned as it
+ * is read, and room-wide and keyed on nothing, exactly as the ruling hold is.
+ */
+export const reshuffleHeldUntil = (room: Room, now = Date.now()): number => {
+  if (room.reshuffle <= now) {
+    room.reshuffle = 0;
+    return 0;
+  }
+  return room.reshuffle;
 };
 
 export const callHeldUntil = (room: Room, now = Date.now()): number => {

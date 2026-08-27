@@ -16,6 +16,7 @@ import {
 
 import {
   CALL_HOLD_MS,
+  RESHUFFLE_HOLD_MS,
   RULING_HOLD_MS,
   addBot,
   applySeatIntent,
@@ -32,6 +33,7 @@ import {
   placeSeat,
   nextBotMove,
   rejoinRoom,
+  reshuffleHeldUntil,
   roomView,
   rulingHeldUntil,
   setAutopilot,
@@ -148,8 +150,8 @@ const botDrawsWithAPlay = (room: Room): string => {
   // where a punishment card is tucked (#364).
   const topRank = game.discardPile[game.discardPile.length - 1]?.rank;
   if (topRank === undefined) throw new Error("no card in play");
-  if (!hand.some((card) => !isPlayable(card, game.activeSuit, topRank))) {
-    const at = game.drawPile.findIndex((card) => !isPlayable(card, game.activeSuit, topRank));
+  if (!hand.some((one) => !isPlayable(one, game.activeSuit, topRank))) {
+    const at = game.drawPile.findIndex((one) => !isPlayable(one, game.activeSuit, topRank));
     const dud = game.drawPile[at];
     const spare = hand[1];
     if (!dud || !spare) throw new Error("no unplayable card anywhere");
@@ -161,6 +163,46 @@ const botDrawsWithAPlay = (room: Room): string => {
   expect(outcome.ok).toBe(true);
   expect(room.game?.challenge?.drawerId).toBe(bot.id);
   return bot.id;
+};
+
+/** Every face-down card turned face up, so the next reach has to recycle. The
+ * cards go to the *bottom* of the pile, which leaves the card in play where it
+ * is and the table still totalling 52. */
+const deckRunsOut = (room: Room, at: number): void => {
+  beginGame(room, room.hostId);
+  const game = room.game;
+  if (!game) throw new Error("no game");
+  game.discardPile.unshift(...game.drawPile.splice(0));
+
+  const reaching = game.players[game.turnIndex];
+  if (!reaching) throw new Error("nobody to draw");
+  vi.setSystemTime(at);
+  const outcome = applySeatIntent(room, reaching.id, {
+    type: "drawCard",
+    playerId: reaching.id,
+  });
+  expect(outcome.ok).toBe(true);
+  expect(outcome.events.some((event) => event.type === "reshuffled")).toBe(true);
+};
+
+/** A landed call, made by the human host against a bot that reached. */
+const callLands = (room: Room, at: number): void => {
+  const drawer = botDrawsWithAPlay(room);
+  const game = room.game;
+  if (!game) throw new Error("no game");
+  const legal = game.challenge?.reach.hand.find((one) =>
+    isPlayable(one, game.challenge!.reach.activeSuit, game.challenge!.reach.topRank),
+  );
+  if (!legal) throw new Error("nothing legal to name");
+  vi.setSystemTime(at);
+  const outcome = applySeatIntent(room, room.hostId, {
+    type: "callSunny",
+    playerId: room.hostId,
+    cardId: legal.id,
+  });
+  expect(outcome.ok).toBe(true);
+  expect(outcome.events.some((event) => event.type === "sunnyCalled")).toBe(true);
+  expect(drawer).not.toBe(room.hostId);
 };
 
 describe("passing the deal", () => {
@@ -698,26 +740,6 @@ describe("bots and the Sunny Rule", () => {
  * disagree with the evidence drawn over it.
  */
 describe("holding the table while a ruling is watched", () => {
-  /** A landed call, made by the human host against a bot that reached. */
-  const callLands = (room: Room, at: number): void => {
-    const drawer = botDrawsWithAPlay(room);
-    const game = room.game;
-    if (!game) throw new Error("no game");
-    const legal = game.challenge?.reach.hand.find((one) =>
-      isPlayable(one, game.challenge!.reach.activeSuit, game.challenge!.reach.topRank),
-    );
-    if (!legal) throw new Error("nothing legal to name");
-    vi.setSystemTime(at);
-    const outcome = applySeatIntent(room, room.hostId, {
-      type: "callSunny",
-      playerId: room.hostId,
-      cardId: legal.id,
-    });
-    expect(outcome.ok).toBe(true);
-    expect(outcome.events.some((event) => event.type === "sunnyCalled")).toBe(true);
-    expect(drawer).not.toBe(room.hostId);
-  };
-
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -769,6 +791,77 @@ describe("holding the table while a ruling is watched", () => {
     expect(outcome.events.find((event) => event.type === "sunnyCalled")?.correct).toBe(false);
     expect(drawer).not.toBe(room.hostId);
     expect(rulingHeldUntil(room, 5000)).toBe(5000 + RULING_HOLD_MS);
+  });
+});
+
+/**
+ * The third hold (#383), and #209's note about the reshuffle reversed rather
+ * than sidestepped. The deck running out is given about five seconds to be
+ * noticed in, and the bots played straight through all of it — at lightning
+ * speed up to seven moves landing during a hold that exists so people can see
+ * *one* thing happen. If it is worth 4.8 seconds of everybody's time it is worth
+ * not talking over.
+ *
+ * Still presentation: no engine change, no new event, `DEFAULT_BOT_TIMING`
+ * untouched. Bots are all that stops.
+ */
+describe("holding the table while the deck is shuffled back", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("holds nothing while the deck still has cards in it", () => {
+    const room = seatedRoom();
+    beginGame(room, room.hostId);
+    expect(reshuffleHeldUntil(room)).toBe(0);
+  });
+
+  it("holds for the length of the animation all three screens draw", () => {
+    vi.useFakeTimers();
+    const room = seatedRoom();
+    deckRunsOut(room, 5000);
+    expect(reshuffleHeldUntil(room, 5000)).toBe(5000 + RESHUFFLE_HOLD_MS);
+  });
+
+  it("lets go on its own, and prunes as it is read", () => {
+    vi.useFakeTimers();
+    const room = seatedRoom();
+    deckRunsOut(room, 5000);
+
+    expect(reshuffleHeldUntil(room, 5000 + RESHUFFLE_HOLD_MS - 1)).toBeGreaterThan(0);
+    expect(reshuffleHeldUntil(room, 5000 + RESHUFFLE_HOLD_MS)).toBe(0);
+    expect(room.reshuffle).toBe(0);
+  });
+
+  it("never shortens a ruling already being watched", () => {
+    // `finishSunny` can rewind a recycle and rule on the call in one outcome, and
+    // the peel goes first, always (#209). Two deadlines rather than one field
+    // they take turns writing is what makes that fall out of `Math.max`.
+    vi.useFakeTimers();
+    const room = seatedRoom();
+    callLands(room, 5000);
+    room.reshuffle = 5000 + RESHUFFLE_HOLD_MS;
+
+    expect(Math.max(rulingHeldUntil(room, 5000), reshuffleHeldUntil(room, 5000))).toBe(
+      5000 + RULING_HOLD_MS,
+    );
+    expect(room.ruling).toBe(5000 + RULING_HOLD_MS);
+  });
+
+  it("leaves the draw pile alone, because a hold is on bots and nothing else", () => {
+    // #209 names this exact five seconds as a tempting place to put a guard rail.
+    // A person's tap is never swallowed because the deck is being shuffled.
+    vi.useFakeTimers();
+    const room = seatedRoom();
+    deckRunsOut(room, 5000);
+
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    const reaching = game.players[game.turnIndex];
+    if (!reaching) throw new Error("nobody to draw");
+    expect(applySeatIntent(room, reaching.id, { type: "drawCard", playerId: reaching.id }).ok).toBe(
+      true,
+    );
   });
 });
 

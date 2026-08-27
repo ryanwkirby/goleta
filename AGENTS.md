@@ -586,20 +586,20 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   and they don't. `DEFAULT_BOT_TIMING` is untouched by any of it: the fix is
   stopping the clock, not stretching every figure at the table to fit the
   slowest possible call. (#73)
-- **And they wait out a ruling, which is the third hold and the only one that is
-  nobody's choice (#356).** `RULING_HOLD_MS` in `rooms.ts` — `PEEL_MS +
-  ANNOUNCE_MS`, the beat both screens already draw (#185) — starts the moment the
-  server emits `sunnyCalled`, and `scheduleBots` takes the later of it and
-  `callHeldUntil`. It is not #56 coming back for the same reason #73 isn't: that
-  grace was bots idling on the *possibility* of a call, on every draw, all game.
-  This hangs off a call that has actually landed, is a fixed length, and ends.
+- **And they wait out a ruling, which is nobody's choice (#356).**
+  `RULING_HOLD_MS` in `rooms.ts` — `PEEL_MS + ANNOUNCE_MS`, the beat both screens
+  already draw (#185) — starts the moment the server emits `sunnyCalled`, and
+  `scheduleBots` takes the latest of it, `callHeldUntil` and the reshuffle below.
+  It is not #56 coming back for the same reason #73 isn't: that grace was bots
+  idling on the *possibility* of a call, on every draw, all game. This hangs off a
+  call that has actually landed, is a fixed length, and ends.
 
   **Bots are all that stops, and the draw pile is the thing to check that
   against.** It stays tappable throughout, with no warning and no disabled state
   — a ruling that greyed the deck out for seven seconds would be the first rule
   in this section broken under another name, and seven seconds is a far more
-  tempting place to do it than five (#209's note about the reshuffle). What was
-  stalling the moment was bots; bots are what stop.
+  tempting place to do it than five. What was stalling the moment was bots; bots
+  are what stop.
 
   It is also what closes the last of the wrong-card problem: `SunnyPeel` draws
   the evidence off the **event** while `Piles` draws the live top card
@@ -607,10 +607,21 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   ruling above it was not about. Sizing the mark to the pile (below) hides it;
   stopping the bots means there is nothing to hide.
 
-  The figure is written out on the server rather than imported: the browser
+  Both figures are written out on the server rather than imported: the browser
   bundle is not the server's to reach into and `packages/engine` is rules.
-  `pacing.test.ts` reads `beats.ts` as text and fails if the two drift, which is
-  how that duplication is paid for rather than assumed.
+  `pacing.test.ts` reads `beats.ts` as text and fails if either pair drifts, which
+  is how that duplication is paid for rather than assumed.
+- **And they wait out a reshuffle, on the same argument one moment later
+  (#383).** `RESHUFFLE_HOLD_MS`, `RESHUFFLE_MS` matched exactly, set off a
+  `reshuffled` event and read as the third term in that `Math.max`. The bullet
+  further down has the reasoning and what it reverses; the thing to know here is
+  that it is **its own deadline** rather than a field the two take turns writing,
+  because `finishSunny` can rule on a call and rewind a recycle in one outcome
+  and the peel goes first, always (#209).
+
+  So there are four holds now and only two of them are anybody's choice. The two
+  that are not — a ruling and a reshuffle — are both fixed lengths started by an
+  event the server emitted, and both stop bots and nothing else.
 - **A hold is never broadcast, and it can't be leaned on.** That somebody is
   weighing a call is not something the table gets told — it would be a tell
   about a verdict nothing else here gives away. Bots going quiet is visible, and
@@ -706,17 +717,40 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   Four things it must not become. **Every card in it stays face down**: the
   recycled pile is shuffled and its order *is* deck order, which `redact.ts`
   guards, and the only face this moment shows is the card turned up at the end.
-  **It is presentation, never rules** — no server change, no engine event, and
-  `DEFAULT_BOT_TIMING` untouched, so bots may well move underneath it. **They no
-  longer do under the peel**, and that is #356 rather than this changing: a
-  reshuffle is scenery and may be played through, a ruling is the table being
-  told what just happened. The two are not the same kind of moment and only one
-  of them stops the room. **It is not a gate on anything, least of all the draw
-  pile**, which stays tappable throughout with no warning and no disabled state;
-  five seconds of animation is a tempting place to quietly break the first rule
-  in this section. And **it queues behind a judged call rather than racing one**,
-  because a recycle can land in the same breath as a call and a landed call
-  rewinds the recycle — the peel goes first, always.
+  **It is presentation, never a rule** — no engine event, no rule that reads it,
+  and `DEFAULT_BOT_TIMING` untouched. **It is not a gate on anything, least of
+  all the draw pile**, which stays tappable throughout with no warning and no
+  disabled state; five seconds of animation is a tempting place to quietly break
+  the first rule in this section. And **it queues behind a judged call rather
+  than racing one**, because a recycle can land in the same breath as a call and
+  a landed call rewinds the recycle — the peel goes first, always.
+
+  **The bots do stop for it, which they did not until #383** — and that reverses
+  the one sentence of #209 that said otherwise. It read *"no server change …  so
+  bots may well move underneath it"*, and #356 sharpened it into a distinction:
+  a reshuffle is scenery and may be played through, a ruling is the table being
+  told what just happened. The distinction does not survive the length. At
+  lightning speed (`botPace` → 700ms) nearly five seconds is up to seven bot
+  moves landing during a hold that exists so people can see **one** thing happen
+  — the moment narrated over by the next moment, which is the failure this bullet
+  was filed about arriving from the other side. If it is worth 4.8 seconds of
+  everybody's time it is worth not talking over.
+
+  What that costs is a **server change** and nothing else: `RESHUFFLE_HOLD_MS` in
+  `rooms.ts`, `RESHUFFLE_MS` written out again for `RULING_HOLD_MS`'s reason and
+  held to it by the same test, set off a `reshuffled` event in an applied
+  intent's outcome and read as a third term in `scheduleBots`. Its **own field**
+  beside `room.ruling` rather than one deadline shared: `finishSunny` can emit
+  both in one outcome, and a recycle must never *shorten* a ruling already being
+  watched. It is not #56 coming back for #73's and #356's reason — that grace was
+  bots idling on the *possibility* of a call, on every draw, all game; this hangs
+  off an event that has actually happened, is a fixed length, and ends.
+
+  **Bots are all that stops**, and the draw pile is the thing to check that
+  against. It is the reason the figure matching the animation exactly is a
+  presentation decision and not a rule: a recycle happens on somebody's *turn*,
+  usually mid-turn, so the hold is added to a turn already running — where a
+  ruling falls between turns.
 
   `compress` learned a `floor` for it. The cap is about a queue nobody is
   watching any more; a hold is the opposite. It used to measure the span from

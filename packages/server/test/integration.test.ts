@@ -263,8 +263,14 @@ describe("a room over the wire", () => {
     expect(guest.game?.players.every((p) => p.hand !== null)).toBe(true);
 
     // Let the humans play like bots would, and let the game run itself out.
+    //
+    // The budget is generous because two of the holds are **not** flattened by
+    // `FLAT_OUT`: a ruling and a reshuffle are fixed lengths on the room store
+    // (#356, #383), not bot pacing, so a game that recycles twice really does
+    // spend 9.6 seconds of it waiting. Measured over 200 seeded games, two
+    // recycles is the most any of them needs.
     await Promise.all([drive(host), drive(guest)]);
-    await host.until((c) => c.room?.status === "finished", 20_000);
+    await host.until((c) => c.room?.status === "finished", 30_000);
     expect(host.room?.lastWinnerId).toBeTruthy();
     expect(host.game?.status).toBe("over");
   }, 40_000);

@@ -116,7 +116,21 @@ const hostDrawsWithAPlay = (room: Room): void => {
   expect(room.game?.challenge?.violation).not.toBeNull();
 };
 
-/** The same the other way round, so the human host is the one who could call. */
+/**
+ * The same the other way round, so the human host is the one who could call.
+ *
+ * The reach hand is left holding **both** kinds of card, because the tests below
+ * name one of each: a legal one, which is what makes the reach a violation at
+ * all, and an illegal one, which is what a wrong call is made of. The first
+ * falls out of pointing `activeSuit` at `hand[0]`; the second used to be
+ * whatever the deal happened to leave over, and about one deal in fifty leaves
+ * none — every card playable, and the wrong-call test throwing rather than
+ * failing (#385).
+ *
+ * It is a **swap** with the draw pile rather than a card conjured into the hand:
+ * hands plus deck plus pile come to 52 is the first invariant this game has, and
+ * several tests in this file count it.
+ */
 const botDrawsWithAPlay = (room: Room): string => {
   beginGame(room, room.hostId);
   const game = room.game;
@@ -125,9 +139,23 @@ const botDrawsWithAPlay = (room: Room): string => {
   if (!bot) throw new Error("no bot");
 
   game.turnIndex = game.players.findIndex((player) => player.id === bot.id);
-  const held = game.players[game.turnIndex]?.hand[0];
-  if (!held) throw new Error("no cards");
+  const hand = game.players[game.turnIndex]?.hand;
+  const held = hand?.[0];
+  if (!hand || !held) throw new Error("no cards");
   game.activeSuit = held.suit;
+
+  // The top of the pile is its *last* card — index 0 is the bottom, which is
+  // where a punishment card is tucked (#364).
+  const topRank = game.discardPile[game.discardPile.length - 1]?.rank;
+  if (topRank === undefined) throw new Error("no card in play");
+  if (!hand.some((card) => !isPlayable(card, game.activeSuit, topRank))) {
+    const at = game.drawPile.findIndex((card) => !isPlayable(card, game.activeSuit, topRank));
+    const dud = game.drawPile[at];
+    const spare = hand[1];
+    if (!dud || !spare) throw new Error("no unplayable card anywhere");
+    game.drawPile[at] = spare;
+    hand[1] = dud;
+  }
 
   const outcome = applySeatIntent(room, bot.id, { type: "drawCard", playerId: bot.id });
   expect(outcome.ok).toBe(true);

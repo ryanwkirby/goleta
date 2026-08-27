@@ -184,6 +184,8 @@ const board = (over: Partial<GameView> = {}): GameView =>
   }) as unknown as GameView;
 
 const drawn = { id: "7D#1", rank: "7", suit: "D" } as unknown as Card;
+const alsoDrawn = { id: "10C#1", rank: "10", suit: "C" } as unknown as Card;
+const lastDrawn = { id: "2H#1", rank: "2", suit: "H" } as unknown as Card;
 
 /**
  * What the offender is told, which was written for one offence when there are
@@ -220,7 +222,41 @@ describe("what the offender's dialog says", () => {
 
   it("turns up what was drawn illegally, when anything was", () => {
     const narration = caughtNarration(called({ via: "draw", returned: [drawn] }), board(), true);
-    expect(narration.step3).toEqual({ kind: "returned", cards: [drawn] });
+    expect(narration.step3).toEqual({ kind: "returned", cards: [drawn], board: drawn });
+  });
+
+  it("names the last card back as the one everybody matches, not the first", () => {
+    // `finishSunny` calls `turnUp`, which does `s.activeSuit = last.suit`; the
+    // rest are gone. The dialog said "that's what everyone matches next" about
+    // all of them at once, leaving the offender to guess with two answers in
+    // three wrong (#381).
+    const narration = caughtNarration(
+      called({ via: "draw", returned: [drawn, alsoDrawn, lastDrawn] }),
+      board(),
+      true,
+    );
+
+    expect(narration.step3).toEqual({
+      kind: "returned",
+      cards: [drawn, alsoDrawn, lastDrawn],
+      board: lastDrawn,
+    });
+  });
+
+  it("reads the order off the ruling rather than sorting it", () => {
+    // `returned` arrives in draw order, because `findCards` maps over
+    // `touchedIds`. Nothing here may tidy that up: the order *is* the answer.
+    const narration = caughtNarration(
+      called({ via: "draw", returned: [lastDrawn, drawn] }),
+      board(),
+      true,
+    );
+
+    expect(narration.step3).toEqual({
+      kind: "returned",
+      cards: [lastDrawn, drawn],
+      board: drawn,
+    });
   });
 
   it("shuffles the pile back when there is nothing to turn up and no deck", () => {
@@ -268,6 +304,6 @@ describe("what the offender's dialog says", () => {
     // Being eliminated does not change what step three does with cards that were
     // drawn illegally: `demandPunishment` skips step two and goes straight to it.
     const narration = caughtNarration(called({ via: "draw", returned: [drawn] }), board(), false);
-    expect(narration.step3).toEqual({ kind: "returned", cards: [drawn] });
+    expect(narration.step3).toEqual({ kind: "returned", cards: [drawn], board: drawn });
   });
 });

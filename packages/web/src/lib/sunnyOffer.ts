@@ -99,8 +99,19 @@ export const caughtState = (
  * land.
  */
 export type CaughtStep3 =
-  /** Cards were drawn illegally: they go face up and the last is the new board. */
-  | { kind: "returned"; cards: Card[] }
+  /**
+   * Cards were drawn illegally: they go back face up on top of the pile, and the
+   * **last of them** is the card everybody matches next. The others are simply
+   * gone — `finishSunny` calls `turnUp`, which does `s.activeSuit = last.suit`
+   * and nothing with the rest.
+   *
+   * `board` is the fourth thing decided here rather than in the dialog (#381),
+   * which said "that's what everyone matches next" about all three at once and
+   * left the offender to guess, with two answers in three wrong. `returned`
+   * arrives in draw order, because `findCards` maps over `touchedIds`, so the
+   * answer is its last card and not its first.
+   */
+  | { kind: "returned"; cards: Card[]; board: Card }
   /** Nothing to take back and no deck either, so the pile is shuffled back and a
    * fresh card turned up. Not "nothing to turn up", which is what it used to say
    * — `finishSunny` calls `recycleFaceUpPile`, and that *does* turn one up. */
@@ -129,15 +140,19 @@ export const caughtNarration = (
   // A ruling from a server that has not learned to say which offence it was
   // describes the original one, which is what every such ruling was.
   offence: call.via ?? "draw",
-  step3:
-    call.returned.length > 0
-      ? { kind: "returned", cards: call.returned }
-      : game.drawPileSize === 0
-        ? { kind: "recycled" }
-        : owesPunishment
-          ? { kind: "resumes", playerId: nextUp(game, call.targetId) }
-          : { kind: "nothing" },
+  step3: thirdStep(call, game, owesPunishment),
 });
+
+const thirdStep = (call: SunnyCalled, game: GameView, owesPunishment: boolean): CaughtStep3 => {
+  // The last card back is the one that ends up in play, and asking for it this
+  // way is also the check that there was one: an empty list has no board.
+  const board = call.returned.at(-1);
+  if (board) return { kind: "returned", cards: call.returned, board };
+  if (game.drawPileSize === 0) return { kind: "recycled" };
+  return owesPunishment
+    ? { kind: "resumes", playerId: nextUp(game, call.targetId) }
+    : { kind: "nothing" };
+};
 
 /** The seat up once the penalty is paid: the offender's left, eliminated seats
  * skipped. `players` is in seat order, which is turn order. */

@@ -147,8 +147,8 @@ function CogGlyph() {
 export const describeRules = (rules: HouseRules): string => {
   const on: string[] = [];
   if (!rules.sunny) on.push("no Sunny Rule");
-  if (rules.eights === "nextPlayerNames") on.push("the Power of Eights");
-  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice on Eight");
+  if (rules.eights === "nextPlayerNames") on.push("the Power of 8s");
+  if (rules.seedEight === "dealerNames") on.push("Dealer's Choice on 8");
   if (on.length === 0) return "Playing the standard rules.";
   return `House rules: ${on.join(", ")}.`;
 };
@@ -259,7 +259,7 @@ export function HouseRulesPicker({
     },
     {
       key: "eights",
-      label: "The Power of Eights",
+      label: "The Power of 8s",
       blurb: "The next player names the suit, not whoever played the 8.",
       on: rules.eights === "nextPlayerNames",
       toggle: {
@@ -269,7 +269,7 @@ export function HouseRulesPicker({
     },
     {
       key: "seedEight",
-      label: "Dealer's Choice on Eight",
+      label: "Dealer's Choice on 8",
       blurb: "If the first card of the game is an 8, the dealer gets to choose the suit.",
       on: rules.seedEight === "dealerNames",
       toggle: {

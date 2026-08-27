@@ -71,7 +71,7 @@ const RULES: {
     key: "eights",
     headline: (
       <>
-        Eights are <em>wild</em>.
+        8s are <em>wild</em>.
       </>
     ),
     // The natural-8 exception used to be spelled out here (#151) and the trade

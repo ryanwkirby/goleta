@@ -55,7 +55,12 @@ export function EventLog({
    * be re-deciding its own input. Turning the phone or a seat gaining a row
    * while the log is open leaves it a little stale until it is next opened,
    * which is the trade — the cap is a maximum, so stale means the column
-   * overflows and the page scrolls, the way it always did.
+   * overflows and the page scrolls.
+   *
+   * That is now the only way it does. `logList` no longer floors this above the
+   * room the column has (#358), so opening the log on a phone takes felt the
+   * piles were already sitting in rather than adding to the column — which is
+   * what stops the page becoming scrollable on the tap.
    */
   const [room, setRoom] = useState(0);
   const latest = log[0];

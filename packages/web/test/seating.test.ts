@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { GameView, PlayerView } from "@goleta/engine";
+import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
-import { inTurnOrder, nextStillIn } from "../src/lib/seating.ts";
+import { inTurnOrder, nextStillIn, isHost } from "../src/lib/seating.ts";
 
 const seat = (id: string, eliminated = false): PlayerView => ({
   id,
@@ -106,5 +106,30 @@ describe("who the strip anchors on during your own turn", () => {
   it("is nobody once everyone else is out", () => {
     expect(nextStillIn([seat("b", true), seat("c", true)])).toBeNull();
     expect(nextStillIn([])).toBeNull();
+  });
+});
+
+/** Only the field this predicate reads; a whole `RoomView` fixture would hide
+ * which one matters. */
+const roomHeldBy = (hostId: string | null) => ({ hostId }) as RoomView;
+
+describe("who the host is", () => {
+  it("is the seat whose id matches", () => {
+    expect(isHost(roomHeldBy("p1"), "p1")).toBe(true);
+    expect(isHost(roomHeldBy("p1"), "p2")).toBe(false);
+  });
+
+  it("is nobody in a room nobody owns", () => {
+    // The case this exists for (#326). A room opened from the shared table
+    // screen has no host until somebody joins and a watcher has no `playerId`,
+    // so the obvious `room.hostId === playerId` is `null === null` and tells
+    // every spectator of an ownerless room that they are the host — offering
+    // them controls the server refuses.
+    expect(isHost(roomHeldBy(null), null)).toBe(false);
+    expect(isHost(roomHeldBy(null), "p1")).toBe(false);
+  });
+
+  it("is never a browser holding no seat", () => {
+    expect(isHost(roomHeldBy("p1"), null)).toBe(false);
   });
 });

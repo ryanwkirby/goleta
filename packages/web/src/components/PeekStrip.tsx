@@ -10,6 +10,7 @@ import { HelpAsk } from "./Help.tsx";
 import { QrGlyph } from "./QrCode.tsx";
 import { SettingsCog } from "./Settings.tsx";
 import { SunnyCall } from "./sunny/SunnyCall.tsx";
+import { isHost } from "../lib/seating.ts";
 
 /**
  * The middle of the table, as much of it as a phone in landscape can spare — and,
@@ -114,7 +115,7 @@ export function PeekStrip({
           inside it and the host's below that (#253). A watcher gets none. */}
         {seated ? (
           <SettingsCog
-            isHost={room.hostId === game.you}
+            isHost={isHost(room, game.you)}
             personal={{
               hints,
               onHints: onChooseHints,

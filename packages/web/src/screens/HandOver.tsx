@@ -2,6 +2,7 @@ import type { GameView, RoomView } from "@goleta/engine";
 
 import { Button } from "../components/ui.tsx";
 import type { NameOf } from "../lib/format.ts";
+import { isHost } from "../lib/seating.ts";
 
 /**
  * The end of a hand, on a phone still held sideways.
@@ -35,7 +36,7 @@ export function HandOver({
   onJoinNext: () => void;
   onLeave: () => void;
 }) {
-  const host = room.hostId === game.you;
+  const host = isHost(room, game.you);
   const full = room.seats.length >= room.maxPlayers;
 
   return (

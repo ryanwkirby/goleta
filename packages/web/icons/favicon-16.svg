@@ -3,12 +3,18 @@
   <!--
     The 16px layer of `favicon.ico`, drawn again rather than scaled down.
 
-    At 16px the tab strip gets about ten pixels of card to work with. The tilt
-    turns to fringe, the margins close up, and the eight fills in solid. So this
-    one sits square on the pixel grid, gives the card the whole tile, and opens
-    the eight's counters until they survive being two pixels across. Same three
-    colours, same card, same eight — see `../public/favicon.svg` for where they
-    come from. Rebuild with `scripts/build-icons.sh`.
+    At 16px the tab strip gets about fourteen pixels of tile. Scaled down, the
+    64px drawing loses both masts to grey — a one-pixel spar landing between two
+    columns is anti-aliased into nothing — so everything here sits square on the
+    pixel grid: both masts are whole columns, and the deck and the sails' feet
+    are whole rows.
+
+    **The jib goes.** Three sails at this size merge into one blob across the
+    bow; two triangles and two masts still say two-masted vessel, and the aft
+    mast being the taller is the only detail that has to survive. Same three
+    colours, same ship — see `../public/favicon.svg` for where they come from.
+
+    Rebuild with `scripts/build-icons.sh`.
   -->
   <defs>
     <radialGradient id="felt" cx="0.5" cy="0" r="1.1">
@@ -18,12 +24,14 @@
   </defs>
 
   <rect width="16" height="16" rx="3.5" fill="url(#felt)" />
-  <rect x="2.5" y="1.5" width="11" height="13" rx="1.5" fill="#ffffff" />
-  <path
-    fill="#0e271b"
-    d="M8 2.85A2.7 2.7 0 1 1 8 8.25A2.7 2.7 0 1 1 8 2.85Z
-       M8 6.15A3.5 3.5 0 1 1 8 13.15A3.5 3.5 0 1 1 8 6.15Z
-       M8 4.2A1.35 1.35 0 1 0 8 6.9A1.35 1.35 0 1 0 8 4.2Z
-       M8 7.75A1.9 1.9 0 1 0 8 11.55A1.9 1.9 0 1 0 8 7.75Z"
-  />
+
+  <g fill="#ffffff">
+    <rect x="4" y="4" width="1" height="7" />
+    <rect x="9" y="2" width="1" height="9" />
+    <path d="M5 4 V10 H8 Z" />
+    <path d="M10 2 V10 H13 Z" />
+    <!-- Tapered rather than square: two full-width rows read as a slab under the
+         rig instead of as a hull. -->
+    <path d="M1 11 H15 L12.8 13 H3.2 Z" />
+  </g>
 </svg>

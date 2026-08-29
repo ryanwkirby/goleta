@@ -21,6 +21,7 @@ import { HelpAsk, HintedMark, shoutingNow } from "../components/Help.tsx";
 import { Piles } from "../components/Piles.tsx";
 import { QrCode, QrGlyph } from "../components/QrCode.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
+import { SettingsCog } from "../components/Settings.tsx";
 import { CardBack, PlayingCard } from "../components/Card.tsx";
 import { SUIT_GLYPH } from "../lib/cardShape.ts";
 import { Seats } from "../components/Seats.tsx";
@@ -161,6 +162,19 @@ export function TableScreen({
     seats: room.seats,
     send,
     enabled: room.irl && room.status !== "playing",
+    /**
+     * **Changing the owner is deliberately hard to find** (#326): a long press
+     * on a name, with no label, no hint, nothing on any other screen and nothing
+     * costing the board any ink. It is an exotic fringe case — the host has gone
+     * home with their phone and the table is still sitting here — and should be
+     * minimally discoverable by design.
+     *
+     * It shares the gesture with the drag rather than being layered over it, so
+     * the two cannot fight: travelling `THRESHOLD` cancels the press, and the
+     * press letting go cancels the drop. Same gate as the drag on both sides of
+     * the wire, and `enabled` above is that gate.
+     */
+    onLongPress: (playerId) => send({ t: "setHost", playerId }),
   });
 
   // The inset goes on the frame, so `fitScale` fits the design into the *safe* box
@@ -247,6 +261,43 @@ export function TableScreen({
         {/* Outside the design box on purpose: both are about the device rather than
             the board, and the invite is a panel somebody holds a camera up to. */}
         <TableRotateNudge />
+
+        {/**
+          * Room settings, from the middle of the table (#326).
+          *
+          * **IRL rooms only**, the same gate as this screen's other auxiliary
+          * actions and for the same reason: in a room where that flag means what
+          * it says everybody present can already reach the propped-up screen, and
+          * an online room is strangers. The server checks it again.
+          *
+          * **Room settings only.** No `personal` half: that half is about cards
+          * this device does not hold, and nobody may set autopilot or hints for
+          * anybody else (#202, #187). `isHost` is true because this cog *is* the
+          * room's — there is no personal page for it to be a door out of.
+          *
+          * It matters most on a room this screen opened itself, which has no host
+          * until the first person joins and would otherwise have nothing able to
+          * set it up.
+          *
+          * Rendered out here rather than against the design box for `RoomInvite`'s
+          * reason: `fitScale` would scale the panel and the quarter turn would
+          * stand it on its side.
+          */}
+        {room.irl ? (
+          <div className="absolute left-2 top-2">
+            <SettingsCog
+              isHost
+              rules={room.houseRules}
+              irl={room.irl}
+              dealerMode={room.dealerMode}
+              shuffleSeats={room.shuffleSeats}
+              onRules={(rules) => send({ t: "setHouseRules", rules })}
+              onIrl={(on) => send({ t: "setIrl", on })}
+              onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
+              onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
+            />
+          </div>
+        ) : null}
 
         {inviting ? (
           <RoomInvite

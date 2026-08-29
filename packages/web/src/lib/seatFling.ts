@@ -34,7 +34,13 @@
  * at the grab, which is strictly fresher.
  */
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 
 import type { ClientMessage } from "@goleta/engine";
 
@@ -48,6 +54,22 @@ import { edgeSeats, seatPoint, spotsOf } from "./tableEdges.ts";
  * design at all.
  */
 export const THRESHOLD = 90;
+
+/**
+ * How long a name has to be held, without travelling `THRESHOLD`, to be a long
+ * press rather than a drag (#326).
+ *
+ * It shares the pointer lifecycle with the drag rather than being a second
+ * gesture layered over the same handlers, which is the only way the two cannot
+ * fight: one `setPointerCapture`, one piece of state, and travelling past the
+ * threshold cancels the press outright. So a drag is never also a handover, and
+ * a handover never leaves a name mid-flight.
+ *
+ * Long, deliberately. What it commits is deliberately hard to find and it is
+ * pressed on a screen propped in the middle of a table where somebody will put a
+ * drink down — the same restraint `THRESHOLD` exists for.
+ */
+export const LONG_PRESS_MS = 700;
 
 export interface SeatFling {
   /** The seat under the finger, or null. */
@@ -143,6 +165,7 @@ export const useSeatFling = ({
   seats,
   send,
   enabled,
+  onLongPress,
   design = TABLE_DESIGN,
 }: {
   board: RefObject<HTMLElement | null>;
@@ -154,11 +177,32 @@ export const useSeatFling = ({
   send: (message: ClientMessage) => void;
   /** An IRL room, between games. The server checks both again. */
   enabled: boolean;
+  /**
+   * Held without travelling: hand the room to this seat (#326). Optional, so the
+   * gesture exists only where something has a use for it, and armed on the same
+   * conditions the drag is.
+   */
+  onLongPress?: (seatId: string) => void;
   design?: Box;
 }): SeatFling | null => {
   const held = useRef<Held | null>(null);
+  const press = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [holding, setHolding] = useState<string | null>(null);
+
+  /** A timer outliving the screen would fire a handover at a table that is no
+   * longer on it. */
+  useEffect(
+    () => () => {
+      if (press.current) clearTimeout(press.current);
+    },
+    [],
+  );
+
+  const disarm = (): void => {
+    if (press.current) clearTimeout(press.current);
+    press.current = null;
+  };
 
   if (!enabled) return null;
 
@@ -176,6 +220,7 @@ export const useSeatFling = ({
   };
 
   const release = (event: ReactPointerEvent<HTMLElement>): void => {
+    disarm();
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture?.(event.pointerId);
     }
@@ -201,6 +246,20 @@ export const useSeatFling = ({
       held.current = { id: seatId, from, anchor };
       setHolding(seatId);
       setOffset({ x: 0, y: 0 });
+
+      // Armed on the grab and cancelled by travel or by letting go, so the two
+      // gestures are one gesture that resolves into whichever it turned out to
+      // be. Letting go of the name here is what stops the drop also acting.
+      disarm();
+      if (!onLongPress) return;
+      press.current = setTimeout(() => {
+        press.current = null;
+        if (held.current?.id !== seatId) return;
+        held.current = null;
+        setHolding(null);
+        setOffset({ x: 0, y: 0 });
+        onLongPress(seatId);
+      }, LONG_PRESS_MS);
     },
 
     onDrag: (event) => {
@@ -215,6 +274,9 @@ export const useSeatFling = ({
         release(event);
         return;
       }
+
+      // Past the threshold this is a drag, so it is no longer a press.
+      if (Math.hypot(now.x - state.from.x, now.y - state.from.y) >= THRESHOLD) disarm();
 
       // Drawing only. Nothing is sent until the drop, so the label follows the
       // finger for the whole gesture and there is never a broadcast in flight for

@@ -98,10 +98,12 @@ export function TableHeader({
         <SettingsCog
           label="settings"
           isHost={isHost}
-          hints={hints}
-          onHints={onChooseHints}
-          autopilot={room.seats.find((seat) => seat.id === me)?.autopilot ?? "off"}
-          onAutopilot={(mode) => send({ t: "setAutopilot", mode })}
+          personal={{
+            hints,
+            onHints: onChooseHints,
+            autopilot: room.seats.find((seat) => seat.id === me)?.autopilot ?? "off",
+            onAutopilot: (mode) => send({ t: "setAutopilot", mode }),
+          }}
           rules={room.houseRules}
           irl={room.irl}
           dealerMode={room.dealerMode}

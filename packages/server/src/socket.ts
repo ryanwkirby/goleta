@@ -51,6 +51,7 @@ import {
   type RoomStore,
   type Seat,
 } from "./rooms.ts";
+import { noRecorder, type Recorder } from "./record.ts";
 
 const HEARTBEAT_MS = 30_000;
 
@@ -106,6 +107,9 @@ export interface SocketDeps {
   onChange: () => void;
   /** Tests run the bots flat out; people need them slower than that. */
   botTiming?: Record<BotSpeed, BotTiming>;
+  /** Where games are written down (#359). Defaults to writing nothing, so a test
+   * that is not about the record does not need a directory to put one in. */
+  recorder?: Recorder;
 }
 
 const send = (client: Client, message: ServerMessage): void => {
@@ -116,7 +120,7 @@ const send = (client: Client, message: ServerMessage): void => {
 
 export const attachSockets = (
   server: Server,
-  { store, onChange, botTiming = DEFAULT_BOT_TIMING }: SocketDeps,
+  { store, onChange, botTiming = DEFAULT_BOT_TIMING, recorder = noRecorder }: SocketDeps,
 ): (() => void) => {
   const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 16 * 1024 });
   const clients = new Set<Client>();
@@ -143,6 +147,13 @@ export const attachSockets = (
   };
 
   const broadcast = (room: Room, events: readonly FeedEvent[] = []): void => {
+    // **The single funnel, and the only tap point** (#359). Every `FeedEvent` in
+    // this app passes through here exactly once per room — human intents, bot
+    // moves, `beginGame`, `leaveSeat` — so the recorder hangs off it rather than
+    // being scattered over the intent sites. It is before the sends because it
+    // is about what happened, not about who was told: a write that fails is
+    // logged and dropped, and nothing here waits on it.
+    recorder.record(room, events);
     const screens = tableScreensAt(room);
     for (const client of clients) {
       if (client.code !== room.code) continue;

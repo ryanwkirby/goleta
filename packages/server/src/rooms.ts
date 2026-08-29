@@ -990,11 +990,19 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
 export const gameViewFor = (room: Room, viewerId: PlayerId | null): GameView | null =>
   room.game ? redact(room.game, viewerId) : null;
 
-export const pruneRooms = (store: RoomStore, maxIdleMs: number, now = Date.now()): number => {
+export const pruneRooms = (
+  store: RoomStore,
+  maxIdleMs: number,
+  now = Date.now(),
+  /** Told which codes have gone, because a four-character code is recycled and
+   * the recorder must not let a new room inherit the old one's game (#359). */
+  onPruned?: (code: string) => void,
+): number => {
   let removed = 0;
   for (const [code, room] of store) {
     if (now - room.updatedAt <= maxIdleMs) continue;
     store.delete(code);
+    onPruned?.(code);
     removed += 1;
   }
   return removed;

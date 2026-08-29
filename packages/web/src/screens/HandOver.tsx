@@ -60,7 +60,9 @@ export function HandOver({
         </Button>
       ) : (
         <p className="text-sm text-white/50">
-          Waiting for {nameOf(room.hostId)} to deal again.
+          {/* A room opened from the shared screen has no host until somebody
+              joins (#326), so there is nobody to be waiting for. */}
+          {room.hostId ? `Waiting for ${nameOf(room.hostId)} to deal again.` : "Waiting for a deal."}
         </p>
       )}
 

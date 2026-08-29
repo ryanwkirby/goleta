@@ -199,6 +199,23 @@ export const useGoleta = (): Goleta => {
               const newRoute = { code: message.code, mode: "play" as ViewMode };
               setRoute(newRoute);
               setHashCode(message.code, "play");
+            } else if (routeRef.current.mode === "play" && !message.playerId) {
+              /**
+               * A room this device opened **as the screen in the middle**
+               * (#326). It came here in "play" mode — there was no hash to say
+               * otherwise — and the server seated nobody, which in this mode
+               * happens for `createTable` and nothing else.
+               *
+               * The URL has to say what this screen is, exactly as the branch
+               * above does in reverse: a device propped in the middle of a table
+               * is opened once and left there, and what it is for has to survive
+               * a reload. It also puts the reconnect on the right message, since
+               * that reads the mode to decide between `rejoin` and `watch`.
+               */
+              const newRoute = { code: message.code, mode: "table" as ViewMode };
+              setRoute(newRoute);
+              routeRef.current = newRoute;
+              setHashCode(message.code, "table");
             } else {
               setHashCode(message.code, routeRef.current.mode);
             }

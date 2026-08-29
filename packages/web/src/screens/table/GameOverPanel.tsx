@@ -47,7 +47,10 @@ export function GameOverPanel({
       ) : (
         <>
           <p className="mt-2 text-sm text-white/50">
-            Waiting for {nameOf(room.hostId)} to deal again.
+            {/* Nobody to wait for while the room is ownerless (#326). */}
+            {room.hostId
+              ? `Waiting for ${nameOf(room.hostId)} to deal again.`
+              : "Waiting for a deal."}
           </p>
           {!seated ? (
             <div className="mt-4 border-t border-white/10 pt-4">

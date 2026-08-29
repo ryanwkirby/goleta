@@ -1,18 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <title>goleta</title>
   <!--
-    The felt, a tilted card, and an eight.
+    The felt, and a goleta — a two-masted, fore-and-aft rigged schooner, which
+    is what the app is named after (#370). It was a tilted card with an eight on
+    it until then, and at 32px in a tab strip that read as a pool ball on a card:
+    the least distinctive thing a card game could put on a tab, with the name
+    sitting right there unused.
+
+    **The card did not survive.** A ship on a card is two competing silhouettes
+    in a 16px box, and the tab strip is where a mark has to be recognisable
+    rather than descriptive. The felt already says table.
+
+    **The aft mast is taller than the fore.** That is the one detail that makes
+    this a schooner rather than a generic sailboat, so it is the last thing that
+    may go when everything else does.
+
+    Hull, two masts, sails, and nothing else — no rigging, no flag, no sea. A
+    rigging line is a hairline, and a hairline is the first thing to die on the
+    way down to 16px. Everything is a filled path rather than a stroke for the
+    same reason the eight was a path and not a `<text>` element: geometry lands
+    the same in every rasteriser, and a stroke lands at whatever the renderer
+    rounds it to.
 
     The colours below are copied out of the `@theme` block in `src/index.css`.
     Tailwind never sees this file — it is a static asset served as-is — so it
     cannot read the theme and will not follow a change to it. If the felt moves,
     move it here too. (The tile runs a step brighter than the table's own
     gradient so it still reads as green rather than black at 16px.)
-
-    The eight is a path and not a `<text>` element on purpose: a favicon is
-    rasterised by the browser against whatever font it happens to resolve, and
-    by something else again when `favicon.ico` is generated. Geometry lands the
-    same everywhere.
   -->
   <defs>
     <radialGradient id="felt" cx="0.5" cy="0" r="1.1">
@@ -23,15 +37,17 @@
 
   <rect width="64" height="64" rx="14" fill="url(#felt)" />
 
-  <g transform="rotate(-10 32 32)">
-    <rect x="15" y="9" width="34" height="46" rx="5" fill="#ffffff" />
-    <!-- Two rings, wound against their holes so the overlap stays inked. -->
-    <path
-      fill="#0e271b"
-      d="M32 14A8.5 8.5 0 1 1 32 31A8.5 8.5 0 1 1 32 14Z
-         M32 27A11.5 11.5 0 1 1 32 50A11.5 11.5 0 1 1 32 27Z
-         M32 18.3A4.2 4.2 0 1 0 32 26.7A4.2 4.2 0 1 0 32 18.3Z
-         M32 32A6.5 6.5 0 1 0 32 45A6.5 6.5 0 1 0 32 32Z"
-    />
+  <g fill="#ffffff">
+    <!-- Fore mast, then the main aft of it and taller. -->
+    <rect x="23" y="14" width="1.7" height="29" />
+    <rect x="39.5" y="10" width="1.7" height="33" />
+    <!-- Jib, forward of the fore mast. -->
+    <path d="M21.9 19 V42 H9.5 Z" />
+    <!-- Both sails set aft of their mast, which is what fore-and-aft means. -->
+    <path d="M25.9 16 V42 H35.5 Z" />
+    <path d="M42.4 12 V42 H53.5 Z" />
+    <!-- Flat deck, curved bottom: a slab reads as a bar rather than a hull. The
+         felt between it and the sails is what keeps the two apart at 32px. -->
+    <path d="M7 44.5 H57 C 51 54.5, 14 54.5, 7 44.5 Z" />
   </g>
 </svg>

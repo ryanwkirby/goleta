@@ -4,9 +4,10 @@
     The source for `apple-touch-icon.png`, which is not a resize of the tab
     icon. iOS puts this on a home screen and applies its own rounded mask, so
     the tile is square and full-bleed — rounding it here would only show up as a
-    dark seam inside Apple's corners — and the card runs a little larger to fill
-    what the mask leaves. Same three colours, same eight; see
-    `../public/favicon.svg` for where they come from.
+    dark seam inside Apple's corners — and the ship runs a little larger to fill
+    what the mask leaves. Same three colours, same schooner; see
+    `../public/favicon.svg` for where they come from and why the card is gone
+    (#370).
 
     Rebuild with `scripts/build-icons.sh`.
   -->
@@ -19,16 +20,14 @@
 
   <rect width="64" height="64" fill="url(#felt)" />
 
-  <g transform="rotate(-10 32 32)">
-    <g transform="translate(32 32) scale(1.06) translate(-32 -32)">
-      <rect x="15" y="9" width="34" height="46" rx="5" fill="#ffffff" />
-      <path
-        fill="#0e271b"
-        d="M32 14A8.5 8.5 0 1 1 32 31A8.5 8.5 0 1 1 32 14Z
-           M32 27A11.5 11.5 0 1 1 32 50A11.5 11.5 0 1 1 32 27Z
-           M32 18.3A4.2 4.2 0 1 0 32 26.7A4.2 4.2 0 1 0 32 18.3Z
-           M32 32A6.5 6.5 0 1 0 32 45A6.5 6.5 0 1 0 32 32Z"
-      />
+  <g transform="translate(32 32) scale(1.06) translate(-32 -32)">
+    <g fill="#ffffff">
+      <rect x="23" y="14" width="1.7" height="29" />
+      <rect x="39.5" y="10" width="1.7" height="33" />
+      <path d="M21.9 19 V42 H9.5 Z" />
+      <path d="M25.9 16 V42 H35.5 Z" />
+      <path d="M42.4 12 V42 H53.5 Z" />
+      <path d="M7 44.5 H57 C 51 54.5, 14 54.5, 7 44.5 Z" />
     </g>
   </g>
 </svg>

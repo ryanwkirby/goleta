@@ -362,6 +362,10 @@ export function Table({
             hand={handControls}
             help={helpControls}
             irl={room.irl}
+            // Read off your own seat, and `setAutopilot` stamps the seat from the
+            // connection, so this can only ever end your own (#202, #368).
+            autopilot={room.seats.find((seat) => seat.id === game.you)?.autopilot ?? "off"}
+            onEndAutopilot={() => send({ t: "setAutopilot", mode: "off" })}
             step={handFanStep}
             boxRef={handRow}
           />

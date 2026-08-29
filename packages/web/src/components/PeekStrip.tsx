@@ -4,6 +4,7 @@ import { useFullscreen } from "../lib/fullscreen.ts";
 import { pileSuit } from "../lib/pile.ts";
 import { DECK, PILE } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
+import { AutopilotReturn } from "./Autopilot.tsx";
 import { CardBack, PlayingCard, SuitMark } from "./Card.tsx";
 import { HelpAsk } from "./Help.tsx";
 import { QrGlyph } from "./QrCode.tsx";
@@ -155,6 +156,18 @@ export function PeekStrip({
             className="-my-1"
           />
         ) : null}
+
+        {/* The way off the autopilot, for somebody who has just walked back to the
+            table (#368). One line of small print in the cluster — the only part
+            of this row a control may take width from — and after the two 44px
+            items rather than between them, which would split the pair that
+            deliberately share a wrapped line above. It draws nothing at all
+            unless this seat is on autopilot, so on almost every turn of almost
+            every game the row is exactly as it was. */}
+        <AutopilotReturn
+          mode={room.seats.find((seat) => seat.id === game.you)?.autopilot ?? "off"}
+          onEnd={() => send({ t: "setAutopilot", mode: "off" })}
+        />
 
         {/* An IRL table is every phone in this view, so the way in somebody actually
             holds out to a newcomer is this one (#135). Four characters became one

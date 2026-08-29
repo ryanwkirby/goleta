@@ -136,6 +136,77 @@ export function AutopilotMark({
 }
 
 /**
+ * The way back, drawn at the table rather than behind the cog (#368).
+ *
+ * **Stepping away was a labelled control and coming back was not.** There were
+ * two ways off the autopilot and neither was findable by looking at the table:
+ * make a move, which `socket.ts` turns into an `off` after any accepted intent
+ * — and only works while the table happens to be waiting on you — or go back
+ * through Settings → *Autoplay* → **I'm here**, two taps and a modal whose whole
+ * discoverability was having been the one who set it.
+ *
+ * That asymmetry is the bug. Somebody stepping away is looking at the screen and
+ * can be asked a question; somebody who has just come back is holding a drink
+ * and looking for their cards. On `bot` there may be nothing to tap, because the
+ * seat is decided and paced on the server and coming back mid-turn is a race
+ * against `botPace`; on `forced` you may sit down three seats early and want the
+ * seat back now rather than in ninety seconds, while the public mark is still
+ * telling the table you are in the kitchen.
+ *
+ * **One word for both modes.** `forced` and `bot` are two strengths of one
+ * answer, and *I'm back* is the answer to both — the mark on the seat goes on
+ * telling them apart for as long as it lasts.
+ *
+ * **No protocol change and no server change.** `setAutopilot` already carries the
+ * mode and already stamps the seat from the connection, so #202's property that
+ * nobody may set this for anybody else comes free. It does not replace the cog's
+ * control either: *Stepping away?* is where you set it and stays a two-question
+ * `TwoWay` (#291); this is the same state reachable in one tap from where you
+ * are actually standing.
+ *
+ * **Not amber**, which at this table means the game is waiting on you (#190) — a
+ * seat playing itself is the opposite of that. And **no confirmation**: coming
+ * back costs nothing and is one tap to undo, which is what separates it from the
+ * leave dialog, where the door cannot be reopened (#255).
+ *
+ * It takes itself away at the end of a game, where `clearAutopilots` already
+ * runs, and it is drawn for your **own** seat only — the caller passes the mode
+ * it read off `game.you`.
+ */
+export function AutopilotReturn({
+  mode,
+  onEnd,
+  className = "",
+}: {
+  mode: AutopilotMode;
+  onEnd: () => void;
+  className?: string;
+}) {
+  if (mode === "off") return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onEnd}
+      /* The mark's own greys rather than the surrounding small print's: this is
+         the one thing in either row somebody is actively looking for, and it
+         reads as the standing mark's other half. `shrink-0` for `HelpLink`'s
+         reason — one of the two rows it sits in is the peek strip, where a
+         control giving up width to a long prompt is a target squeezed to a
+         sliver. */
+      className={[
+        "shrink-0 rounded-lg bg-white/10 px-2 py-1 text-xs font-medium text-white/70",
+        "transition-colors hover:bg-white/20 hover:text-white",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+        className,
+      ].join(" ")}
+    >
+      I'm back
+    </button>
+  );
+}
+
+/**
  * The control, for the *yours* half of the cog (#253): it belongs to one player
  * and changes nothing about the room.
  *

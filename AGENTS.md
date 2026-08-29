@@ -1666,6 +1666,83 @@ The evidence is `bench/results.md` in full, the protocol for adding to it is
 was concluded. Read them before re-deriving any of this from first principles,
 which is exactly how it came to be run the first time.
 
+## The game record
+
+`packages/server/src/record.ts` writes an append-only JSONL file of what tables
+actually did (#359). Before it, nothing this app did survived the table it
+happened at: `persist.ts` overwrites one `rooms.json` in place, a room is swept
+six hours after its last activity, `Room.gamesPlayed` is a counter rather than a
+record, and container logs reset on every deploy — which is every merge to
+`main`. Asked how many games real people had played, on which days, with whom,
+the answer was that the data had never existed.
+
+It lives in `config.dataDir`, the same named volume as the snapshot, so it
+survives a redeploy with no `docker-compose.yml` change.
+
+**`broadcast()` in `socket.ts` is the single funnel and the only tap point.**
+Every `FeedEvent` passes through it exactly once per room — human intents, bot
+moves, `beginGame`, `leaveSeat` — so the recorder hangs there and nowhere else.
+Do not scatter a write at each intent site.
+
+Five rules, and each one is a silent failure if it goes:
+
+- **It is never served.** No route, no static path, no endpoint. `redact.ts`
+  governs what reaches a client and this file is deliberately richer than any
+  client is sent — the deck order is in it, which is precisely what redaction
+  guards. It is read off the disk by hand.
+- **It is never discarded and never migrated.** Every line carries its own `v`.
+  This is the one place `SNAPSHOT_VERSION`'s rule is *inverted*: a snapshot of an
+  old shape is dropped on boot because serving a half-understood game is worse
+  than dealing a new one, and an old line here is still a true account of a game
+  that was played. Read what you can, leave the rest, delete nothing.
+- **Never `seat.token`.** It is the credential that proves a seat is yours (#256)
+  and the one thing in a `Room` that must not be written down. Seats are built
+  field by field on the way out rather than spread, and `record.test.ts` reads
+  the file as raw text and asserts no token appears anywhere in it — the shape
+  `redact.ts`'s own test uses, and for the same reason.
+- **Nothing in the running game may depend on it.** A failed write is logged once
+  and the recorder disables itself, exactly as a failed snapshot is dropped.
+- **The header is not optional.** `startGame` deals inside itself and the engine
+  emits **no events for the deal**, so a record built from the feed alone could
+  replay the middle of the table and never the hands. At `gameStarted` the state
+  is untouched and right there, so the hands, the deck order and the seed come
+  off it and the record is self-sufficient — replayable without the engine.
+
+**The seed is kept alongside the events, not instead of them.** The engine is
+deterministic, so the seed plus the ordered intents would replay a game exactly
+and in far fewer bytes — but a seed-only record is replayable only by the engine
+version that wrote it, and the rules here move on purpose (#31 → #50, #220 →
+#318). A rules change would silently turn every older game into a different game.
+
+**A game id is the room code plus the moment it was dealt.** Codes are four
+characters and are recycled after a prune, and one room plays many games, so
+neither the code nor `gamesPlayed` identifies one on its own. `pruneRooms` takes
+an `onPruned` callback for exactly that: a recycled code must not inherit the old
+room's game.
+
+**Records are written as play happens, not at `gameOver`**, because plenty of
+games never formally end — people wander off and the room is swept. A game whose
+lines stop is an abandoned one and is legible as that rather than absent. A game
+this process never saw dealt (every redeploy restores live rooms from the
+snapshot) gets a reconstructed header marked `resumed`, rather than orphaned
+events.
+
+**`playerId` counts browsers, not people.** Worth stating wherever the number is
+read, because it will be read as something it isn't: identity is a `playerId`
+plus a rejoin token in `localStorage`, there is no login and there will not be
+one, so the same person on a phone and a laptop is two players and a cleared
+browser is a stranger. The seat name is the only human-legible handle and people
+retype it. A real player is a seat with `bot: false`; a real game is a header
+with two or more of them.
+
+**The size cap is deliberately unbuilt.** A full game is a few hundred events and
+an evening is nothing; a year of them unattended is not. A size or age roll-off
+wants a figure picked from real numbers rather than guessed at now.
+
+**No UI, no replay viewer, no client change.** The point is that the material
+exists at all; rewatching a game is separate work and should be filed as such
+once there is something to rewatch.
+
 ## Testing
 
 - Engine tests are the safety net for the rules; every rule in `docs/RULES.md`

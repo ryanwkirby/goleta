@@ -35,12 +35,19 @@ import {
   placeSeat,
   nextBotMove,
   createRoom,
+  createTableRoom,
   rejoinRoom,
   removeSeat,
   roomView,
   seatOf,
   setBotSpeed,
   setDealerMode,
+  setBotSpeedFromTable,
+  setDealerModeFromTable,
+  setHostFromTable,
+  setHouseRulesFromTable,
+  setIrlFromTable,
+  setShuffleSeatsFromTable,
   leaveSeat,
   setAutopilot,
   setHints,
@@ -257,6 +264,19 @@ export const attachSockets = (
       const { room, seat } = createRoom(store, message.name);
       return attach(client, room, seat.id, seat.token);
     }
+    /**
+     * A room opened from the screen in the middle of the table (#326). The
+     * device holds no cards, so it attaches as a watcher with the `table` bit
+     * set — exactly what `watch` does — and the room has no host until the first
+     * person joins. Nothing else about it is special: it is IRL from the start
+     * because that is what answering "this device is the screen" means, and
+     * `createTableRoom` says why.
+     */
+    if (message.t === "createTable") {
+      const { room } = createTableRoom(store);
+      client.table = true;
+      return attach(client, room, null, null);
+    }
     if (message.t === "join") {
       const { room, seat } = joinRoom(store, message.code, message.name);
       return attach(client, room, seat.id, seat.token);
@@ -323,6 +343,53 @@ export const attachSockets = (
       broadcast(room);
       return;
     }
+    /**
+     * The shared table screen's room settings (#326), and the same shape as its
+     * other auxiliary actions: the `table` bit is the client's own word for what
+     * it is, so it narrows rather than grants, and **`irl` is the gate that
+     * matters and is checked here**. In a room where that flag means what it
+     * says, everybody present can already reach the propped-up screen; an online
+     * room is strangers, and none of them get to change a stranger's table.
+     *
+     * **Room settings only.** Nothing from the *Your settings* half reaches
+     * here: that half is about cards this device does not hold, and nobody may
+     * set autopilot or hints for anybody else (#202, #187). The three seat-level
+     * messages are equally absent.
+     *
+     * It matters most on a room this screen opened itself, which has no host at
+     * all until somebody joins — without this there would be nothing able to set
+     * the table up.
+     */
+    if (!playerId && client.table && room.irl) {
+      switch (message.t) {
+        case "setHouseRules":
+          setHouseRulesFromTable(room, message.rules);
+          return broadcast(room);
+        case "setDealerMode":
+          setDealerModeFromTable(room, message.mode);
+          return broadcast(room);
+        case "setShuffleSeats":
+          setShuffleSeatsFromTable(room, message.on === true);
+          return broadcast(room);
+        case "setBotSpeed":
+          setBotSpeedFromTable(room, message.speed);
+          return broadcast(room);
+        case "setIrl":
+          // It can switch off the flag this whole block is gated on. That is not
+          // a dead end: the first person to join owns the room and can switch it
+          // back, which is the same recovery an ownerless room already relies on.
+          setIrlFromTable(room, message.on);
+          return broadcast(room);
+        case "setHost":
+          // Deliberately hard to find — a long press on a name, no label
+          // anywhere. Between games, which `setHostFromTable` enforces.
+          setHostFromTable(room, message.playerId);
+          return broadcast(room);
+        default:
+          break;
+      }
+    }
+
     if (!playerId) throw new RoomError("You're watching this table, not playing it");
 
     switch (message.t) {
@@ -415,6 +482,14 @@ export const attachSockets = (
        */
       case "placeSeat":
         throw new RoomError("Seats are placed from the table screen");
+      /**
+       * Not a seated player's to send either (#326). Handing the room on is a
+       * gesture that exists only on the shared screen, which is handled above;
+       * naming it rather than letting it fall through makes it a refusal
+       * somebody can read instead of a message that quietly does nothing.
+       */
+      case "setHost":
+        throw new RoomError("The room is handed on from the table screen");
     }
   };
 

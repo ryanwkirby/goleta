@@ -1,6 +1,7 @@
 import type { Ref } from "react";
-import type { GameView } from "@goleta/engine";
+import type { AutopilotMode, GameView } from "@goleta/engine";
 
+import { AutopilotReturn } from "../../components/Autopilot.tsx";
 import { Hand, HandSortButton } from "../../components/Hand.tsx";
 import { HandFrame } from "../../components/HandFrame.tsx";
 import { HelpLink, HelpShout } from "../../components/Help.tsx";
@@ -18,6 +19,8 @@ export function OwnHand({
   hand,
   help,
   irl,
+  autopilot,
+  onEndAutopilot,
   step,
   boxRef,
 }: {
@@ -25,6 +28,9 @@ export function OwnHand({
   hand: HandControls;
   help: HelpControls;
   irl: boolean;
+  /** Your own seat's mode. `off` draws nothing (#368). */
+  autopilot: AutopilotMode;
+  onEndAutopilot: () => void;
   /** Left edge to left edge, fitted against the measured box below. */
   step: number;
   /** The upright table measures this to fit the fan against. */
@@ -41,6 +47,12 @@ export function OwnHand({
       {/* Kept clear whether or not the offer is showing, so the hand doesn't move
           under your fingers when it appears. */}
       <div className="flex min-h-7 items-center gap-2 px-1">
+        {/* First in the row, because it is the one thing here somebody is
+            actively looking for rather than being offered (#368). The row is
+            kept clear either way, so a control appearing in it never resizes the
+            hand under a thumb (#131) — which is the whole reason this is the
+            line and not a new one. */}
+        <AutopilotReturn mode={autopilot} onEnd={onEndAutopilot} />
         {help.stalled ? <HelpLink onAsk={help.onAskForHelp} /> : null}
         {/* Yours alone: the server sends this to nobody else. */}
         {game.sunnyLockedReaches > 0 ? (

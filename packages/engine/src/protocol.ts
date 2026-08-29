@@ -111,7 +111,10 @@ export type DealerMode = "rotate" | "random";
 
 export interface RoomView {
   code: string;
-  hostId: PlayerId;
+  /** **Null while nobody owns the room** (#326): one opened from the shared table
+   * screen has no host until the first person joins, and every host power is
+   * refused meanwhile. Every reader has to cope. */
+  hostId: PlayerId | null;
   seats: SeatView[];
   status: "lobby" | "playing" | "finished";
   gamesPlayed: number;
@@ -139,6 +142,16 @@ export interface RoomView {
 
 export type ClientMessage =
   | { t: "create"; name: string }
+  /**
+   * A room opened from the **screen in the middle of the table** (#326). Its own
+   * message rather than a `table` bit on `create`, because it carries no name:
+   * the device has no seat, and an optional name on the playing path would be a
+   * weaker type for the sake of one flag.
+   *
+   * It seats nobody, so the room has **no host until the first person joins**,
+   * and it is IRL from the start — see `createTableRoom`.
+   */
+  | { t: "createTable" }
   | { t: "join"; code: string; name: string }
   /** Reclaim a seat after a reload, a dropped connection or a redeploy. */
   | { t: "rejoin"; code: string; playerId: PlayerId; token: string }
@@ -209,6 +222,15 @@ export type ClientMessage =
    * server could not tell them apart. Yours alone, stamped from the connection.
    */
   | { t: "leave" }
+  /**
+   * Hand the room to another seat (#326). From the shared table screen only, in
+   * an **IRL** room, between games — the same gate as the draw (#120) and the
+   * seat drag (#320), and checked on the server for the same reason: an online
+   * room is strangers.
+   *
+   * Deliberately hard to find: a long press on a name, with no label anywhere.
+   */
+  | { t: "setHost"; playerId: PlayerId }
   | { t: "ping" };
 
 /**

@@ -18,7 +18,10 @@ import { createStore, pruneRooms } from "./rooms.ts";
 // 19: `Challenge.violation` gained `via`, which says which of the two offences
 // was recorded (#363). A restored snapshot would carry a violation with no
 // answer, and the ruling drawn from it would describe the wrong offence.
-const SNAPSHOT_VERSION = 19;
+// 20: `Room.hostId` became nullable (#326) — a room opened from the shared table
+// screen has no owner until somebody joins. An old snapshot cannot express that,
+// and a room restored under the old shape would claim a host it may not have.
+const SNAPSHOT_VERSION = 20;
 
 interface Snapshot {
   version: number;

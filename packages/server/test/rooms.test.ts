@@ -23,6 +23,7 @@ import {
   beginGame,
   callHeldUntil,
   createRoom,
+  createTableRoom,
   createStore,
   holdCall,
   joinRoom,
@@ -39,6 +40,7 @@ import {
   setAutopilot,
   setBotSpeed,
   setDealerMode,
+  setHostFromTable,
   setHints,
   setHouseRules,
   setIrl,
@@ -50,10 +52,18 @@ import {
  * clear the game and deal again, and TypeScript can't narrow across that. */
 const dealtOptions = (room: Room) => room.game?.options;
 
+/** `Room.hostId` is nullable since #326 — a room opened from the shared table
+ * screen has no owner until somebody joins. Every room in this file has one, so
+ * this asserts it once rather than at a hundred call sites. */
+const hostOf = (room: Room): string => {
+  if (room.hostId === null) throw new Error("this room has no host");
+  return room.hostId;
+};
+
 /** A room with the host in seat one and bots filling it out to `size`. */
 const seatedRoom = (size = MIN_TABLE_PLAYERS): Room => {
   const { room } = createRoom(createStore(), "Ryan");
-  while (room.seats.length < size) addBot(room, room.hostId);
+  while (room.seats.length < size) addBot(room, hostOf(room));
   return room;
 };
 
@@ -69,7 +79,7 @@ const leaderOf = (room: Room): string => {
 /** Deals again, which a room only allows once the last game is finished. */
 const dealAgain = (room: Room): string => {
   if (room.game) room.game.status = "over";
-  beginGame(room, room.hostId);
+  beginGame(room, hostOf(room));
   return leaderOf(room);
 };
 
@@ -80,7 +90,7 @@ const card = (spec: string, index = 0): Card => ({
   suit: spec.slice(-1) as Card["suit"],
 });
 
-const hostSeat = (room: Room) => room.seats.find((seat) => seat.id === room.hostId);
+const hostSeat = (room: Room) => room.seats.find((seat) => seat.id === hostOf(room));
 
 /** Every card in the game, wherever it is. The count must never change. */
 const cardsInPlay = (room: Room): number => {
@@ -102,15 +112,15 @@ const seedRolling = (call: boolean): number => {
 /** Puts the host plainly in the wrong: a card in their hand is made to match
  * what's showing, and then they reach for the deck anyway. */
 const hostDrawsWithAPlay = (room: Room): void => {
-  beginGame(room, room.hostId);
+  beginGame(room, hostOf(room));
   const game = room.game;
   if (!game) throw new Error("no game");
-  game.turnIndex = game.players.findIndex((player) => player.id === room.hostId);
+  game.turnIndex = game.players.findIndex((player) => player.id === hostOf(room));
   const held = game.players[game.turnIndex]?.hand[0];
   if (!held) throw new Error("no cards");
   game.activeSuit = held.suit;
 
-  const outcome = applySeatIntent(room, room.hostId, { type: "drawCard", playerId: room.hostId });
+  const outcome = applySeatIntent(room, hostOf(room), { type: "drawCard", playerId: hostOf(room) });
   expect(outcome.ok).toBe(true);
   // Read back off the room: `applySeatIntent` swaps in a new state rather than
   // mutating the one above.
@@ -134,7 +144,7 @@ const hostDrawsWithAPlay = (room: Room): void => {
  * several tests in this file count it.
  */
 const botDrawsWithAPlay = (room: Room): string => {
-  beginGame(room, room.hostId);
+  beginGame(room, hostOf(room));
   const game = room.game;
   if (!game) throw new Error("no game");
   const bot = room.seats.find((seat) => seat.bot);
@@ -169,7 +179,7 @@ const botDrawsWithAPlay = (room: Room): string => {
  * cards go to the *bottom* of the pile, which leaves the card in play where it
  * is and the table still totalling 52. */
 const deckRunsOut = (room: Room, at: number): void => {
-  beginGame(room, room.hostId);
+  beginGame(room, hostOf(room));
   const game = room.game;
   if (!game) throw new Error("no game");
   game.discardPile.unshift(...game.drawPile.splice(0));
@@ -195,20 +205,82 @@ const callLands = (room: Room, at: number): void => {
   );
   if (!legal) throw new Error("nothing legal to name");
   vi.setSystemTime(at);
-  const outcome = applySeatIntent(room, room.hostId, {
+  const outcome = applySeatIntent(room, hostOf(room), {
     type: "callSunny",
-    playerId: room.hostId,
+    playerId: hostOf(room),
     cardId: legal.id,
   });
   expect(outcome.ok).toBe(true);
   expect(outcome.events.some((event) => event.type === "sunnyCalled")).toBe(true);
-  expect(drawer).not.toBe(room.hostId);
+  expect(drawer).not.toBe(hostOf(room));
 };
+
+describe("a room with nobody in it (#326)", () => {
+  it("opens with no host, no seats, and IRL already on", () => {
+    const { room } = createTableRoom(createStore());
+    expect(room.hostId).toBe(null);
+    expect(room.seats).toHaveLength(0);
+    // Answering "this device is the screen in the middle" is itself a statement
+    // that the table is sitting in one room — and every power this screen has is
+    // gated on the flag, so without it it could not reach the room it opened.
+    expect(room.irl).toBe(true);
+  });
+
+  it("refuses every host power until somebody owns it", () => {
+    const { room } = createTableRoom(createStore());
+    expect(() => addBot(room, "nobody")).toThrow(/Nobody has this room/);
+    expect(() => beginGame(room, "nobody")).toThrow(/Nobody has this room/);
+    expect(() => setBotSpeed(room, "nobody", "lightning")).toThrow(/Nobody has this room/);
+  });
+
+  it("hands the room to the first person through the door", () => {
+    const store = createStore();
+    const { room } = createTableRoom(store);
+    const first = joinRoom(store, room.code, "Ryan").seat;
+    expect(room.hostId).toBe(first.id);
+
+    // And only the first: the second arrival joins a room that already has one.
+    const second = joinRoom(store, room.code, "Sam").seat;
+    expect(room.hostId).toBe(first.id);
+    expect(second.id).not.toBe(room.hostId);
+  });
+
+  it("goes ownerless rather than pointing at somebody who has gone", () => {
+    const store = createStore();
+    const { room, seat } = createRoom(store, "Ryan");
+    leaveSeat(room, seat.id);
+    // It used to keep the departed id, which read as a host and behaved as one.
+    expect(room.hostId).toBe(null);
+    expect(roomView(room).hostId).toBe(null);
+  });
+
+  it("hands the room on from the table screen, but not to a bot or mid-game", () => {
+    const store = createStore();
+    const { room, seat } = createRoom(store, "Ryan");
+    const guest = joinRoom(store, room.code, "Sam").seat;
+    addBot(room, seat.id);
+    addBot(room, seat.id);
+
+    expect(() => setHostFromTable(room, guest.id)).toThrow(/in-person/);
+    setIrl(room, seat.id, true);
+
+    const bot = room.seats.find((candidate) => candidate.bot);
+    expect(() => setHostFromTable(room, bot?.id ?? "")).toThrow(/bot can't run the room/);
+    expect(() => setHostFromTable(room, "nobody")).toThrow(/Nobody by that name/);
+
+    setHostFromTable(room, guest.id);
+    expect(room.hostId).toBe(guest.id);
+
+    // Between games, exactly like the drag it must not fight (#201, #320).
+    beginGame(room, guest.id);
+    expect(() => setHostFromTable(room, seat.id)).toThrow(/Wait for this game/);
+  });
+});
 
 describe("passing the deal", () => {
   it("opens on the seat after the dealer, and the host deals first", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
 
     expect(room.dealerId).toBe(room.seats[0]?.id);
     expect(leaderOf(room)).toBe(room.seats[1]?.id);
@@ -216,7 +288,7 @@ describe("passing the deal", () => {
 
   it("moves the deal one seat every round, all the way round the table", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
 
     const leaders = [leaderOf(room)];
     for (let round = 1; round < room.seats.length; round++) leaders.push(dealAgain(room));
@@ -229,7 +301,7 @@ describe("passing the deal", () => {
 
   it("starts the rotation over if the last dealer has left the room", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     room.dealerId = "someone-who-left";
 
     expect(dealAgain(room)).toBe(room.seats[1]?.id);
@@ -243,7 +315,7 @@ describe("drawing for the deal", () => {
     expect(room.dealerMode).toBe("rotate");
     expect(roomView(room).dealerMode).toBe("rotate");
 
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     expect(room.dealerId).toBe(room.seats[0]?.id);
     expect(dealAgain(room)).toBe(room.seats[2]?.id ?? room.seats[0]?.id);
   });
@@ -258,13 +330,13 @@ describe("drawing for the deal", () => {
 
   it("refuses a mode it does not have", () => {
     const room = seatedRoom();
-    expect(() => setDealerMode(room, room.hostId, "whatever" as never)).toThrow(/No such dealer/);
+    expect(() => setDealerMode(room, hostOf(room), "whatever" as never)).toThrow(/No such dealer/);
   });
 
   it("always lands on a seat that is actually at the table", () => {
     const room = seatedRoom(4);
-    setDealerMode(room, room.hostId, "random");
-    beginGame(room, room.hostId);
+    setDealerMode(room, hostOf(room), "random");
+    beginGame(room, hostOf(room));
 
     const ids = new Set(room.seats.map((seat) => seat.id));
     for (let round = 0; round < 60; round++) {
@@ -275,8 +347,8 @@ describe("drawing for the deal", () => {
 
   it("stops being predictable, which is the whole point of it", () => {
     const room = seatedRoom(4);
-    setDealerMode(room, room.hostId, "random");
-    beginGame(room, room.hostId);
+    setDealerMode(room, hostOf(room), "random");
+    beginGame(room, hostOf(room));
 
     const dealers = new Set([room.dealerId]);
     for (let round = 0; round < 60; round++) {
@@ -290,22 +362,22 @@ describe("drawing for the deal", () => {
 
   it("applies at the next deal and never to the hand on the table", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     const before = JSON.stringify(room.game);
 
     // Not frozen mid-game: it is read once, at the deal.
-    setDealerMode(room, room.hostId, "random");
+    setDealerMode(room, hostOf(room), "random");
     expect(roomView(room).dealerMode).toBe("random");
     expect(JSON.stringify(room.game)).toBe(before);
-    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/Wait for this game/);
+    expect(() => setBotSpeed(room, hostOf(room), "lightning")).toThrow(/Wait for this game/);
   });
 
   it("goes back to rotating from wherever the random draw left the deal", () => {
     const room = seatedRoom(4);
-    setDealerMode(room, room.hostId, "random");
-    beginGame(room, room.hostId);
+    setDealerMode(room, hostOf(room), "random");
+    beginGame(room, hostOf(room));
 
-    setDealerMode(room, room.hostId, "rotate");
+    setDealerMode(room, hostOf(room), "rotate");
     const landed = room.seats.findIndex((seat) => seat.id === room.dealerId);
     dealAgain(room);
     expect(room.dealerId).toBe(room.seats[(landed + 1) % room.seats.length]?.id);
@@ -319,7 +391,7 @@ describe("shuffling the seats", () => {
     expect(roomView(room).shuffleSeats).toBe(false);
 
     const before = seatOrder(room);
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     for (let round = 0; round < 5; round++) dealAgain(room);
     expect(seatOrder(room)).toEqual(before);
   });
@@ -334,12 +406,12 @@ describe("shuffling the seats", () => {
 
   it("changes the order at the deal, and keeps everybody at the table", () => {
     const room = seatedRoom(6);
-    setShuffleSeats(room, room.hostId, true);
+    setShuffleSeats(room, hostOf(room), true);
     const names = seatOrder(room).toSorted();
 
     let moved = false;
     let order = seatOrder(room);
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     for (let round = 0; round < 20; round++) {
       // Nobody joins, nobody leaves, nobody is duplicated: it is a permutation.
       expect(seatOrder(room).toSorted()).toEqual(names);
@@ -352,17 +424,17 @@ describe("shuffling the seats", () => {
 
   it("says so on the event that describes the deal", () => {
     const room = seatedRoom(4);
-    expect(beginGame(room, room.hostId)[0]).toMatchObject({ seatsShuffled: false });
+    expect(beginGame(room, hostOf(room))[0]).toMatchObject({ seatsShuffled: false });
 
     room.game = null;
-    setShuffleSeats(room, room.hostId, true);
-    expect(beginGame(room, room.hostId)[0]).toMatchObject({ seatsShuffled: true });
+    setShuffleSeats(room, hostOf(room), true);
+    expect(beginGame(room, hostOf(room))[0]).toMatchObject({ seatsShuffled: true });
   });
 
   it("does not lose the dealer across a shuffle", () => {
     const room = seatedRoom(5);
-    setShuffleSeats(room, room.hostId, true);
-    beginGame(room, room.hostId);
+    setShuffleSeats(room, hostOf(room), true);
+    beginGame(room, hostOf(room));
 
     for (let round = 0; round < 20; round++) {
       const dealt = room.dealerId;
@@ -377,11 +449,11 @@ describe("shuffling the seats", () => {
 
   it("applies at the next deal and never to the hand on the table", () => {
     const room = seatedRoom(4);
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     const order = seatOrder(room);
     const before = JSON.stringify(room.game);
 
-    setShuffleSeats(room, room.hostId, true);
+    setShuffleSeats(room, hostOf(room), true);
     expect(roomView(room).shuffleSeats).toBe(true);
     expect(seatOrder(room)).toEqual(order);
     expect(JSON.stringify(room.game)).toBe(before);
@@ -389,9 +461,9 @@ describe("shuffling the seats", () => {
 
   it("reads sensibly alongside a random dealer, with both on", () => {
     const room = seatedRoom(4);
-    setShuffleSeats(room, room.hostId, true);
-    setDealerMode(room, room.hostId, "random");
-    beginGame(room, room.hostId);
+    setShuffleSeats(room, hostOf(room), true);
+    setDealerMode(room, hostOf(room), "random");
+    beginGame(room, hostOf(room));
 
     const names = seatOrder(room).toSorted();
     for (let round = 0; round < 20; round++) {
@@ -406,7 +478,7 @@ describe("shuffling the seats", () => {
 describe("seating", () => {
   it("won't deal to a table below the minimum", () => {
     const room = seatedRoom(MIN_TABLE_PLAYERS - 1);
-    expect(() => beginGame(room, room.hostId)).toThrow(
+    expect(() => beginGame(room, hostOf(room))).toThrow(
       new RegExp(`needs ${MIN_TABLE_PLAYERS} players`),
     );
   });
@@ -425,10 +497,10 @@ describe("moving a seat", () => {
     const room = seatedRoom();
     const [first, second] = seatOrder(room);
 
-    moveSeat(room, room.hostId, room.seats[1]?.id ?? "", "up");
+    moveSeat(room, hostOf(room), room.seats[1]?.id ?? "", "up");
     expect(seatOrder(room).slice(0, 2)).toEqual([second, first]);
 
-    moveSeat(room, room.hostId, room.seats[0]?.id ?? "", "down");
+    moveSeat(room, hostOf(room), room.seats[0]?.id ?? "", "down");
     expect(seatOrder(room).slice(0, 2)).toEqual([first, second]);
   });
 
@@ -437,7 +509,7 @@ describe("moving a seat", () => {
     const last = room.seats[room.seats.length - 1]?.id ?? "";
 
     for (let step = room.seats.length - 1; step > 0; step -= 1) {
-      moveSeat(room, room.hostId, last, "up");
+      moveSeat(room, hostOf(room), last, "up");
     }
 
     expect(room.seats[0]?.id).toBe(last);
@@ -450,9 +522,9 @@ describe("moving a seat", () => {
 
     // The arrow that would do this is disabled; a tap that arrives anyway means the
     // table moved, and that is not worth an error banner.
-    expect(() => moveSeat(room, room.hostId, room.seats[0]?.id ?? "", "up")).not.toThrow();
+    expect(() => moveSeat(room, hostOf(room), room.seats[0]?.id ?? "", "up")).not.toThrow();
     expect(() =>
-      moveSeat(room, room.hostId, room.seats[room.seats.length - 1]?.id ?? "", "down"),
+      moveSeat(room, hostOf(room), room.seats[room.seats.length - 1]?.id ?? "", "down"),
     ).not.toThrow();
     expect(seatOrder(room)).toEqual(before);
   });
@@ -462,13 +534,13 @@ describe("moving a seat", () => {
     const guest = room.seats[1]?.id ?? "";
     expect(() => moveSeat(room, guest, guest, "up")).toThrow(/Only the host/);
 
-    beginGame(room, room.hostId);
-    expect(() => moveSeat(room, room.hostId, guest, "up")).toThrow(/Wait for this game/);
+    beginGame(room, hostOf(room));
+    expect(() => moveSeat(room, hostOf(room), guest, "up")).toThrow(/Wait for this game/);
   });
 
   it("refuses a seat that isn't at this table", () => {
     const room = seatedRoom();
-    expect(() => moveSeat(room, room.hostId, "someone-who-left", "up")).toThrow(/Nobody by that id/);
+    expect(() => moveSeat(room, hostOf(room), "someone-who-left", "up")).toThrow(/Nobody by that id/);
   });
 
   it("needs no IRL room, because the order is real in every room", () => {
@@ -477,21 +549,21 @@ describe("moving a seat", () => {
 
     // Which rooms are worth *offering* this in is the lobby's call. Refusing it here
     // would throw at a host who flipped an unrelated setting mid-shuffle.
-    moveSeat(room, room.hostId, room.seats[1]?.id ?? "", "up");
+    moveSeat(room, hostOf(room), room.seats[1]?.id ?? "", "up");
     expect(seatOrder(room)[0]).toBe("Robot");
   });
 
   it("passes the deal round the new order", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     expect(room.dealerId).toBe(room.seats[0]?.id);
 
     // The deal follows the seat list, so a table rearranged between games rotates
     // round the order it is now actually sitting in.
     const third = room.seats[2]?.id ?? "";
     if (room.game) room.game.status = "over";
-    moveSeat(room, room.hostId, third, "up");
-    beginGame(room, room.hostId);
+    moveSeat(room, hostOf(room), third, "up");
+    beginGame(room, hostOf(room));
 
     expect(room.dealerId).toBe(third);
   });
@@ -502,7 +574,7 @@ describe("bot speed", () => {
     const room = seatedRoom();
     expect(roomView(room).botSpeed).toBe("human");
 
-    setBotSpeed(room, room.hostId, "lightning");
+    setBotSpeed(room, hostOf(room), "lightning");
     expect(roomView(room).botSpeed).toBe("lightning");
   });
 
@@ -511,8 +583,8 @@ describe("bot speed", () => {
     const guest = room.seats[1]?.id ?? "";
     expect(() => setBotSpeed(room, guest, "lightning")).toThrow(/Only the host/);
 
-    beginGame(room, room.hostId);
-    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/Wait for this game/);
+    beginGame(room, hostOf(room));
+    expect(() => setBotSpeed(room, hostOf(room), "lightning")).toThrow(/Wait for this game/);
     expect(room.botSpeed).toBe("human");
   });
 });
@@ -530,9 +602,9 @@ describe("house rules", () => {
   // Unlike bot speed, which is read live. These are read once, at the deal (#134).
   it("can be changed with a game already running", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
 
-    setHouseRules(room, room.hostId, {
+    setHouseRules(room, hostOf(room), {
       eights: "nextPlayerNames",
       seedEight: "dealerNames",
       sunny: false,
@@ -547,10 +619,10 @@ describe("house rules", () => {
 
   it("leaves the hand already dealt playing the rules it was dealt under", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     const dealtUnder = structuredClone(dealtOptions(room));
 
-    setHouseRules(room, room.hostId, {
+    setHouseRules(room, hostOf(room), {
       eights: "nextPlayerNames",
       seedEight: "dealerNames",
       sunny: false,
@@ -563,15 +635,15 @@ describe("house rules", () => {
 
   it("hands them to the next deal", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
-    setHouseRules(room, room.hostId, {
+    beginGame(room, hostOf(room));
+    setHouseRules(room, hostOf(room), {
       eights: "nextPlayerNames",
       seedEight: "dealerNames",
       sunny: false,
     });
 
     room.game = null;
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
 
     expect(dealtOptions(room)?.eights).toBe("nextPlayerNames");
     expect(dealtOptions(room)?.seedEight).toBe("dealerNames");
@@ -582,10 +654,10 @@ describe("house rules", () => {
     const room = seatedRoom();
     const rules = roomView(room).houseRules;
 
-    expect(() => setHouseRules(room, room.hostId, { ...rules, eights: "whatever" as never })).toThrow(
+    expect(() => setHouseRules(room, hostOf(room), { ...rules, eights: "whatever" as never })).toThrow(
       /No such rule/,
     );
-    expect(() => setHouseRules(room, room.hostId, { ...rules, sunny: "yes" as never })).toThrow(
+    expect(() => setHouseRules(room, hostOf(room), { ...rules, sunny: "yes" as never })).toThrow(
       /on or off/,
     );
   });
@@ -606,22 +678,22 @@ describe("IRL mode", () => {
 
   it("can be turned on with a game already running, unlike bot speed", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
 
     // The point of the flag: nothing it touches is running, so nothing about a
     // live hand stops it moving.
-    setIrl(room, room.hostId, true);
+    setIrl(room, hostOf(room), true);
     expect(roomView(room).irl).toBe(true);
-    expect(() => setBotSpeed(room, room.hostId, "lightning")).toThrow(/Wait for this game/);
+    expect(() => setBotSpeed(room, hostOf(room), "lightning")).toThrow(/Wait for this game/);
   });
 
   it("leaves the game itself alone", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     const before = JSON.stringify(room.game);
 
-    setIrl(room, room.hostId, true);
-    setIrl(room, room.hostId, false);
+    setIrl(room, hostOf(room), true);
+    setIrl(room, hostOf(room), false);
 
     // No timer moved, no window shifted, no card went anywhere: the engine
     // never learns this flag exists.
@@ -647,12 +719,12 @@ describe("playing with the highlights on", () => {
 
   it("can be changed with a game already running", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     const before = JSON.stringify(room.game);
 
     // The point of #187 is that it is a thing you decide rather than one that
     // expires, and mid-hand is when somebody works out they want it.
-    expect(setHints(room, room.hostId, true)).toBe(true);
+    expect(setHints(room, hostOf(room), true)).toBe(true);
     expect(roomView(room).seats[0]?.hinted).toBe(true);
     // And the engine never learns it happened.
     expect(JSON.stringify(room.game)).toBe(before);
@@ -661,12 +733,12 @@ describe("playing with the highlights on", () => {
   it("only announces the change that turns it on", () => {
     const room = seatedRoom();
 
-    expect(setHints(room, room.hostId, true)).toBe(true);
+    expect(setHints(room, hostOf(room), true)).toBe(true);
     // A browser re-asserting its own preference on reconnect says nothing.
-    expect(setHints(room, room.hostId, true)).toBe(false);
+    expect(setHints(room, hostOf(room), true)).toBe(false);
     // And giving up an advantage is nobody else's business.
-    expect(setHints(room, room.hostId, false)).toBe(false);
-    expect(setHints(room, room.hostId, true)).toBe(true);
+    expect(setHints(room, hostOf(room), false)).toBe(false);
+    expect(setHints(room, hostOf(room), true)).toBe(true);
   });
 
   it("refuses a seat that is not at this table", () => {
@@ -713,7 +785,7 @@ describe("bots and the Sunny Rule", () => {
     for (let recompute = 0; recompute < 50; recompute += 1) {
       expect(nextBotMove(room)?.intent.type).not.toBe("callSunny");
     }
-    expect(room.sunnyVerdict).toMatchObject({ drawerId: room.hostId, call: false });
+    expect(room.sunnyVerdict).toMatchObject({ drawerId: hostOf(room), call: false });
   });
 
   it("forgets its verdict once the window shuts", () => {
@@ -782,14 +854,14 @@ describe("holding the table while a ruling is watched", () => {
     if (!wrong) throw new Error("nothing illegal to name");
 
     vi.setSystemTime(5000);
-    const outcome = applySeatIntent(room, room.hostId, {
+    const outcome = applySeatIntent(room, hostOf(room), {
       type: "callSunny",
-      playerId: room.hostId,
+      playerId: hostOf(room),
       cardId: wrong.id,
     });
     expect(outcome.ok).toBe(true);
     expect(outcome.events.find((event) => event.type === "sunnyCalled")?.correct).toBe(false);
-    expect(drawer).not.toBe(room.hostId);
+    expect(drawer).not.toBe(hostOf(room));
     expect(rulingHeldUntil(room, 5000)).toBe(5000 + RULING_HOLD_MS);
   });
 });
@@ -812,7 +884,7 @@ describe("holding the table while the deck is shuffled back", () => {
 
   it("holds nothing while the deck still has cards in it", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     expect(reshuffleHeldUntil(room)).toBe(0);
   });
 
@@ -871,7 +943,7 @@ describe("holding the table to name a card", () => {
     botDrawsWithAPlay(room);
     expect(callHeldUntil(room)).toBe(0);
 
-    holdCall(room, room.hostId, true, 1000);
+    holdCall(room, hostOf(room), true, 1000);
     expect(callHeldUntil(room, 1000)).toBe(1000 + CALL_HOLD_MS);
   });
 
@@ -879,33 +951,33 @@ describe("holding the table to name a card", () => {
     const room = seatedRoom();
     botDrawsWithAPlay(room);
 
-    holdCall(room, room.hostId, true, 1000);
-    holdCall(room, room.hostId, false, 1000);
+    holdCall(room, hostOf(room), true, 1000);
+    holdCall(room, hostOf(room), false, 1000);
     expect(callHeldUntil(room, 1000)).toBe(0);
 
-    holdCall(room, room.hostId, true, 1000);
-    markDisconnected(room, room.hostId);
+    holdCall(room, hostOf(room), true, 1000);
+    markDisconnected(room, hostOf(room));
     expect(callHeldUntil(room, 1000)).toBe(0);
   });
 
   it("gives up on its own, so a dead tab can't strand the table", () => {
     const room = seatedRoom();
     botDrawsWithAPlay(room);
-    holdCall(room, room.hostId, true, 1000);
+    holdCall(room, hostOf(room), true, 1000);
 
     expect(callHeldUntil(room, 1000 + CALL_HOLD_MS - 1)).toBeGreaterThan(0);
     expect(callHeldUntil(room, 1000 + CALL_HOLD_MS)).toBe(0);
 
     // And it stays given up: reopening the picker on the same window doesn't
     // wind it back on.
-    holdCall(room, room.hostId, true, 1000 + CALL_HOLD_MS);
+    holdCall(room, hostOf(room), true, 1000 + CALL_HOLD_MS);
     expect(callHeldUntil(room, 1000 + CALL_HOLD_MS)).toBe(0);
   });
 
   it("goes with the window it was taken out on", () => {
     const room = seatedRoom();
     botDrawsWithAPlay(room);
-    holdCall(room, room.hostId, true, 1000);
+    holdCall(room, hostOf(room), true, 1000);
 
     const game = room.game;
     if (!game) throw new Error("no game");
@@ -918,13 +990,13 @@ describe("holding the table to name a card", () => {
     const room = seatedRoom();
     botDrawsWithAPlay(room);
 
-    holdCall(room, room.hostId, true, 1000);
+    holdCall(room, hostOf(room), true, 1000);
     const deadline = callHeldUntil(room, 1000);
 
     // Close it and open it again, twenty seconds later. The table stops
     // waiting when it was always going to.
-    holdCall(room, room.hostId, false, 21_000);
-    holdCall(room, room.hostId, true, 21_000);
+    holdCall(room, hostOf(room), false, 21_000);
+    holdCall(room, hostOf(room), true, 21_000);
     expect(callHeldUntil(room, 21_000)).toBe(deadline);
   });
 
@@ -943,9 +1015,9 @@ describe("holding the table to name a card", () => {
     botDrawsWithAPlay(room);
     const game = room.game;
     if (!game) throw new Error("no game");
-    game.sunnyLockouts[room.hostId] = game.totalReaches + 3;
+    game.sunnyLockouts[hostOf(room)] = game.totalReaches + 3;
 
-    holdCall(room, room.hostId, true, 1000);
+    holdCall(room, hostOf(room), true, 1000);
     expect(callHeldUntil(room, 1000)).toBe(0);
   });
 });
@@ -965,10 +1037,10 @@ describe("a seat on autopilot", () => {
    * still.
    */
   const stageHostTurn = (room: Room, hand: string[], top: string) => {
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     const game = room.game;
     if (!game) throw new Error("no game");
-    game.turnIndex = game.players.findIndex((player) => player.id === room.hostId);
+    game.turnIndex = game.players.findIndex((player) => player.id === hostOf(room));
     const player = game.players[game.turnIndex];
     if (!player) throw new Error("no player");
 
@@ -984,7 +1056,7 @@ describe("a seat on autopilot", () => {
     const room = seatedRoom();
     expect(roomView(room).seats.every((seat) => seat.autopilot === "off")).toBe(true);
 
-    setAutopilot(room, room.hostId, "forced");
+    setAutopilot(room, hostOf(room), "forced");
     expect(roomView(room).seats[0]?.autopilot).toBe("forced");
   });
 
@@ -993,7 +1065,7 @@ describe("a seat on autopilot", () => {
     // The only handle is the caller's own id, which the socket stamps from the
     // connection — so there is nothing here another player could reach.
     expect(() => setAutopilot(room, "somebody-else", "bot")).toThrow(/not at this table/);
-    expect(() => setAutopilot(room, room.hostId, "sideways" as never)).toThrow(/No such autopilot/);
+    expect(() => setAutopilot(room, hostOf(room), "sideways" as never)).toThrow(/No such autopilot/);
   });
 
   it("refuses a bot, which already plays itself", () => {
@@ -1007,9 +1079,9 @@ describe("a seat on autopilot", () => {
     stageHostTurn(room, ["7H", "2D"], "7S");
 
     // Nothing moves this seat while it is a person's.
-    expect(nextBotMove(room)?.seat.id).not.toBe(room.hostId);
-    setAutopilot(room, room.hostId, "bot");
-    expect(nextBotMove(room)?.seat.id).toBe(room.hostId);
+    expect(nextBotMove(room)?.seat.id).not.toBe(hostOf(room));
+    setAutopilot(room, hostOf(room), "bot");
+    expect(nextBotMove(room)?.seat.id).toBe(hostOf(room));
   });
 
   it("never draws while holding a play, in either mode", () => {
@@ -1020,9 +1092,9 @@ describe("a seat on autopilot", () => {
       const room = seatedRoom();
       stageHostTurn(room, ["7H", "2D"], "7S");
 
-      setAutopilot(room, room.hostId, mode);
+      setAutopilot(room, hostOf(room), mode);
       const move = nextBotMove(room);
-      expect(move?.seat.id).toBe(room.hostId);
+      expect(move?.seat.id).toBe(hostOf(room));
       expect(move?.intent.type).toBe("playCard");
     }
   });
@@ -1033,34 +1105,34 @@ describe("a seat on autopilot", () => {
     // hands back.
     stageHostTurn(room, ["7H", "7D"], "7S");
 
-    setAutopilot(room, room.hostId, "forced");
+    setAutopilot(room, hostOf(room), "forced");
     expect(nextBotMove(room)).toBeNull();
 
-    setAutopilot(room, room.hostId, "bot");
-    expect(nextBotMove(room)?.seat.id).toBe(room.hostId);
+    setAutopilot(room, hostOf(room), "bot");
+    expect(nextBotMove(room)?.seat.id).toBe(hostOf(room));
   });
 
   it("draws in forced-only when nothing matches, because that is not a choice", () => {
     const room = seatedRoom();
     stageHostTurn(room, ["2D", "3D"], "7S");
 
-    setAutopilot(room, room.hostId, "forced");
+    setAutopilot(room, hostOf(room), "forced");
     const move = nextBotMove(room);
-    expect(move?.seat.id).toBe(room.hostId);
+    expect(move?.seat.id).toBe(hostOf(room));
     expect(move?.intent.type).toBe("drawCard");
   });
 
   it("names no suit and picks no punishment card in forced-only", () => {
     const room = seatedRoom();
     const game = stageHostTurn(room, ["2D", "3D"], "7S");
-    setAutopilot(room, room.hostId, "forced");
+    setAutopilot(room, hostOf(room), "forced");
 
     // Which suit to call is a choice, and under Power of Eights an important one.
-    game.phase = { kind: "suit", playerId: room.hostId };
+    game.phase = { kind: "suit", playerId: hostOf(room) };
     expect(nextBotMove(room)).toBeNull();
 
     // And which card to lose is a choice about which card to lose.
-    game.phase = { kind: "surrender", playerId: room.hostId, reason: "sunnyPunishment" };
+    game.phase = { kind: "surrender", playerId: hostOf(room), reason: "sunnyPunishment" };
     expect(nextBotMove(room)).toBeNull();
   });
 
@@ -1068,23 +1140,23 @@ describe("a seat on autopilot", () => {
     const room = seatedRoom();
     room.botSeed = seedRolling(true);
     const bot = botDrawsWithAPlay(room);
-    setAutopilot(room, room.hostId, "bot");
+    setAutopilot(room, hostOf(room), "bot");
 
     // The bot is caught and the table has agreed to call. Every call that comes
     // out is a bot's; the autopiloted seat plays its hand and accuses nobody.
     for (let move = nextBotMove(room); move; move = nextBotMove(room)) {
       if (move.intent.type !== "callSunny") break;
-      expect(move.seat.id).not.toBe(room.hostId);
+      expect(move.seat.id).not.toBe(hostOf(room));
       const outcome = applySeatIntent(room, move.seat.id, move.intent);
       expect(outcome.ok).toBe(true);
     }
-    expect(bot).not.toBe(room.hostId);
+    expect(bot).not.toBe(hostOf(room));
   });
 
   it("switches itself off when the game ends", () => {
     const room = seatedRoom();
-    beginGame(room, room.hostId);
-    setAutopilot(room, room.hostId, "bot");
+    beginGame(room, hostOf(room));
+    setAutopilot(room, hostOf(room), "bot");
 
     // Play it out. A new deal is a new hand, and coming back to find you had
     // been playing on autopilot for three games is not what anybody asked for.
@@ -1121,13 +1193,13 @@ describe("a player leaving mid-game", () => {
 
   it("does not stop the table, and the hand still ends with one winner", () => {
     const room = seatedRoom(4);
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     expect(cardsInPlay(room)).toBe(52);
 
     // Before this existed the turn reached this seat and stayed there forever:
     // `nextBotMove` drove `seat.bot` and nothing else, so a human seat was moved
     // by messages from that human's socket and by nothing at all otherwise.
-    leaveSeat(room, room.hostId);
+    leaveSeat(room, hostOf(room));
     playOut(room);
 
     expect(room.game?.status).toBe("over");
@@ -1137,7 +1209,7 @@ describe("a player leaving mid-game", () => {
 
   it("keeps their cards in play rather than deleting the seat", () => {
     const room = seatedRoom(4);
-    const gone = room.hostId;
+    const gone = hostOf(room);
     beginGame(room, gone);
     const seats = room.seats.length;
 
@@ -1153,7 +1225,7 @@ describe("a player leaving mid-game", () => {
   it("hands the seat to the autopilot rather than to forced-only", () => {
     const room = seatedRoom(4);
     const who = room.seats[1]?.id ?? "";
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     leaveSeat(room, who);
 
     // Nobody is coming back to make the choices, and forced-only stalls on any
@@ -1167,8 +1239,8 @@ describe("a player leaving mid-game", () => {
   it("is not recoverable, where a dropped connection still is", () => {
     const store = createStore();
     const { room, seat } = createRoom(store, "Ryan");
-    while (room.seats.length < MIN_TABLE_PLAYERS) addBot(room, room.hostId);
-    beginGame(room, room.hostId);
+    while (room.seats.length < MIN_TABLE_PLAYERS) addBot(room, hostOf(room));
+    beginGame(room, hostOf(room));
 
     // A lock screen, a backgrounded tab and a dropped tunnel are all one thing.
     markDisconnected(room, seat.id);
@@ -1185,8 +1257,8 @@ describe("a player leaving mid-game", () => {
     const { room } = createRoom(store, "Ryan");
     const { seat: guest } = joinRoom(store, room.code, "Ana");
     // One over the minimum, so the table is still dealable once Ana has gone.
-    while (room.seats.length <= MIN_TABLE_PLAYERS) addBot(room, room.hostId);
-    beginGame(room, room.hostId);
+    while (room.seats.length <= MIN_TABLE_PLAYERS) addBot(room, hostOf(room));
+    beginGame(room, hostOf(room));
 
     leaveSeat(room, guest.id);
     // The hand ends however it ends — the point here is what the *next* deal
@@ -1196,7 +1268,7 @@ describe("a player leaving mid-game", () => {
 
     // "That game is already under way" was the other half of the stall: with the
     // turn parked forever, the host could not start a new one either.
-    expect(() => beginGame(room, room.hostId)).not.toThrow();
+    expect(() => beginGame(room, hostOf(room))).not.toThrow();
     expect(room.seats.some((seat) => seat.id === guest.id)).toBe(false);
     expect(room.seats.every((seat) => !seat.left)).toBe(true);
   });
@@ -1214,10 +1286,10 @@ describe("a player leaving mid-game", () => {
     const store = createStore();
     const { room } = createRoom(store, "Ryan");
     const { seat: guest } = joinRoom(store, room.code, "Ana");
-    while (room.seats.length < MIN_TABLE_PLAYERS) addBot(room, room.hostId);
+    while (room.seats.length < MIN_TABLE_PLAYERS) addBot(room, hostOf(room));
 
-    leaveSeat(room, room.hostId);
-    expect(room.hostId).toBe(guest.id);
+    leaveSeat(room, hostOf(room));
+    expect(hostOf(room)).toBe(guest.id);
   });
 });
 
@@ -1232,7 +1304,7 @@ describe("a player leaving mid-game", () => {
 describe("moving a seat from the shared table screen", () => {
   const irlRoom = (): Room => {
     const room = seatedRoom();
-    setIrl(room, room.hostId, true);
+    setIrl(room, hostOf(room), true);
     return room;
   };
 
@@ -1253,7 +1325,7 @@ describe("moving a seat from the shared table screen", () => {
 
     const arrowTarget = byArrow.seats[2]?.id ?? "";
     const dragTarget = byDrag.seats[2]?.id ?? "";
-    moveSeat(byArrow, byArrow.hostId, arrowTarget, "up");
+    moveSeat(byArrow, hostOf(byArrow), arrowTarget, "up");
     moveSeatFromTable(byDrag, dragTarget, "up");
 
     expect(seatOrder(byDrag)).toEqual(seatOrder(byArrow));
@@ -1268,7 +1340,7 @@ describe("moving a seat from the shared table screen", () => {
 
   it("refuses while a hand is out", () => {
     const room = irlRoom();
-    beginGame(room, room.hostId);
+    beginGame(room, hostOf(room));
     expect(() => moveSeatFromTable(room, room.seats[1]?.id ?? "", "up")).toThrow(
       /Wait for this game to finish/,
     );
@@ -1304,7 +1376,7 @@ describe("where the seats are sitting", () => {
 
   it("re-spaces as a table fills, while nobody has arranged it", () => {
     const room = seatedRoom();
-    addBot(room, room.hostId);
+    addBot(room, hostOf(room));
     expect(seatOrder(room)).toEqual(["Ryan", "Robot", "Clockwork", "Tinny", "Gizmo"]);
     for (const [index, at] of spotsOf(room).entries()) expect(at).toBeCloseTo(index / 5, 9);
   });
@@ -1312,7 +1384,7 @@ describe("where the seats are sitting", () => {
   it("moves a seat by trading chairs, so the order follows the board", () => {
     const room = seatedRoom();
     const before = spotsOf(room);
-    moveSeat(room, room.hostId, room.seats[1]?.id ?? "", "up");
+    moveSeat(room, hostOf(room), room.seats[1]?.id ?? "", "up");
     expect(seatOrder(room)[0]).toBe("Robot");
     // The pair swapped where they sit; nobody else moved, and the chairs are the
     // same chairs.
@@ -1321,7 +1393,7 @@ describe("where the seats are sitting", () => {
 
   it("puts a seat where it was dropped, and leaves everybody else alone", () => {
     const room = seatedRoom();
-    setIrl(room, room.hostId, true);
+    setIrl(room, hostOf(room), true);
     const moved = room.seats[3]?.id ?? "";
     const others = room.seats.filter((seat) => seat.id !== moved).map((seat) => seat.spot);
 
@@ -1334,13 +1406,13 @@ describe("where the seats are sitting", () => {
 
   it("stops re-spacing once a table has arranged itself", () => {
     const room = seatedRoom();
-    setIrl(room, room.hostId, true);
+    setIrl(room, hostOf(room), true);
     placeSeat(room, room.seats[3]?.id ?? "", 0.1);
     const arranged = spotsOf(room);
 
     // A newcomer takes the free chair rather than sending everybody round the
     // table again.
-    addBot(room, room.hostId);
+    addBot(room, hostOf(room));
     expect(spotsOf(room)).toEqual(expect.arrayContaining(arranged));
     expect(room.seats).toHaveLength(5);
   });
@@ -1350,14 +1422,14 @@ describe("where the seats are sitting", () => {
     expect(() => placeSeat(online, online.seats[1]?.id ?? "", 0.4)).toThrow(/only watch/);
 
     const room = seatedRoom();
-    setIrl(room, room.hostId, true);
-    beginGame(room, room.hostId);
+    setIrl(room, hostOf(room), true);
+    beginGame(room, hostOf(room));
     expect(() => placeSeat(room, room.seats[1]?.id ?? "", 0.4)).toThrow(/Wait for this game/);
   });
 
   it("refuses a seat that isn't at this table, and a spot that isn't a number", () => {
     const room = seatedRoom();
-    setIrl(room, room.hostId, true);
+    setIrl(room, hostOf(room), true);
     expect(() => placeSeat(room, "someone-who-left", 0.4)).toThrow(/Nobody by that id/);
     expect(() => placeSeat(room, room.seats[1]?.id ?? "", "half" as unknown as number)).toThrow(
       /sits somewhere/,
@@ -1368,7 +1440,7 @@ describe("where the seats are sitting", () => {
     // Two seats on one point have no order between them, which would be a turn
     // order that depended on a sort's stability.
     const room = seatedRoom();
-    setIrl(room, room.hostId, true);
+    setIrl(room, hostOf(room), true);
     placeSeat(room, room.seats[2]?.id ?? "", 0.25);
     const spots = spotsOf(room);
     expect(new Set(spots).size).toBe(spots.length);
@@ -1379,12 +1451,12 @@ describe("where the seats are sitting", () => {
     // #199 says the chairs stay where they are and who sits in them changes,
     // which is what the "take your seat" screen is already telling everybody.
     const room = seatedRoom();
-    setIrl(room, room.hostId, true);
+    setIrl(room, hostOf(room), true);
     placeSeat(room, room.seats[3]?.id ?? "", 0.1);
     const chairs = spotsOf(room);
 
-    setShuffleSeats(room, room.hostId, true);
-    beginGame(room, room.hostId);
+    setShuffleSeats(room, hostOf(room), true);
+    beginGame(room, hostOf(room));
     expect(spotsOf(room)).toEqual(chairs);
     expect(room.seats).toHaveLength(chairs.length);
   });

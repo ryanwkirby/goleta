@@ -1666,6 +1666,80 @@ The evidence is `bench/results.md` in full, the protocol for adding to it is
 was concluded. Read them before re-deriving any of this from first principles,
 which is exactly how it came to be run the first time.
 
+## Opening a room, and a room with nobody in it
+
+**The question comes before the name** (#326). `Join.tsx` used to put the name
+box first and always visible, with *create* / *join* underneath — so it asked
+*who are you* before it had established there was going to be a seat, and a
+device that turned out to be the screen in the middle of the table was asked for
+a name it would never use. The question is asked first now and the name box is
+revealed by the answer. A link with a code in it has already answered it and
+lands on the code box, which `codeFromHash` latches; choosing wrong is never a
+dead end.
+
+**Creating asks a second question: is this device playing, or is it the screen in
+the middle?** That is what makes it possible to start a game from the centre
+device, which until then could only ever join a room somebody else had already
+made. A shared screen has no name, so answering *table screen* is also what takes
+the name box away. It is drawn with `TwoWay`, which is exactly what that control
+is for.
+
+**`Room.hostId` is nullable, and that is a real state rather than a gap.** A room
+opened from the screen seats nobody, so it has no owner until the first person
+joins:
+
+- `requireHost` refuses **everything** while there is none, which is the right
+  answer — there is nobody to have granted it.
+- `joinRoom` hands the room to the first person through the door. That is what
+  makes such a room playable, not a courtesy.
+- `passHostOn` now goes to `null` rather than leaving the id of somebody who has
+  gone. The old value read as a host and behaved as one; `rejoinRoom` handed the
+  room to a returning player anyway, so it bought nothing and lied meanwhile.
+- `roomView.hostId` and `SeatView.isHost` both cope, and so do the two screens
+  that said *waiting for &lt;host&gt;* — with no host there is nobody to wait for.
+
+The persisted shape changed, so `SNAPSHOT_VERSION` went to 20 and old snapshots
+are discarded on boot. No migrations.
+
+**A room opened from the screen is IRL from the start.** Answering "this device
+is the screen in the middle" is itself a statement that the table is sitting in
+one room — and every power that screen has is gated on `irl`, so without it the
+screen could not reach the settings of the room it had just opened, and there
+would be no host to turn the flag on either.
+
+**The shared screen's cog holds room settings only.** House rules, dealer mode,
+shuffled seats, bot speed and IRL — and **nothing** from *Your settings*: that
+half is about cards the device does not hold, and nobody may set autopilot or
+hints for anybody else (#202, #187). `SettingsCog` takes its personal half as an
+optional `personal` bundle; absent, it opens on the room page with no navigation
+at all, exactly as a non-host sees one page. Same gate as the screen's other
+auxiliary actions, checked on the server: an **IRL** room, because an online room
+is strangers.
+
+The one wrinkle worth knowing: that cog can switch **off** the flag the whole
+block is gated on. It is not a dead end — the first person to join owns the room
+and can switch it back, which is the same recovery an ownerless room already
+relies on.
+
+**Changing the owner is deliberately hard to find.** A long press on a name on
+the shared screen, with no label, no hint, nothing on any other screen and
+nothing costing the board ink. It is an exotic fringe case — the host has gone
+home with their phone and the table is still sitting there — and should be
+minimally discoverable by design.
+
+**It shares the gesture with the drag rather than being layered over it**, which
+is the only way the two cannot fight: one `setPointerCapture`, one piece of
+state, and travelling `THRESHOLD` cancels the press outright while the press
+firing cancels the drop. So a drag is never also a handover and a handover never
+leaves a name mid-flight. `LONG_PRESS_MS` is long on purpose, for `THRESHOLD`'s
+own reason: somebody will put a drink down on this screen. Between games and IRL
+only, like the drag, and a bot or a seat that has left cannot be given the room —
+both would leave the table with a host that can never press anything.
+
+**No seated player may send `setHost`.** It is named in the switch rather than
+left to fall through, so it is a refusal somebody can read instead of a message
+that quietly does nothing — the shape `placeSeat` already uses.
+
 ## The game record
 
 `packages/server/src/record.ts` writes an append-only JSONL file of what tables

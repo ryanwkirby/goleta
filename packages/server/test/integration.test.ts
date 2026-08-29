@@ -667,7 +667,12 @@ describe("what the wire carries", () => {
       { t: "intent", intent: { type: "endTurn", playerId: "" } },
       { t: "composingCall", open: true },
       { t: "help" },
-      { t: "setIrl", on: false },
+      // Nothing from the *Your settings* half, ever: that half is about cards
+      // this device does not hold, and nobody may set autopilot or hints for
+      // anybody else (#202, #187). The **room** settings are a different thing
+      // and are allowed since #326 — covered below.
+      { t: "setHints", on: true },
+      { t: "setAutopilot", mode: "bot" },
     ];
 
     // oxlint-disable no-await-in-loop -- one refusal at a time, in order.
@@ -679,6 +684,100 @@ describe("what the wire carries", () => {
     }
 
     expect(host.room?.irl).toBe(true);
+  }, 20_000);
+
+  it("lets an IRL shared table screen change the room's settings, and an online one not", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    const code = host.code as string;
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code, table: true });
+    await screen.until((c) => c.room !== null);
+
+    // An online room is strangers, and none of them get to change a stranger's
+    // table — the same line the draw and `placeSeat` meet (#120, #320).
+    const before = screen.errors.length;
+    screen.send({ t: "setShuffleSeats", on: true });
+    await screen.until((c) => c.errors.length > before);
+    expect(screen.errors.at(-1)).toMatch(/watching this table/);
+    expect(host.room?.shuffleSeats).toBe(false);
+
+    host.send({ t: "setIrl", on: true });
+    await host.until((c) => c.room?.irl === true);
+
+    // In a room where that flag means what it says, everybody present can
+    // already reach the propped-up screen.
+    screen.send({ t: "setShuffleSeats", on: true });
+    await host.until((c) => c.room?.shuffleSeats === true);
+    screen.send({ t: "setDealerMode", mode: "random" });
+    await host.until((c) => c.room?.dealerMode === "random");
+    screen.send({ t: "setBotSpeed", speed: "lightning" });
+    await host.until((c) => c.room?.botSpeed === "lightning");
+    screen.send({
+      t: "setHouseRules",
+      rules: { eights: "playerNames", seedEight: "natural", sunny: false },
+    });
+    await host.until((c) => c.room?.houseRules.sunny === false);
+  }, 20_000);
+
+  it("opens a room from the screen in the middle, with no host until somebody joins", async () => {
+    const server = await startServer(tempDir());
+    const screen = await openClient(server.port);
+
+    // No name and no seat: the device in the middle of a table holds no cards.
+    screen.send({ t: "createTable" });
+    await screen.until((c) => c.room !== null);
+    expect(screen.playerId).toBe(null);
+    expect(screen.room?.seats).toHaveLength(0);
+    // IRL from the start — answering "this device is the screen" is what that
+    // means, and the screen's own powers are all gated on the flag.
+    expect(screen.room?.irl).toBe(true);
+    expect(screen.room?.hostId).toBe(null);
+
+    // Every host power is refused while nobody owns it, which is the right
+    // answer rather than a gap.
+    const code = screen.room?.code as string;
+    const player = await openClient(server.port);
+    player.send({ t: "join", code, name: "Ryan" });
+    await player.until((c) => c.room !== null);
+
+    // The first person in owns it, which is what makes such a room playable.
+    expect(player.room?.hostId).toBe(player.playerId);
+    expect(player.room?.seats.find((seat) => seat.id === player.playerId)?.isHost).toBe(true);
+  }, 20_000);
+
+  it("hands the room on from the screen, in an IRL room, between games", async () => {
+    const server = await startServer(tempDir());
+    const host = await openClient(server.port);
+    host.send({ t: "create", name: "Ryan" });
+    await host.until((c) => c.room !== null);
+    const code = host.code as string;
+    host.send({ t: "setIrl", on: true });
+    await host.until((c) => c.room?.irl === true);
+
+    const guest = await openClient(server.port);
+    guest.send({ t: "join", code, name: "Sam" });
+    await guest.until((c) => c.room !== null);
+    const sam = guest.playerId as string;
+
+    const screen = await openClient(server.port);
+    screen.send({ t: "watch", code, table: true });
+    await screen.until((c) => c.room !== null);
+
+    // A long press on a name, which is one message. Nobody else may send it: a
+    // seated player reordering the room is the lobby's job.
+    const before = host.errors.length;
+    host.send({ t: "setHost", playerId: sam });
+    await host.until((c) => c.errors.length > before);
+    expect(host.errors.at(-1)).toMatch(/handed on from the table screen/);
+    expect(host.room?.hostId).toBe(host.playerId);
+
+    screen.send({ t: "setHost", playerId: sam });
+    await host.until((c) => c.room?.hostId === sam);
+    expect(host.room?.seats.find((seat) => seat.id === sam)?.isHost).toBe(true);
   }, 20_000);
 
   it("lets an IRL shared table screen reorder the seats between games", async () => {

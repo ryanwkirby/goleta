@@ -386,12 +386,27 @@ export function IrlToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
  * both layouts, and it exists in both** (#194) — hosts did not find the 16px
  * glyph, and it rendered only in a header `HandView` does not have.
  */
+/**
+ * The *yours* half, as one bundle so it can be **absent** (#326).
+ *
+ * The shared table screen holds no cards and no identity, so its cog is room
+ * settings only: nobody may set autopilot or hints for anybody else (#202,
+ * #187), and there is no "you" on that screen to set them for. Without it there
+ * would be nothing able to configure a room that screen had just opened, which
+ * has no host at all until somebody joins.
+ */
+export interface PersonalSettings {
+  hints: boolean;
+  onHints: (on: boolean) => void;
+  /** Whether this seat is playing itself for a while (#202). Yours alone to set
+   * — the server stamps it from the connection — and public once it is on. */
+  autopilot: AutopilotMode;
+  onAutopilot: (mode: AutopilotMode) => void;
+}
+
 export function SettingsCog({
   isHost,
-  hints,
-  onHints,
-  autopilot,
-  onAutopilot,
+  personal,
   rules,
   irl,
   dealerMode,
@@ -403,14 +418,12 @@ export function SettingsCog({
   label,
   className = "",
 }: {
-  /** Whether the table half is drawn at all. The personal half is everyone's. */
+  /** Whether the table half is drawn at all. The personal half is everyone's who
+   * has one — see `personal`. */
   isHost: boolean;
-  hints: boolean;
-  onHints: (on: boolean) => void;
-  /** Whether this seat is playing itself for a while (#202). Yours alone to set
-   * — the server stamps it from the connection — and public once it is on. */
-  autopilot: AutopilotMode;
-  onAutopilot: (mode: AutopilotMode) => void;
+  /** Absent on the shared table screen, which gets the room page and nothing
+   * else (#326). */
+  personal?: PersonalSettings;
   rules: HouseRules;
   irl: boolean;
   dealerMode: DealerMode;
@@ -431,14 +444,17 @@ export function SettingsCog({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  /** Where a cog with both pages opens, and the only page a cog without a
+   * personal half has. */
+  const first: SettingsPage = personal ? "yours" : "room";
   /** Which page is showing. Not remembered: closing forgets it and the next open
    * lands on *yours*, the reasoning that took `goleta:table-view` out — a
    * preference the app would have to store to answer a question that is one tap
    * to re-ask. */
-  const [page, setPage] = useState<SettingsPage>("yours");
+  const [page, setPage] = useState<SettingsPage>(first);
   const close = (): void => {
     setOpen(false);
-    setPage("yours");
+    setPage(first);
   };
 
   return (
@@ -512,18 +528,22 @@ export function SettingsCog({
                   </p>
                 </div>
 
-                <PageLink label="Your settings" back onGo={() => setPage("yours")} />
+                {/* No way back where there is nowhere to go back to: a screen
+                    in the middle of a table has no personal page (#326). */}
+                {personal ? (
+                  <PageLink label="Your settings" back onGo={() => setPage("yours")} />
+                ) : null}
               </>
-            ) : (
+            ) : personal ? (
               <>
                 <div className="flex flex-col gap-4">
                   <SectionHeading>Your settings</SectionHeading>
-                  <HintsRow on={hints} onChange={onHints} />
+                  <HintsRow on={personal.hints} onChange={personal.onHints} />
                   {/* Both halves of *yours* clear the bar #188 set: they belong to one
                       player and change nothing about the room. Neither is private —
                       hints are shouted (#187) and an autopiloted seat carries a
                       standing mark (#202). */}
-                  <AutopilotPicker mode={autopilot} onChange={onAutopilot} />
+                  <AutopilotPicker mode={personal.autopilot} onChange={personal.onAutopilot} />
                 </div>
 
                 {/* Only a host is told the other page exists. A non-host sees one
@@ -531,7 +551,7 @@ export function SettingsCog({
                     enter. */}
                 {isHost ? <PageLink label="Room settings" onGo={() => setPage("room")} /> : null}
               </>
-            )}
+            ) : null}
 
             <Button variant="secondary" full onClick={close}>
               Done

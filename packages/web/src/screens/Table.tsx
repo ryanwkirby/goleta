@@ -22,6 +22,7 @@ import { OwnHand } from "./table/OwnHand.tsx";
 import { TableHeader } from "./table/TableHeader.tsx";
 import { TableOverlays } from "./table/TableOverlays.tsx";
 import { useTableState } from "./table/useTableState.ts";
+import { isHost } from "../lib/seating.ts";
 
 /**
  * The line that says what the table is waiting for, and the picker it asks for.
@@ -246,7 +247,7 @@ export function Table({
         <TableHeader
           room={room}
           me={game.you}
-          isHost={room.hostId === game.you}
+          isHost={isHost(room, game.you)}
           seated={seated}
           hints={hints}
           onChooseHints={onChooseHints}
@@ -320,7 +321,7 @@ export function Table({
             room={room}
             game={game}
             nameOf={nameOf}
-            isHost={room.hostId === game.you}
+            isHost={isHost(room, game.you)}
             seated={seated}
             onDealAgain={() => send({ t: "start" })}
             onJoinNext={() => send({ t: "join", code: room.code, name: loadName() || "Watcher" })}

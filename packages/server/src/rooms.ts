@@ -94,7 +94,16 @@ interface CallHold {
 
 export interface Room {
   code: string;
-  hostId: PlayerId;
+  /**
+   * **Nullable, because a room can be opened from the middle of the table**
+   * (#326). A screen propped between six people has no seat and no name, so a
+   * room it opens has nobody to be host of it until the first person joins —
+   * `requireHost` refuses everything meanwhile, which is the right answer rather
+   * than a gap. It also became the honest answer to a case that already existed:
+   * `passHostOn` used to keep pointing at somebody who had gone when there was
+   * nobody left to hand it to.
+   */
+  hostId: PlayerId | null;
   seats: Seat[];
   dealerId: PlayerId | null;
   /** Human by default: a bot that answers instantly leaves no room to notice a
@@ -224,15 +233,17 @@ const seatArrives = (room: Room, seat: Seat): void => {
   reseat(room);
 };
 
-export const createRoom = (store: RoomStore, name: string): { room: Room; seat: Seat } => {
-  const seat = newSeatFor(cleanName(name), false, 0);
+/** Everything a room is before anybody sits down. Shared by the two ways one is
+ * opened, so a room made from the middle of the table cannot quietly drift from
+ * a room made by a player. */
+const emptyRoom = (store: RoomStore, irl: boolean): Room => {
   const room: Room = {
     code: newRoomCode((code) => store.has(code)),
-    hostId: seat.id,
-    seats: [seat],
+    hostId: null,
+    seats: [],
     dealerId: null,
     botSpeed: "human",
-    irl: false,
+    irl,
     // Off by default: a table that never opens the setting deals as it always has.
     dealerMode: "rotate",
     shuffleSeats: false,
@@ -249,8 +260,35 @@ export const createRoom = (store: RoomStore, name: string): { room: Room; seat: 
     updatedAt: Date.now(),
   };
   store.set(room.code, room);
+  return room;
+};
+
+export const createRoom = (store: RoomStore, name: string): { room: Room; seat: Seat } => {
+  const room = emptyRoom(store, false);
+  const seat = newSeatFor(cleanName(name), false, 0);
+  room.seats.push(seat);
+  room.hostId = seat.id;
   return { room, seat };
 };
+
+/**
+ * A room opened from the **shared table screen** (#326).
+ *
+ * It seats nobody, because a device propped in the middle of a table holds no
+ * cards and has no name, and it has **no host until the first person joins** —
+ * `requireHost` refuses everything meanwhile, which is the right answer rather
+ * than a gap.
+ *
+ * It is **IRL from the start**. Answering "this device is the screen in the
+ * middle" is itself a statement that the table is sitting in one room, and the
+ * screen's own auxiliary powers are all gated on `irl` — drawing (#120),
+ * `placeSeat` (#320), and now the room settings — so without it the screen could
+ * not reach the settings of the room it had just opened, and there would be no
+ * host to turn the flag on either.
+ */
+export const createTableRoom = (store: RoomStore): { room: Room } => ({
+  room: emptyRoom(store, true),
+});
 
 export const findRoom = (store: RoomStore, code: string): Room =>
   store.get(normaliseCode(code)) ?? fail("No room with that code");
@@ -270,6 +308,10 @@ export const joinRoom = (
 
   const seat = newSeatFor(cleanName(name), false, 0);
   seatArrives(room, seat);
+  // **The first person into a room opened from the screen owns it** (#326).
+  // Until somebody does, `requireHost` refuses everything and the room cannot be
+  // dealt — so this is what makes such a room playable rather than a courtesy.
+  if (room.hostId === null) room.hostId = seat.id;
   touch(room);
   return { room, seat };
 };
@@ -354,8 +396,16 @@ export const leaveSeat = (room: Room, playerId: PlayerId): TableEvent[] => {
 const passHostOn = (room: Room, playerId: PlayerId): void => {
   if (room.hostId !== playerId) return;
   const successor = room.seats.find((s) => !s.bot && !s.left && s.connected);
-  if (successor) room.hostId = successor.id;
-  else room.hostId = room.seats.find((s) => !s.bot && !s.left)?.id ?? room.hostId;
+  if (successor) {
+    room.hostId = successor.id;
+    return;
+  }
+  // **Null rather than the id of somebody who has gone** (#326). It used to keep
+  // pointing at them, which read as a host and behaved as one — a returning
+  // player was handed the room by `rejoinRoom` anyway, so the stale id bought
+  // nothing and lied in the meantime. An ownerless room is now a state the rest
+  // of this file understands.
+  room.hostId = room.seats.find((s) => !s.bot && !s.left)?.id ?? null;
 };
 
 export const markDisconnected = (room: Room, playerId: PlayerId): void => {
@@ -369,7 +419,11 @@ export const markDisconnected = (room: Room, playerId: PlayerId): void => {
   touch(room);
 };
 
+/** An ownerless room refuses every host power, which is the right answer: there
+ * is nobody to have granted it, and the first person to join becomes the host
+ * moments later (#326). */
 const requireHost = (room: Room, playerId: PlayerId): void => {
+  if (room.hostId === null) fail("Nobody has this room yet");
   if (room.hostId !== playerId) fail("Only the host can do that");
 };
 
@@ -386,8 +440,7 @@ export const addBot = (room: Room, byPlayerId: PlayerId): void => {
 
 /** Between games only: changing the pace mid-hand would move a challenge window
  * somebody is already watching. */
-export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): void => {
-  requireHost(room, byPlayerId);
+export const setBotSpeedFromTable = (room: Room, speed: BotSpeed): void => {
   if (roomStatus(room) === "playing") fail("Wait for this game to finish");
   if (speed !== "human" && speed !== "lightning") fail("No such speed");
 
@@ -395,32 +448,49 @@ export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): 
   touch(room);
 };
 
+export const setBotSpeed = (room: Room, byPlayerId: PlayerId, speed: BotSpeed): void => {
+  requireHost(room, byPlayerId);
+  setBotSpeedFromTable(room, speed);
+};
+
 /** The one host power with no "wait for this game to finish": bot speed and
  * house rules each reach something live, and this reaches nothing. */
-export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
-  requireHost(room, byPlayerId);
+export const setIrlFromTable = (room: Room, on: boolean): void => {
   if (typeof on !== "boolean") fail("IRL mode is on or off");
 
   room.irl = on;
   touch(room);
 };
 
-/** Read once at `beginGame`, so a host always changes the next deal (#198). */
-export const setDealerMode = (room: Room, byPlayerId: PlayerId, mode: DealerMode): void => {
+export const setIrl = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
   requireHost(room, byPlayerId);
+  setIrlFromTable(room, on);
+};
+
+/** Read once at `beginGame`, so a host always changes the next deal (#198). */
+export const setDealerModeFromTable = (room: Room, mode: DealerMode): void => {
   if (mode !== "rotate" && mode !== "random") fail("No such dealer mode");
 
   room.dealerMode = mode;
   touch(room);
 };
 
-/** Read once at the deal, like `setDealerMode` (#199), and independent of it. */
-export const setShuffleSeats = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
+export const setDealerMode = (room: Room, byPlayerId: PlayerId, mode: DealerMode): void => {
   requireHost(room, byPlayerId);
+  setDealerModeFromTable(room, mode);
+};
+
+/** Read once at the deal, like `setDealerMode` (#199), and independent of it. */
+export const setShuffleSeatsFromTable = (room: Room, on: boolean): void => {
   if (typeof on !== "boolean") fail("Shuffled seats are on or off");
 
   room.shuffleSeats = on;
   touch(room);
+};
+
+export const setShuffleSeats = (room: Room, byPlayerId: PlayerId, on: boolean): void => {
+  requireHost(room, byPlayerId);
+  setShuffleSeatsFromTable(room, on);
 };
 
 /**
@@ -472,8 +542,7 @@ const clearAutopilots = (room: Room): void => {
  * keeps its own copy (#134). This replaces `room.options` wholesale rather than
  * mutating it; keep it that way. Every field is checked rather than trusted.
  */
-export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRules): void => {
-  requireHost(room, byPlayerId);
+export const setHouseRulesFromTable = (room: Room, rules: HouseRules): void => {
   if (rules.eights !== "playerNames" && rules.eights !== "nextPlayerNames") {
     fail("No such rule for eights");
   }
@@ -491,11 +560,48 @@ export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRule
   touch(room);
 };
 
+export const setHouseRules = (room: Room, byPlayerId: PlayerId, rules: HouseRules): void => {
+  requireHost(room, byPlayerId);
+  setHouseRulesFromTable(room, rules);
+};
+
 export const houseRulesOf = (room: Room): HouseRules => ({
   eights: room.options.eights,
   seedEight: room.options.seedEight,
   sunny: room.options.sunny !== null,
 });
+
+/**
+ * Hand the room to somebody else, from the shared table screen (#326).
+ *
+ * **Deliberately hard to find.** It is a long press on a name, with no label, no
+ * hint, nothing on any other screen and nothing costing the board any ink — an
+ * exotic fringe case that should be minimally discoverable by design. What it is
+ * for is the case the lobby cannot answer: the host has gone home with their
+ * phone and the table is still sitting there.
+ *
+ * Gated exactly as the drag is (#201, #320): an **IRL** room, checked on the
+ * server, and **between games**. In a room where that flag means what it says
+ * everybody present can already reach the propped-up screen; an online room is
+ * strangers, and none of them get to hand a stranger's room to somebody. Between
+ * games because this screen is propped in the middle of a table where somebody
+ * will put a drink down on it — the same restraint the drag takes, and the drag
+ * is the gesture this one must not fight.
+ *
+ * A bot cannot be given the room, and neither can a seat that has left: both
+ * would leave the table with a host that can never press anything.
+ */
+export const setHostFromTable = (room: Room, target: PlayerId): void => {
+  if (!room.irl) fail("Only an in-person table can do that");
+  if (roomStatus(room) === "playing") fail("Wait for this game to finish");
+  const seat = room.seats.find((candidate) => candidate.id === target);
+  if (!seat) fail("Nobody by that name is at this table");
+  if (seat.bot) fail("A bot can't run the room");
+  if (seat.left) fail("They left the table");
+
+  room.hostId = seat.id;
+  touch(room);
+};
 
 /**
  * Move a seat one place along the table order, which is also the turn order.
@@ -968,7 +1074,7 @@ export const roomView = (room: Room, tableScreens = 0): RoomView => ({
     name: seat.name,
     bot: seat.bot,
     connected: seat.connected,
-    isHost: seat.id === room.hostId,
+    isHost: room.hostId !== null && seat.id === room.hostId,
     hinted: seat.hinted,
     autopilot: seat.autopilot,
     left: seat.left,

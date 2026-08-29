@@ -1,4 +1,4 @@
-import type { GameView, PlayerView } from "@goleta/engine";
+import type { GameView, PlayerView, RoomView } from "@goleta/engine";
 
 /**
  * Everyone else, in the order play will reach them. Anchored on your own seat
@@ -27,3 +27,19 @@ export const inTurnOrder = (game: GameView): PlayerView[] => {
  * almost always the answer already, but "almost always" is not a rule. */
 export const nextStillIn = (strip: PlayerView[]): PlayerView | null =>
   strip.find((player) => !player.eliminated) ?? null;
+
+/**
+ * Whether this browser is the host, asked in the one place rather than as
+ * `room.hostId === playerId` at six call sites (#326).
+ *
+ * **Both sides can be null now**, which is exactly why this exists. A room
+ * opened from the shared table screen has no host until somebody joins, and a
+ * watcher has no `playerId` — so the obvious comparison is `null === null` and
+ * says *you are the host* to every spectator of an ownerless room. They would be
+ * offered the host's controls and the server would refuse every one of them.
+ *
+ * Nobody is the host of a room nobody owns, and a browser holding no seat is
+ * never the host of anything.
+ */
+export const isHost = (room: RoomView, playerId: string | null): boolean =>
+  playerId !== null && room.hostId !== null && room.hostId === playerId;

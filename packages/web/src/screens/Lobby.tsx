@@ -27,6 +27,7 @@ import { Button, CodeRow, Panel } from "../components/ui.tsx";
 import { loadName } from "../net/identity.ts";
 import { joinLink } from "../net/route.ts";
 import { LAYER } from "../lib/layers.ts";
+import { isHost } from "../lib/seating.ts";
 
 /** The QR used to grow out of the middle of this and push the copy button down
  * the moment the host said the table was in person. See `JoinQr`.
@@ -350,7 +351,7 @@ export function Lobby({
   onShowRules: () => void;
   onLeave: () => void;
 }) {
-  const isHost = room.hostId === playerId;
+  const host = isHost(room, playerId);
   const enough = room.seats.length >= room.minPlayers;
   const tableFull = room.seats.length >= room.maxPlayers;
   const anyBots = room.seats.some((seat) => seat.bot);
@@ -362,7 +363,7 @@ export function Lobby({
    * real order for it to disagree with. The numbers go to everyone there — the
    * person sitting in the wrong place spots it first. */
   const numbered = room.irl;
-  const orderable = isHost && room.irl && room.seats.length > 1;
+  const orderable = host && room.irl && room.seats.length > 1;
 
   /** A confirmation rather than a block: getting it wrong is recoverable and
    * getting it right is a glance. Both answers say which one they are. */
@@ -459,7 +460,7 @@ export function Lobby({
 
       {/* Ahead of the names, because the answer decides how the rest of this
           screen — and every phone at the table — behaves. */}
-      {isHost && !confirming ? (
+      {host && !confirming ? (
         <Panel>
           <IrlToggle on={room.irl} onChange={(on) => send({ t: "setIrl", on })} />
         </Panel>
@@ -564,7 +565,7 @@ export function Lobby({
                     of the app designs to, and labelled with the person it
                     removes rather than with "remove" (#246). The server refuses
                     a removal mid-game, so nothing here needs a confirmation. */}
-                {isHost && seat.id !== room.hostId ? (
+                {host && seat.id !== room.hostId ? (
                   <Button
                     variant="ghost"
                     className="size-11 shrink-0 px-0 py-0"
@@ -598,7 +599,7 @@ export function Lobby({
             the remove button (#246) — so *Go back* is not the only way to fix an
             order the host can simply fix in place.
           */}
-          {isHost && !confirming ? (
+          {host && !confirming ? (
             <li>
               <Button
                 variant="ghost"
@@ -661,7 +662,7 @@ export function Lobby({
         />
       ) : null}
 
-      {isHost ? (
+      {host ? (
         <>
           {/* On its own, under the names it needs four of: sharing a row with "Add a
               bot" gave equal weight to the button a table presses once and the

@@ -1,7 +1,7 @@
 {
   "name": "goleta",
   "short_name": "goleta",
-  "description": "Crazy Eights, reversed: you want to keep cards. 3-6 players, no accounts.",
+  "description": "Crazy Eights, reversed: you want to keep cards. 4 to 8 players, no accounts.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

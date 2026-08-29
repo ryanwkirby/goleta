@@ -5,6 +5,7 @@ import fs from "node:fs";
 import { ENGINE_VERSION } from "@goleta/engine";
 import { config } from "./config.ts";
 import { loadRooms, startPersistence } from "./persist.ts";
+import { startRecorder } from "./record.ts";
 import { pruneRooms } from "./rooms.ts";
 import { attachSockets } from "./socket.ts";
 
@@ -12,6 +13,9 @@ const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
 
 const store = loadRooms(config.dataDir, config.roomIdleMs);
 const persistence = startPersistence(store, config.dataDir);
+// Append-only and never served — see `record.ts`. It shares `dataDir` with the
+// snapshot, which is the named volume, so it survives a redeploy (#359).
+const recorder = startRecorder(config.dataDir);
 
 app.get("/healthz", () => ({ ok: true, engine: ENGINE_VERSION, rooms: store.size }));
 
@@ -27,10 +31,14 @@ if (config.serveStatic && fs.existsSync(config.webRoot)) {
 
 await app.listen({ port: config.port, host: config.host });
 
-const detachSockets = attachSockets(app.server, { store, onChange: () => persistence.save() });
+const detachSockets = attachSockets(app.server, {
+  store,
+  onChange: () => persistence.save(),
+  recorder,
+});
 
 const sweep = setInterval(() => {
-  const removed = pruneRooms(store, config.roomIdleMs);
+  const removed = pruneRooms(store, config.roomIdleMs, Date.now(), (code) => recorder.forget(code));
   if (removed > 0) {
     app.log.info(`swept ${removed} idle room(s)`);
     persistence.save();
@@ -43,6 +51,7 @@ const shutdown = async (signal: string): Promise<void> => {
   clearInterval(sweep);
   detachSockets();
   persistence.flush();
+  recorder.close();
   await app.close();
   process.exit(0);
 };

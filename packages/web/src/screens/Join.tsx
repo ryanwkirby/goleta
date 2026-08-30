@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { NAME_LIMIT } from "@goleta/engine";
 import type { ClientMessage } from "@goleta/engine";
 
+import { Mark } from "../components/Mark.tsx";
 import { TwoWay } from "../components/TwoWay.tsx";
 import { Button, Field, Panel, inputClass } from "../components/ui.tsx";
 import { loadName, saveName } from "../net/identity.ts";
@@ -119,6 +120,10 @@ export function Join({
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 p-5">
       <header className="text-center">
+        {/* The name, drawn (#395). The first screen anybody sees is the one place
+            the app introduces itself, and until now it did that in a word the
+            browser was also showing in the tab. */}
+        <Mark size={52} className="mx-auto mb-3 text-white" />
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
         {/* Two lines rather than three (#326). This flow gains two questions and
             should lose at least as many words as it gains, and the line that went

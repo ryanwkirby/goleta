@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { Mark } from "./components/Mark.tsx";
 import { MOVE_MS, SESSION_MS, SessionError } from "./components/Refusal.tsx";
 import { LAYER } from "./lib/layers.ts";
 import { hasSeenRules, markRulesSeen, setWantsHints, wantsHints } from "./net/identity.ts";
@@ -19,6 +20,13 @@ import { TableScreen } from "./screens/TableScreen.tsx";
 function Waiting({ status }: { status: string }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+      {/* Still almost nothing, and this is not the exception: it is the same
+          name the line under it already carries, drawn instead of spelled
+          (#395). This screen is a device propped in the middle of a table and
+          read from across the room, which is the one place two lines of grey
+          type had the least to work with. It takes the wordmark's weight rather
+          than the title's — `currentColor` is what the mark is for. */}
+      <Mark size={40} className="mb-1 text-white/40" />
       <p className="font-mono text-sm uppercase tracking-[0.3em] text-white/40">goleta</p>
       <p className="text-sm text-white/50">
         {status === "open" ? "Finding the table…" : "Connecting…"}

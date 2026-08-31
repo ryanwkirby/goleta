@@ -83,15 +83,25 @@ export function Join({
   const offerWatch = doing === "join" && refused !== null && refused === trimmedCode;
 
   /**
-   * The reveal puts the cursor where it just made room. A screen opened from an
-   * invite has its code already, so the name is what it wants; anything else
-   * wants the box the answer just uncovered.
+   * The reveal puts the cursor where it just made room, and **only the join path
+   * has such a box** (#400).
+   *
+   * Creating reveals two things at once — the *This device* question and the
+   * name box — and it used to focus the second of them, which on a phone raises
+   * the keyboard over the first. The question is the one that decides whether
+   * there is a name to ask for at all (#326): answer *Table screen* and the box
+   * holding the cursor disappears. So creating focuses nothing. The name box is
+   * one tap, and the two answers above it are what should be read first.
+   *
+   * Joining keeps both branches, because neither competes for the first look: an
+   * empty code box takes the cursor, and a code arriving from an invite link
+   * passes it to the name, which is genuinely all that is left to fill in.
    */
   useEffect(() => {
-    if (doing === null) return;
-    if (doing === "join" && codeRef.current?.value === "") codeRef.current.focus();
-    else if (!screen) nameRef.current?.focus();
-  }, [doing, screen]);
+    if (doing !== "join") return;
+    if (codeRef.current?.value === "") codeRef.current.focus();
+    else nameRef.current?.focus();
+  }, [doing]);
 
   const go = (message: ClientMessage): void => {
     saveName(trimmedName);
@@ -204,7 +214,9 @@ export function Join({
             )}
 
             {/* A shared screen holds no cards and never appears in the order, so
-                it has nobody to be. */}
+                it has nobody to be. The placeholder is an example rather than
+                somebody: "Ryan" is one particular person, and a real name in a
+                grey box reads as a value already entered (#400). */}
             {screen ? null : (
               <Field label="Your name">
                 <input
@@ -212,7 +224,7 @@ export function Join({
                   className={inputClass}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="Ryan"
+                  placeholder="John"
                   maxLength={NAME_LIMIT}
                   autoComplete="nickname"
                 />

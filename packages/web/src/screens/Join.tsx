@@ -35,10 +35,29 @@ type Doing = null | "join" | "create";
  * Drawn with `TwoWay` because it is exactly what that control is for: two
  * answers a person would say, to a question, neither of them the absence of the
  * other.
+ *
+ * **Each answer says what it means, which #326 said was unnecessary** (#401).
+ * That was right about *I'm playing* and wrong about *Table screen*: the second
+ * is this app's own term for an optional extra device showing the middle of the
+ * table, and this is the first screen anybody sees — before there is a room, a
+ * lobby or a table to have learned it from. Choosing wrong is recoverable, but
+ * nobody knows they have until a device meant to be playing turns out to hold
+ * no cards.
+ *
+ * The line belongs to the answer, so it lives beside the label rather than in a
+ * table somewhere else.
  */
 const DEVICE = [
-  { value: "playing", label: "I'm playing" },
-  { value: "screen", label: "Table screen" },
+  {
+    value: "playing",
+    label: "I'm playing",
+    means: "You're playing on this device.",
+  },
+  {
+    value: "screen",
+    label: "Table screen",
+    means: "This device is a shared screen for the table.",
+  },
 ] as const;
 
 export function Join({
@@ -83,15 +102,25 @@ export function Join({
   const offerWatch = doing === "join" && refused !== null && refused === trimmedCode;
 
   /**
-   * The reveal puts the cursor where it just made room. A screen opened from an
-   * invite has its code already, so the name is what it wants; anything else
-   * wants the box the answer just uncovered.
+   * The reveal puts the cursor where it just made room, and **only the join path
+   * has such a box** (#400).
+   *
+   * Creating reveals two things at once — the *This device* question and the
+   * name box — and it used to focus the second of them, which on a phone raises
+   * the keyboard over the first. The question is the one that decides whether
+   * there is a name to ask for at all (#326): answer *Table screen* and the box
+   * holding the cursor disappears. So creating focuses nothing. The name box is
+   * one tap, and the two answers above it are what should be read first.
+   *
+   * Joining keeps both branches, because neither competes for the first look: an
+   * empty code box takes the cursor, and a code arriving from an invite link
+   * passes it to the name, which is genuinely all that is left to fill in.
    */
   useEffect(() => {
-    if (doing === null) return;
-    if (doing === "join" && codeRef.current?.value === "") codeRef.current.focus();
-    else if (!screen) nameRef.current?.focus();
-  }, [doing, screen]);
+    if (doing !== "join") return;
+    if (codeRef.current?.value === "") codeRef.current.focus();
+    else nameRef.current?.focus();
+  }, [doing]);
 
   const go = (message: ClientMessage): void => {
     saveName(trimmedName);
@@ -122,17 +151,32 @@ export function Join({
       <header className="text-center">
         {/* The name, drawn (#395). The first screen anybody sees is the one place
             the app introduces itself, and until now it did that in a word the
-            browser was also showing in the tab. */}
-        <Mark size={52} className="mx-auto mb-3 text-white" />
+            browser was also showing in the tab.
+
+            Three times the size it arrived at, and grey (#397). 52px was the
+            right size for a mark *heading* a word, and this screen is not that:
+            it is the one page with nothing else on it, so the ship is the whole
+            of the picture rather than a bullet beside the title. The grey is
+            what pays for the size — 156px of solid white would shout over the
+            two buttons that are the actual point of the page — and it is one
+            class because `Mark` takes its colour from `currentColor` for
+            exactly this. The waiting screen's copy is untouched: it still heads
+            a wordmark. */}
+        <Mark size={156} className="mx-auto mb-3 text-white/50" />
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
         {/* Two lines rather than three (#326). This flow gains two questions and
             should lose at least as many words as it gains, and the line that went
             was the one restating what the two above it had already said. Block
             children rather than `<br>`: the second wraps on a phone, and each
-            sentence still starts on its own line at every width. */}
+            sentence still starts on its own line at every width.
+
+            Shorter again (#398). *still holding any* was the two words in front
+            of it said a second time. This is a hook and not the rules —
+            `docs/RULES.md` and the rules screen are where the game is actually
+            explained — so it says the shortest true thing and stops. */}
         <div className="mt-2 text-balance text-white/60">
           <p>It's Crazy Eights, reversed.</p>
-          <p>Hold on to your cards — the last player still holding any wins.</p>
+          <p>Hold on to your cards — the last player standing wins.</p>
         </div>
       </header>
 
@@ -141,7 +185,7 @@ export function Join({
           /* The question, on its own. Nothing to fill in until it is answered. */
           <div className="space-y-2">
             <Button variant="primary" full onClick={() => setDoing("create")}>
-              Start a new room
+              Create new room
             </Button>
             <Button variant="secondary" full onClick={() => setDoing("join")}>
               Join a room
@@ -172,8 +216,7 @@ export function Join({
               </Field>
             ) : (
               /* Asked before the name, because the answer decides whether there
-                 is a name to ask for. No explanation under it: the two answers
-                 say what they are. */
+                 is a name to ask for. */
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
                   This device
@@ -185,11 +228,23 @@ export function Join({
                   onChange={setDevice}
                   className="mt-2"
                 />
+                {/* One line for the answer that is chosen, never a caption under
+                    each (#401): a pair of them is a second control's worth of
+                    ink for a question with one answer at a time, and the switch
+                    above already says which one that is. `Field`'s own hint size
+                    and colour, so it reads as explanation rather than as a third
+                    option — and `min-h-8` so the panel does not resize under a
+                    thumb moving between the two. */}
+                <p className="mt-1.5 min-h-8 text-xs text-white/40">
+                  {DEVICE.find((option) => option.value === device)?.means}
+                </p>
               </div>
             )}
 
             {/* A shared screen holds no cards and never appears in the order, so
-                it has nobody to be. */}
+                it has nobody to be. The placeholder is an example rather than
+                somebody: "Ryan" is one particular person, and a real name in a
+                grey box reads as a value already entered (#400). */}
             {screen ? null : (
               <Field label="Your name">
                 <input
@@ -197,7 +252,7 @@ export function Join({
                   className={inputClass}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="Ryan"
+                  placeholder="John"
                   maxLength={NAME_LIMIT}
                   autoComplete="nickname"
                 />
@@ -212,9 +267,16 @@ export function Join({
                     trimmedCode.length === 4
                     ? `Join room ${trimmedCode}`
                     : "Join room"
-                  : screen
-                    ? "Open a room on this screen"
-                    : "Start the room"}
+                  : /* One verb for one act (#399). This screen named making a
+                       room three times and never twice the same way — *start a
+                       new room*, *start the room*, *open a room on this
+                       screen* — so a person setting up the centre device read
+                       a different word for the thing they had just chosen.
+                       Both submits saying the same thing is right rather than
+                       a collision: the answer above them is what says which
+                       device this is, and it says it far better than "on this
+                       screen" squeezed onto the end of a button. */
+                    "Create room"}
               </Button>
               {/* Choosing wrong is not a dead end, in either direction. */}
               <Button variant="ghost" full onClick={() => setDoing(null)}>

@@ -139,10 +139,15 @@ export function Join({
             should lose at least as many words as it gains, and the line that went
             was the one restating what the two above it had already said. Block
             children rather than `<br>`: the second wraps on a phone, and each
-            sentence still starts on its own line at every width. */}
+            sentence still starts on its own line at every width.
+
+            Shorter again (#398). *still holding any* was the two words in front
+            of it said a second time. This is a hook and not the rules —
+            `docs/RULES.md` and the rules screen are where the game is actually
+            explained — so it says the shortest true thing and stops. */}
         <div className="mt-2 text-balance text-white/60">
           <p>It's Crazy Eights, reversed.</p>
-          <p>Hold on to your cards — the last player still holding any wins.</p>
+          <p>Hold on to your cards — the last player standing wins.</p>
         </div>
       </header>
 

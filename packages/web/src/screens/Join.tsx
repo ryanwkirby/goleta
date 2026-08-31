@@ -156,7 +156,7 @@ export function Join({
           /* The question, on its own. Nothing to fill in until it is answered. */
           <div className="space-y-2">
             <Button variant="primary" full onClick={() => setDoing("create")}>
-              Start a new room
+              Create new room
             </Button>
             <Button variant="secondary" full onClick={() => setDoing("join")}>
               Join a room
@@ -227,9 +227,16 @@ export function Join({
                     trimmedCode.length === 4
                     ? `Join room ${trimmedCode}`
                     : "Join room"
-                  : screen
-                    ? "Open a room on this screen"
-                    : "Start the room"}
+                  : /* One verb for one act (#399). This screen named making a
+                       room three times and never twice the same way — *start a
+                       new room*, *start the room*, *open a room on this
+                       screen* — so a person setting up the centre device read
+                       a different word for the thing they had just chosen.
+                       Both submits saying the same thing is right rather than
+                       a collision: the answer above them is what says which
+                       device this is, and it says it far better than "on this
+                       screen" squeezed onto the end of a button. */
+                    "Create room"}
               </Button>
               {/* Choosing wrong is not a dead end, in either direction. */}
               <Button variant="ghost" full onClick={() => setDoing(null)}>

@@ -122,8 +122,18 @@ export function Join({
       <header className="text-center">
         {/* The name, drawn (#395). The first screen anybody sees is the one place
             the app introduces itself, and until now it did that in a word the
-            browser was also showing in the tab. */}
-        <Mark size={52} className="mx-auto mb-3 text-white" />
+            browser was also showing in the tab.
+
+            Three times the size it arrived at, and grey (#397). 52px was the
+            right size for a mark *heading* a word, and this screen is not that:
+            it is the one page with nothing else on it, so the ship is the whole
+            of the picture rather than a bullet beside the title. The grey is
+            what pays for the size — 156px of solid white would shout over the
+            two buttons that are the actual point of the page — and it is one
+            class because `Mark` takes its colour from `currentColor` for
+            exactly this. The waiting screen's copy is untouched: it still heads
+            a wordmark. */}
+        <Mark size={156} className="mx-auto mb-3 text-white/50" />
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
         {/* Two lines rather than three (#326). This flow gains two questions and
             should lose at least as many words as it gains, and the line that went

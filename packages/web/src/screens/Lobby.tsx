@@ -100,10 +100,9 @@ function SharedScreenInvite({
       onClick={onClose}
     >
       <Panel className="w-full max-w-sm text-center" onClick={(event) => event.stopPropagation()}>
-        <p className="text-sm font-semibold text-white">Scan this with a spare device</p>
+        <p className="text-sm font-semibold text-white">Scan with a spare device</p>
         <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-          A tablet, an old phone, a laptop — something nobody is playing on. It shows the middle of
-          the table, so stand it where everyone can see it.
+          It shows the middle of the table — prop it where everyone can see.
         </p>
         <p className="mt-1 text-xs font-semibold text-amber-300/80">Not the phone in your hand.</p>
         <div className="mt-4 flex justify-center">
@@ -115,7 +114,7 @@ function SharedScreenInvite({
         </div>
         {/* There is no code drawn on this panel — the QR above is the whole of
             it, and it is what copies (#243). */}
-        <p className="mt-2 text-xs text-white/40">Or tap it to copy the link.</p>
+        <p className="mt-2 text-xs text-white/40">Or tap to copy.</p>
         <Button variant="secondary" full className="mt-3" onClick={onClose}>
           Done
         </Button>

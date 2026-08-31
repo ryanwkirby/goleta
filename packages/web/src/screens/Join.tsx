@@ -35,10 +35,29 @@ type Doing = null | "join" | "create";
  * Drawn with `TwoWay` because it is exactly what that control is for: two
  * answers a person would say, to a question, neither of them the absence of the
  * other.
+ *
+ * **Each answer says what it means, which #326 said was unnecessary** (#401).
+ * That was right about *I'm playing* and wrong about *Table screen*: the second
+ * is this app's own term for an optional extra device showing the middle of the
+ * table, and this is the first screen anybody sees — before there is a room, a
+ * lobby or a table to have learned it from. Choosing wrong is recoverable, but
+ * nobody knows they have until a device meant to be playing turns out to hold
+ * no cards.
+ *
+ * The line belongs to the answer, so it lives beside the label rather than in a
+ * table somewhere else.
  */
 const DEVICE = [
-  { value: "playing", label: "I'm playing" },
-  { value: "screen", label: "Table screen" },
+  {
+    value: "playing",
+    label: "I'm playing",
+    means: "You're playing on this device.",
+  },
+  {
+    value: "screen",
+    label: "Table screen",
+    means: "This device is a shared screen for the table.",
+  },
 ] as const;
 
 export function Join({
@@ -197,8 +216,7 @@ export function Join({
               </Field>
             ) : (
               /* Asked before the name, because the answer decides whether there
-                 is a name to ask for. No explanation under it: the two answers
-                 say what they are. */
+                 is a name to ask for. */
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
                   This device
@@ -210,6 +228,16 @@ export function Join({
                   onChange={setDevice}
                   className="mt-2"
                 />
+                {/* One line for the answer that is chosen, never a caption under
+                    each (#401): a pair of them is a second control's worth of
+                    ink for a question with one answer at a time, and the switch
+                    above already says which one that is. `Field`'s own hint size
+                    and colour, so it reads as explanation rather than as a third
+                    option — and `min-h-8` so the panel does not resize under a
+                    thumb moving between the two. */}
+                <p className="mt-1.5 min-h-8 text-xs text-white/40">
+                  {DEVICE.find((option) => option.value === device)?.means}
+                </p>
               </div>
             )}
 

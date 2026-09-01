@@ -5,13 +5,15 @@ import type { Card as CardModel } from "@goleta/engine";
 // Type-only, so it is erased and there is no runtime dependency either way.
 import type { PileSuit } from "../lib/pile.ts";
 import {
-  CARD_SHAPE,
+  CARD_HEIGHT_PX,
   cardWidthAt,
   isRed,
+  shapeFor,
   SUIT_GLYPH,
   SUIT_LABEL,
   type CardSize,
 } from "../lib/cardShape.ts";
+import { usePrintScale } from "../lib/largePrint.ts";
 
 /** Re-exported because this is where people look for them. They live in
  * `lib/cardShape.ts` so `lib` can use them without importing a component (#224),
@@ -19,6 +21,14 @@ import {
  * to draw a suit" then read both files. Only the suit helpers, not the ladder. */
 export { isRed, SUIT_GLYPH, SUIT_LABEL } from "../lib/cardShape.ts";
 
+/**
+ * The ladder, as rem-based classes. Every one of these is the pixel pair
+ * `CARD_WIDTH_PX`/`CARD_HEIGHT_PX` records divided by 16, and **the two have to
+ * stay in step** — large print moves the root font size, which takes these up
+ * and leaves the constants where they were unless somebody multiplies them too
+ * (#323). Nothing would fail if they drifted, so `cardLadder.test.ts` reads this
+ * table as text and fails instead.
+ */
 const SIZES: Record<CardSize, string> = {
   sm: "h-14 w-10 text-sm rounded-md p-1",
   md: "h-24 w-[4.25rem] text-xl rounded-lg p-1.5",
@@ -66,16 +76,33 @@ export function PlayingCard({
   const colour = isRed(card.suit) ? "text-rose-600" : "text-slate-900";
   const Tag = onClick ? "button" : "div";
 
-  // A height replaces the rung's class outright rather than overriding half of it:
-  // a card carrying both would have padding and type from one size and a box from
-  // another.
-  const sized: CSSProperties | undefined = height
+  /** 1 unless this device is in large print (#323), in which case every rung is
+   * this much bigger and the face is a different one. */
+  const scale = usePrintScale();
+  const large = scale !== 1;
+  const shape = shapeFor(large);
+
+  /**
+   * A height replaces the rung's class outright rather than overriding half of
+   * it: a card carrying both would have padding and type from one size and a box
+   * from another.
+   *
+   * **Large print always takes this path**, because its face is fractions of the
+   * card rather than a `text-…` per rung — one more table of five classes would
+   * be a second ladder to keep in step with the first two. The number it starts
+   * from is the rung's own pixel height times the same scale the root font size
+   * moved by, so a large-print `sm` card and a large-print `CardBack` at `sm`,
+   * which is still drawn with the rem classes, come out the same size to the
+   * pixel.
+   */
+  const drawnHeight = height ?? (large ? CARD_HEIGHT_PX[size] * scale : undefined);
+  const sized: CSSProperties | undefined = drawnHeight
     ? {
-        height,
-        width: cardWidthAt(height),
-        fontSize: height * CARD_SHAPE.text,
-        padding: height * CARD_SHAPE.pad,
-        borderRadius: height * CARD_SHAPE.radius,
+        height: drawnHeight,
+        width: cardWidthAt(drawnHeight),
+        fontSize: drawnHeight * shape.text,
+        padding: drawnHeight * shape.pad,
+        borderRadius: drawnHeight * shape.radius,
       }
     : undefined;
 
@@ -88,11 +115,13 @@ export function PlayingCard({
       style={sized}
       aria-label={`${card.rank} of ${SUIT_LABEL[card.suit]}`}
       className={[
-        height ? "" : SIZES[size],
+        drawnHeight ? "" : SIZES[size],
         arriving ? "invisible" : "",
         // Belt to the layout's braces: a rank like 10 at a large text size must never
         // spill past the card's edge.
-        "relative flex shrink-0 flex-col items-start overflow-hidden bg-white font-semibold leading-none shadow-lg",
+        "relative flex shrink-0 flex-col overflow-hidden bg-white font-semibold leading-none shadow-lg",
+        // Large print centres its one index; every other face pins the corner one.
+        large ? "items-center justify-center" : "items-start",
         "ring-1 ring-black/10 transition-transform duration-150",
         // Dimmed, never translucent (#331). The hand fans with a step well under a
         // card's width, so 25–41px of every card is overlapped by the next one —
@@ -107,32 +136,53 @@ export function PlayingCard({
         colour,
       ].join(" ")}
     >
-      <span className="leading-[1.05]">
-        {card.rank}
-        <span className="block text-[0.85em]">{glyph}</span>
-      </span>
-      {/* The big pip sits in whatever room is left rather than claiming its own
-          row, so the face can't grow taller than the card. Not drawn on a
-          mirrored card at all (#130): that corner holds the second index, so at
-          an IRL table it is decoration under an upside-down rank. */}
-      {mirrored ? (
-        <span className="absolute bottom-[0.25em] right-[0.25em] rotate-180 text-right leading-[1.05]">
+      {large ? (
+        /* One centred rank and suit, and nothing else (#323). No corner index,
+           no ghost pip, and **no mirrored second index either** — that is #130's
+           argument one step further on. The second index exists so the far side
+           of an IRL table can read your phone; at 0.42 of the card it would have
+           to come out of the first one, and a single rank nearly twice the size
+           is more legible across a table upside down than two small ones are the
+           right way up. A player who has asked for this has said which trade
+           they want. */
+        <span className="text-center leading-[1.05]">
           {card.rank}
           <span className="block text-[0.85em]">{glyph}</span>
         </span>
       ) : (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 translate-x-[15%] translate-y-[18%] text-[2.6em] opacity-25"
-        >
-          {glyph}
-        </span>
+        <>
+          <span className="leading-[1.05]">
+            {card.rank}
+            <span className="block text-[0.85em]">{glyph}</span>
+          </span>
+          {/* The big pip sits in whatever room is left rather than claiming its own
+              row, so the face can't grow taller than the card. Not drawn on a
+              mirrored card at all (#130): that corner holds the second index, so at
+              an IRL table it is decoration under an upside-down rank. */}
+          {mirrored ? (
+            <span className="absolute bottom-[0.25em] right-[0.25em] rotate-180 text-right leading-[1.05]">
+              {card.rank}
+              <span className="block text-[0.85em]">{glyph}</span>
+            </span>
+          ) : (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 right-0 translate-x-[15%] translate-y-[18%] text-[2.6em] opacity-25"
+            >
+              {glyph}
+            </span>
+          )}
+        </>
       )}
     </Tag>
   );
 }
 
-/** The back of a card: someone else's hand, or the draw pile. */
+/** The back of a card: someone else's hand, or the draw pile.
+ *
+ * It stays on the rem classes in large print, where `PlayingCard` switches to
+ * pixels — the two agree because every rung in `SIZES` is its pixel pair divided
+ * by 16 and large print moves the root font size by the same scale (#323). */
 export function CardBack({
   size = "md",
   className = "",

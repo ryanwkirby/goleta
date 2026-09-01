@@ -24,7 +24,8 @@ import { cardAnchor, HAND } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
 import { PlayingCard } from "./Card.tsx";
 import type { HandMode } from "../lib/handMode.ts";
-import { CARD_WIDTH_PX, cardWidthAt, type CardSize } from "../lib/cardShape.ts";
+import { cardWidthAt, cardWidthPx, type CardSize } from "../lib/cardShape.ts";
+import { usePrintScale } from "../lib/largePrint.ts";
 
 /** `forced` plays a card like `play` but commits on the second tap like
  * `surrender`: a punishment you can fire off with a stray thumb is one you never
@@ -172,8 +173,10 @@ export function Hand({
    * commits. See `choose`. */
   fit?: boolean;
 }) {
-  // One width for the fan and every card in it.
-  const cardWidth = height ? cardWidthAt(height) : CARD_WIDTH_PX[size];
+  // One width for the fan and every card in it. A measured height already has
+  // large print in it; a rung has to be told (#323).
+  const scale = usePrintScale();
+  const cardWidth = height ? cardWidthAt(height) : cardWidthPx(size, scale);
 
   const [selected, setSelected] = useState<string | null>(null);
   const { anchor, isArriving, reduced } = useMotion();

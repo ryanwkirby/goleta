@@ -27,7 +27,8 @@ import type { SunnyReach } from "@goleta/engine";
 import { handStep, PICKER_TIGHTEST } from "../../lib/handFan.ts";
 import { useBox } from "../../lib/measure.ts";
 import { PlayingCard } from "../Card.tsx";
-import { CARD_WIDTH_PX, isRed, SUIT_GLYPH, SUIT_LABEL } from "../../lib/cardShape.ts";
+import { cardWidthPx, isRed, SUIT_GLYPH, SUIT_LABEL } from "../../lib/cardShape.ts";
+import { usePrintScale } from "../../lib/largePrint.ts";
 import { Button } from "../ui.tsx";
 
 /**
@@ -170,7 +171,18 @@ export function SunnyAccusePicker({
   const row = useRef<HTMLDivElement>(null);
   const { width } = useBox(row);
   // Only the compact row fans. The full table's picker has the width to wrap.
-  const step = handStep(width, reach.hand.length, CARD_WIDTH_PX.sm, PICKER_TIGHTEST);
+  // In large print a bigger picker takes more, and the hand under it gives back
+  // exactly that much — `handHeight` returns the room the row is left (#166, #323).
+  // `PICKER_TIGHTEST` does not scale: it is a tap floor.
+  const scale = usePrintScale();
+  const step = handStep(
+    width,
+    reach.hand.length,
+    cardWidthPx("sm", scale),
+    PICKER_TIGHTEST,
+    false,
+    scale,
+  );
 
   return (
     <section
@@ -245,7 +257,7 @@ export function SunnyAccusePicker({
         ref={row}
         style={
           compact
-            ? ({ "--fan": `${step - CARD_WIDTH_PX["sm"]}px` } as CSSProperties)
+            ? ({ "--fan": `${step - cardWidthPx("sm", scale)}px` } as CSSProperties)
             : undefined
         }
         className={[

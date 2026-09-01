@@ -330,7 +330,21 @@ export function Hand({
         // The row's width *is* the width the fan was fitted to, so it keeps no padding
         // of its own. `auto` rather than `hidden`: `fit` has a floor, and past it
         // clipping the ends would hide cards the turn needs.
-        "justify-center overflow-x-auto [&>*+*]:ml-[var(--fan)]",
+        //
+        // **Centred by auto margins rather than by `justify-center`** (#323).
+        // They come to the same thing while the hand fits and part company the
+        // moment it does not: an overflowing `justify-center` row spills equally
+        // out of *both* ends and `scrollLeft` cannot go below zero, so the first
+        // card or two are off the left edge and there is no gesture that reaches
+        // them. Auto margins resolve to zero under overflow, so the row simply
+        // starts at its first card and scrolls.
+        //
+        // It was latent until now — `fit` closes a hand up rather than letting it
+        // overflow, so only a hand past `FIT_TIGHTEST` ever got there. Large print
+        // reaches it routinely, because the floor a big face has to clear is the
+        // rank's own width rather than a thumb's.
+        "justify-start overflow-x-auto [&>*+*]:ml-[var(--fan)]",
+        "[&>*:first-child]:ml-auto [&>*:last-child]:mr-auto",
       ].join(" ")}
       onClick={(event) => {
         if (event.target === event.currentTarget) setSelected(null);

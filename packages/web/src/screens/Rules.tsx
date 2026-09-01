@@ -243,20 +243,26 @@ export function Rules({
       {/* Bleeds to the panel's edges and puts the padding back on itself, so the
           scrollbar runs down the panel rather than an inset column. */}
       <div className="-mx-5 -mt-5 min-h-0 flex-1 overflow-y-auto px-5 pt-5">
-        {/* **Beside the title rather than beside the hints question**, which is
-            what #323 proposed and marked open for review. The one thing it says
-            it must not be is buried, and the hints question is not a fixed place
-            on this screen: on a short one it moves up into the scroll (#305), so
-            a control next to it would be below the fold on exactly the phone
-            whose text is hardest to read. The head of the panel is above the
-            fold in both. */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-xl font-semibold text-white">How goleta works</h2>
-            <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
-          </div>
-          <LargePrintButton className="-mr-1.5 -mt-1.5" />
+        {/* **At the head of the panel rather than beside the hints question**,
+            which is what #323 proposed and marked open for review. The one thing
+            it says it must not be is buried, and the hints question is not a
+            fixed place on this screen: on a short one it moves up into the
+            scroll (#305), so a control next to it would be below the fold on
+            exactly the phone whose text is hardest to read.
+
+            On its own line rather than opposite the title, which is where it was
+            first put and where it cost more than it was worth: in large print
+            itself the pair no longer fit across a phone and *How goleta works*
+            broke over two lines. It is also the better reading — the person who
+            wants this control is the person who cannot read the panel, so it
+            comes before the panel rather than beside its heading. Pulled up into
+            the panel's own padding, so the row it takes is the button and
+            nothing more. */}
+        <div className="-mr-1.5 -mt-3 flex justify-end">
+          <LargePrintButton />
         </div>
+        <h2 className="text-xl font-semibold text-white">How goleta works</h2>
+        <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
 
         <ol className="mt-4">
           {rules.map((rule) => (

@@ -1,3 +1,5 @@
+import { CARD_HEIGHT_PX, readableSliver } from "./cardShape.ts";
+
 /**
  * Fanning the seat strip: one overlap for the whole table, rows as the valve.
  * Laid flat, fourteen cards is a seat 615px wide, so a phone made you scroll
@@ -39,8 +41,35 @@ export const LOOSEST = CARD + GAP;
  * Past here the strip scrolls *between* seats instead. */
 export const TIGHTEST = 22;
 
-export const handWidth = (cards: number, sliver: number): number =>
-  cards > 0 ? (cards - 1) * sliver + CARD : 0;
+/**
+ * The same question asked of large print's face, which is not the same face
+ * (#323): one rank about twice the ink, drawn from `LARGE_CARD_SHAPE`'s
+ * fractions rather than from a `text-…` class. Scaling 22 would leave a sliver
+ * that cuts a digit in half, which is the one thing this floor exists to stop.
+ *
+ * It comes out around three quarters of a card rather than half of one, so a
+ * large-print strip barely overlaps and scrolls sooner. That is the trade #323
+ * names: rows and scrolling between seats are the release valve (#59), and a
+ * hand you cannot read is a play you cannot spot.
+ */
+const tightestAt = (scale: number, large: boolean): number =>
+  large
+    ? readableSliver(CARD_HEIGHT_PX.sm * scale, true)
+    : Math.round(TIGHTEST * scale);
+
+/**
+ * Every number above is a rem written out in pixels — `w-10`, `gap-1`, `px-3`,
+ * `min-w-32`, `gap-2` — and `TIGHTEST` is a measurement off `text-sm`. So in
+ * large print (#323) the whole set moves by the one scale the root font size
+ * moved by, and each function below takes it.
+ *
+ * The **legibility** floor scales with the card, because a bigger card tightened
+ * to the same 22px sliver buys nothing. There is no tap floor in this file at
+ * all: nothing in the seat strip is a control. Default 1, so a caller that has
+ * not been told is exactly the strip this was before.
+ */
+export const handWidth = (cards: number, sliver: number, scale = 1): number =>
+  cards > 0 ? (cards - 1) * sliver + CARD * scale : 0;
 
 /** A hand of that many cards, or a chip. Two kinds rather than a number and a
  * flag: an eliminated seat is a different shape, and never wraps. */
@@ -48,18 +77,24 @@ export type SeatHand = number | "out";
 
 /** `out` is the measured shared chip width, floored at `SEAT_OUT_MIN`. Defaulted
  * so a caller with nothing measured yet gets exactly what it got before. */
-export const seatWidth = (hand: SeatHand, sliver: number, out = SEAT_OUT_MIN): number =>
+export const seatWidth = (
+  hand: SeatHand,
+  sliver: number,
+  out = SEAT_OUT_MIN,
+  scale = 1,
+): number =>
   hand === "out"
-    ? Math.max(SEAT_OUT_MIN, out)
-    : Math.max(SEAT_MIN, handWidth(hand, sliver) + SEAT_PAD);
+    ? Math.max(SEAT_OUT_MIN * scale, out)
+    : Math.max(SEAT_MIN * scale, handWidth(hand, sliver, scale) + SEAT_PAD * scale);
 
 export const stripWidth = (
   hands: readonly SeatHand[],
   sliver: number,
   out = SEAT_OUT_MIN,
+  scale = 1,
 ): number =>
-  hands.reduce<number>((total, hand) => total + seatWidth(hand, sliver, out), 0) +
-  SEAT_GAP * Math.max(0, hands.length - 1);
+  hands.reduce<number>((total, hand) => total + seatWidth(hand, sliver, out, scale), 0) +
+  SEAT_GAP * scale * Math.max(0, hands.length - 1);
 
 export interface Fan {
   /** Left edge to left edge: how much of a card its neighbour leaves showing. */
@@ -67,15 +102,22 @@ export interface Fan {
   rows: number[];
 }
 
-const tighten = (available: number, hands: readonly SeatHand[], out: number): number => {
-  for (let sliver = LOOSEST; sliver > TIGHTEST; sliver--) {
-    if (stripWidth(hands, sliver, out) <= available) return sliver;
+const tighten = (
+  available: number,
+  hands: readonly SeatHand[],
+  out: number,
+  scale: number,
+  large: boolean,
+): number => {
+  const floor = tightestAt(scale, large);
+  for (let sliver = Math.round(LOOSEST * scale); sliver > floor; sliver--) {
+    if (stripWidth(hands, sliver, out, scale) <= available) return sliver;
   }
-  return TIGHTEST;
+  return floor;
 };
 
-const rowCapacity = (available: number, sliver: number): number => {
-  const room = available - SEAT_PAD - CARD;
+const rowCapacity = (available: number, sliver: number, scale: number): number => {
+  const room = available - (SEAT_PAD + CARD) * scale;
   return room > 0 ? Math.floor(room / sliver) + 1 : 1;
 };
 
@@ -96,11 +138,23 @@ export const fanTable = (
   hands: readonly SeatHand[],
   /** What one out seat's chip actually measures (#334). */
   out = SEAT_OUT_MIN,
+  /** How much bigger this device draws everything (#323). */
+  scale = 1,
+  /** Whether the cards are drawn with large print's face, which is what decides
+   * the floor. It travels with `scale` and is spelled out beside it because the
+   * two are different questions: one is how big a card is, the other is where
+   * the ink on it sits. */
+  large = false,
 ): Fan => {
-  if (available <= 0) return { sliver: LOOSEST, rows: hands.map((hand) => rowsFor(hand, null)) };
+  if (available <= 0) {
+    return {
+      sliver: Math.round(LOOSEST * scale),
+      rows: hands.map((hand) => rowsFor(hand, null)),
+    };
+  }
 
-  const sliver = tighten(available, hands, out);
-  const perRow = rowCapacity(available, sliver);
+  const sliver = tighten(available, hands, out, scale, large);
+  const perRow = rowCapacity(available, sliver, scale);
   return { sliver, rows: hands.map((hand) => rowsFor(hand, perRow)) };
 };
 

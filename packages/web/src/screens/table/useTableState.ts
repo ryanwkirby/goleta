@@ -2,7 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import type { ClientMessage, GameView, RoomView } from "@goleta/engine";
 
-import { CARD_WIDTH_PX } from "../../lib/cardShape.ts";
+import { cardHeightPx, cardWidthPx, readableSliver } from "../../lib/cardShape.ts";
+import { printScale, useLargePrint } from "../../lib/largePrint.ts";
 import type { GoletaError, LoggedEvent, Shout } from "../../lib/feed.ts";
 import { namerFor } from "../../lib/format.ts";
 import { creditFinishedGames } from "../../net/graduation.ts";
@@ -123,6 +124,10 @@ export function useTableState({
    */
   const handRow = useRef<HTMLDivElement>(null);
   const handBox = useBox(handRow);
+  /** The upright hand stays on the ladder, so the rung it fans against has to be
+   * told what large print did to it (#323). */
+  const large = useLargePrint().on;
+  const print = printScale(large);
   /**
    * The felt the piles are sitting in that they are not using (#352). Upright
    * only — landscape draws no log, so neither of these attaches there and the
@@ -325,9 +330,11 @@ export function useTableState({
   const handFanStep = handStep(
     handBox.width,
     handCards.length,
-    CARD_WIDTH_PX[FULL_TABLE.hand],
+    cardWidthPx(FULL_TABLE.hand, print),
     undefined,
     true,
+    print,
+    readableSliver(cardHeightPx(FULL_TABLE.hand, print), large),
   );
 
   /**

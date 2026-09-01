@@ -24,7 +24,8 @@ import { cardAnchor, HAND } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
 import { PlayingCard } from "./Card.tsx";
 import type { HandMode } from "../lib/handMode.ts";
-import { CARD_WIDTH_PX, cardWidthAt, type CardSize } from "../lib/cardShape.ts";
+import { cardWidthAt, cardWidthPx, type CardSize } from "../lib/cardShape.ts";
+import { usePrintScale } from "../lib/largePrint.ts";
 
 /** `forced` plays a card like `play` but commits on the second tap like
  * `surrender`: a punishment you can fire off with a stray thumb is one you never
@@ -172,8 +173,10 @@ export function Hand({
    * commits. See `choose`. */
   fit?: boolean;
 }) {
-  // One width for the fan and every card in it.
-  const cardWidth = height ? cardWidthAt(height) : CARD_WIDTH_PX[size];
+  // One width for the fan and every card in it. A measured height already has
+  // large print in it; a rung has to be told (#323).
+  const scale = usePrintScale();
+  const cardWidth = height ? cardWidthAt(height) : cardWidthPx(size, scale);
 
   const [selected, setSelected] = useState<string | null>(null);
   const { anchor, isArriving, reduced } = useMotion();
@@ -327,7 +330,21 @@ export function Hand({
         // The row's width *is* the width the fan was fitted to, so it keeps no padding
         // of its own. `auto` rather than `hidden`: `fit` has a floor, and past it
         // clipping the ends would hide cards the turn needs.
-        "justify-center overflow-x-auto [&>*+*]:ml-[var(--fan)]",
+        //
+        // **Centred by auto margins rather than by `justify-center`** (#323).
+        // They come to the same thing while the hand fits and part company the
+        // moment it does not: an overflowing `justify-center` row spills equally
+        // out of *both* ends and `scrollLeft` cannot go below zero, so the first
+        // card or two are off the left edge and there is no gesture that reaches
+        // them. Auto margins resolve to zero under overflow, so the row simply
+        // starts at its first card and scrolls.
+        //
+        // It was latent until now — `fit` closes a hand up rather than letting it
+        // overflow, so only a hand past `FIT_TIGHTEST` ever got there. Large print
+        // reaches it routinely, because the floor a big face has to clear is the
+        // rank's own width rather than a thumb's.
+        "justify-start overflow-x-auto [&>*+*]:ml-[var(--fan)]",
+        "[&>*:first-child]:ml-auto [&>*:last-child]:mr-auto",
       ].join(" ")}
       onClick={(event) => {
         if (event.target === event.currentTarget) setSelected(null);

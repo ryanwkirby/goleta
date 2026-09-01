@@ -15,7 +15,9 @@ import { cardAnchor, seatAnchor } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
 import type { Shout } from "../lib/feed.ts";
 import { PlayingCard } from "./Card.tsx";
-import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
+import { cardWidthPx } from "../lib/cardShape.ts";
+import { printScale } from "../lib/largePrint.ts";
+import { useLargePrint } from "../lib/largePrint.ts";
 import { AutopilotMark } from "./Autopilot.tsx";
 import { HelpShout, HintedMark, shoutingNow } from "./Help.tsx";
 
@@ -230,6 +232,9 @@ export function Seats({
    * chip width rather than a text width plus a constant somebody has to keep in
    * step.
    */
+  const { on: large } = useLargePrint();
+  const scale = printScale(large);
+
   const outNames = others
     .filter((player) => player.eliminated)
     .map((player) => nameFor(room, player.id));
@@ -253,7 +258,11 @@ export function Seats({
   const held: SeatHand[] = others.map((player) =>
     player.eliminated ? "out" : player.hand.length,
   );
-  const fan = fanTable(available, held, outWidth);
+  // Large print moves the rem behind every constant in `fan.ts`, so the strip's
+  // arithmetic is told the same number the root font size moved by (#323). More
+  // rows and more scrolling between seats is the expected outcome, not a
+  // regression: rows are the release valve (#59).
+  const fan = fanTable(available, held, outWidth, scale, large);
 
   /**
    * One rule for where the strip sits: show whoever the table is waiting on,
@@ -305,7 +314,7 @@ export function Seats({
       ref={strip}
       // One overlap for the entire strip, so somebody holding three isn't squashed
       // differently from somebody holding twenty.
-      style={{ "--fan": `${fan.sliver - CARD_WIDTH_PX.sm}px` } as CSSProperties}
+      style={{ "--fan": `${fan.sliver - cardWidthPx("sm", scale)}px` } as CSSProperties}
       // The padding is for the turn ring, which is drawn outside the border box, and
       // a box that clips one axis clips both.
       className="relative flex gap-2 overflow-x-auto p-1"

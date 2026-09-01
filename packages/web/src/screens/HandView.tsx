@@ -14,8 +14,8 @@ import { turnPrompt } from "../lib/format.ts";
 import { handHeight, handStep } from "../lib/handFan.ts";
 import { useBox } from "../lib/measure.ts";
 import { useMotion } from "../lib/motion.ts";
-import { cardWidthAt } from "../lib/cardShape.ts";
-import { usePrintScale } from "../lib/largePrint.ts";
+import { cardWidthAt, readableSliver } from "../lib/cardShape.ts";
+import { printScale, useLargePrint } from "../lib/largePrint.ts";
 import type {
   HandControls,
   HelpControls,
@@ -71,9 +71,18 @@ export function HandView({ table, hand, help, sunny, onShowInvite, onShowRules }
   // The row it is measuring has already shrunk by whatever large print took out
   // of the strip above it, so the cards give some of the scale straight back —
   // and get it again on the face, which is nearly twice the ink (#323).
-  const scale = usePrintScale();
+  const { on: large } = useLargePrint();
+  const scale = printScale(large);
   const height = handHeight(box.height, scale);
-  const step = handStep(box.width, cards.length, cardWidthAt(height), undefined, true, scale);
+  const step = handStep(
+    box.width,
+    cards.length,
+    cardWidthAt(height),
+    undefined,
+    true,
+    scale,
+    readableSliver(height, large),
+  );
   const me = game.you ?? "";
 
   return (

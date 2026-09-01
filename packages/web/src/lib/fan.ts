@@ -1,3 +1,5 @@
+import { CARD_HEIGHT_PX, readableSliver } from "./cardShape.ts";
+
 /**
  * Fanning the seat strip: one overlap for the whole table, rows as the valve.
  * Laid flat, fourteen cards is a seat 615px wide, so a phone made you scroll
@@ -38,6 +40,22 @@ export const LOOSEST = CARD + GAP;
  * readable — `10` at `text-sm` is the binding case, its right edge at 19.97px.
  * Past here the strip scrolls *between* seats instead. */
 export const TIGHTEST = 22;
+
+/**
+ * The same question asked of large print's face, which is not the same face
+ * (#323): one rank about twice the ink, drawn from `LARGE_CARD_SHAPE`'s
+ * fractions rather than from a `text-…` class. Scaling 22 would leave a sliver
+ * that cuts a digit in half, which is the one thing this floor exists to stop.
+ *
+ * It comes out around three quarters of a card rather than half of one, so a
+ * large-print strip barely overlaps and scrolls sooner. That is the trade #323
+ * names: rows and scrolling between seats are the release valve (#59), and a
+ * hand you cannot read is a play you cannot spot.
+ */
+const tightestAt = (scale: number, large: boolean): number =>
+  large
+    ? readableSliver(CARD_HEIGHT_PX.sm * scale, true)
+    : Math.round(TIGHTEST * scale);
 
 /**
  * Every number above is a rem written out in pixels — `w-10`, `gap-1`, `px-3`,
@@ -89,8 +107,9 @@ const tighten = (
   hands: readonly SeatHand[],
   out: number,
   scale: number,
+  large: boolean,
 ): number => {
-  const floor = Math.round(TIGHTEST * scale);
+  const floor = tightestAt(scale, large);
   for (let sliver = Math.round(LOOSEST * scale); sliver > floor; sliver--) {
     if (stripWidth(hands, sliver, out, scale) <= available) return sliver;
   }
@@ -121,6 +140,11 @@ export const fanTable = (
   out = SEAT_OUT_MIN,
   /** How much bigger this device draws everything (#323). */
   scale = 1,
+  /** Whether the cards are drawn with large print's face, which is what decides
+   * the floor. It travels with `scale` and is spelled out beside it because the
+   * two are different questions: one is how big a card is, the other is where
+   * the ink on it sits. */
+  large = false,
 ): Fan => {
   if (available <= 0) {
     return {
@@ -129,7 +153,7 @@ export const fanTable = (
     };
   }
 
-  const sliver = tighten(available, hands, out, scale);
+  const sliver = tighten(available, hands, out, scale, large);
   const perRow = rowCapacity(available, sliver, scale);
   return { sliver, rows: hands.map((hand) => rowsFor(hand, perRow)) };
 };

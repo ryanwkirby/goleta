@@ -119,9 +119,10 @@ export function PlayingCard({
         arriving ? "invisible" : "",
         // Belt to the layout's braces: a rank like 10 at a large text size must never
         // spill past the card's edge.
-        "relative flex shrink-0 flex-col overflow-hidden bg-white font-semibold leading-none shadow-lg",
-        // Large print centres its one index; every other face pins the corner one.
-        large ? "items-center justify-center" : "items-start",
+        "relative flex shrink-0 flex-col items-start overflow-hidden bg-white font-semibold leading-none shadow-lg",
+        // Large print's one index sits in the middle of the card's height, at the
+        // left edge like every other face here. See below for why not centred.
+        large ? "justify-center" : "",
         "ring-1 ring-black/10 transition-transform duration-150",
         // Dimmed, never translucent (#331). The hand fans with a step well under a
         // card's width, so 25–41px of every card is overlapped by the next one —
@@ -137,15 +138,27 @@ export function PlayingCard({
       ].join(" ")}
     >
       {large ? (
-        /* One centred rank and suit, and nothing else (#323). No corner index,
-           no ghost pip, and **no mirrored second index either** — that is #130's
-           argument one step further on. The second index exists so the far side
-           of an IRL table can read your phone; at 0.42 of the card it would have
-           to come out of the first one, and a single rank nearly twice the size
-           is more legible across a table upside down than two small ones are the
-           right way up. A player who has asked for this has said which trade
-           they want. */
-        <span className="text-center leading-[1.05]">
+        /* One rank and its suit, and nothing else (#323). No ghost pip, and **no
+           mirrored second index either** — that is #130's argument one step
+           further on. The second index exists so the far side of an IRL table can
+           read your phone; at 0.42 of the card it would have to come out of the
+           first one, and a single rank nearly twice the size is more legible
+           across a table upside down than two small ones are the right way up.
+
+           **At the left edge, not centred**, which is where #323's proposal was
+           wrong and the app's oldest layout rule is right. Cards fan: the seat
+           strip overlaps them to fit a table on a phone (#59) and your own hand
+           closes up before it scrolls (#117), and what a fanned card leaves
+           showing is a sliver of its **left edge**. A centred rank is drawn in
+           the half of the card the next card is covering, so at the strip's floor
+           it was blank white — measured on a four-seat table, which is the widest
+           the strip ever is. Vertically it does sit in the middle: nothing else
+           is competing for the height, and it reads as placed rather than as an
+           index that lost its card.
+
+           `readableSliver` is the floor that follows from this, and it is why
+           large print scrolls sooner than the ordinary face does. */
+        <span className="leading-[1.05]">
           {card.rank}
           <span className="block text-[0.85em]">{glyph}</span>
         </span>

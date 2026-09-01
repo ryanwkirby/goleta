@@ -83,15 +83,29 @@ export const handStep = (
    * already scaled, because its caller had to pick a rung or measure a row; what
    * this is for is the gap between the cards and the floor under them. */
   scale = 1,
+  /**
+   * The narrowest sliver this card's face can be cut to and still have its rank
+   * read off it — `readableSliver`, and **zero for the ordinary face** (#323).
+   *
+   * It outranks both floors below, which is the one place large print changes
+   * what this function does rather than how big its numbers are. The ordinary
+   * face's index is small enough that the thumb's 44 has always cleared it;
+   * large print's is about twice the ink and does not, so without this a hand
+   * would close up to a sliver showing half a digit. Where that means a row no
+   * longer fits, it **scrolls** — the release valve #323 accepts, and the same
+   * call `fan.ts` makes one file along.
+   */
+  readable = 0,
 ): number => {
   const loose = loosest(cardWidth, scale);
+  const floor = Math.max(tightest, readable);
   if (cards <= 1 || available <= 0) return loose;
-  for (let step = loose; step > tightest; step -= 1) {
+  for (let step = loose; step > floor; step -= 1) {
     if (handWidth(cards, step, cardWidth) <= available) return step;
   }
   if (fit) {
     const fitted = Math.floor((available - cardWidth) / Math.max(cards - 1, 1));
-    return Math.max(FIT_TIGHTEST * scale, Math.min(tightest, fitted));
+    return Math.max(Math.max(FIT_TIGHTEST * scale, readable), Math.min(floor, fitted));
   }
-  return tightest;
+  return floor;
 };

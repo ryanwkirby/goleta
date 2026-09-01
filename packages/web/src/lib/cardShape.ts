@@ -81,6 +81,35 @@ export const LARGE_CARD_SHAPE: CardShape = { width: 0.75, text: 0.42, pad: 0.04,
 
 export const shapeFor = (large: boolean): CardShape => (large ? LARGE_CARD_SHAPE : CARD_SHAPE);
 
+/** `10` in this app's semibold sans, measured in the browser: 1.107 times its
+ * own font size, and the widest thing printed on any card — the suit under it is
+ * drawn at `0.85em` and comes to 0.84. Every floor here is about `10`. */
+export const RANK_EM = 1.107;
+
+/** A couple of pixels so a floor is not exactly a glyph's right edge. The
+ * ordinary face carries the same margin: `10` at `text-sm` ends at 19.97 and
+ * `fan.ts` floors at 22. */
+const MARGIN = 2;
+
+/**
+ * How much of a card's left edge has to show for its rank to still be read off
+ * it, which is the floor every fan in the app tightens to.
+ *
+ * **Only asked of large print's face**, and zero otherwise — the ordinary face's
+ * floors are numbers measured off the rungs themselves (`fan.ts`'s 22, the
+ * thumb's 44) and this must not disturb them. It can be asked of this face
+ * because this face *is* these fractions at every rung: large print always draws
+ * a card from a height rather than from a `text-…` class.
+ *
+ * It is why the face keeps its index at the **left** (#323 proposed centring it,
+ * and `Card.tsx` says what happened). A sliver shows the left edge of a card, so
+ * ink anywhere else is ink a fanned hand hides.
+ */
+export const readableSliver = (cardHeight: number, large: boolean): number =>
+  large
+    ? Math.ceil(cardHeight * (LARGE_CARD_SHAPE.pad + LARGE_CARD_SHAPE.text * RANK_EM) + MARGIN)
+    : 0;
+
 export const cardWidthAt = (height: number): number => Math.round(height * CARD_SHAPE.width);
 
 /**

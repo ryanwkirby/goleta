@@ -59,9 +59,11 @@ export function LargePrintButton({ className = "" }: { className?: string }) {
       className={[
         "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm",
         "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-        on
-          ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
-          : "text-white/60 hover:bg-white/5 hover:text-white",
+        // On is amber ink rather than an amber box. It is a utility control, and
+        // boxed it came out as the second loudest thing on a lobby whose own
+        // room code is the loud one — while the plainest statement that it is on
+        // is the screen it is drawn on.
+        on ? "text-amber-300 hover:bg-white/5" : "text-white/60 hover:bg-white/5 hover:text-white",
         className,
       ].join(" ")}
     >

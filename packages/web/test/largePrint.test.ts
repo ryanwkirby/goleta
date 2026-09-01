@@ -8,8 +8,10 @@ import {
   CARD_SHAPE,
   CARD_WIDTH_PX,
   LARGE_CARD_SHAPE,
+  RANK_EM,
   cardHeightPx,
   cardWidthPx,
+  readableSliver,
   shapeFor,
   type CardSize,
 } from "../src/lib/cardShape.ts";
@@ -23,6 +25,7 @@ import {
   TIGHTEST,
   handHeight,
   handStep,
+  handWidth,
 } from "../src/lib/handFan.ts";
 
 const SIZES: CardSize[] = ["sm", "md", "lg", "xl", "2xl"];
@@ -91,9 +94,6 @@ describe("one ladder, written twice", () => {
 });
 
 describe("the large-print face", () => {
-  /** Two digits of a semibold sans, which is what `10` costs and the binding
-   * case. */
-  const RANK_EM = 1.15;
   /** `leading-[1.05]` on the rank, with the suit under it at `0.85em` on the
    * same line height. */
   const STACK_EM = 1.05 + 0.85 * 1.05;
@@ -171,13 +171,80 @@ describe("which floors move and which do not", () => {
     expect(handHeight(10_000)).toBe(TALLEST);
   });
 
-  it("scales the seat strip's legibility floor", () => {
-    // Eight full hands in a phone's width: nothing fits, so the sliver bottoms out.
+  it("scales the seat strip's floor with the cards when the face has not changed", () => {
+    // Seven full hands in a phone's width: nothing fits, so the sliver bottoms out.
     const hands = [12, 12, 12, 12, 12, 12, 12];
     expect(fanTable(320, hands, SEAT_OUT_MIN, LARGE_SCALE).sliver).toBe(
       Math.round(SLIVER_FLOOR * LARGE_SCALE),
     );
     expect(fanTable(320, hands).sliver).toBe(SLIVER_FLOOR);
+  });
+});
+
+/**
+ * The floor a fan may tighten to is about the **face**, not only the card, and
+ * that is what large print changes rather than merely scales. A sliver shows a
+ * card's left edge; the large face puts about twice the ink there; so the floor
+ * is roughly three quarters of a card instead of half of one.
+ */
+describe("how much of a card has to show", () => {
+  it("says nothing about the ordinary face", () => {
+    expect(readableSliver(CARD_HEIGHT_PX.sm, false)).toBe(0);
+    expect(readableSliver(1000, false)).toBe(0);
+  });
+
+  it("is what `10` needs at the large face's size", () => {
+    const height = CARD_HEIGHT_PX["2xl"];
+    const rank = LARGE_CARD_SHAPE.text * RANK_EM * height;
+    const pad = LARGE_CARD_SHAPE.pad * height;
+    expect(readableSliver(height, true)).toBeGreaterThanOrEqual(rank + pad);
+    // And not extravagantly more than it: a floor is a floor, not a whole card.
+    expect(readableSliver(height, true)).toBeLessThan(rank + pad + 8);
+  });
+
+  it("comes to about three quarters of a card, against the ordinary face's half", () => {
+    const height = CARD_HEIGHT_PX.sm * LARGE_SCALE;
+    const width = CARD_WIDTH_PX.sm * LARGE_SCALE;
+    expect(readableSliver(height, true) / width).toBeGreaterThan(0.65);
+    expect(readableSliver(height, true) / width).toBeLessThan(0.8);
+    expect(SLIVER_FLOOR / CARD_WIDTH_PX.sm).toBeCloseTo(0.55, 2);
+  });
+
+  it("floors the seat strip instead of the scaled 22 once the face changes", () => {
+    const hands = [12, 12, 12, 12, 12, 12, 12];
+    const large = fanTable(320, hands, SEAT_OUT_MIN * LARGE_SCALE, LARGE_SCALE, true).sliver;
+    expect(large).toBe(readableSliver(CARD_HEIGHT_PX.sm * LARGE_SCALE, true));
+    expect(large).toBeGreaterThan(Math.round(SLIVER_FLOOR * LARGE_SCALE));
+  });
+
+  /** It outranks the thumb, which is the one place large print changes what
+   * `handStep` does rather than how big its numbers are. */
+  it("outranks the tap floor in the hand", () => {
+    const height = CARD_HEIGHT_PX.md * LARGE_SCALE;
+    const width = CARD_WIDTH_PX.md * LARGE_SCALE;
+    const readable = readableSliver(height, true);
+    expect(readable).toBeGreaterThan(TIGHTEST);
+    expect(handStep(300, 20, width, undefined, false, LARGE_SCALE, readable)).toBe(readable);
+  });
+
+  /** And it outranks `fit`, so a hand scrolls rather than closing up past the
+   * point its ranks can be read — the release valve, and the same call `fan.ts`
+   * makes with rows. */
+  it("outranks the fitted floor too, so the row scrolls instead", () => {
+    const height = CARD_HEIGHT_PX["2xl"] * LARGE_SCALE;
+    const width = CARD_WIDTH_PX["2xl"] * LARGE_SCALE;
+    const readable = readableSliver(height, true);
+    const step = handStep(width + 10, 40, width, undefined, true, LARGE_SCALE, readable);
+    expect(step).toBe(readable);
+    expect(handWidth(40, step, width)).toBeGreaterThan(width + 10);
+  });
+
+  it("leaves the ordinary face's hand exactly where it was", () => {
+    for (const cards of [2, 6, 12, 20]) {
+      expect(handStep(828, cards, CARD_WIDTH_PX["2xl"], undefined, true, 1, 0)).toBe(
+        handStep(828, cards, CARD_WIDTH_PX["2xl"], undefined, true),
+      );
+    }
   });
 });
 

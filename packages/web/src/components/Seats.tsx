@@ -16,7 +16,8 @@ import { useMotion } from "../lib/motion.ts";
 import type { Shout } from "../lib/feed.ts";
 import { PlayingCard } from "./Card.tsx";
 import { cardWidthPx } from "../lib/cardShape.ts";
-import { usePrintScale } from "../lib/largePrint.ts";
+import { printScale } from "../lib/largePrint.ts";
+import { useLargePrint } from "../lib/largePrint.ts";
 import { AutopilotMark } from "./Autopilot.tsx";
 import { HelpShout, HintedMark, shoutingNow } from "./Help.tsx";
 
@@ -231,7 +232,8 @@ export function Seats({
    * chip width rather than a text width plus a constant somebody has to keep in
    * step.
    */
-  const scale = usePrintScale();
+  const { on: large } = useLargePrint();
+  const scale = printScale(large);
 
   const outNames = others
     .filter((player) => player.eliminated)
@@ -260,7 +262,7 @@ export function Seats({
   // arithmetic is told the same number the root font size moved by (#323). More
   // rows and more scrolling between seats is the expected outcome, not a
   // regression: rows are the release valve (#59).
-  const fan = fanTable(available, held, outWidth, scale);
+  const fan = fanTable(available, held, outWidth, scale, large);
 
   /**
    * One rule for where the strip sits: show whoever the table is waiting on,

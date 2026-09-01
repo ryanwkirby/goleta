@@ -15,6 +15,7 @@ import type { AutopilotMode, DealerMode, HouseRules } from "@goleta/engine";
 
 import { AutopilotPicker } from "./Autopilot.tsx";
 import { HintsRow } from "./Help.tsx";
+import { LargePrintRow } from "./LargePrint.tsx";
 import { SettingSwitch } from "./SettingSwitch.tsx";
 import { TwoWay } from "./TwoWay.tsx";
 import { Button, headerItem, Panel } from "./ui.tsx";
@@ -539,6 +540,13 @@ export function SettingsCog({
                 <div className="flex flex-col gap-4">
                   <SectionHeading>Your settings</SectionHeading>
                   <HintsRow on={personal.hints} onChange={personal.onHints} />
+                  {/* Beside Tutorial mode, and it takes no props: nothing about
+                      large print goes on the wire, so it reads its own context
+                      rather than riding in `personal` (#323). It is inside the
+                      `personal` branch all the same — the shared table screen
+                      has no "you" to set a display setting for, and no cog page
+                      to put one on. */}
+                  <LargePrintRow />
                   {/* Both halves of *yours* clear the bar #188 set: they belong to one
                       player and change nothing about the room. Neither is private —
                       hints are shouted (#187) and an autopiloted seat carries a

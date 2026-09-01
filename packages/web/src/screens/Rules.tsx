@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { DEFAULT_HOUSE_RULES, type HouseRules } from "@goleta/engine";
 
 import { HintsQuestion } from "../components/Help.tsx";
+import { LargePrintButton } from "../components/LargePrint.tsx";
 import { Button, Panel } from "../components/ui.tsx";
 import { useIsShort } from "../lib/viewport.ts";
 
@@ -242,8 +243,20 @@ export function Rules({
       {/* Bleeds to the panel's edges and puts the padding back on itself, so the
           scrollbar runs down the panel rather than an inset column. */}
       <div className="-mx-5 -mt-5 min-h-0 flex-1 overflow-y-auto px-5 pt-5">
-        <h2 className="text-xl font-semibold text-white">How goleta works</h2>
-        <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
+        {/* **Beside the title rather than beside the hints question**, which is
+            what #323 proposed and marked open for review. The one thing it says
+            it must not be is buried, and the hints question is not a fixed place
+            on this screen: on a short one it moves up into the scroll (#305), so
+            a control next to it would be below the fold on exactly the phone
+            whose text is hardest to read. The head of the panel is above the
+            fold in both. */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-white">How goleta works</h2>
+            <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
+          </div>
+          <LargePrintButton className="-mr-1.5 -mt-1.5" />
+        </div>
 
         <ol className="mt-4">
           {rules.map((rule) => (

@@ -8,6 +8,7 @@ import {
 import type { BotSpeed, ClientMessage, RoomView } from "@goleta/engine";
 
 import { AutopilotMark } from "../components/Autopilot.tsx";
+import { LargePrintButton } from "../components/LargePrint.tsx";
 import { LeaveControl } from "../components/Leave.tsx";
 import { useCopyLink } from "../lib/copy.ts";
 import { dropIndex, hopsBetween, type SeatDrag } from "../lib/seatDrag.ts";
@@ -446,6 +447,20 @@ export function Lobby({
       local to the host's device, so nobody else's screen changes at all.
     */
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
+      {/* The lobby is where somebody is before their first hand, and this is the
+          top of it — above the code rather than down beside **How to play**,
+          which is `mt-auto` and lands under a list of eight seats. #323 says the
+          one thing it must not be is buried.
+
+          It goes with everything else while the seat-order question is up: that
+          moment is a single question about a single list, and the screen is
+          deliberately nothing else (#316). */}
+      {confirming ? null : (
+        <div className="-mb-2 flex justify-end">
+          <LargePrintButton className="-mr-1.5" />
+        </div>
+      )}
+
       {confirming ? null : <RoomCode code={room.code} />}
 
       {winner && !confirming ? (

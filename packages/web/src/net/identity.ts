@@ -160,6 +160,26 @@ export const wantsHints = (): boolean => readLocal(HINTS_KEY) !== "0";
 export const setWantsHints = (wanted: boolean): void =>
   writeLocal(HINTS_KEY, wanted ? "1" : "0");
 
+const LARGE_PRINT_KEY = "goleta:large-print";
+
+/**
+ * Whether this device draws everything bigger (#323).
+ *
+ * **Off by default and never inferred.** There is no user agent check and no
+ * reading of the system's own text size: the app cannot tell a phone held at
+ * arm's length from one held close, and a display setting somebody did not ask
+ * for is worse than one they have to find. `wantsHints` defaults the other way
+ * because help is the safe answer for a first game; the safe answer here is the
+ * app people already know.
+ *
+ * It goes nowhere but this browser — no shout, no seat mark, nothing on the wire
+ * (see `lib/largePrint.ts`).
+ */
+export const wantsLargePrint = (): boolean => readLocal(LARGE_PRINT_KEY) === "1";
+
+export const setWantsLargePrint = (wanted: boolean): void =>
+  writeLocal(LARGE_PRINT_KEY, wanted ? "1" : "0");
+
 const SORT_KEY = "goleta:hand-sort";
 
 /** Kept because having to set it again every reload is exactly the sort of

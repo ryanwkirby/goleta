@@ -815,6 +815,60 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   different route. Letting the row bleed would keep the arithmetic looking
   healthy while the hardware quietly overruled it.
 
+- **Large print is one scale and one different face, and both are private
+  (#323).** A player whose eyesight makes the default unreadable turns it on from
+  the lobby header, the head of the rules screen, or the cog's *Your settings*.
+  It is presentation — `packages/engine` never learns it exists, it is not on
+  `GameOptions` or `HouseRules`, no bot may read it — and, unlike the hints it
+  sits beside, **nothing about it goes on the wire**. Hints are shouted and mark
+  the seat because taking help is an advantage (#33, #187); this says nothing
+  about anybody's hand and buys nobody a play they didn't have, so it is silent
+  on and silent off. Do not reuse `SeatView.hinted`'s machinery for it. It is a
+  context in `lib/largePrint.ts` rather than a prop for that reason: it is a fact
+  about the device, like `MotionApi.reduced` beside it. **Player devices only** —
+  the shared screen fits one design to whatever it is on and its own legibility
+  problem is #320.
+
+  **The size is a root font size, and every pixel constant that mirrors a rem
+  must be multiplied by hand.** That is the whole of the mechanism and the whole
+  of the trap: `SIZES` in `Card.tsx` is the card ladder as rem classes and
+  `CARD_WIDTH_PX`/`CARD_HEIGHT_PX` is the same ladder in pixels, so moving the
+  root font size moves one and leaves the other, and nothing would fail.
+  `largePrint.test.ts` reads the component as text and fails instead.
+
+  **The face is a second set of fractions, not a bigger `text`.** A rank at half
+  a card's height on the ordinary padding runs off the edge, silently, because
+  the card is `overflow-hidden`. `LARGE_CARD_SHAPE` is one rank with its suit
+  under it, no ghost pip and no mirrored second index — #130's argument one step
+  on, since a single rank twice the size reads across a table better upside down
+  than two small ones do the right way up.
+
+  **It keeps its index at the left, and that is where #323's proposal was
+  wrong.** Cards fan: the seat strip overlaps them to fit a table on a phone
+  (#59) and your own hand closes up before it scrolls (#117), and what a fanned
+  card leaves showing is a sliver of its **left edge**. A centred rank is drawn
+  in the half the next card is covering, and at the strip's floor it came out
+  blank white on a four-seat table. Vertically it does sit in the middle, because
+  nothing is competing for the height.
+
+  **Which floors move is the part to get right, and it is three questions rather
+  than one.** A **tap** floor does not scale at all: a thumb is the same width
+  whatever size the cards are (`handFan.ts`'s 44, `PICKER_TIGHTEST`). A floor
+  that is a rem written out in pixels scales with everything else (`fan.ts`'s
+  constants, `AIR`, `TALLEST`, `SHORTEST`). And a **legibility** floor is about
+  the *face* rather than the card, so it is neither: `readableSliver` is what
+  `10` needs at the large face's size, about three quarters of a card against the
+  ordinary face's half, and it outranks both of the others. Where that means a
+  row no longer fits, it scrolls, and the strip grows rows — the release valve
+  #323 accepts and #59 already chose.
+
+  **Auto margins centre the hand, never `justify-center`.** They are the same
+  thing while the hand fits and part company the moment it does not: an
+  overflowing `justify-center` row spills out of *both* ends and `scrollLeft`
+  cannot go below zero, so the first card or two are off the left edge with no
+  gesture that reaches them. It was latent — `fit` closes a hand up rather than
+  letting it overflow — and large print reaches it routinely.
+
 ## House rules
 
 A table can vary three things, all of them rules the game already had written

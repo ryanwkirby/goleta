@@ -156,12 +156,20 @@ export const turnPrompt = (
       return game.winnerId
         ? `${nameOf(game.winnerId)} wins, still holding cards.`
         : "Deadlock — nobody could move.";
+    // **Step 2 and step 1, never "of 3"** (#412). The third step is real and is
+    // in `docs/RULES.md` and in the caught dialog — the illegally drawn cards go
+    // face up and the last is what everybody matches — but no prompt can ever
+    // announce it: `finishSunny` turns them up itself, with no phase and no
+    // action, so the moment step 2 is answered the game is back at `action` for
+    // the next seat. A line that counted to three promised a beat and then
+    // skipped it. The dialog keeps its three, because it is the one place all
+    // three are explained; what it may not do is disagree with this line.
     case "surrender": {
       const yours = game.phase.playerId === game.you;
       const who = yours ? "You" : nameOf(game.phase.playerId);
       return yours
         ? "☀️ Step 2 — sacrifice any card."
-        : `${who} owes a punishment card — step 2 of 3.`;
+        : `${who} owes a punishment card — step 2.`;
     }
     case "suit":
       // The one prompt that waits on the deal, because it is the one that can arrive
@@ -176,8 +184,8 @@ export const turnPrompt = (
       return mine ? "Choose a suit." : `${nameOf(game.phase.playerId)} is naming a suit.`;
     case "sunnyPlay":
       return mine
-        ? "☀️ Step 1 of 3 — play the card you skipped."
-        : `${nameOf(game.turnPlayerId)} has to make the play they skipped — step 1 of 3.`;
+        ? "☀️ Step 1 — play the card you skipped."
+        : `${nameOf(game.turnPlayerId)} has to make the play they skipped — step 1.`;
     case "action":
       if (!mine) return `${nameOf(game.turnPlayerId)}'s turn.`;
       // Both give the answer away — being told you *must* play is being told a card

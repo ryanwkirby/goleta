@@ -37,10 +37,22 @@ const scratch = (): string => {
   return dir;
 };
 
-const recorderIn = (dir: string): Recorder => {
-  const recorder = startRecorder(dir);
+const recorderIn = (dir: string, now?: () => number): Recorder => {
+  const recorder = startRecorder(dir, now);
   recorders.push(recorder);
   return recorder;
+};
+
+/**
+ * A clock that moves a millisecond every time it is read. A game id is its
+ * room's code plus the moment it was dealt, so a test that deals twice on one
+ * code needs those two moments to differ — and back-to-back statements land in
+ * the same millisecond on a fast machine, which is how this flaked on CI and
+ * never locally (#417).
+ */
+const ticking = (from = 1_700_000_000_000): (() => number) => {
+  let at = from;
+  return () => (at += 1);
 };
 
 /** The stream is asynchronous, so a read has to wait for what was written. */
@@ -187,9 +199,30 @@ describe("the game record", () => {
     expect(lines[1]?.game).toBe(lines[0]?.game);
   });
 
+  /**
+   * The guard on the fix rather than on the symptom. Without it, putting
+   * `Date.now()` back inside the recorder would leave the test below passing on
+   * most runs and failing on a fast one, which is exactly where it started
+   * (#417).
+   */
+  it("stamps its lines with the clock it was given, not the wall clock", async () => {
+    const dir = scratch();
+    const recorder = recorderIn(dir, () => 1_234_567);
+    const { room, hostId } = dealtRoom();
+
+    recorder.record(room, beginGame(room, hostId));
+
+    const header = (await linesIn(dir))[0];
+    if (!header) throw new Error("nothing was written");
+    expect(header.at).toBe(1_234_567);
+    expect(header.game).toBe(`${room.code}-1234567`);
+  });
+
   it("forgets a pruned code, so a recycled one cannot inherit its game", async () => {
     const dir = scratch();
-    const recorder = recorderIn(dir);
+    // Its own clock: the two deals below are consecutive statements on the same
+    // four characters, and the whole assertion is that their ids differ (#417).
+    const recorder = recorderIn(dir, ticking());
     const store = createStore();
     const { room, seat } = createRoom(store, "Ryan");
     addBot(room, seat.id);

@@ -8,6 +8,11 @@ This document is canonical. The engine implements it; the UI explains it.
 Where it knowingly leaves the original written rules, that is written down at
 the [foot of this file](#where-this-departs-from-the-original).
 
+**To learn the game rather than to check it**, read
+[`HOW-TO-PLAY.md`](../HOW-TO-PLAY.md) instead — the original rules in plain
+English, written for somebody sitting down to their first hand. The original text
+itself is in [`ORIGINAL-RULES.md`](ORIGINAL-RULES.md).
+
 ---
 
 ## Setup
@@ -314,7 +319,7 @@ there is simply nobody empowered to do anything about it if you don't.
 
 ### The Power of Eights
 
-*From the original written rules.*
+*This game's own, not the original's (#420).*
 
 Instead of the player who plays an 8 naming the suit, **the next player names
 it** — and then plays against the suit they just named.
@@ -332,7 +337,8 @@ just a bad card.
 
 ### Dealer's Choice
 
-*From the original written rules.*
+*This game's own, not the original's (#420). The rule it varies — that a seed 8
+is a [natural eight](#natural-eights) — is the original's.*
 
 If the card turned up to start the game is an 8, the **dealer names the suit**
 instead of it playing as a [natural eight](#natural-eights).
@@ -380,45 +386,9 @@ to somebody holding the original text** — and two of them are invisible in the
 original game and only surface on a path this app invented, which is exactly the
 sort of thing a fresh pair of eyes puts back.
 
-The original is quoted rather than summarised so you can check the reconciliation
-instead of trusting it.
-
-### The original text
-
-On drawing, the Sunny Rule and winning:
-
-> If a player does not have a card that they can play, they are allowed to draw
-> up to three cards from the deck. Cards are drawn one at a time and placed into
-> the players hand. When the player draws a card they can play, they must play it
-> and their turn is over. If three cards are drawn and no play can be made, the
-> players turn is over and the next player is up. If there are no more cards
-> remaining in the deck to be drawn from, the face up side of the deck is then
-> reshuffled and turned face down. The top card is flipped over and the game
-> continues on. If a player was in the middle of drawing cards, they are able to
-> continue to draw up to three cards so long as they are still unable to play a
-> card in their hand.
->
-> If a player has a card they can play but they reach out and touch the face down
-> side of the middle decks as if to draw another card, this triggers a Sunny Rule
-> (if called out by another player). In a Sunny Rule event, the offending player
-> must first play the card they could have played in the regular manner, then,
-> from their remaining hand, choose any one of the cards as a punishment card to
-> be played as well. Finally, the card from the face down side of the decks that
-> was touched is flipped over to the face up side of the decks and becomes the
-> new card in play. This ends the offending players turn. If nobody calls the
-> Sunny Rule out at the time of offense, the game continues as normal for the
-> player.
->
-> When a player loses all of their hand to the center deck, they have lost the
-> game. They exit the game while it continues on without them. This continues
-> until only one player remains. They are the winner.
->
-> \*If an 8 is drawn as the seed card, it is considered a natural 8, and is
-> played like any other card would. The suit shown is the suit played.
-
-[The Power of Eights](#the-power-of-eights) and
-[Dealer's Choice](#dealers-choice) come from the same written rules and are
-already marked as such. They are alternates the original offered, not departures.
+**The original text lives in [`ORIGINAL-RULES.md`](ORIGINAL-RULES.md)**, exactly
+as it was written, so you can check this reconciliation instead of trusting it.
+[`HOW-TO-PLAY.md`](../HOW-TO-PLAY.md) says the same thing in plain English.
 
 ### What is unchanged
 
@@ -488,3 +458,16 @@ rule on any of them.
 - **Two calls at once.** The first to arrive is judged; the rest cost nothing.
 - **A player who is out cannot call.** They have left the game, so they are not
   one of the *other players* the original empowers.
+
+### And two alternates this game added
+
+Not departures — both are off by default, so the game as written is untouched by
+them — but they are **not the original's either**, which this file claimed until
+#420. [The Power of Eights](#the-power-of-eights) and
+[Dealer's Choice](#dealers-choice) were invented here and headed *"From the
+original written rules"* for as long as that section existed, which put the one
+document whose job is telling *ours* from *theirs* two rules out.
+
+Dealer's Choice is the subtler half of the correction: the rule it varies — that
+a seed 8 plays as a [natural eight](#natural-eights) — **is** the original's,
+written into its only footnote. The option to override it is not.

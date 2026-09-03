@@ -183,7 +183,3 @@ of somebody's hand.
 
 **Your punishment card is an 8.** It names no suit. It is not a play, and the
 card you touched lands on top of it a moment later anyway.
-
-**Nobody can play and there is nothing to draw.** Every card is in somebody's
-hand and none of them match. The game stops there and the largest hand wins. It
-has never happened.

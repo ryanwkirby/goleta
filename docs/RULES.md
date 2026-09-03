@@ -5,6 +5,8 @@ hand. Here, emptying your hand knocks you out. Cards are what keep you alive,
 playing them is compulsory, and drawing is the reward you have to earn.
 
 This document is canonical. The engine implements it; the UI explains it.
+Where it knowingly leaves the original written rules, that is written down at
+the [foot of this file](#where-this-departs-from-the-original).
 
 ---
 
@@ -366,3 +368,123 @@ After that, sit on a turn for five seconds and a quiet offer of help appears
 next to your hand. Take it and the highlights come back — for that turn only,
 and with a **"help!"** going up over your cards on every screen at the table.
 The rule is always there when you need it. It is never there quietly.
+
+---
+
+## Where this departs from the original
+
+goleta was a written game before it was an app, and the written rules are short.
+Everything above is what this app actually does; this section is where the two
+part company, and why. It is here because **every departure below reads as a bug
+to somebody holding the original text** — and two of them are invisible in the
+original game and only surface on a path this app invented, which is exactly the
+sort of thing a fresh pair of eyes puts back.
+
+The original is quoted rather than summarised so you can check the reconciliation
+instead of trusting it.
+
+### The original text
+
+On drawing, the Sunny Rule and winning:
+
+> If a player does not have a card that they can play, they are allowed to draw
+> up to three cards from the deck. Cards are drawn one at a time and placed into
+> the players hand. When the player draws a card they can play, they must play it
+> and their turn is over. If three cards are drawn and no play can be made, the
+> players turn is over and the next player is up. If there are no more cards
+> remaining in the deck to be drawn from, the face up side of the deck is then
+> reshuffled and turned face down. The top card is flipped over and the game
+> continues on. If a player was in the middle of drawing cards, they are able to
+> continue to draw up to three cards so long as they are still unable to play a
+> card in their hand.
+>
+> If a player has a card they can play but they reach out and touch the face down
+> side of the middle decks as if to draw another card, this triggers a Sunny Rule
+> (if called out by another player). In a Sunny Rule event, the offending player
+> must first play the card they could have played in the regular manner, then,
+> from their remaining hand, choose any one of the cards as a punishment card to
+> be played as well. Finally, the card from the face down side of the decks that
+> was touched is flipped over to the face up side of the decks and becomes the
+> new card in play. This ends the offending players turn. If nobody calls the
+> Sunny Rule out at the time of offense, the game continues as normal for the
+> player.
+>
+> When a player loses all of their hand to the center deck, they have lost the
+> game. They exit the game while it continues on without them. This continues
+> until only one player remains. They are the winner.
+>
+> \*If an 8 is drawn as the seed card, it is considered a natural 8, and is
+> played like any other card would. The suit shown is the suit played.
+
+[The Power of Eights](#the-power-of-eights) and
+[Dealer's Choice](#dealers-choice) come from the same written rules and are
+already marked as such. They are alternates the original offered, not departures.
+
+### What is unchanged
+
+The spine of the game is the original's, to the letter: drawing only when you
+cannot play, one card at a time, three at most; the drawn card that can be played
+having to be played, ending the turn; the recycle when the deck runs out, and
+carrying on with your draws afterwards so long as you are still stuck; the
+offence being the **reach** rather than what comes back with it; the punishment
+card coming from the hand that is left after the forced play, needing no legality
+and being the offender's own choice; an uncalled offence being forgiven outright;
+elimination on an empty hand, with play continuing and the last holder winning;
+and a seed 8 playing as a [natural eight](#natural-eights).
+
+### The departures
+
+Each one was decided on purpose, and the issue that decided it is named. Do not
+undo one because the original says otherwise — the original saying otherwise is
+the point of this list.
+
+1. **The turn does not end itself** (#260). The original ends it for you after
+   three fruitless draws. Here it stays with you until you say you're done,
+   because an automatic end shut the challenge window on the hardest reach to
+   judge — the third, after which the offender is holding three more cards than
+   the table has been reading. **This is the departure the next two hang off**: it
+   creates a second way to commit the offence, one where nothing was drawn.
+2. **The punishment card is slid under the pile rather than played on top of it**
+   (#364). The original says *played as well*, and in the original that is a
+   distinction without a difference: the offence is always a touch, so there is
+   always a touched card flipped on top a moment later, and the punishment card is
+   always buried. On the turn-ending path from departure 1 nothing buries it — so
+   it was left as the card in play, letting the offender choose what the table
+   matched next.
+3. **A forced 8 names no suit.** The original says the skipped play is made *in
+   the regular manner*, and the regular manner for an 8 is naming a suit.
+   Buried in the original for the same reason as above; visible only on
+   departure 1's path, where this game gives it its printed suit and no choice.
+4. **A call has to name a card** (#50). The original just calls it. Naming one is
+   what makes an accusation a specific claim that can be specifically wrong, and
+   it is what replaced the card forfeit below.
+5. **A wrong call costs a three-reach lockout** (#50). The original has **no
+   wrong-call penalty at all**. The lockout exists only because a call still needs
+   some brake; it is deliberately not a card.
+6. **The window outlives the offender's turn.** The original closes it *at the
+   time of offense*; here it closes on the **next player's first action**, and the
+   turn is rewound if a call lands after play has moved on. That width is what
+   makes remembering the board a real cost, which is the difficulty
+   [naming the card](#naming-the-card) is built on (#318).
+7. **A call rewinds every card drawn since the first illegal reach**, not just the
+   one touched. The original flips the touched card, singular, and forgives
+   anything already got away with. Returning the lot means being caught on your
+   third steal does not leave you two cards ahead of an honest turn.
+
+### Where the original is silent
+
+These had to be answered for a game that runs itself, and the original does not
+rule on any of them.
+
+- **Natural eights beyond the seed card.** The original's footnote covers only the
+  card that starts the game. This game extends it to every card turned up off the
+  deck — the recycle, and the flip after a call — on the reasoning that the
+  distinction is simply whether a hand was involved.
+- **Reaching for an empty deck.** Still an offence, because the reach is the
+  offence; otherwise an empty deck would be a free way to touch it while holding a
+  play. With nothing touched to turn up, the pile is recycled instead.
+- **[Deadlock](#deadlock).** Nobody able to play and nothing to draw: the largest
+  hand wins. It exists so the game cannot simply stop.
+- **Two calls at once.** The first to arrive is judged; the rest cost nothing.
+- **A player who is out cannot call.** They have left the game, so they are not
+  one of the *other players* the original empowers.

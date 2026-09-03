@@ -24,6 +24,9 @@ const DEAL_WINDOW_MS = 820;
 /** A burst that would run longer than this is compressed rather than queued. */
 const BATCH_CAP_MS = 900;
 
+/** The last beat of a wait, given over to the card arriving. See `revealAt`. */
+const REVEAL_MS = 110;
+
 /** Slowly enough to watch: the last card lands around 3.7s into a 4.8s beat,
  * leaving a held second for the words. Every one is face down and must stay that
  * way — the recycled pile's order *is* deck order, which `redact.ts` guards. */
@@ -245,8 +248,14 @@ export const planFlights = (
         for (const card of event.returned) {
           add({
             card,
-            // The rewind has already taken it out of the hand, so the card's own
-            // anchor is gone and the hand as a whole is the origin.
+            // The rewind has already taken it out of the hand, so its own anchor
+            // is out of the live DOM — but `resolveAnchor` falls through to the
+            // previous commit's geometry, which still has it, so what this
+            // actually resolves to is the place the card held when it was taken.
+            // That is the right origin and it is also why nothing may be
+            // *painted* there while the peel runs: the hand closes up over those
+            // places inside 190ms (#409). The hand is the backstop, for a seat
+            // that has gone off screen since.
             from: [cardAnchor(card.id), handOf(game, event.targetId)],
             to: [DECK],
             size: scale.pile,
@@ -347,6 +356,39 @@ const compress = (flights: FlightPlan[], floor: number): FlightPlan[] => {
       ? flight
       : { ...flight, delay: floor + Math.round((flight.delay - floor) * factor) },
   );
+};
+
+/**
+ * **A flight is not drawn until it moves** (#409), and this is the window in
+ * which it turns up.
+ *
+ * The flight layer parks a card at its origin for the whole of its `delay` —
+ * it has to, or a card with a delay would sit in the corner of the screen until
+ * its turn — and for most of what is planned here that costs nothing: a deal's
+ * cards wait on the deck, under the deck, and the 110ms between the cards of an
+ * ordinary burst is not long enough to read as anything.
+ *
+ * The holds above are a different matter. A landed call keeps its rewind back by
+ * the whole of `PEEL_MS` so it cannot start underneath the evidence, and a
+ * recycle keeps the rest of its batch back by `RESHUFFLE_MS` — so the cards
+ * about to come off the offender's hand were painted over that hand, tilted, at
+ * places it had already closed up over, for the better part of three seconds;
+ * and a recycle's nine cards sat face down on top of the card in play waiting
+ * their turn. Neither was saying anything, and the first was reported as the
+ * hand splaying out on its own.
+ *
+ * So the card is held at nothing until its wait is nearly over and fades in
+ * across the last beat of it, arriving whole on the frame it starts to travel.
+ * **A flight with no wait keeps no fade**: an immediate flight is most of them,
+ * and it is drawn exactly as it always was.
+ *
+ * The shared table screen has always worked this way — `table-screen-card` opens
+ * at `opacity: 0` under a `both` fill — which is where the rule comes from rather
+ * than being invented here.
+ */
+export const revealAt = (delay: number): { delay: number; duration: number } => {
+  const fade = delay > REVEAL_MS ? REVEAL_MS : delay > 0 ? delay : 0;
+  return { delay: delay - fade, duration: fade };
 };
 
 /** When the last card in a batch comes to rest. */

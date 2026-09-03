@@ -4,7 +4,7 @@ import type { Card, GameEvent, GameView } from "@goleta/engine";
 
 import { DECK, seatAnchor } from "../src/lib/anchors.ts";
 import { PEEL_MS, RESHUFFLE_MS } from "../src/lib/beats.ts";
-import { RESHUFFLE_CARDS, planFlights, settlesAt } from "../src/motion/plan.ts";
+import { RESHUFFLE_CARDS, planFlights, revealAt, settlesAt } from "../src/motion/plan.ts";
 import { DECK as DECK_KEY, PILE } from "../src/lib/anchors.ts";
 
 const card = (id: string, rank: Card["rank"] = "7", suit: Card["suit"] = "H"): Card => ({
@@ -200,8 +200,8 @@ describe("a batch", () => {
     expect(rewind?.card?.id).toBe("r1");
     expect(rewind?.to).toEqual([DECK]);
     expect(rewind?.toPile).toBe(false);
-    // The hand as a whole is the fallback origin: by now the card has already
-    // left it, so its own anchor is gone.
+    // The card's own place is the origin — it resolves out of the previous
+    // commit's geometry — with the hand as the backstop behind it.
     expect(rewind?.from).toContain(seatAnchor("them"));
     // And the forced play that follows waits for it.
     expect(flights[1]?.card?.id).toBe("t1");
@@ -318,5 +318,60 @@ describe("a reshuffle", () => {
     expect(recycled).toHaveLength(RESHUFFLE_CARDS);
     for (const flight of recycled) expect(flight.delay).toBeGreaterThanOrEqual(PEEL_MS);
     expect(flights.at(-1)?.delay).toBeGreaterThanOrEqual(PEEL_MS + RESHUFFLE_MS);
+  });
+});
+
+/**
+ * A flight is not drawn until it moves (#409). The rule is about the holds
+ * above: a card parked at its origin through `PEEL_MS` was painted there, so a
+ * landed call doubled the offender's hand — the cards it was about to take back
+ * sitting tilted over the places the hand had already closed up over.
+ */
+describe("when a flight turns up", () => {
+  it("draws one that leaves straight away exactly as it always was", () => {
+    // Most flights. There is no wait to hide anything through, so there is
+    // nothing to run and nothing about them changes.
+    expect(revealAt(0)).toEqual({ delay: 0, duration: 0 });
+  });
+
+  it("arrives whole on the frame it starts to travel", () => {
+    // Not a fade into the trip: the card is fully there before it moves, so the
+    // movement is the only thing anybody has to follow.
+    const waited = PEEL_MS + 500;
+    const reveal = revealAt(waited);
+
+    expect(reveal.duration).toBeGreaterThan(0);
+    expect(reveal.delay + reveal.duration).toBe(waited);
+  });
+
+  it("spends a short wait rather than overrunning it", () => {
+    // The beats inside an ordinary burst are shorter than the fade, and a fade
+    // that started before its flight was planned would show the card early.
+    const reveal = revealAt(40);
+
+    expect(reveal.delay).toBe(0);
+    expect(reveal.duration).toBe(40);
+  });
+
+  it("holds every card a landed call takes back through the whole peel", () => {
+    const returned = [card("r1"), card("r2"), card("r3")];
+    const { flights } = plan([called({ returned })]);
+
+    expect(flights).toHaveLength(3);
+    for (const flight of flights) {
+      // Nothing of it is on the screen while the evidence is (#63).
+      expect(revealAt(flight.delay).delay).toBeGreaterThan(PEEL_MS);
+    }
+  });
+
+  it("keeps a recycle's cards off the pile until each one's turn", () => {
+    // Nine cards staggered 380ms apart, all leaving the same place: parked and
+    // painted, eight of them sat face down over the card in play.
+    const { flights } = plan([recycle()]);
+    const reveals = flights.map((flight) => revealAt(flight.delay).delay);
+
+    expect(reveals[0]).toBe(0);
+    expect(reveals.slice(1).every((at) => at > 0)).toBe(true);
+    expect(reveals).toEqual(reveals.toSorted((a, b) => a - b));
   });
 });

@@ -169,6 +169,25 @@ export interface Recorder {
  */
 const gameIdFor = (code: string, at: number): string => `${code}-${at}`;
 
+/**
+ * Where the recorder gets the time. Production passes nothing and gets
+ * `Date.now`; a test passes its own so a game id is chosen rather than raced
+ * for (#417).
+ *
+ * The id is the code plus the moment it was dealt, and a code is recycled after
+ * a prune — so two games can share an id if they are dealt in the same
+ * millisecond on the same four characters. In a live room that cannot happen: a
+ * code only comes back after `pruneRooms` drops a room idle for hours. In a test
+ * the two deals are consecutive statements, which on a fast machine is well
+ * inside one millisecond, and the assertion that a recycled code does not
+ * inherit its predecessor's game failed at random on CI.
+ *
+ * A `sleep` in the test would have made it rarer rather than impossible. This
+ * makes the input to the id an argument, which is the same reason
+ * `packages/engine` takes its RNG rather than calling `Math.random`.
+ */
+export type Clock = () => number;
+
 const handsOf = (game: GameState): Record<PlayerId, Card[]> => {
   const hands: Record<PlayerId, Card[]> = {};
   for (const player of game.players) hands[player.id] = [...player.hand];
@@ -183,7 +202,7 @@ export const noRecorder: Recorder = {
   close() {},
 };
 
-export const startRecorder = (dataDir: string): Recorder => {
+export const startRecorder = (dataDir: string, now: Clock = Date.now): Recorder => {
   const file = path.join(dataDir, RECORD_FILE);
   /** The game each room is currently playing, by code. Not on `Room`: it would
    * change the persisted shape for something the recorder can work out, and a
@@ -259,7 +278,7 @@ export const startRecorder = (dataDir: string): Recorder => {
   return {
     record(room, events) {
       if (broken || events.length === 0) return;
-      const at = Date.now();
+      const at = now();
 
       for (const event of events) {
         if (event.type === "gameStarted") {

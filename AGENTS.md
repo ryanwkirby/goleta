@@ -1240,6 +1240,41 @@ Things that will read as oversights in that view and are not:
   nothing after it: once this phone has been turned, upright is a view rather
   than a mistake.
 
+  **There is a way past it that is not the gesture, and until #407 there was
+  not.** The only exit was the browser reporting landscape, and an iPhone
+  reports portrait while being held sideways in at least two ordinary ways:
+  **rotation lock**, which is on half the phones at any table; and **lying
+  flat**, where iOS has no lateral gravity component to read and simply keeps
+  whatever orientation it last had. Either one put that player behind the panel
+  for the rest of the hand, with the next deal asking again — and it cost a real
+  table their room: `games.jsonl` has an IRL game dealt at 19:42, one
+  `gameStarted` line and nothing after it, then the same two people opening a
+  new room ninety seconds later.
+
+  The way out **stamps `rotatedFor` with this deal**, which is the identical
+  fact turning the phone stamps, so `tableRoute` needs no second branch and
+  nothing downstream can tell the two apart. What it lands on is the ordinary
+  upright table — a real screen, the one an online player gets and the one a
+  watcher at this same table gets — so this is a fallback rather than a degraded
+  mode. It is **per deal like everything else here** and is deliberately not
+  remembered: whatever stopped the phone answering may have gone away, and this
+  panel is what teaches the gesture.
+
+  Two things it must not become. **It stays subordinate to the instruction** —
+  the gesture is worth teaching, so the way out is the app's quiet `ghost`
+  control under an amber heading, never the other half of a choice. And **it
+  must stay findable**, which is why it is a control rather than hand-rolled
+  small print: the people who press it are the ones with no other way to answer
+  the panel at all.
+
+  **The words are the animation's, not a caption's.** This carried two sentences
+  under the heading that restated it, explained a room the player is sitting in,
+  and described what they would see when it worked — the app's longest piece of
+  copy, on a screen with one instruction. One of those sentences also said *lay
+  it flat on the table*, which is the second cause above, so cutting the
+  paragraph and fixing the lockout were one edit. A rotating phone, one line,
+  and the way out.
+
   **Nothing anywhere reaches for that lock, including where it exists.** The
   panel used to offer it behind a "keep it landscape" button, and it froze the
   app's only view switch: locked, turning the phone upright did nothing,

@@ -126,7 +126,7 @@ describe("a correct call", () => {
     let state = call(caughtInTheAct(), "b", "5H");
     state = play(state, "a", "5H");
     expect(reject(state, { type: "surrenderCard", playerId: "b", cardId: "9H#1" })).toMatch(
-      /Not your card to give up/,
+      /Not your card to sacrifice/,
     );
     expect(reject(state, { type: "surrenderCard", playerId: "a", cardId: "9H#1" })).toMatch(
       /Not in your hand/,

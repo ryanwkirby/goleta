@@ -38,7 +38,7 @@ export const namerFor = (room: RoomView | null): NameOf => {
  * rather than pushed onto the top of it, the log would be the only thing at the
  * table claiming it landed somewhere anybody can see. */
 const surrenderPhrase: Record<SurrenderReason, string> = {
-  sunnyPunishment: "gave up the punishment card",
+  sunnyPunishment: "sacrificed the punishment card",
 };
 
 /** One event, as a sentence for the table log. */
@@ -160,7 +160,7 @@ export const turnPrompt = (
       const yours = game.phase.playerId === game.you;
       const who = yours ? "You" : nameOf(game.phase.playerId);
       return yours
-        ? "☀️ Step 2 of 3 — give up any card."
+        ? "☀️ Step 2 — sacrifice any card."
         : `${who} owes a punishment card — step 2 of 3.`;
     }
     case "suit":

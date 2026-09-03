@@ -139,7 +139,6 @@ export function Table({
     logSlack,
     me,
     mine,
-    mode,
     nameOf,
     namingCard,
     narration,
@@ -329,12 +328,6 @@ export function Table({
             onDealAgain={() => send({ t: "start" })}
             onJoinNext={() => send({ t: "join", code: room.code, name: loadName() || "Watcher" })}
           />
-        ) : null}
-
-        {mode === "surrender" ? (
-          <p className="rounded-xl bg-rose-500/15 px-3 py-2 text-center text-sm text-rose-200 ring-1 ring-rose-400/30">
-            Choose any card to give up — it doesn't have to match. Tap it twice.
-          </p>
         ) : null}
 
         {/* Both pickers dock above your hand rather than being thrown over the

@@ -156,7 +156,7 @@ export function SunnyCaught({
               <span className="font-semibold text-amber-300">2.</span>
               <span>
                 {owesPunishment
-                  ? "Give up any card — it goes under the pile, out of play."
+                  ? "Sacrifice any card — it goes under the pile, out of play."
                   : "That was your last card — no punishment to pay. It puts you out."}
               </span>
             </li>

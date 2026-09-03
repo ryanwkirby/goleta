@@ -370,8 +370,8 @@ export function Hand({
             title={
               mode === "surrender"
                 ? selected === card.id
-                  ? "Tap again to give it up"
-                  : "Give up this card"
+                  ? "Tap again to sacrifice it"
+                  : "Sacrifice this card"
                 : assist && !playable
                   ? "Doesn't match"
                   : "Play this card"

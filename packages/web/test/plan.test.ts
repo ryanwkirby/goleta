@@ -200,8 +200,8 @@ describe("a batch", () => {
     expect(rewind?.card?.id).toBe("r1");
     expect(rewind?.to).toEqual([DECK]);
     expect(rewind?.toPile).toBe(false);
-    // The hand as a whole is the fallback origin: by now the card has already
-    // left it, so its own anchor is gone.
+    // The card's own place is the origin — it resolves out of the previous
+    // commit's geometry — with the hand as the backstop behind it.
     expect(rewind?.from).toContain(seatAnchor("them"));
     // And the forced play that follows waits for it.
     expect(flights[1]?.card?.id).toBe("t1");

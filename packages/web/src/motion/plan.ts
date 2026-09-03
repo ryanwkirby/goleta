@@ -248,8 +248,14 @@ export const planFlights = (
         for (const card of event.returned) {
           add({
             card,
-            // The rewind has already taken it out of the hand, so the card's own
-            // anchor is gone and the hand as a whole is the origin.
+            // The rewind has already taken it out of the hand, so its own anchor
+            // is out of the live DOM — but `resolveAnchor` falls through to the
+            // previous commit's geometry, which still has it, so what this
+            // actually resolves to is the place the card held when it was taken.
+            // That is the right origin and it is also why nothing may be
+            // *painted* there while the peel runs: the hand closes up over those
+            // places inside 190ms (#409). The hand is the backstop, for a seat
+            // that has gone off screen since.
             from: [cardAnchor(card.id), handOf(game, event.targetId)],
             to: [DECK],
             size: scale.pile,

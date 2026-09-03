@@ -111,6 +111,22 @@ describe("the rotate prompt is asked once a deal", () => {
     expect(tableRoute(at({ portrait: true, gamesPlayed: 4, rotatedFor: 3 })).kind).toBe("rotate");
   });
 
+  it("lets a phone that will not turn out, on the same stamp (#407)", () => {
+    // The panel's way out sets `rotatedFor` to this deal, which is the identical
+    // fact turning the phone sets — so there is no second branch here and no way
+    // to tell the two apart. A phone with rotation locked, or lying flat on the
+    // table with no gravity vector for iOS to read, reports portrait forever;
+    // before this it was behind the panel for the rest of the hand.
+    expect(tableRoute(at({ portrait: true, gamesPlayed: 6, rotatedFor: 6 })).kind).toBe("full");
+  });
+
+  it("asks that phone again next deal, exactly as it asks a turned one", () => {
+    // The way out is not a preference and is not remembered. Whatever stopped
+    // the phone answering may have gone away, and the panel is what teaches the
+    // gesture.
+    expect(tableRoute(at({ portrait: true, gamesPlayed: 7, rotatedFor: 6 })).kind).toBe("rotate");
+  });
+
   it("never blocks a watcher, who holds no cards to read", () => {
     expect(tableRoute(at({ portrait: true, seated: false, rotatedFor: null })).kind).toBe("full");
   });

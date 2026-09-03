@@ -4,8 +4,12 @@
 
 This is the game as it is played at a table with real cards, written for
 somebody who has never played it. It is not a description of this app —
-[`RULES.md`](RULES.md) is that, and its last section says where the two differ
-and why. Learn the game here; settle an argument about the software there.
+[`docs/RULES.md`](docs/RULES.md) is that, and its last section says where the two
+differ and why. Learn the game here; settle an argument about the software there.
+
+The rules as they were originally written down are in
+[`docs/ORIGINAL-RULES.md`](docs/ORIGINAL-RULES.md), untouched. This is that text
+said out loud.
 
 ---
 
@@ -140,3 +144,46 @@ That keeps happening until one player is left holding cards. **They win.**
 8, it is a **natural 8**: it counts as an ordinary card of the suit printed on
 it, and nobody names anything. An 8 is only wild when it is played out of
 somebody's hand.
+
+---
+
+# Rare cases
+
+None of these will come up in most games. They are written down so that when one
+does, nobody has to argue about it.
+
+**You reached for a deck that was empty.** Reaching is the offence, not what came
+back with it, so it counts exactly the same. There is no card to turn over at
+step 3 — instead the pile is shuffled into a new deck and its top card turned up
+to start again. Nobody chooses that card, which is the point.
+
+**You got away with it once and were caught the second time.** Everything you
+took from your first illegal reach onwards goes face up on the pile, and the last
+of them is the new card to match. Being caught on your third helping does not get
+to leave you two cards ahead of an honest turn.
+
+**The card you skipped was your last one.** You play it, and you are out on the
+spot. There is no punishment card, because you have no hand left to give one
+from.
+
+**Two people call at once.** The first call heard is the one that counts. The
+others cost nothing — being slow is not an offence.
+
+**Somebody already out wants to call.** They can't. They left the game, and the
+rule is for the players still in it.
+
+**You draw an 8.** An 8 plays on anything, so drawing one ends your turn on the
+spot — even if it was the first of your three. It is the card most likely to ruin
+a good turn, and there is nothing to be done about it.
+
+**An 8 turns up off the deck.** Whether it seeds the game, comes off a reshuffle,
+or is the card turned over after a Sunny call, it is a natural 8: the suit
+printed on it, and nobody names anything. An 8 is only wild when it is played out
+of somebody's hand.
+
+**Your punishment card is an 8.** It names no suit. It is not a play, and the
+card you touched lands on top of it a moment later anyway.
+
+**Nobody can play and there is nothing to draw.** Every card is in somebody's
+hand and none of them match. The game stops there and the largest hand wins. It
+has never happened.

@@ -495,8 +495,8 @@ const handleSurrender = (
   cardId: string,
   events: GameEvent[],
 ): string | null => {
-  if (s.phase.kind !== "surrender") return "No card to give up";
-  if (s.phase.playerId !== playerId) return "Not your card to give up";
+  if (s.phase.kind !== "surrender") return "No card to sacrifice";
+  if (s.phase.playerId !== playerId) return "Not your card to sacrifice";
 
   const player = playerById(s, playerId);
   if (!player) return "Unknown player";
@@ -515,7 +515,7 @@ const handleSurrender = (
   // decides the suit — `activeSuit` is untouched here, and always was — so the
   // board handed to the next player was half the card they could see and half
   // the card underneath it. It also let the offender pick what the table matched
-  // next, by choosing which card to give up.
+  // next, by choosing which card to sacrifice.
   //
   // The tuck is the gesture from a real table and settles all of it: the card in
   // play stays the card they were forced to play, which the table watched land

@@ -234,7 +234,7 @@ moment they reached. The offender, in this order:
 1. **Makes the play they skipped**, choosing among the cards that were legal
    before they reached for the deck. They are not held to the card you named —
    naming one only had to prove they had one.
-2. **Gives up a punishment card** — any one card from the rest of their hand,
+2. **Sacrifices a punishment card** — any one card from the rest of their hand,
    their choice. It does not have to be legal, because it is not a play: it is
    slid **under** the pile, face up with the rest of it. It never becomes the
    card in play, and nobody ever matches it. It comes back the way any face-up
@@ -242,7 +242,7 @@ moment they reached. The offender, in this order:
 
    Under the pile rather than on it, because being caught must never hand you a
    free placement of a card you picked out of your own hand: whichever card they
-   give up, the board the next player reads is the same one.
+   sacrifice, the board the next player reads is the same one.
 3. **Turns up the card they touched.** Every card they drew illegally goes face
    up on the pile, and the last of them becomes the new card in play. It is
    turned up off the deck, so [natural eights](#natural-eights) applies.
@@ -264,8 +264,8 @@ on top of it, and lost whatever they had illegally drawn. An honest turn would
 have cost them one card.
 
 If the skipped play empties their hand they are eliminated on the spot and there
-is no punishment card to give. An 8 given up at step 2 names no suit, because a
-card slid under the pile is not in play. An 8 played at step 1 names none
+is no punishment card to sacrifice. An 8 sacrificed at step 2 names no suit,
+because a card slid under the pile is not in play. An 8 played at step 1 names none
 either: where something is turned up at step 3 it lands on top immediately, and
 where nothing is, the 8 simply stands as the card in play with its own printed
 suit, exactly as a [natural eight](#natural-eights) does.

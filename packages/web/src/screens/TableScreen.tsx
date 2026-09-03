@@ -702,7 +702,7 @@ function Playing({
             // (#209) and a departure was nothing at all (#256). After the ruling,
             // for the reason the peel comes first — which is also what `judging`
             // leads with here: while the pile is peeling this band used to say
-            // "step 1 of 3", the ruling, then "step 1 of 3" again (#382).
+            // "step 1", the ruling, then "step 1" again (#382).
             <span className="text-amber-300">{prompt}</span>
           ) : finished ? (
             <span className="text-amber-300">{prompt}</span>

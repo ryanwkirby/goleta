@@ -107,7 +107,7 @@ describe("what the table is waiting for", () => {
   it("holds nothing else back for the deal — every other prompt can be acted on", () => {
     expect(asks(table(), true)).toBe("Your turn.");
     expect(asks(table({ you: "p2" }), true)).toBe("Ana's turn.");
-    expect(asks(table({ phase: { kind: "sunnyPlay" } }), true)).toContain("Step 1 of 3");
+    expect(asks(table({ phase: { kind: "sunnyPlay" } }), true)).toContain("Step 1");
   });
 
   // The shared table screen reads this same line, as a viewer holding no cards
@@ -123,10 +123,10 @@ describe("what the table is waiting for", () => {
     // The two the band was silent on, and the reason this matters: a call lands
     // and the table is walked through a numbered punishment.
     expect(watching({ phase: { kind: "sunnyPlay" } })).toBe(
-      "Bo has to make the play they skipped — step 1 of 3.",
+      "Bo has to make the play they skipped — step 1.",
     );
     expect(watching({ phase: { kind: "surrender", playerId: "p2", reason: "sunnyPunishment" } })).toBe(
-      "Bo owes a punishment card — step 2 of 3.",
+      "Bo owes a punishment card — step 2.",
     );
     expect(
       watching({ phase: { kind: "over" }, status: "over", winnerId: "p2", waitingOn: null }),
@@ -188,13 +188,13 @@ describe("what the table is told while a ruling is being watched", () => {
     // Both halves: the offender's own screen and everybody else's.
     const yours = table({ you: "p1", waitingOn: "p1", turnPlayerId: "p1", phase: { kind: "sunnyPlay" } });
 
-    expect(turnPrompt(yours, nameOf, true, false, true)).not.toContain("Step 1 of 3");
-    expect(turnPrompt(landed, nameOf, false, false, true)).not.toContain("step 1 of 3");
+    expect(turnPrompt(yours, nameOf, true, false, true)).not.toContain("Step 1");
+    expect(turnPrompt(landed, nameOf, false, false, true)).not.toContain("step 1");
   });
 
   it("gives the line back the moment the beat is over", () => {
     expect(turnPrompt(landed, nameOf, false)).toBe(
-      "Bo has to make the play they skipped — step 1 of 3.",
+      "Bo has to make the play they skipped — step 1.",
     );
     expect(turnPrompt(missed, nameOf, false)).toBe("Bo's turn.");
   });

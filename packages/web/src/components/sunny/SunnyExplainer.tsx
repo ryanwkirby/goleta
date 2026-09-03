@@ -37,7 +37,7 @@ export function SunnyExplainer({ onDone }: { onDone: () => void }) {
               <strong className="text-white">To call it:</strong> tap the sun, then tap the card you say they should have played.
             </li>
             <li>
-              <strong className="text-white">Right:</strong> they play that card, plus a second card as a punishment.
+              <strong className="text-white">Right:</strong> they play that card, then sacrifice a second one as punishment.
             </li>
             <li>
               <strong className="text-white">Wrong:</strong> nobody loses a card, but you can't call again until the table has reached for the deck three more times.

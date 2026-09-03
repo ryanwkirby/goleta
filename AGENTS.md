@@ -651,7 +651,7 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   here and always was, so the board the next player was handed was half the card
   they could see and half the card underneath it — #150's failure with the
   volume up, settled rather than about to be replaced. And it let **the offender
-  pick what the table matches next**, by choosing which card to give up, which
+  pick what the table matches next**, by choosing which card to sacrifice, which
   is the exact outcome `finishSunny`'s empty-deck branch already existed to
   prevent and whose guard (`drawPile.length === 0`) this path went straight past.
 
@@ -659,9 +659,9 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   refilled — but it is now about the deck and nothing else. `s.namedSuit = null`
   came out of `handleSurrender`: it was a no-op, and the rule it belongs to is
   "cleared wherever the card in play changes" (#114), which a tucked card does
-  not do. And the log says *gave up*, not *played*, because the log would
+  not do. And the log says *sacrificed*, not *played*, because the log would
   otherwise be the only thing at the table claiming it landed where anybody can
-  see it. The flight still aims at `PILE`; whether it should read as sliding
+  see it — the word is #411's and the constraint is this bullet's. The flight still aims at `PILE`; whether it should read as sliding
   underneath is a presentation question nobody has answered.
 
   **The offender's own dialog says where it goes as well** (#381). It read *Give
@@ -672,6 +672,26 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   exactly who needs it. Step 2 names the under, step 3 names the on-top, and step
   1 stops reading as pointless because the stack now explains why the card it
   played is not the card anybody matches.
+
+  **The word for it is *sacrifice*, everywhere, and it is one word on purpose
+  (#411).** It was *give up* in the prompt, in the log, in the caught dialog, in
+  the card tooltips and in the engine's two refusals — a phrase that also means
+  *surrender the game* and *stop trying*, describing the one card a player loses
+  for nothing in return. *Sacrifice* says that without a clause after it, which
+  is what this step has never been able to afford: it is read by somebody who has
+  just been told they were caught. The `docs/RULES.md` wording moved with it, so
+  the doc and the screens say one thing.
+
+  **And step 2 is the prompt line and the dialog, not a third notice** (#411).
+  The upright table drew a rose banner over the hand for the length of the phase —
+  *Choose any card to give up — it doesn't have to match. Tap it twice.* — three
+  sentences over the cards it is about, on top of a prompt already saying what
+  the table is waiting for and a dialog that has just walked the player through
+  all three steps. Landscape never had it. The double tap it explained is
+  `CONFIRMS` in `Hand.tsx`, the tooltip says it, and a first tap that only selects
+  teaches it in one go; the confirm itself is `Hand.tsx`'s "a punishment you can
+  fire off with a stray thumb is one you never find out you served", and it does
+  not move.
 - **`namedSuit` is on the game state and no rule reads it.** That is not dead
   state. `activeSuit` says which suit must be matched; `namedSuit` says a person
   *chose* it, and the second is not recoverable from the first. A namer who picks

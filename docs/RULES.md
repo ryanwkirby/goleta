@@ -358,22 +358,31 @@ in the name. It is this rule under a longer label, not a different one.
 cards are held up, not fanned in secret, and the app plays it the same way.
 
 That is what makes the Sunny Rule a rule and not a guess: whether someone had a
-play they skipped is there on the table to be seen. The app never marks up
-another player's cards for you — and it won't mark up your own either, once
-you've played a game. Spotting the play, and being able to point at it, is the
-game.
+play they skipped is there on the table to be seen. **The app never marks up
+another player's cards for you.** It will mark up your own if you ask it to, but
+that is a choice you make out loud and the table can see you have made it.
+Spotting the play, and being able to point at it, is the game.
 
 ## Asking for a hand
 
-Your first game can be played with training wheels: the cards you can't play are
-dimmed, and the app tells you whether you have a move. You are asked on the way
-in whether you want them, and when that game ends they go away for good either
-way.
+You can play with training wheels: the cards you can't play are dimmed, and the
+app tells you whether you have a move. **They start on**, so nobody's first game
+is played blind.
 
-After that, sit on a turn for five seconds and a quiet offer of help appears
-next to your hand. Take it and the highlights come back — for that turn only,
-and with a **"help!"** going up over your cards on every screen at the table.
-The rule is always there when you need it. It is never there quietly.
+**They are a setting you keep, not a countdown.** Nothing expires them. After
+your first finished game the app asks once whether you would like to keep them,
+and both answers are real — and from then on they are yours to switch on and off
+whenever you like, at the foot of the rules screen or in your own settings behind
+the cog.
+
+**Switching them on is public.** It is announced to the table, and your seat
+carries a mark for as long as they are on, on every screen. Switching them *off*
+is silent: giving up an advantage is nobody else's business.
+
+Separately, sit on a turn for five seconds and a quiet offer of help appears next
+to your hand. Take it and the highlights come up for that turn only, with a
+**"help!"** going over your cards on every screen at the table. Help is always
+there when you need it. It is never there quietly.
 
 ---
 

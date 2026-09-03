@@ -1083,9 +1083,16 @@ to draw, in four bundles (`TableContext`, `HandControls`, `HelpControls`,
 owed is `lib/tableRoute.ts`; what tapping one of your own cards does, and
 whether the app is pointing at the answer, is `lib/handMode.ts`; the call window
 and the caught dialog are `lib/sunnyOffer.ts`; counting finished games is
-`lib/graduation.ts`. All four are pure, all four have tests, and that is the
-point — nothing in this repo renders a React component in a test, so a decision
-left inside a screen is a decision nothing checks. Put new ones there too.
+`net/graduation.ts`. All four have tests, and that is the point — nothing in this
+repo renders a React component in a test, so a decision left inside a screen is a
+decision nothing checks. Put new ones there too.
+
+The first three are pure and live in `lib`. **The fourth is in `net` on purpose**
+and this said `lib/graduation.ts` until #421, which is worse than a dead path:
+it reaches into storage through `identity.ts`, so `lib` — a leaf that depends on
+nothing but the engine — would put the two folders straight back into the cycle
+#224 removed. Its own docblock says so. A decision that needs storage goes beside
+`identity.ts`; only the pure ones go in `lib`.
 
 **Which way up the phone is picks between them, and nothing else does.**
 Sideways is your hand, upright is the whole table. There is no stored

@@ -29,7 +29,7 @@ import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
 import type { LoggedEvent } from "../lib/feed.ts";
 import { resolveAnchor, type AnchorGeometry, type AnchorKey } from "../lib/anchors.ts";
 import { MotionContext, type MotionApi } from "../lib/motion.ts";
-import { FULL_TABLE, planFlights, type FlightPlan, type TableScale } from "./plan.ts";
+import { FULL_TABLE, planFlights, revealAt, type FlightPlan, type TableScale } from "./plan.ts";
 import { usePrefersReducedMotion } from "./reducedMotion.ts";
 import { LAYER } from "../lib/layers.ts";
 
@@ -291,11 +291,9 @@ function FlightCard({
       [
         {
           transform: `${place(fromX, fromY)} scale(${scale}) rotate(${tiltFor(flight.card?.id ?? flight.id)}deg)`,
-          opacity: 1,
         },
         {
           transform: `${place(toX, toY)} scale(1) rotate(0deg)`,
-          opacity: 1,
         },
       ],
       {
@@ -307,6 +305,30 @@ function FlightCard({
         easing: "cubic-bezier(0.22, 0.72, 0.3, 1)",
       },
     );
+
+    /**
+     * **And nothing is drawn there until it is about to leave** (#409). Parking
+     * is right — a card with a delay has to be somewhere, and the corner of the
+     * screen is not it — but *painting* what is parked is only free while the
+     * wait is short and the origin is a pile: a deal's cards wait on the deck,
+     * under the deck. The holds in `plan.ts` are neither. A landed call keeps its
+     * rewind back for the whole peel, so every card it was about to take off the
+     * offender's hand was painted over that hand, at its own `tiltFor` angle, at
+     * a place the hand had closed up over 190ms later — three seconds of a
+     * doubled, tilted hand, reported as the cards splaying out on their own.
+     *
+     * Opacity is a second animation rather than two more keyframes because the
+     * two run on different clocks: the trip is `flight.duration` long and this is
+     * the last beat of the wait *before* it, so folding them together would mean
+     * offsets computed from a ratio of the two. `revealAt` returns nothing to run
+     * when there is no wait, which is most flights, and those are drawn exactly
+     * as they always were.
+     */
+    const reveal = revealAt(flight.delay);
+    const rising =
+      reveal.duration > 0
+        ? node.animate([{ opacity: 0 }, { opacity: 1 }], { ...reveal, fill: "both" })
+        : null;
 
     let landed = false;
     const arrive = (): void => {
@@ -323,6 +345,7 @@ function FlightCard({
       landed = true;
       window.clearTimeout(backstop);
       animation.cancel();
+      rising?.cancel();
     };
   }, [flight, onLanded]);
 

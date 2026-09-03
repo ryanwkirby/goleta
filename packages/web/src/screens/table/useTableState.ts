@@ -107,6 +107,11 @@ export function useTableState({
   /**
    * The deal rather than a bare flag: a boolean reset by an effect would put the
    * rotate panel back up for a frame at the top of every hand.
+   *
+   * Two things stamp it and they stamp the same number: the phone being seen in
+   * landscape, and the panel being dismissed by somebody whose phone will not
+   * report it (#407). The route asks one question, so there is nothing to tell
+   * them apart by and nothing that wants to.
    */
   const [rotatedFor, setRotatedFor] = useState<number | null>(null);
   /**
@@ -511,6 +516,8 @@ export function useTableState({
     route,
     seated,
     setInviting,
+    /** The panel's way out, which is the deal this phone has settled (#407). */
+    settleRotation: () => setRotatedFor(room.gamesPlayed),
     setSeatedFor,
     showCaught,
     skipped,

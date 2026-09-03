@@ -152,6 +152,7 @@ export function Table({
     route,
     seated,
     setInviting,
+    settleRotation,
     setSeatedFor,
     showCaught,
     skipped,
@@ -176,7 +177,9 @@ export function Table({
     return <TakeYourSeat room={room} you={game.you} onDone={() => setSeatedFor(shuffleId)} />;
   }
 
-  if (route.kind === "rotate") return <RotatePanel offline={offline} />;
+  if (route.kind === "rotate") {
+    return <RotatePanel offline={offline} onDismiss={settleRotation} />;
+  }
 
   if (route.kind === "handOver") {
     return (

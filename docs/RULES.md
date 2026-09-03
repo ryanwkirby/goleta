@@ -8,6 +8,10 @@ This document is canonical. The engine implements it; the UI explains it.
 Where it knowingly leaves the original written rules, that is written down at
 the [foot of this file](#where-this-departs-from-the-original).
 
+**To learn the game rather than to check it**, read
+[`HOW-TO-PLAY.md`](HOW-TO-PLAY.md) instead — the original rules in plain English,
+written for somebody sitting down to their first hand.
+
 ---
 
 ## Setup
@@ -381,7 +385,8 @@ original game and only surface on a path this app invented, which is exactly the
 sort of thing a fresh pair of eyes puts back.
 
 The original is quoted rather than summarised so you can check the reconciliation
-instead of trusting it.
+instead of trusting it. The excerpt below is the part this section rules on;
+[`HOW-TO-PLAY.md`](HOW-TO-PLAY.md) renders the whole of it in plain English.
 
 ### The original text
 

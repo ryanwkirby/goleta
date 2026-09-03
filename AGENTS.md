@@ -118,7 +118,9 @@ rule question comes up, answer it there first, then in code — and if the code 
 
 **It ends with the original written rules and a reconciliation** (#414), and that
 is the section to read before "fixing" a rule to match a text somebody has handed
-you. Seven departures are deliberate and two of them — the punishment card tucked
+you. `docs/HOW-TO-PLAY.md` is the same original in plain English (#418) and
+deliberately describes **the game rather than the app** — that is what stops a
+third rules document drifting, so do not make it track behaviour. Seven departures are deliberate and two of them — the punishment card tucked
 under the pile, and a forced 8 naming nothing — are **invisible in the original
 game**, because there the flip after a call always buries both. They surface only
 on the turn-ending path this app invented (#260), which is why they look like

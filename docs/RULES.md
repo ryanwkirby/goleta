@@ -149,9 +149,21 @@ you play instead of drawing again.
 
 If it ever happens that no player can play and there is nothing left to draw —
 every card sitting in a hand, nobody matching the card in play — the game ends
-there and the largest hand wins. It has never come up across thousands of
-simulated games and you are unlikely to ever see it; it exists so the game
-cannot simply stop.
+there and the largest hand wins.
+
+**It cannot actually arise**, and the reason is the condition's own second half.
+Nothing left to draw means an empty deck and a face-up pile that is just the card
+in play, so the other 51 cards are all in hands — and that necessarily includes
+the twelve remaining cards of the suit in play. The fewest legal cards the table
+can be holding at that moment is fifteen. The clause is here so the turn loop
+terminates rather than because a game is expected to reach it, and it is not dead
+code to be tidied away: it is the branch that stops `advanceTurn` searching a
+table where nobody can move.
+
+What keeps it unreachable is that leaving the game requires an empty hand. Every
+card outside the pile is therefore in a hand still being played, which is what
+puts a match in one of them. A rule that put a player out while they still held
+cards would be the first thing to break that.
 
 ## The Sunny Rule
 
@@ -463,7 +475,7 @@ rule on any of them.
   offence; otherwise an empty deck would be a free way to touch it while holding a
   play. With nothing touched to turn up, the pile is recycled instead.
 - **[Deadlock](#deadlock).** Nobody able to play and nothing to draw: the largest
-  hand wins. It exists so the game cannot simply stop.
+  hand wins. It exists so the game cannot simply stop, and it cannot arise.
 - **Two calls at once.** The first to arrive is judged; the rest cost nothing.
 - **A player who is out cannot call.** They have left the game, so they are not
   one of the *other players* the original empowers.

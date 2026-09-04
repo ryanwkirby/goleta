@@ -46,12 +46,17 @@ type Doing = null | "join" | "create";
  *
  * The line belongs to the answer, so it lives beside the label rather than in a
  * table somewhere else.
+ *
+ * **It answers in the voice the button used** (#429). It read *You're playing on
+ * this device.* — the app answering back, one line under the player's own words,
+ * about the same fact. Two people in four words is a change of person nobody
+ * asked for, and the switch above is already written in the first.
  */
 const DEVICE = [
   {
     value: "playing",
     label: "I'm playing",
-    means: "You're playing on this device.",
+    means: "I'm playing on this device.",
   },
   {
     value: "screen",
@@ -234,8 +239,15 @@ export function Join({
                     above already says which one that is. `Field`'s own hint size
                     and colour, so it reads as explanation rather than as a third
                     option — and `min-h-8` so the panel does not resize under a
-                    thumb moving between the two. */}
-                <p className="mt-1.5 min-h-8 text-xs text-white/40">
+                    thumb moving between the two.
+
+                    **Centred under the track rather than ranged left** (#429).
+                    The switch is full width with its two labels centred in their
+                    own halves, so a line starting at the panel's left edge is
+                    drawn as far as the panel allows from the answer it is about
+                    whenever that answer is the right-hand one. Centred, it is
+                    under whichever half is lit either way. */}
+                <p className="mt-1.5 min-h-8 text-center text-xs text-white/40">
                   {DEVICE.find((option) => option.value === device)?.means}
                 </p>
               </div>

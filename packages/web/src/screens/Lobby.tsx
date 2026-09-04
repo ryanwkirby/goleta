@@ -469,12 +469,18 @@ export function Lobby({
           which is `mt-auto` and lands under a list of eight seats. #323 says the
           one thing it must not be is buried.
 
+          **At the left since #431**, which is where the cog is at the table and
+          the corner a thumb reaches on a phone held either way up. It is also
+          the far end of the row from nothing: this line holds one control, so
+          the side it takes is a free choice and the right was the wrong one to
+          have made.
+
           It goes with everything else while the seat-order question is up: that
           moment is a single question about a single list, and the screen is
           deliberately nothing else (#316). */}
       {confirming ? null : (
-        <div className="-mb-2 flex justify-end">
-          <LargePrintButton className="-mr-1.5" />
+        <div className="-mb-2 flex justify-start">
+          <LargePrintButton className="-ml-1.5" />
         </div>
       )}
 

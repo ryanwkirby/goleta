@@ -257,8 +257,13 @@ export function Rules({
             wants this control is the person who cannot read the panel, so it
             comes before the panel rather than beside its heading. Pulled up into
             the panel's own padding, so the row it takes is the button and
-            nothing more. */}
-        <div className="-mr-1.5 -mt-3 flex justify-end">
+            nothing more.
+
+            **At the left since #431**, over the heading it precedes rather than
+            across the panel from it, and the same side it is on in the lobby.
+            Two doors onto one setting that sit at opposite ends of their
+            screens are two controls as far as anybody's eye is concerned. */}
+        <div className="-ml-1.5 -mt-3 flex justify-start">
           <LargePrintButton />
         </div>
         <h2 className="text-xl font-semibold text-white">How goleta works</h2>

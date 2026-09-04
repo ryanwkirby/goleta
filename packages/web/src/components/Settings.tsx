@@ -302,8 +302,18 @@ export function HouseRulesPicker({
   );
 }
 
-/** Real life leads, because it is the answer that changes the most. Remote play
- * is still what a new room *is* — see `createRoom`.
+/** Remote play leads, because it is the room the host is standing in (#430).
+ *
+ * #365 put real life first, as the answer that changes the most — and the same
+ * docblock recorded the other half of it: remote play is what a new room *is*
+ * (`createRoom`). So the first thing a host saw on the way into a room they had
+ * just made was a switch already at its far stop, which is the one rest position
+ * a two-answer track reads as *something has been changed here*. Which answer
+ * changes the most is a fine reason to write one first in a sentence; it is not
+ * a reason to make the untouched state of a control look touched.
+ *
+ * Order only. The values, the wire and `room.irl` are untouched, and `TwoWay`
+ * draws whatever order it is handed.
  *
  * **Neither answer carries a line under it, and that reverses #305** (#365).
  * The case for one was that the labels say where everybody is and nothing about
@@ -317,8 +327,8 @@ export function HouseRulesPicker({
  * these two answers are the description already. If the consequences are worth
  * saying, they want a line that says one of them. */
 const PLACES = [
-  { value: "irl", label: "Real life" },
   { value: "remote", label: "Remote play" },
+  { value: "irl", label: "Real life" },
 ] as const;
 
 /**

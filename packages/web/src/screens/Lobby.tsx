@@ -230,7 +230,24 @@ function BotSpeedPicker({
 /** A lid and a bin. Destructive, and sitting between two arrows that are not —
  * so the *glyph* is what separates them and the colour is left alone. Red on
  * this green vibrates, and red already means hearts and diamonds here
- * (`Refusal.tsx` has the argument in full). */
+ * (`Refusal.tsx` has the argument in full).
+ *
+ * **Drawn at 28 of the button's 44 rather than 20** (#428). The target was
+ * always right and the mark on it was not: a lid, a bin and three ribs inside a
+ * fifth of the area the control actually occupies is a shape a host has to go
+ * looking for rather than one they see. It is still comfortably inside the
+ * target, and nothing about the target moved.
+ *
+ * **The size only arrives if the button's padding is forced off**, which is why
+ * both call sites below carry `px-0! py-0!` rather than the `px-0 py-0` they
+ * used to. `Button` writes `px-4 py-2.5` into the same class list, and Tailwind
+ * resolves a collision by stylesheet order rather than by which class the caller
+ * wrote last — `px-0` is emitted before `px-4`, so the plain form lost, silently,
+ * and had done since these two controls were written. A 44px button was really a
+ * 12px content box: the old glyph was not a 20px trash can, it was a 20px trash
+ * can squeezed to 12 wide, which is most of why it was hard to read. The `!` is
+ * the only one in this app and it earns it — the alternative is a glyph told not
+ * to shrink and left to overflow a padding box that is lying about its size. */
 function TrashGlyph() {
   return (
     <svg
@@ -240,7 +257,7 @@ function TrashGlyph() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-5 w-5"
+      className="size-7"
       aria-hidden
     >
       <path d="M4 6.5h16M9.5 6.5V4.5h5v2" />
@@ -275,7 +292,7 @@ function MoveSeat({
   last: boolean;
   onMove: (direction: "up" | "down") => void;
 }) {
-  const arrow = "min-h-0 size-8 shrink-0 px-0 py-0 text-xs";
+  const arrow = "min-h-0 size-8 shrink-0 px-0! py-0! text-xs";
 
   return (
     <span className="flex items-center gap-1 sr-only focus-within:not-sr-only sm:not-sr-only">
@@ -582,7 +599,7 @@ export function Lobby({
                 {host && seat.id !== room.hostId ? (
                   <Button
                     variant="ghost"
-                    className="size-11 shrink-0 px-0 py-0"
+                    className="size-11 shrink-0 px-0! py-0!"
                     aria-label={`Remove ${seat.name}`}
                     title={`Remove ${seat.name}`}
                     onClick={() => send({ t: "removeSeat", playerId: seat.id })}

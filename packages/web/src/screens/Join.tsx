@@ -6,6 +6,7 @@ import type { ClientMessage } from "@goleta/engine";
 import { Mark } from "../components/Mark.tsx";
 import { TwoWay } from "../components/TwoWay.tsx";
 import { Button, Field, Panel, inputClass } from "../components/ui.tsx";
+import { useLineCount } from "../lib/lines.ts";
 import { loadName, saveName } from "../net/identity.ts";
 import { codeFromHash, hashFor } from "../net/route.ts";
 
@@ -82,6 +83,10 @@ export function Join({
   const [device, setDevice] = useState<"playing" | "screen">("playing");
   const codeRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  /** The two sentences under the title, and how many lines they came out as
+      (#433). See the header below for what the answer buys. */
+  const taglineRef = useRef<HTMLDivElement>(null);
+  const taglineLines = useLineCount(taglineRef);
   /**
    * The room that turned us away, latched rather than read off the live error:
    * the banner expires, and an offer that vanishes while somebody is reading it
@@ -167,7 +172,21 @@ export function Join({
             class because `Mark` takes its colour from `currentColor` for
             exactly this. The waiting screen's copy is untouched: it still heads
             a wordmark. */}
-        <Mark size={156} className="mx-auto mb-3 text-white/50" />
+        <Mark size={156} className="mx-auto -mb-2 text-white/50" />
+        {/* **Midway between the ship and the line under it, measured from ink
+            rather than from boxes** (#432). It used to sit on the sentence
+            below: 53px of air above the *g* and 12px under it, which is the
+            same word four and a half times closer to one neighbour than the
+            other.
+
+            Neither margin was wrong on its own. `Mark`'s viewBox is square and
+            the ship is not — the drawing stops at y≈52 of 64 — so a `mb-3`
+            under it was 12px plus 29px of empty box, and the *g*'s descender
+            hangs past the bottom of its own line box and ate most of the `mt-2`
+            below. The negative margin here is that 29px being paid back, and
+            the `mt-7` under the word is what the descender and the sentence's
+            own half-leading leave. It lands at about 33px each side, and the
+            block keeps the height it had. */}
         <h1 className="text-4xl font-semibold tracking-tight text-white">goleta</h1>
         {/* Two lines rather than three (#326). This flow gains two questions and
             should lose at least as many words as it gains, and the line that went
@@ -179,7 +198,21 @@ export function Join({
             of it said a second time. This is a hook and not the rules —
             `docs/RULES.md` and the rules screen are where the game is actually
             explained — so it says the shortest true thing and stops. */}
-        <div className="mt-2 text-balance text-white/60">
+        <div
+          ref={taglineRef}
+          className={[
+            "mt-7 text-balance text-white/60",
+            // **Half a line between the sentences, but only past two lines**
+            // (#433). At two lines the line break between them *is* the
+            // separator and a gap would be spending space to say something the
+            // layout already says. Once one of them wraps there are three lines
+            // and nothing telling a reader which two belong together — the
+            // sentence break and the wrap look identical. Half of the 1.5rem
+            // line height, in rem, so large print takes it up with everything
+            // else.
+            taglineLines > 2 ? "space-y-3" : "",
+          ].join(" ")}
+        >
           <p>It's Crazy Eights, reversed.</p>
           <p>Hold on to your cards — the last player standing wins.</p>
         </div>

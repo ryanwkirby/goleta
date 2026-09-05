@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 import type { AutopilotMode, DealerMode, HouseRules } from "@goleta/engine";
 
@@ -126,7 +127,7 @@ function PageLink({
  * are trapezoids rather than radial ticks on a ring, which would have drawn a
  * sun — and the sun means the Sunny Rule on every surface in this app.
  */
-function CogGlyph() {
+function CogGlyph({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -135,7 +136,7 @@ function CogGlyph() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-5 w-5"
+      className={className}
       aria-hidden
     >
       <path d="M10.15 6.29L10.4 2.94A9.2 9.2 0 0 1 13.6 2.94L13.85 6.29A6 6 0 0 1 16.01 7.54L19.05 6.09A9.2 9.2 0 0 1 20.65 8.85L17.87 10.75A6 6 0 0 1 17.87 13.25L20.65 15.15A9.2 9.2 0 0 1 19.05 17.91L16.01 16.46A6 6 0 0 1 13.85 17.71L13.6 21.06A9.2 9.2 0 0 1 10.4 21.06L10.15 17.71A6 6 0 0 1 7.99 16.46L4.95 17.91A9.2 9.2 0 0 1 3.35 15.15L6.13 13.25A6 6 0 0 1 6.13 10.75L3.35 8.85A9.2 9.2 0 0 1 4.95 6.09L7.99 7.54A6 6 0 0 1 10.15 6.29Z" />
@@ -428,6 +429,7 @@ export function SettingsCog({
   onShuffleSeats,
   label,
   className = "",
+  glyph,
 }: {
   /** Whether the table half is drawn at all. The personal half is everyone's who
    * has one — see `personal`. */
@@ -453,6 +455,14 @@ export function SettingsCog({
   label?: string;
   /** Where the caller wants it sat in its row. The size is not the caller's. */
   className?: string;
+  /**
+   * How big the mark inside it is drawn — the one exception to the line above,
+   * and it is the shared table screen's (#438). That screen stands the cog in a
+   * row with the invite and the view toggle, which are glyphs sized by the row;
+   * three marks at three sizes on one line is what that row was straightened out
+   * to stop. Every other caller leaves it alone and gets the 20px mark.
+   */
+  glyph?: string;
 }) {
   const [open, setOpen] = useState(false);
   /** Where a cog with both pages opens, and the only page a cog without a
@@ -490,92 +500,107 @@ export function SettingsCog({
               ].join(" ")
         }
       >
-        <CogGlyph />
+        <CogGlyph className={glyph} />
         {label ? <span>{label}</span> : null}
       </button>
 
+      {/**
+        * **Portaled to the body, the way `FlightLayer` already is** (#438). This
+        * panel is `fixed` to the viewport, and a transformed ancestor is the
+        * containing block for `fixed` — so a cog drawn inside the shared screen's
+        * board would open a dialog the board scales and the quarter turn stands on
+        * its side. That is the whole reason that cog was drawn outside the board,
+        * where it could never line up with the two controls beside it.
+        *
+        * Nothing moves on a phone, where no ancestor is transformed. `LAYER.dialog`
+        * is the top rung, so arriving last in the DOM buys it nothing it did not
+        * already have: the tie #297 was filed about is with `flights`, a rung down.
+        */}
       {open ? (
-        <div
-          className={`fixed inset-0 ${LAYER.dialog} flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm`}
-          role="dialog"
-          aria-modal="true"
-          aria-label={page === "room" ? "Room settings" : "Your settings"}
-          onClick={close}
-        >
-          <Panel
-            className="flex w-full max-h-full max-w-sm flex-col gap-4 overflow-y-auto"
-            onClick={(event) => event.stopPropagation()}
+        createPortal(
+          <div
+            className={`fixed inset-0 ${LAYER.dialog} flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={page === "room" ? "Room settings" : "Your settings"}
+            onClick={close}
           >
-            {page === "room" ? (
-              <>
-                <div className="flex flex-col gap-2">
-                  {/* The heading is the page's title now rather than a divider in a
-                      column. Same component and same size: a page still has to say
-                      which room you are standing in (#289). */}
-                  <SectionHeading>Room settings</SectionHeading>
-                  <IrlToggle on={irl} onChange={onIrl} />
-                </div>
+            <Panel
+              className="flex w-full max-h-full max-w-sm flex-col gap-4 overflow-y-auto"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {page === "room" ? (
+                <>
+                  <div className="flex flex-col gap-2">
+                    {/* The heading is the page's title now rather than a divider in a
+                        column. Same component and same size: a page still has to say
+                        which room you are standing in (#289). */}
+                    <SectionHeading>Room settings</SectionHeading>
+                    <IrlToggle on={irl} onChange={onIrl} />
+                  </div>
 
-                {/* Still separated from the tap-to-take-effect switch above, because
-                    the note at the foot is true of these and not of that one. */}
-                <div className="flex flex-col gap-4">
-                  <HouseRulesPicker rules={rules} onChange={onRules} />
-                  {/* In here because of when it answers rather than what it is: read
-                      once, at the deal, exactly like the switches above it. */}
-                  <DealerPicker mode={dealerMode} onChange={onDealerMode} />
-                  {/* **Below the starting player, and independent of it** (#289).
-                      #245 put it above, on the argument that where people sit is
-                      the bigger of the two and decides what the other is even
-                      about. That is true of the *rules* and not of the *reading*:
-                      who opens is the question a host has already been asked by
-                      the lobby, and musical chairs is the one that changes what a
-                      table has to physically do. It is last because it is the
-                      loudest. */}
-                  <ShuffleSeatsToggle on={shuffleSeats} onChange={onShuffleSeats} />
-                  {/* Said once, under everything it is true of: the same sentence
-                      four times is a warning, not a note. */}
-                  <p className="text-xs text-white/40">
-                    These apply at the next deal. This hand keeps the rules it was dealt under.
-                  </p>
-                </div>
+                  {/* Still separated from the tap-to-take-effect switch above, because
+                      the note at the foot is true of these and not of that one. */}
+                  <div className="flex flex-col gap-4">
+                    <HouseRulesPicker rules={rules} onChange={onRules} />
+                    {/* In here because of when it answers rather than what it is: read
+                        once, at the deal, exactly like the switches above it. */}
+                    <DealerPicker mode={dealerMode} onChange={onDealerMode} />
+                    {/* **Below the starting player, and independent of it** (#289).
+                        #245 put it above, on the argument that where people sit is
+                        the bigger of the two and decides what the other is even
+                        about. That is true of the *rules* and not of the *reading*:
+                        who opens is the question a host has already been asked by
+                        the lobby, and musical chairs is the one that changes what a
+                        table has to physically do. It is last because it is the
+                        loudest. */}
+                    <ShuffleSeatsToggle on={shuffleSeats} onChange={onShuffleSeats} />
+                    {/* Said once, under everything it is true of: the same sentence
+                        four times is a warning, not a note. */}
+                    <p className="text-xs text-white/40">
+                      These apply at the next deal. This hand keeps the rules it was dealt under.
+                    </p>
+                  </div>
 
-                {/* No way back where there is nowhere to go back to: a screen
-                    in the middle of a table has no personal page (#326). */}
-                {personal ? (
-                  <PageLink label="Your settings" back onGo={() => setPage("yours")} />
-                ) : null}
-              </>
-            ) : personal ? (
-              <>
-                <div className="flex flex-col gap-4">
-                  <SectionHeading>Your settings</SectionHeading>
-                  <HintsRow on={personal.hints} onChange={personal.onHints} />
-                  {/* Beside Tutorial mode, and it takes no props: nothing about
-                      large print goes on the wire, so it reads its own context
-                      rather than riding in `personal` (#323). It is inside the
-                      `personal` branch all the same — the shared table screen
-                      has no "you" to set a display setting for, and no cog page
-                      to put one on. */}
-                  <LargePrintRow />
-                  {/* Both halves of *yours* clear the bar #188 set: they belong to one
-                      player and change nothing about the room. Neither is private —
-                      hints are shouted (#187) and an autopiloted seat carries a
-                      standing mark (#202). */}
-                  <AutopilotPicker mode={personal.autopilot} onChange={personal.onAutopilot} />
-                </div>
+                  {/* No way back where there is nowhere to go back to: a screen
+                      in the middle of a table has no personal page (#326). */}
+                  {personal ? (
+                    <PageLink label="Your settings" back onGo={() => setPage("yours")} />
+                  ) : null}
+                </>
+              ) : personal ? (
+                <>
+                  <div className="flex flex-col gap-4">
+                    <SectionHeading>Your settings</SectionHeading>
+                    <HintsRow on={personal.hints} onChange={personal.onHints} />
+                    {/* Beside Tutorial mode, and it takes no props: nothing about
+                        large print goes on the wire, so it reads its own context
+                        rather than riding in `personal` (#323). It is inside the
+                        `personal` branch all the same — the shared table screen
+                        has no "you" to set a display setting for, and no cog page
+                        to put one on. */}
+                    <LargePrintRow />
+                    {/* Both halves of *yours* clear the bar #188 set: they belong to one
+                        player and change nothing about the room. Neither is private —
+                        hints are shouted (#187) and an autopiloted seat carries a
+                        standing mark (#202). */}
+                    <AutopilotPicker mode={personal.autopilot} onChange={personal.onAutopilot} />
+                  </div>
 
-                {/* Only a host is told the other page exists. A non-host sees one
-                    page and no navigation — nothing naming a room they cannot
-                    enter. */}
-                {isHost ? <PageLink label="Room settings" onGo={() => setPage("room")} /> : null}
-              </>
-            ) : null}
+                  {/* Only a host is told the other page exists. A non-host sees one
+                      page and no navigation — nothing naming a room they cannot
+                      enter. */}
+                  {isHost ? <PageLink label="Room settings" onGo={() => setPage("room")} /> : null}
+                </>
+              ) : null}
 
-            <Button variant="secondary" full onClick={close}>
-              Done
-            </Button>
-          </Panel>
-        </div>
+              <Button variant="secondary" full onClick={close}>
+                Done
+              </Button>
+            </Panel>
+          </div>,
+          document.body,
+        )
       ) : null}
     </>
   );

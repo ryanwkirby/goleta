@@ -727,9 +727,21 @@ function Playing({
       {/* Its width is the rung's, because it and the bottom names are trading
           against one number: the names sit in the flanks either side of it, so a
           bigger name is paid for here (#320, #141). */}
+      {/* **And `bottom-2`, so it is in the band it shares** (#442). It was
+          `bottom-8`, and the pill is 54 design pixels tall against a band of 48:
+          one line ran from 474 to 528, which is 38 above the band and well inside
+          the room the piles are given, so on the centre view it was drawn across
+          the bottom of the card in play and the deck's count. Two pixels off the
+          floor puts it on the same centre line as the names beside it and gives
+          the piles back every pixel — a reserved lane would have cost the card in
+          play about a tenth of itself to fix a pill sitting too high.
+
+          A multi-line ruling still grows up out of the band, which is accepted:
+          it is the one thing at this table nobody may miss, it lasts seven
+          seconds, and it starts 24 pixels lower than it used to. */}
       <div
         style={{ maxWidth: rung.prompt }}
-        className="pointer-events-none absolute inset-x-0 bottom-8 z-40 mx-auto flex justify-center"
+        className="pointer-events-none absolute inset-x-0 bottom-2 z-40 mx-auto flex justify-center"
       >
         <p
           style={{ transform: `rotate(${turn}deg)` }}

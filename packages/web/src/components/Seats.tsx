@@ -231,6 +231,16 @@ export function Seats({
    * layout, and it carries the chip's own `px-3` and type — what comes back is a
    * chip width rather than a text width plus a constant somebody has to keep in
    * step.
+   *
+   * **`offsetWidth`, never a client rect** (#437). Everything that reads this is
+   * in layout pixels — the chip's own `style={{ width }}`, and `fanTable`'s `out`
+   * — and a client rect is what the browser *painted*, after every transform
+   * above the element. On a phone the two are the same number, which is why this
+   * was right for as long as the strip only ever ran on one. The shared table
+   * screen is one design scaled to whatever it is propped on, so the rect comes
+   * back multiplied by the board's scale; and on a board turned a quarter (#141)
+   * a rect's width is the element's **height**, so it is not even the right axis.
+   * A 128-wide chip measured back 59.8.
    */
   const { on: large } = useLargePrint();
   const scale = printScale(large);
@@ -245,7 +255,7 @@ export function Seats({
     const node = probe.current;
     let widest = 0;
     for (const child of node?.children ?? []) {
-      widest = Math.max(widest, child.getBoundingClientRect().width);
+      if (child instanceof HTMLElement) widest = Math.max(widest, child.offsetWidth);
     }
     setOutWidth(Math.max(SEAT_OUT_MIN, Math.ceil(widest)));
   }, [measuring]);

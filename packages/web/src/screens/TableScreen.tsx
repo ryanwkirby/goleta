@@ -27,7 +27,6 @@ import { SUIT_GLYPH } from "../lib/cardShape.ts";
 import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
-import { Button } from "../components/ui.tsx";
 import { DECK } from "../lib/anchors.ts";
 import { facingTurn } from "../lib/facing.ts";
 import { namerFor, turnPrompt } from "../lib/format.ts";
@@ -146,6 +145,44 @@ export function TableScreen({
   const scale = fitScale(quarter ? turned(box) : box);
 
   /**
+   * Room settings, from the middle of the table (#326).
+   *
+   * **IRL rooms only**, the same gate as this screen's other auxiliary actions
+   * and for the same reason: in a room where that flag means what it says
+   * everybody present can already reach the propped-up screen, and an online room
+   * is strangers. The server checks it again.
+   *
+   * **Room settings only.** No `personal` half: that half is about cards this
+   * device does not hold, and nobody may set autopilot or hints for anybody else
+   * (#202, #187). `isHost` is true because this cog *is* the room's — there is no
+   * personal page for it to be a door out of.
+   *
+   * It matters most on a room this screen opened itself, which has no host until
+   * the first person joins and would otherwise have nothing able to set it up.
+   *
+   * **It is drawn inside the board now** (#438), in the row along the top with
+   * the invite and the view toggle. It was pinned to the frame instead, in device
+   * pixels, because its panel is `fixed` and the board's transform would have
+   * scaled and turned it — so the three controls only lined up at scale 1, which
+   * is a scale no device has. The panel portals to the body; see `Settings.tsx`.
+   */
+  const settings = room.irl ? (
+    <SettingsCog
+      isHost
+      className={TOP_CONTROL}
+      glyph="h-[1em] w-[1em]"
+      rules={room.houseRules}
+      irl={room.irl}
+      dealerMode={room.dealerMode}
+      shuffleSeats={room.shuffleSeats}
+      onRules={(rules) => send({ t: "setHouseRules", rules })}
+      onIrl={(on) => send({ t: "setIrl", on })}
+      onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
+      onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
+    />
+  ) : null;
+
+  /**
    * Dragging a name to the edge its player is sitting at (#201). The board is the
    * element carrying the transform, so a pointer can be put back into design
    * coordinates — the arithmetic is in `designPoint`, which is pure and tested.
@@ -223,6 +260,7 @@ export function TableScreen({
           {game ? (
             <Playing
               room={room}
+              settings={settings}
               fling={fling}
               boardScale={scale}
               game={game}
@@ -243,7 +281,7 @@ export function TableScreen({
               }
             />
           ) : (
-            <Waiting room={room} fling={fling} />
+            <Waiting room={room} fling={fling} settings={settings} />
           )}
 
           {/* A screen that has lost touch with its table should say so rather than
@@ -261,43 +299,6 @@ export function TableScreen({
         {/* Outside the design box on purpose: both are about the device rather than
             the board, and the invite is a panel somebody holds a camera up to. */}
         <TableRotateNudge />
-
-        {/**
-          * Room settings, from the middle of the table (#326).
-          *
-          * **IRL rooms only**, the same gate as this screen's other auxiliary
-          * actions and for the same reason: in a room where that flag means what
-          * it says everybody present can already reach the propped-up screen, and
-          * an online room is strangers. The server checks it again.
-          *
-          * **Room settings only.** No `personal` half: that half is about cards
-          * this device does not hold, and nobody may set autopilot or hints for
-          * anybody else (#202, #187). `isHost` is true because this cog *is* the
-          * room's — there is no personal page for it to be a door out of.
-          *
-          * It matters most on a room this screen opened itself, which has no host
-          * until the first person joins and would otherwise have nothing able to
-          * set it up.
-          *
-          * Rendered out here rather than against the design box for `RoomInvite`'s
-          * reason: `fitScale` would scale the panel and the quarter turn would
-          * stand it on its side.
-          */}
-        {room.irl ? (
-          <div className="absolute left-2 top-2">
-            <SettingsCog
-              isHost
-              rules={room.houseRules}
-              irl={room.irl}
-              dealerMode={room.dealerMode}
-              shuffleSeats={room.shuffleSeats}
-              onRules={(rules) => send({ t: "setHouseRules", rules })}
-              onIrl={(on) => send({ t: "setIrl", on })}
-              onDealerMode={(mode) => send({ t: "setDealerMode", mode })}
-              onShuffleSeats={(on) => send({ t: "setShuffleSeats", on })}
-            />
-          </div>
-        ) : null}
 
         {inviting ? (
           <RoomInvite
@@ -337,6 +338,34 @@ const contentBox = (element: HTMLElement): Box => {
 /** A name fills 46 of its 48-pixel band, so piles fitted flush touch the names,
  * which across a room reads as the collision this was fixing. */
 const GUTTER = 10;
+
+/**
+ * The one shape the three controls along the top of the board share (#438): the
+ * cog, the invite and the toggle between the middle of the table and every hand.
+ *
+ * They used to be three sizes in two coordinate systems — a 44px box round a
+ * 20px mark pinned to the *frame*, and two `text-3xl` glyphs with different
+ * padding on the *board* — so they lined up only at scale 1 and drifted apart on
+ * every real device. One box, one mark, one colour, and `SettingsCog` takes it
+ * as its `className` rather than being asked to match by hand.
+ */
+const TOP_CONTROL = [
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-3xl",
+  "text-white/60 transition-colors hover:bg-white/5 hover:text-white",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
+].join(" ");
+
+/**
+ * And where they sit: one row across the top band, the corners
+ * `nameRung.band.corner` reserves and no name is ever drawn in.
+ *
+ * **The row itself takes no taps.** It spans the width, and the middle of it is
+ * over the top edge's names — which can be dragged to reorder the table (#201),
+ * so a full-width box swallowing pointers there would quietly take that away.
+ * The clusters take them back.
+ */
+const TOP_ROW = "pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between";
+const TOP_CLUSTER = "pointer-events-auto flex items-center gap-1";
 
 /** The room between the bands, which moves with them: the large rung's deeper
  * bands are what the centre piles give up for a name anybody can read (#320). */
@@ -443,13 +472,26 @@ function HandsIcon() {
 }
 
 /** Between games, and before the first one: the way in, at the size of a room. */
-function Waiting({ room, fling }: { room: RoomView; fling: SeatFling | null }) {
+function Waiting({
+  room,
+  fling,
+  settings,
+}: {
+  room: RoomView;
+  fling: SeatFling | null;
+  /** The cog, in the same corner it is in during a hand (#438). */
+  settings: ReactNode;
+}) {
   const link = joinLink(room.code);
   const { band } = nameRung(spotsOf(room.seats));
 
   return (
     <>
       <EdgeNames room={room} drag={fling} />
+
+      <div className={TOP_ROW}>
+        <div className={TOP_CLUSTER}>{settings}</div>
+      </div>
 
       {/* Stacked, a code worth crossing a room for plus the room code under it came
           to more than the board is tall. */}
@@ -485,6 +527,7 @@ function Waiting({ room, fling }: { room: RoomView; fling: SeatFling | null }) {
 /** A game in progress: the two piles, whose turn it is, and what everyone holds. */
 function Playing({
   room,
+  settings,
   fling,
   boardScale,
   game,
@@ -500,6 +543,9 @@ function Playing({
   onDraw,
 }: {
   room: RoomView;
+  /** The cog, drawn as the first item of the row along the top (#438). Built by
+   * the caller because the waiting state shows the same one. */
+  settings: ReactNode;
   /** Null unless the table may be reordered from here — an IRL room, between
    * games (#201). */
   fling: SeatFling | null;
@@ -604,36 +650,38 @@ function Playing({
         paint={boardScale}
       />
 
-      {/* No name reaches the top corners, and the board is composed around the
-          piles, so anything above them is the first thing the peel lands on. */}
+      {/* One row, one size, one baseline (#438). No name reaches the top corners,
+          and the board is composed around the piles, so anything above them is
+          the first thing the peel lands on. */}
+      <div className={TOP_ROW}>
+        <div className={TOP_CLUSTER}>
+          {settings}
+          {/* Four grey characters in a `<p>` until #162, and the only surface in
+              the app where the code was not tappable. */}
+          <button
+            type="button"
+            aria-label={`Invite to room ${room.code}`}
+            aria-haspopup="dialog"
+            onClick={onShowInvite}
+            className={TOP_CONTROL}
+          >
+            <QrGlyph />
+          </button>
+        </div>
 
-      {/* Four grey characters in a `<p>` until #162, and the only surface in the
-          app where the code was not tappable. */}
-      <button
-        type="button"
-        aria-label={`Invite to room ${room.code}`}
-        aria-haspopup="dialog"
-        onClick={onShowInvite}
-        className={[
-          "absolute left-2 top-1 rounded-lg p-1.5 text-3xl text-white/30",
-          "transition-colors hover:text-white/70",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300",
-        ].join(" ")}
-      >
-        <QrGlyph />
-      </button>
-
-      {/* Two icons rather than two words (#168): a word in a corner reads as a
-          heading for the view you are in about as readily as a way out of it. */}
-      <Button
-        variant="ghost"
-        className="absolute right-2 top-1 p-2 text-3xl"
-        style={{ transform: `rotate(${turn}deg)` }}
-        onClick={onToggleView}
-        aria-label={view === "center" ? "Show every hand" : "Show the middle of the table"}
-      >
-        {view === "center" ? <HandsIcon /> : <CentreIcon />}
-      </Button>
+        {/* Two icons rather than two words (#168): a word in a corner reads as a
+            heading for the view you are in about as readily as a way out of it.
+            One of the four pieces that turn to face whoever is up (#160). */}
+        <button
+          type="button"
+          className={TOP_CONTROL}
+          style={{ transform: `rotate(${turn}deg)` }}
+          onClick={onToggleView}
+          aria-label={view === "center" ? "Show every hand" : "Show the middle of the table"}
+        >
+          {view === "center" ? <HandsIcon /> : <CentreIcon />}
+        </button>
+      </div>
 
       {view === "hands" ? (
         <div

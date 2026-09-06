@@ -29,6 +29,7 @@ import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
 import type { LoggedEvent } from "../lib/feed.ts";
 import { resolveAnchor, type AnchorGeometry, type AnchorKey } from "../lib/anchors.ts";
 import { MotionContext, type MotionApi } from "../lib/motion.ts";
+import { faceOf, landed, setOff, SETTLED, type PileHold } from "../lib/pileHold.ts";
 import { FULL_TABLE, planFlights, revealAt, type FlightPlan, type TableScale } from "./plan.ts";
 import { usePrefersReducedMotion } from "./reducedMotion.ts";
 import { LAYER } from "../lib/layers.ts";
@@ -43,9 +44,6 @@ interface LiveFlight extends Omit<FlightPlan, "from" | "to"> {
   from: DOMRect;
   to: DOMRect;
 }
-
-/** What the pile draws while cards are still on their way to it. */
-type PileFace = { kind: "actual" } | { kind: "card"; card: Card } | { kind: "empty" };
 
 export function TableMotion({
   game,
@@ -70,7 +68,11 @@ export function TableMotion({
 
   const [flights, setFlights] = useState<LiveFlight[]>([]);
   const [arriving, setArriving] = useState<ReadonlySet<string>>(() => new Set());
-  const [pile, setPile] = useState<PileFace>({ kind: "actual" });
+  /** The pile lags the state while cards are inbound (#449). The rule is
+   * `lib/pileHold.ts`, shared with the shared screen's own flight layer; what is
+   * local to each is only what tells it a card has landed — here, the animation
+   * saying so. */
+  const [pile, setPile] = useState<PileHold>(SETTLED);
   const [dealing, setDealing] = useState(false);
 
   const elements = useRef(new Map<AnchorKey, HTMLElement>());
@@ -80,7 +82,6 @@ export function TableMotion({
   const previousTop = useRef<Card | null>(null);
   /** Log entries already animated. Ids only ever climb. */
   const seen = useRef(0);
-  const inbound = useRef(0);
   const sequence = useRef(0);
   /**
    * The deal's own flights, so the table knows when the cards are down. Counted
@@ -125,13 +126,7 @@ export function TableMotion({
       });
     }
 
-    if (flight.toPile) {
-      inbound.current -= 1;
-      // The last card in is the one the state already calls the top card, so once
-      // nothing is inbound the pile goes back to reading the state.
-      const landed = flight.card;
-      setPile(inbound.current > 0 && landed ? { kind: "card", card: landed } : { kind: "actual" });
-    }
+    if (flight.toPile) setPile((held) => landed(held, flight.card));
   }, []);
 
   // 1. Animate whatever is new in the log.
@@ -173,9 +168,8 @@ export function TableMotion({
 
     const toPile = live.filter((flight) => flight.toPile);
     if (toPile.length > 0) {
-      inbound.current += toPile.length;
-      const held = previousTop.current;
-      setPile(emptiesPile || !held ? { kind: "empty" } : { kind: "card", card: held });
+      const before = previousTop.current;
+      setPile((held) => setOff(held, toPile.length, before, emptiesPile));
     }
 
     // Set here rather than when the batch is planned, so a deal whose anchors all
@@ -203,10 +197,7 @@ export function TableMotion({
     () => ({
       anchor,
       isArriving: (cardId) => arriving.has(cardId),
-      pileFace: (actual) => {
-        if (pile.kind === "empty") return null;
-        return pile.kind === "card" ? pile.card : actual;
-      },
+      pileFace: (actual) => faceOf(pile, actual),
       dealing,
       reduced,
     }),
@@ -330,10 +321,10 @@ function FlightCard({
         ? node.animate([{ opacity: 0 }, { opacity: 1 }], { ...reveal, fill: "both" })
         : null;
 
-    let landed = false;
+    let arrived = false;
     const arrive = (): void => {
-      if (landed) return;
-      landed = true;
+      if (arrived) return;
+      arrived = true;
       onLanded(flight);
     };
     animation.addEventListener("finish", arrive);
@@ -342,7 +333,7 @@ function FlightCard({
     const backstop = window.setTimeout(arrive, flight.delay + flight.duration + SETTLE_GRACE_MS);
 
     return () => {
-      landed = true;
+      arrived = true;
       window.clearTimeout(backstop);
       animation.cancel();
       rising?.cancel();

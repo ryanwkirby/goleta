@@ -28,12 +28,23 @@ export interface MotionApi {
 
 const noopRef: RefCallback<HTMLElement> = () => () => {};
 
-export const MotionContext = createContext<MotionApi>({
+/**
+ * The settled state, and what anything rendered outside a provider is answered
+ * with.
+ *
+ * Exported because the shared table screen builds its own from it (#449): that
+ * board has no DOM anchors and nothing arriving into a hand, but its flight layer
+ * does hold the pile back, so it overrides the one member it has an answer for
+ * and takes the rest from here rather than restating them.
+ */
+export const NO_MOTION: MotionApi = {
   anchor: () => noopRef,
   isArriving: () => false,
   pileFace: (actual) => actual,
   dealing: false,
   reduced: true,
-});
+};
+
+export const MotionContext = createContext<MotionApi>(NO_MOTION);
 
 export const useMotion = (): MotionApi => useContext(MotionContext);

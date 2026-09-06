@@ -1586,6 +1586,36 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   throughout. And **reduced motion plans no flights at all**, exactly as the
   phone does, with the board correct without them.
 
+  **The pile is the one exception to that, and it is not a gate** (#449). Every
+  state message arrives as a finished picture, so the card in play changes the
+  moment it is played — and this board then spends 840ms flying that same card to
+  the place it is already drawn. The table watched a card land and, half a second
+  later, watched it land again, on the one square inch of the screen everybody is
+  looking at. So the pile lags the state: while cards are inbound it draws the
+  card they are landing *on*, and takes each one at the instant it arrives.
+
+  It is the mechanism the phone has always had — `Piles` has asked
+  `MotionApi.pileFace` since the motion layer landed, and this screen simply had
+  no answer for it, so the context default handed back the settled state. **The
+  rule now lives in `lib/pileHold.ts`**, because it is the one thing the two
+  flight layers must agree on and neither of them is where a rule about what the
+  pile draws belongs. What stays local to each is only what tells it a card has
+  landed: an animation's `finish` event on a phone, and here a timer at `landsAt`
+  — the figure the animation is already given, which the sweep reads too rather
+  than approximating a second time.
+
+  Three things it must not become. **It holds a face, never an action**: no
+  `dealing`, nothing gated on it, and the draw pile stays tappable throughout —
+  the same sentence as the ruling hold and the reshuffle (#356, #209). **It says
+  nothing about what landed**: a hold is the same length and the same picture
+  whatever the card is, because it is a count of cards in the air and nothing
+  else. And **a card bound for the pile does not fade**. `table-screen-card` takes
+  opacity to zero over the last fifth of the trip, which is right for a card
+  carrying on past the edge to a player (#325) and wrong for one with somewhere to
+  land: `table-screen-land` arrives opaque and at the pile's own size, over the
+  face the pile is handed at the same instant, so the swap is invisible and the
+  sweep a moment later takes away a card identical to the one underneath it.
+
   A card back in the air divides `--paint-scale` out by the board's scale *and*
   the piles' fitting, multiplied by hand, for `ScaledPiles`' reason (#169): the
   lattice is a screen measurement and must not grow with the board.

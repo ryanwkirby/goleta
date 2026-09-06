@@ -51,10 +51,30 @@ function ZoomGlyph({ on, className = "size-6" }: { on: boolean; className?: stri
 }
 
 /**
- * The one on the way in: the lobby, and the head of the rules screen. **Top left
- * in both** (#431) — where the cog is at the table, and the corner a thumb
- * reaches on a phone held in either hand. It was at the right, which is where
- * nothing else in this app that changes the page sits.
+ * The one on the way in: the lobby, and the head of the rules screen. **It hangs
+ * out of the flow, in the corner each of those screens leaves empty** (#444).
+ * #431 took the label off it and put it top left in both, and left it drawn as a
+ * row of its own — so the first thing at the top of the lobby was an unlabelled
+ * glyph above the room code, and the first thing in the rules panel was one
+ * above *How goleta works*. A control pressed once and then forgotten was
+ * leading two screens and spending a line on each.
+ *
+ * `absolute` in both, so it costs no row: the room code and the heading are back
+ * at the top of their screens and the glass hovers beside them over felt that
+ * was empty anyway. **Which corner is whichever one is actually empty**, which
+ * is the lobby's left and the rules panel's right — the lobby's code is centred
+ * with the copy control in its right flank (#243), and the rules panel's heading
+ * is left-aligned with nothing after it. That is #431's *same side in both*
+ * spent, and it buys the thing #431 was arguing about: neither one is in front
+ * of the screen's own subject any more. Both are still the head of the screen,
+ * both are still one dim glyph, and there is nowhere else on either screen a
+ * 44px target fits without pushing something.
+ *
+ * The rules panel is where #431 said this could not go, because a glass and a
+ * label beside the heading broke *How goleta works* over two lines in large
+ * print. Out of the flow it takes no width from the heading — `pr-11` reserves
+ * what it covers, so a wrap puts the second line under it rather than through
+ * it.
  *
  * **A button that toggles rather than a switch**, which is the opposite of the
  * cog's row and is deliberate. Both places it is drawn are somewhere a person is
@@ -90,7 +110,13 @@ export function LargePrintButton({ className = "" }: { className?: string }) {
         // boxed it came out as the second loudest thing on a lobby whose own
         // room code is the loud one — while the plainest statement that it is on
         // is the screen it is drawn on.
-        on ? "text-amber-300 hover:bg-white/5" : "text-white/60 hover:bg-white/5 hover:text-white",
+        //
+        // Off is dimmer than the app's ordinary grey (#444), because this is the
+        // one control here that is drawn over somebody else's subject rather
+        // than in a row of its own: at `white/60` a glyph floating beside the
+        // room code read as something to attend to. Hover takes it back up, and
+        // on stays amber — going quiet is for the state nobody is looking for.
+        on ? "text-amber-300/80 hover:bg-white/5" : "text-white/30 hover:bg-white/5 hover:text-white/70",
         className,
       ].join(" ")}
     >

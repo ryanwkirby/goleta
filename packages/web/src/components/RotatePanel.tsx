@@ -24,9 +24,19 @@ import { Button } from "./ui.tsx";
  * table — a real screen, the one an online player gets and the one a watcher at
  * this same table gets — rather than a degraded anything.
  *
- * **It is small grey print and it stays that way.** The gesture is worth
- * teaching and this panel is what teaches it, so the escape must not read as the
- * other half of a choice.
+ * **It is subordinate to the instruction and it looks like a button** (#446).
+ * Those pulled against each other and #407 resolved them the wrong way round: it
+ * was `ghost`, which is text and nothing else, on a screen holding one amber
+ * heading, one glyph and no other control — so 70% white text centred under a
+ * heading is a caption, and the half that was worth having is the findable one.
+ * `secondary` is a grey surface at `bg-white/10`, plainly pressable and nowhere
+ * near the amber above it; `TableRotateNudge` answers the same gesture in
+ * reverse with the same variant and the same construction. Subordinate is not
+ * the same as invisible.
+ *
+ * **Not an ✕ in a corner.** That fails the findable half harder than `ghost`
+ * did: an unlabelled corner glyph says *close this* to somebody who already
+ * knows there is a way out, and this control exists for somebody who does not.
  *
  * **The words are the animation's, not a caption's.** This carried two sentences
  * under the heading that restated it, explained a room the player is sitting in,
@@ -52,13 +62,13 @@ export function RotatePanel({ offline, onDismiss }: { offline: boolean; onDismis
       <h2 className="text-xl font-semibold text-amber-300">Turn your phone sideways</h2>
 
       <div className="flex flex-col items-center gap-1">
-        {/* `ghost` rather than hand-rolled small print: the people who need this
-            are the ones with no other way to answer the panel, so it has to read
-            as something to press and be a full thumb to press it with. The
-            variant is already the app's quiet control, and next to an amber
-            heading it is plainly the subordinate half. */}
-        <Button variant="ghost" onClick={onDismiss}>
-          Play upright
+        {/* The people who press this are the ones with no other way to answer
+            the panel at all, so it has to read as something to press and be a
+            full thumb to press it with. *Play upright* named a mode; *anyway* is
+            what makes it an answer to the heading, and it still says what you
+            get rather than only what you are refusing. */}
+        <Button variant="secondary" onClick={onDismiss}>
+          Play upright anyway
         </Button>
 
         {/* Its line is reserved either way, so nothing above it moves when the

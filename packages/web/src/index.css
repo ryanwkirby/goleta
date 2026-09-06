@@ -220,7 +220,16 @@
 }
 
 /* Upright, then over, then held there — the gesture the panel is asking for,
-   demonstrated rather than described. */
+   demonstrated rather than described.
+
+   **Anticlockwise, and that is the instruction rather than a detail** (#446).
+   The panel has no words left to say which way to turn (#407), so the direction
+   this rests at is the whole of what it is asking for — and it was asking for
+   the turn nobody makes. A phone goes into landscape chin-to-the-right, because
+   that is what the wrist already holding it does with the least effort; tipped
+   the other way it reads as a phone falling over rather than one being turned to
+   play on. It rests there for most of the cycle, and the reduced-motion still
+   below rests there permanently, so the two ends move together. */
 @keyframes rotate-hint {
   0%,
   25% {
@@ -228,7 +237,7 @@
   }
   45%,
   85% {
-    transform: rotate(90deg);
+    transform: rotate(-90deg);
   }
   100% {
     transform: rotate(0deg);
@@ -384,7 +393,7 @@
   @keyframes rotate-hint {
     from,
     to {
-      transform: rotate(90deg);
+      transform: rotate(-90deg);
     }
   }
 

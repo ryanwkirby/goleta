@@ -1317,11 +1317,25 @@ Things that will read as oversights in that view and are not:
   panel is what teaches the gesture.
 
   Two things it must not become. **It stays subordinate to the instruction** —
-  the gesture is worth teaching, so the way out is the app's quiet `ghost`
-  control under an amber heading, never the other half of a choice. And **it
-  must stay findable**, which is why it is a control rather than hand-rolled
-  small print: the people who press it are the ones with no other way to answer
-  the panel at all.
+  the gesture is worth teaching, so the way out sits under an amber heading and
+  is never the other half of a choice. And **it must stay findable**, which is
+  why it is a control rather than hand-rolled small print: the people who press
+  it are the ones with no other way to answer the panel at all.
+
+  **Those pull against each other and #407 resolved them the wrong way round**
+  (#446). It was `ghost`, which is the app's text-only variant — no surface, no
+  ring — on a screen holding one amber heading, one glyph and nothing else, so
+  70% white text centred under a heading is a caption. It is `secondary` now: a
+  grey surface at `bg-white/10`, plainly pressable and still nowhere near the
+  amber above it, which is the variant `TableRotateNudge` already answers the
+  same gesture in reverse with. **Subordinate is not the same as invisible**, and
+  findable is the half with the cost attached — this is the exit from a
+  full-screen block and there is no other. The word is *Play upright anyway*
+  rather than *Play upright*, which named a mode; *anyway* is what makes it an
+  answer to the heading, and it still says what you get rather than only what you
+  are refusing. **Not an ✕ in a corner**: an unlabelled corner glyph says *close
+  this* to somebody who already knows there is a way out, and this control is for
+  somebody who does not.
 
   **The words are the animation's, not a caption's.** This carried two sentences
   under the heading that restated it, explained a room the player is sitting in,
@@ -1330,6 +1344,16 @@ Things that will read as oversights in that view and are not:
   it flat on the table*, which is the second cause above, so cutting the
   paragraph and fixing the lockout were one edit. A rotating phone, one line,
   and the way out.
+
+  **Which makes the direction it turns the instruction** (#446). `rotate-hint`
+  went clockwise, tipping the glyph's top edge right and resting it chin-on-the-
+  left, and with the paragraph gone there is nothing else on the screen saying
+  which way to go. It is anticlockwise now — chin to the right, the turn the
+  wrist already holding the phone makes with the least effort — and both ends
+  moved together, because it rests turned for most of the cycle and under
+  `prefers-reduced-motion` that rest is the only frame anybody sees.
+  `TableRotateNudge` draws the same keyframe while asking for the opposite
+  gesture, which the flip mirrors rather than fixes; that is #447 and is not this.
 
   **Nothing anywhere reaches for that lock, including where it exists.** The
   panel used to offer it behind a "keep it landscape" button, and it froze the

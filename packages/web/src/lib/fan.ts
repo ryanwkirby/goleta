@@ -1,4 +1,5 @@
 import { CARD_HEIGHT_PX, readableSliver } from "./cardShape.ts";
+import type { Box } from "./fitScale.ts";
 
 /**
  * Fanning the seat strip: one overlap for the whole table, rows as the valve.
@@ -35,6 +36,31 @@ export const SEAT_OUT_MIN = 80;
 const SEAT_GAP = 8;
 
 export const LOOSEST = CARD + GAP;
+
+/**
+ * The chip's own furniture, down the page rather than across it, in the same
+ * rem-written-out pixels as the widths above: the strip's `p-1` top and bottom,
+ * a seat's `py-2`, the name row, the `mt-1.5` over the cards and the `gap-1`
+ * between two rows of them.
+ *
+ * `NAME_ROW` is measured rather than derived, the way `pillHeight`'s is: the row
+ * is `items-baseline` with a `font-mono` count in it, and comes out a pixel over
+ * the `text-sm` line. A strip of one-row hands measures 107 and this says 107.
+ */
+const STRIP_PAD = 8;
+const SEAT_PAD_Y = 16;
+const NAME_ROW = 21;
+const NAME_GAP = 6;
+const ROW_GAP = 4;
+
+/** How tall the strip stands when its deepest hand takes that many rows. */
+export const stripHeight = (rows: number, scale = 1): number => {
+  const deep = Math.max(1, rows);
+  return (
+    (STRIP_PAD + SEAT_PAD_Y + NAME_ROW + NAME_GAP + deep * CARD_HEIGHT_PX.sm + (deep - 1) * ROW_GAP) *
+    scale
+  );
+};
 
 /** The narrowest sliver where a rank and its suit are still unambiguously
  * readable — `10` at `text-sm` is the binding case, its right edge at 19.97px.
@@ -156,6 +182,82 @@ export const fanTable = (
   const sliver = tighten(available, hands, out, scale, large);
   const perRow = rowCapacity(available, sliver, scale);
   return { sliver, rows: hands.map((hand) => rowsFor(hand, perRow)) };
+};
+
+/**
+ * The strip drawn as big as a **fixed box** will take it (#439).
+ *
+ * The seat strip is a phone's: `sm` cards, `text-sm` names, a row that scrolls
+ * when it will not fit (#59). That is right on the device it was written for and
+ * wrong in the middle of a table, where nobody is going to scroll it and it is
+ * read from the far side of the room — the gap #320 closed for the edge names.
+ *
+ * So a caller that knows exactly what room the strip has may ask for the largest
+ * scale that fits it. One number takes cards, names, counts, padding and chips
+ * together, which is what keeps the strip the strip: this is `ScaledPiles`'s
+ * shape and #159's rule, a piece asking for the room it wants rather than
+ * painting outside the box the layout gave it.
+ *
+ * Three things it is careful about.
+ *
+ * **It never goes below 1.** A strip that will not fit its box is the strip
+ * that exists today and it scrolls, which is #59's accepted cost; shrinking the
+ * cards to fit a full table would break the rule that pays for it, which is that
+ * a hand you cannot read is a play you cannot spot.
+ *
+ * **The answer is quantised.** Hands grow and shrink on nearly every turn, and a
+ * scale computed to the pixel would resize the whole table each time one did.
+ *
+ * **It buys nothing at a crowded table, and that is honest rather than a bug.**
+ * Seven seats at their `min-w-32` floor come to 944 of the 960 a board has, so
+ * the width binds at 1 and the strip is exactly what it was. What it is for is
+ * a table that has thinned out — six seats out and one holding four cards is 796
+ * wide, and takes the whole of the height it is given.
+ */
+export interface StripFit {
+  /** What to scale the strip by. At least 1. */
+  scale: number;
+  /** The width the strip lays out in, in its own pixels, before that scale. */
+  available: number;
+  /** What it measures across at that width, before the scale. Larger than
+   * `available` only in the overflowing case the scale is 1 for. */
+  width: number;
+  /** And down the page, before the scale. */
+  height: number;
+  fan: Fan;
+}
+
+/** Tenths, from twice the size down to the size it already is. Coarse on
+ * purpose: see "quantised" above. */
+const STRIP_STEPS = Array.from({ length: 11 }, (_, step) => (20 - step) / 10);
+
+export const fitStrip = (
+  box: Box,
+  hands: readonly SeatHand[],
+  out = SEAT_OUT_MIN,
+  scale = 1,
+  large = false,
+): StripFit => {
+  const at = (k: number): StripFit => {
+    const available = box.width / k;
+    const fan = fanTable(available, hands, out, scale, large);
+    return {
+      scale: k,
+      available,
+      width: stripWidth(hands, fan.sliver, out, scale),
+      height: stripHeight(Math.max(1, ...fan.rows), scale),
+      fan,
+    };
+  };
+
+  if (box.width > 0 && box.height > 0) {
+    for (const step of STRIP_STEPS) {
+      const fit = at(step);
+      if (fit.width <= fit.available && fit.height * step <= box.height) return fit;
+    }
+  }
+  // Nothing fits: the strip it already was, overflowing and scrolling.
+  return at(1);
 };
 
 /** Never empty, which is a promise `inRows` keeps. */

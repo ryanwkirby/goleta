@@ -9,7 +9,8 @@ import {
 
 import type { GameView, PlayerView, RoomView, ShoutKind } from "@goleta/engine";
 
-import { SEAT_OUT_MIN, fanTable, inRows, type SeatHand } from "../lib/fan.ts";
+import { SEAT_OUT_MIN, fanTable, fitStrip, inRows, type SeatHand } from "../lib/fan.ts";
+import type { Box } from "../lib/fitScale.ts";
 import { inTurnOrder, nextStillIn } from "../lib/seating.ts";
 import { cardAnchor, seatAnchor } from "../lib/anchors.ts";
 import { useMotion } from "../lib/motion.ts";
@@ -194,10 +195,21 @@ export function Seats({
   room,
   game,
   shouts,
+  fill,
 }: {
   room: RoomView;
   game: GameView;
   shouts: Shout[];
+  /**
+   * A box, in the caller's own pixels, to draw the strip as large as will fit
+   * (#439). The shared table screen passes the room its hands view has; a phone
+   * passes nothing and gets the strip it always had, measured and scrolling.
+   *
+   * The strip is scaled by one number rather than re-laid-out, so the cards, the
+   * names, the counts and the chips all grow together — and the wrapper reserves
+   * what that paints, which is `ScaledPiles`' bargain and #159's rule.
+   */
+  fill?: Box;
 }) {
   const others = inTurnOrder(game);
   const shouting = shoutingNow(shouts);
@@ -272,7 +284,15 @@ export function Seats({
   // arithmetic is told the same number the root font size moved by (#323). More
   // rows and more scrolling between seats is the expected outcome, not a
   // regression: rows are the release valve (#59).
-  const fan = fanTable(available, held, outWidth, scale, large);
+  /** Everything the strip is drawn at. Off the box when there is one, and off
+   * the observer when there is not — `fitStrip` is the same arithmetic asked the
+   * other way round, so the unfitted answer is exactly what it was. */
+  const fit = fill ? fitStrip(fill, held, outWidth, scale, large) : null;
+  const fan = fit ? fit.fan : fanTable(available, held, outWidth, scale, large);
+  /** The strip lays out in its own pixels and is painted `fit.scale` times
+   * bigger, so what it is given is the box divided by that — and no more than it
+   * will actually use, which is what lets the wrapper centre it. */
+  const laidOutIn = fit ? Math.min(fit.width, fit.available) : null;
 
   /**
    * One rule for where the strip sits: show whoever the table is waiting on,
@@ -289,7 +309,7 @@ export function Seats({
   const waitingOn = game.waitingOn;
   const you = game.you;
   const nextUp = nextStillIn(others)?.id ?? null;
-  const settled = `${available}:${fan.sliver}:${held.join(",")}`;
+  const settled = `${laidOutIn ?? available}:${fan.sliver}:${held.join(",")}`;
   useEffect(() => {
     const list = strip.current;
     if (!list || waitingOn === null) return;
@@ -319,12 +339,23 @@ export function Seats({
     list.scrollTo({ left, behavior: gliding ? "smooth" : "auto" });
   }, [waitingOn, you, nextUp, reduced, settled]);
 
-  return (
+  const list = (
     <ul
       ref={strip}
       // One overlap for the entire strip, so somebody holding three isn't squashed
       // differently from somebody holding twenty.
-      style={{ "--fan": `${fan.sliver - cardWidthPx("sm", scale)}px` } as CSSProperties}
+      style={
+        {
+          "--fan": `${fan.sliver - cardWidthPx("sm", scale)}px`,
+          ...(fit && laidOutIn !== null
+            ? {
+                width: laidOutIn,
+                transform: `scale(${fit.scale})`,
+                transformOrigin: "top left",
+              }
+            : {}),
+        } as CSSProperties
+      }
       // The padding is for the turn ring, which is drawn outside the border box, and
       // a box that clips one axis clips both.
       className="relative flex gap-2 overflow-x-auto p-1"
@@ -356,5 +387,19 @@ export function Seats({
         />
       ))}
     </ul>
+  );
+
+  if (!fit || laidOutIn === null) return list;
+
+  /** The box the scaled strip paints in, asked for rather than taken (#159): a
+   * transform is invisible to the layout around it, so the wrapper reserves what
+   * the ink will actually cover and the column above it is told the truth. */
+  return (
+    <div
+      style={{ width: laidOutIn * fit.scale, height: fit.height * fit.scale }}
+      className="mx-auto"
+    >
+      {list}
+    </div>
   );
 }

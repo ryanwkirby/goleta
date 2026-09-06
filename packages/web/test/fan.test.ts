@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   fanTable,
+  fitStrip,
   handWidth,
   inRows,
   LOOSEST,
   SEAT_OUT_MIN,
   seatWidth,
+  stripHeight,
   stripWidth,
   TIGHTEST,
   type SeatHand,
@@ -247,5 +249,83 @@ describe("dealing a hand into rows", () => {
         expect(out.flat().length).toBe(rows > 0 ? count : 0);
       }
     }
+  });
+});
+
+/** The hands view's own room on the shared table screen: the board less its
+ * margins, and what is left of the column once the piles have their 240. */
+const BOARD = { width: 960, height: 184 };
+/** What a chip holding "Clockwork" measures — the probe's answer, near enough. */
+const OUT = 92;
+
+describe("fitting the strip to a fixed box", () => {
+  it("draws a thinned table as large as the box will take", () => {
+    const hands: SeatHand[] = ["out", "out", "out", "out", "out", "out", 4];
+    const fit = fitStrip(BOARD, hands, OUT);
+
+    expect(fit.scale).toBeGreaterThan(1);
+    expect(fit.width).toBeLessThanOrEqual(fit.available);
+    expect(fit.height * fit.scale).toBeLessThanOrEqual(BOARD.height);
+
+    // And it is the largest step that fits: one tenth more does not. Asked by
+    // narrowing the box by that tenth, which is the same question.
+    const tighter = fitStrip({ ...BOARD, width: BOARD.width / (fit.scale + 0.1) }, hands, OUT);
+    expect(tighter.width).toBeGreaterThan(tighter.available);
+  });
+
+  it("leaves a crowded table exactly as it was, rather than shrinking it", () => {
+    // Seven live hands are already at their own floor and already overflowing.
+    const hands: SeatHand[] = [5, 5, 5, 5, 5, 5, 5];
+    const fit = fitStrip(BOARD, hands, OUT);
+
+    expect(fit.scale).toBe(1);
+    expect(fit.fan).toEqual(fanTable(BOARD.width, hands, OUT));
+  });
+
+  it("never answers below 1, however little room it is given", () => {
+    for (const height of [0, 10, 60, 106]) {
+      expect(fitStrip({ width: 200, height }, [5, 5, 5, 5], OUT).scale).toBe(1);
+    }
+    expect(fitStrip({ width: 0, height: 0 }, [2, 2], OUT).scale).toBe(1);
+  });
+
+  it("never asks for more height than it was given, at any table it can grow", () => {
+    const tables: SeatHand[][] = [
+      [2],
+      [2, 2],
+      ["out", 3],
+      ["out", "out", "out", 4],
+      ["out", "out", 6, 6],
+      [1, 1, 1, 1, 1, 1],
+    ];
+    for (const hands of tables) {
+      const fit = fitStrip(BOARD, hands, OUT);
+      expect(fit.height * fit.scale).toBeLessThanOrEqual(BOARD.height);
+      expect(fit.width * fit.scale).toBeLessThanOrEqual(BOARD.width + 0.001);
+    }
+  });
+
+  it("is quantised, so one card arriving cannot resize the whole table", () => {
+    const scales = new Set<number>();
+    for (let cards = 1; cards <= 9; cards++) {
+      scales.add(fitStrip(BOARD, ["out", "out", "out", "out", cards], OUT).scale);
+    }
+    for (const scale of scales) expect(Math.round(scale * 10) / 10).toBe(scale);
+  });
+});
+
+describe("how tall the strip stands", () => {
+  it("is the strip a phone draws, at one row", () => {
+    // Measured in the browser on a one-row strip: 107.
+    expect(stripHeight(1)).toBe(107);
+  });
+
+  it("grows by a card and a gap per row, and treats none as one", () => {
+    expect(stripHeight(2) - stripHeight(1)).toBe(56 + 4);
+    expect(stripHeight(0)).toBe(stripHeight(1));
+  });
+
+  it("takes large print's scale the way every width in here does", () => {
+    expect(stripHeight(1, 1.3)).toBe(107 * 1.3);
   });
 });

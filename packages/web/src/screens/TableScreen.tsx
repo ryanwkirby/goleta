@@ -373,17 +373,37 @@ const centrePileRoom = (band: NameRung["band"]) => ({
   width: TABLE_DESIGN.width - band.side * 2 - GUTTER * 2,
   height: TABLE_DESIGN.height - band.top - band.bottom - GUTTER * 2,
 });
+/**
+ * The hands view's column, which is **its own** rather than the name bands'
+ * (#439). This view draws no edge names — the strip names everybody itself — so
+ * the only two things it has to keep clear of are the row of controls along the
+ * top (#438) and the turn prompt at the foot (#442). It used to sit inside
+ * `band.top`/`band.bottom`, which reserved room for names that are not there and
+ * still ended 38 pixels below the prompt, so the column overlapped the one thing
+ * under it and left a bare band above it.
+ *
+ * The piles keep the 240 they have always had; the strip gets what is left,
+ * which it now fills.
+ */
+const HANDS_TOP = 56;
+const HANDS_BOTTOM = 64;
+const HANDS_GAP = 16;
+const HANDS_COLUMN = TABLE_DESIGN.height - HANDS_TOP - HANDS_BOTTOM;
 const HANDS_PILE_ROOM = { width: TABLE_DESIGN.width - 40, height: 240 };
+const HANDS_STRIP_ROOM = {
+  width: TABLE_DESIGN.width - 40,
+  height: HANDS_COLUMN - HANDS_GAP - HANDS_PILE_ROOM.height,
+};
 
 /** Derived rather than written down: the centre view's container is symmetric,
- * and the hands view keeps its slot directly under the top band. */
+ * and the hands view keeps its slot at the head of its own column. */
 const centrePilesAt = (band: NameRung["band"]) => ({
   x: TABLE_DESIGN.width / 2,
   y: (band.top + (TABLE_DESIGN.height - band.bottom)) / 2,
 });
-const handsPilesAt = (band: NameRung["band"]) => ({
+const handsPilesAt = () => ({
   x: TABLE_DESIGN.width / 2,
-  y: band.top + HANDS_PILE_ROOM.height / 2,
+  y: HANDS_TOP + HANDS_PILE_ROOM.height / 2,
 });
 
 /**
@@ -605,7 +625,7 @@ function Playing({
 
   // A card in the air has to leave the deck that is actually on screen.
   const pileRoom = view === "hands" ? HANDS_PILE_ROOM : centrePileRoom(rung.band);
-  const pilesAt = view === "hands" ? handsPilesAt(rung.band) : centrePilesAt(rung.band);
+  const pilesAt = view === "hands" ? handsPilesAt() : centrePilesAt(rung.band);
 
   const piles = (
     <Piles
@@ -685,10 +705,13 @@ function Playing({
 
       {view === "hands" ? (
         <div
-          style={{ top: rung.band.top, bottom: rung.band.bottom, left: 20, right: 20 }}
-          className="absolute flex flex-col items-center gap-4"
+          style={{ top: HANDS_TOP, bottom: HANDS_BOTTOM, left: 20, right: 20 }}
+          className="absolute flex flex-col items-center"
         >
-          <div className="flex h-60 shrink-0 items-center justify-center">
+          <div
+            style={{ height: HANDS_PILE_ROOM.height }}
+            className="flex shrink-0 items-center justify-center"
+          >
             <ScaledPiles room={pileRoom} outer={boardScale}>
               {piles}
             </ScaledPiles>
@@ -697,12 +720,15 @@ function Playing({
             a turned panel puts the piles under the prompt pinned to the bottom
             band — and the piles inside would be turned twice, which is no turn
             at all. */}
-          <div className="min-h-0 w-full flex-1">
+          {/* Centred in what is left, because a strip the board's width cannot
+            grow into is a strip with slack above and below rather than a hole
+            under it (#439). */}
+          <div className="flex min-h-0 w-full flex-1 items-center">
             {/* On a box the size of the strip, not the box that *holds* it: `flex-1`
               fills the height that is left, so turning that swings the strip to
               the bottom. */}
-            <div style={{ transform: `rotate(${turn}deg)` }}>
-              <Seats room={room} game={game} shouts={shouts} />
+            <div className="w-full" style={{ transform: `rotate(${turn}deg)` }}>
+              <Seats room={room} game={game} shouts={shouts} fill={HANDS_STRIP_ROOM} />
             </div>
           </div>
         </div>

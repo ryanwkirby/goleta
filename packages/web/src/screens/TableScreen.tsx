@@ -1,6 +1,7 @@
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -9,6 +10,7 @@ import {
 
 import {
   isGameEvent,
+  type Card,
   type ClientMessage,
   type GameView,
   type PlayerId,
@@ -53,6 +55,8 @@ import {
   TURN_FOR,
   type NameRung,
 } from "../lib/tableEdges.ts";
+import { MotionContext, NO_MOTION, type MotionApi } from "../lib/motion.ts";
+import { faceOf, landed, setOff, SETTLED, type PileHold } from "../lib/pileHold.ts";
 import { tablePoint, type TablePlaces } from "../lib/tableFlight.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
 import { planFlights, TABLE_SCREEN, type FlightPlan } from "../motion/plan.ts";
@@ -627,25 +631,59 @@ function Playing({
   const pileRoom = view === "hands" ? HANDS_PILE_ROOM : centrePileRoom(rung.band);
   const pilesAt = view === "hands" ? handsPilesAt() : centrePilesAt(rung.band);
 
+  /**
+   * The cards in the air, and what the pile draws while they are (#449). Both
+   * come off one hook because they are one fact: the state's top card is the one
+   * that has *finished* arriving, and this board spends 840ms flying it there.
+   */
+  const { flights, pile } = useBoardFlights({
+    game,
+    log,
+    places: {
+      seats: room.seats,
+      // The deck and the pile move with the view, and a card has to leave the
+      // one that is actually on screen (#164).
+      deck: deckPoint(pileRoom, pilesAt, "xl"),
+      pile: pilePoint(pileRoom, pilesAt, "xl"),
+      design: TABLE_DESIGN,
+    },
+  });
+
+  /**
+   * The only thing this board has to say to the motion layer. There are no DOM
+   * anchors here — flights are aimed in design coordinates (#200) — and nothing
+   * arrives into a hand, so the rest is `NO_MOTION`'s and `Piles` needs no second
+   * way of being told.
+   */
+  const motion = useMemo<MotionApi>(
+    () => ({ ...NO_MOTION, pileFace: (actual) => faceOf(pile, actual) }),
+    [pile],
+  );
+
   const piles = (
-    <Piles
-      game={game}
-      canDraw={canDraw}
-      onDraw={onDraw}
-      irl={room.irl}
-      size="xl"
-      turn={turn}
-      peel={
-        peeling && call
-          ? {
-              evidence: call.evidence,
-              named: call.card,
-              callerName: nameOf(call.callerId),
-              targetName: nameOf(call.targetId),
-            }
-          : null
-      }
-    />
+    // Around the piles alone, because the pile face is the whole of what this
+    // board has to say: everything else in here is already reading `NO_MOTION`
+    // and must go on reading it.
+    <MotionContext value={motion}>
+      <Piles
+        game={game}
+        canDraw={canDraw}
+        onDraw={onDraw}
+        irl={room.irl}
+        size="xl"
+        turn={turn}
+        peel={
+          peeling && call
+            ? {
+                evidence: call.evidence,
+                named: call.card,
+                callerName: nameOf(call.callerId),
+                targetName: nameOf(call.targetId),
+              }
+            : null
+        }
+      />
+    </MotionContext>
   );
 
   return (
@@ -655,17 +693,8 @@ function Playing({
         <EdgeNames room={room} game={game} asking={asking} drag={fling} />
       ) : null}
       <TableFlights
-        room={room}
-        game={game}
-        log={log}
-        places={{
-          seats: room.seats,
-          // The deck and the pile move with the view, and a card has to leave the
-          // one that is actually on screen (#164).
-          deck: deckPoint(pileRoom, pilesAt, "xl"),
-          pile: pilePoint(pileRoom, pilesAt, "xl"),
-          design: TABLE_DESIGN,
-        }}
+        flights={flights}
+        irl={room.irl}
         scale={fitScale(pileRoom, pileBox("xl"))}
         paint={boardScale}
       />
@@ -986,6 +1015,15 @@ const TABLE_TRIP_MS = 620;
 /** Long enough after the last flight has finished for its fade to be over. */
 const SWEEP_GRACE_MS = 200;
 
+/**
+ * When a flight is over, counted from the moment its batch arrived. The figure
+ * the animation is given, read back rather than approximated: the sweep that
+ * takes the element out of the DOM and the pile it hands the card to (#449) are
+ * both timed off it, and a sweep that ran early would take a card out mid-flight.
+ */
+const landsAt = (flight: LiveFlight): number =>
+  flight.delay + (flight.turns ? FLIP_MS : 0) + flight.duration + TABLE_TRIP_MS;
+
 /** A plan with both ends resolved to points on the board. */
 interface LiveFlight extends Omit<FlightPlan, "from" | "to"> {
   from: Point;
@@ -1018,37 +1056,38 @@ interface LiveFlight extends Omit<FlightPlan, "from" | "to"> {
  * **Reduced motion plans nothing**, and the board is correct with no flights at
  * all — every count, the pile and the prompt are read from the state.
  */
-function TableFlights({
-  room,
+function useBoardFlights({
   game,
   log,
   places,
-  scale,
-  paint,
 }: {
-  room: RoomView;
   game: GameView;
   log: LoggedEvent[];
   places: TablePlaces;
-  /** What the piles were fitted at, so a card in the air matches them. */
-  scale: number;
-  /** The board's own scale, for `--paint-scale`: a card back's thread is a screen
-   * measurement and must not grow with the board (#169). */
-  paint: number;
-}) {
+}): { flights: LiveFlight[]; pile: PileHold } {
   const reduced = usePrefersReducedMotion();
   const seen = useRef(0);
   const sequence = useRef(0);
   /** One per batch, so a second batch arriving does not cancel the first one's
    * sweep and leave its cards in the DOM forever. */
   const sweeps = useRef(new Set<ReturnType<typeof setTimeout>>());
+  /** One per card on its way to the pile — the arrival this board has no event
+   * for. See `landsAt`. */
+  const arrivals = useRef(new Set<ReturnType<typeof setTimeout>>());
   const [flights, setFlights] = useState<LiveFlight[]>([]);
+  const [pile, setPile] = useState<PileHold>(SETTLED);
+  /** The face the pile wore before the update being animated, which is the one
+   * it goes on drawing until the card in the air gets there (#449). */
+  const previousTop = useRef<Card | null>(null);
 
   useEffect(() => {
-    const timers = sweeps.current;
+    const sweeping = sweeps.current;
+    const arriving = arrivals.current;
     return () => {
-      for (const timer of timers) clearTimeout(timer);
-      timers.clear();
+      for (const timer of sweeping) clearTimeout(timer);
+      for (const timer of arriving) clearTimeout(timer);
+      sweeping.clear();
+      arriving.clear();
     };
   }, []);
 
@@ -1070,7 +1109,7 @@ function TableFlights({
 
     // Game events only: the log also carries what happens to the table, and a
     // seat leaving puts no card in the air (#256).
-    const { flights: plans } = planFlights(
+    const { flights: plans, emptiesPile } = planFlights(
       recent.toReversed().map((entry) => entry.event).filter(isGameEvent),
       game,
       () => `t${(sequence.current += 1)}`,
@@ -1090,15 +1129,63 @@ function TableFlights({
     if (live.length === 0) return;
 
     setFlights((current) => [...current, ...live]);
-    const last = Math.max(...live.map((flight) => flight.delay + flight.duration));
+
+    /**
+     * The pile lags the state until the card gets there (#449). This board has
+     * no `finish` event to hang that on — the flights are CSS animations and the
+     * elements are swept in a batch — so an arrival is a timer at the same
+     * figure the animation is given.
+     */
+    const toPile = live.filter((flight) => flight.toPile);
+    if (toPile.length > 0) {
+      const before = previousTop.current;
+      setPile((held) => setOff(held, toPile.length, before, emptiesPile));
+      for (const flight of toPile) {
+        const arrival = setTimeout(() => {
+          arrivals.current.delete(arrival);
+          setPile((held) => landed(held, flight.card));
+        }, landsAt(flight));
+        arrivals.current.add(arrival);
+      }
+    }
+
     const ids = new Set(live.map((flight) => flight.id));
     const sweep = setTimeout(() => {
       sweeps.current.delete(sweep);
       setFlights((current) => current.filter((flight) => !ids.has(flight.id)));
-    }, last + FLIP_MS + TABLE_TRIP_MS + SWEEP_GRACE_MS);
+    }, Math.max(...live.map(landsAt)) + SWEEP_GRACE_MS);
     sweeps.current.add(sweep);
   }, [log, reduced]);
 
+  // Read by the effect above on the next batch, so it is written after it — the
+  // ordering `TableMotion` keeps for the same pair of effects and the same
+  // reason.
+  useEffect(() => {
+    previousTop.current = game.topCard;
+  });
+
+  return { flights, pile };
+}
+
+/**
+ * The cards themselves. Everything about *which* card goes where is decided
+ * above; this is the ink, drawn inside the board's transform so a flight
+ * survives the quarter turn and every scale without one of its own.
+ */
+function TableFlights({
+  flights,
+  irl,
+  scale,
+  paint,
+}: {
+  flights: LiveFlight[];
+  irl: boolean;
+  /** What the piles were fitted at, so a card in the air matches them. */
+  scale: number;
+  /** The board's own scale, for `--paint-scale`: a card back's thread is a screen
+   * measurement and must not grow with the board (#169). */
+  paint: number;
+}) {
   return (
     <>
       {flights.map((flight) => (
@@ -1114,7 +1201,13 @@ function TableFlights({
               "--duration": `${flight.duration + TABLE_TRIP_MS}ms`,
             } as CSSProperties
           }
-          className="table-screen-card pointer-events-none absolute z-30"
+          /* A card going to a player carries on past the edge and dissolves out
+             there, because there is nothing on this board for it to land in
+             (#325). A card going to the pile has somewhere to be: it arrives
+             opaque, at rest, over the face the pile is handed at the same
+             instant — so the swap is invisible and the sweep a moment later
+             takes away a card identical to the one underneath it (#449). */
+          className={`${flight.toPile ? "table-screen-land" : "table-screen-card"} pointer-events-none absolute z-30`}
         >
           <div
             style={
@@ -1144,11 +1237,11 @@ function TableFlights({
                   style={{ "--delay": `${flight.delay}ms` } as CSSProperties}
                   className="table-screen-turn-face absolute inset-0 block"
                 >
-                  <PlayingCard card={flight.card} size="xl" mirrored={room.irl} />
+                  <PlayingCard card={flight.card} size="xl" mirrored={irl} />
                 </span>
               </span>
             ) : (
-              <PlayingCard card={flight.card} size="xl" mirrored={room.irl} />
+              <PlayingCard card={flight.card} size="xl" mirrored={irl} />
             )}
           </div>
         </div>

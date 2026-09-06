@@ -851,7 +851,22 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
 
 - **Large print is one scale and one different face, and both are private
   (#323).** A player whose eyesight makes the default unreadable turns it on from
-  the lobby header, the head of the rules screen, or the cog's *Your settings*.
+  the head of the lobby, the head of the rules screen, or the cog's *Your
+  settings*.
+
+  **The two on the way in are drawn out of the flow, in whichever corner of their
+  screen is empty anyway** (#444) — the lobby's left, because the code is centred
+  and the copy control has its right flank (#243); the rules panel's right,
+  because its heading is left-aligned with nothing after it. Each had a line of
+  its own until then, which put an unlabelled glyph in front of the room code on
+  one screen and in front of *How goleta works* on the other, for a control that
+  is pressed once and forgotten. That spends #431's *same side in both*, and it
+  is the trade worth making: a glass hanging over felt at the head of a screen is
+  found by somebody looking for it and stepped past by everybody else. It is also
+  dimmer than the app's ordinary grey for the same reason. Do not give it a row
+  back, and do not let a heading it hovers over lose the padding that reserves
+  its place.
+
   It is presentation — `packages/engine` never learns it exists, it is not on
   `GameOptions` or `HouseRules`, no bot may read it — and, unlike the hints it
   sits beside, **nothing about it goes on the wire**. Hints are shouted and mark

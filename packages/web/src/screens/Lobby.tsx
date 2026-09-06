@@ -463,26 +463,25 @@ export function Lobby({
       answered, and it still never appears in an online room. `checkingOrder` is
       local to the host's device, so nobody else's screen changes at all.
     */
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
+    <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-5">
       {/* The lobby is where somebody is before their first hand, and this is the
-          top of it — above the code rather than down beside **How to play**,
-          which is `mt-auto` and lands under a list of eight seats. #323 says the
-          one thing it must not be is buried.
+          top of it — not down beside **How to play**, which is `mt-auto` and
+          lands under a list of eight seats. #323 says the one thing it must not
+          be is buried.
 
-          **At the left since #431**, which is where the cog is at the table and
-          the corner a thumb reaches on a phone held either way up. It is also
-          the far end of the row from nothing: this line holds one control, so
-          the side it takes is a free choice and the right was the wrong one to
-          have made.
+          **It hangs over the code's left flank rather than above it** (#444). It
+          had a row of its own, so an unlabelled glyph was the first thing at the
+          top of the screen whose room code is the thing to read. `absolute`
+          against the column, so the code is back at the top and this costs
+          nothing: the code is centred and four characters wide, which leaves
+          both flanks empty, and the **right** one is the copy control's (#243) —
+          stacking a second grey glyph over it made them read as a pair of
+          buttons on the code.
 
           It goes with everything else while the seat-order question is up: that
           moment is a single question about a single list, and the screen is
           deliberately nothing else (#316). */}
-      {confirming ? null : (
-        <div className="-mb-2 flex justify-start">
-          <LargePrintButton className="-ml-1.5" />
-        </div>
-      )}
+      {confirming ? null : <LargePrintButton className="absolute left-1 top-2" />}
 
       {confirming ? null : <RoomCode code={room.code} />}
 

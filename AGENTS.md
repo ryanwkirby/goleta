@@ -1377,6 +1377,13 @@ the design box, inside the bands reserved for seat names (#141), and no piece
 gets a scale of its own (#159). Adding anything back into a flow is how the
 overflow that pushed names through the edges returns.
 
+A **control** has one place, which is the row across the top: the cog, the invite
+and the view toggle, all on `TOP_CONTROL`, in the corners `band.corner` reserves
+and no name is drawn in (#438). A new one joins them there rather than being
+pinned to a corner of its own, and it is drawn **inside the board** — anything
+that then opens `fixed` over the screen portals to the body, because the board's
+transform is the containing block for `fixed`.
+
 ### The shared table screen
 
 An optional extra device at `#/r/ABCD/table`, showing the middle of the table.
@@ -1407,6 +1414,39 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   can see who else is in it. It is never what the screen comes up in, it is not
   remembered, and the centre piles stay large in both views. Do not make it the
   default, and do not persist it.
+
+  **The hands view is fitted to the board, and it is the board's own column
+  rather than the names' bands** (#439, #442). It draws no edge names — the strip
+  names everybody itself — so the only things it keeps clear of are the row of
+  controls along the top and the prompt at the foot. The piles keep their 240 and
+  the strip takes the rest, at the largest scale that fits it: `fitStrip` in
+  `lib/fan.ts`, one number for cards, names, counts and chips together, with the
+  wrapper reserving what it paints. That is `ScaledPiles`' bargain and #159's
+  rule, and it is what stops a phone's `sm` cards and `text-sm` names being the
+  thing a table reads from across the room — the gap #320 closed for the edge
+  names and not for these.
+
+  Three things about that fit. **It never goes below 1**: a strip that will not
+  fit still scrolls (#59), because shrinking the cards to fit more of the table
+  in breaks the rule that pays for the scroll. **It is quantised to tenths**, so
+  a hand growing by one card cannot resize the whole table. And **it buys nothing
+  at a crowded table, which is honest rather than broken**: seven seats at their
+  `min-w-32` floor come to 944 of the 960 the board has, so the width binds at 1
+  and the strip is what it always was. What it is for is a table that has thinned
+  out or was small to begin with, which is most of what a shared screen is
+  looking at by the time anybody looks. Making a full table's hands bigger needs
+  seats in a **grid** rather than one row, and that is a different question with
+  its own arithmetic — do not answer it by lowering the floor.
+- **The three controls along the top are one row, one size, one baseline**
+  (#438): the cog, the invite and the view toggle, sharing `TOP_CONTROL` in the
+  corners `nameRung.band.corner` reserves. They used to be drawn in two
+  coordinate systems — the cog pinned to the *frame* in device pixels because its
+  panel is `fixed` and the board's transform would have scaled and turned it,
+  the other two on the board — so they lined up at a board scale of 1 and at no
+  other. The panel portals to `document.body` now, the way `FlightLayer` does.
+  Anything else that opens over this screen has to do the same or stay outside
+  the board. The row spans the width and takes no pointers: the middle of it is
+  over the top edge's names, and those are dragged to reorder the table (#201).
 - **It has exactly two auxiliary actions**, in the sense that matters: two
   things it can do that reach the server. It still joins as a watcher (#16), with
   a `table` bit on the watch message. (Opening the invite is not a third — it is
@@ -1616,7 +1656,14 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   much of. **The prompt is in the bottom band**, sharing it with bottom names
   pushed out to the corners — beside the piles is too narrow to read a Sunny
   ruling in, and under them costs the piles the height that *is* the board's
-  width once it is turned. And **a name's anchor has no size of its own**: sized
+  width once it is turned. It is `bottom-2` and that is not a rounding: a 54px
+  pill at `bottom-8` stood 38 above a 48px band and was drawn across the bottom
+  of the card in play, which is the thing on that board everybody is reading
+  (#442). Two off the floor puts it on the names' own centre line and costs the
+  piles nothing — a reserved lane would have taken about a tenth of the card in
+  play to fix a pill sitting too high. A multi-line ruling still grows up out of
+  the band, and still may: it is the one thing nobody may miss and it lasts seven
+  seconds. And **a name's anchor has no size of its own**: sized
   by its label, a `right`/`bottom` anchor pins the far edge of the label rather
   than the point, which put the right-hand names a third of the way into the
   board.

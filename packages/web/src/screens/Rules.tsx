@@ -250,24 +250,25 @@ export function Rules({
             scroll (#305), so a control next to it would be below the fold on
             exactly the phone whose text is hardest to read.
 
-            On its own line rather than opposite the title, which is where it was
-            first put and where it cost more than it was worth: in large print
-            itself the pair no longer fit across a phone and *How goleta works*
-            broke over two lines. It is also the better reading — the person who
-            wants this control is the person who cannot read the panel, so it
-            comes before the panel rather than beside its heading. Pulled up into
-            the panel's own padding, so the row it takes is the button and
-            nothing more.
+            **Beside the heading and out of the flow** (#444). It had a line of
+            its own above the title, which put an unlabelled glyph in front of
+            the sentence this panel exists to say and spent a row of a panel that
+            already scrolls on a short screen. Drawn `absolute` it spends
+            nothing, and the space right of a left-aligned heading is the one
+            piece of this panel's head that was empty anyway.
 
-            **At the left since #431**, over the heading it precedes rather than
-            across the panel from it, and the same side it is on in the lobby.
-            Two doors onto one setting that sit at opposite ends of their
-            screens are two controls as far as anybody's eye is concerned. */}
-        <div className="-ml-1.5 -mt-3 flex justify-start">
-          <LargePrintButton />
+            That is the place #431 ruled out, on the grounds that a glass *and a
+            label* beside the heading broke *How goleta works* over two lines in
+            large print. Out of the flow it takes no width: `pr-11` reserves
+            exactly what it covers, so at 320px in large print the wrap puts the
+            second line under the glass rather than through it. It scrolls with
+            the heading rather than being pinned to the panel, because pinned it
+            would have the rules' own `›` column sliding beneath it. */}
+        <div className="relative">
+          <LargePrintButton className="absolute -right-2.5 -top-2" />
+          <h2 className="pr-11 text-xl font-semibold text-white">How goleta works</h2>
+          <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
         </div>
-        <h2 className="text-xl font-semibold text-white">How goleta works</h2>
-        <p className="mt-1 text-sm text-white/60">It's Crazy Eights, backwards.</p>
 
         <ol className="mt-4">
           {rules.map((rule) => (

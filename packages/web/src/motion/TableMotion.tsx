@@ -24,13 +24,21 @@ import { createPortal } from "react-dom";
 
 import { isGameEvent, type Card, type GameView } from "@goleta/engine";
 
-import { CardBack, PlayingCard } from "../components/Card.tsx";
+import { CardBack, PlayingCard, TurningCard } from "../components/Card.tsx";
 import { CARD_WIDTH_PX } from "../lib/cardShape.ts";
 import type { LoggedEvent } from "../lib/feed.ts";
 import { resolveAnchor, type AnchorGeometry, type AnchorKey } from "../lib/anchors.ts";
 import { MotionContext, type MotionApi } from "../lib/motion.ts";
 import { faceOf, landed, setOff, SETTLED, type PileHold } from "../lib/pileHold.ts";
-import { FULL_TABLE, planFlights, revealAt, type FlightPlan, type TableScale } from "./plan.ts";
+import {
+  departsAt,
+  FLIP_MS,
+  FULL_TABLE,
+  planFlights,
+  revealAt,
+  type FlightPlan,
+  type TableScale,
+} from "./plan.ts";
 import { usePrefersReducedMotion } from "./reducedMotion.ts";
 import { LAYER } from "../lib/layers.ts";
 
@@ -289,7 +297,10 @@ function FlightCard({
       ],
       {
         duration: flight.duration,
-        delay: flight.delay,
+        // A card off the deck turns over where it starts, so the trip begins on
+        // the far side of that (#451). `departsAt` is the one place the two
+        // flight layers agree on how long "where it starts" lasts.
+        delay: departsAt(flight),
         // `both` parks the card at the start of its path through the delay, which is
         // what makes a staggered deal look dealt rather than blinked.
         fill: "both",
@@ -330,7 +341,10 @@ function FlightCard({
     animation.addEventListener("finish", arrive);
     // A backstop for a tab that stops painting mid-flight: the card must reveal
     // itself even if the animation never finishes.
-    const backstop = window.setTimeout(arrive, flight.delay + flight.duration + SETTLE_GRACE_MS);
+    const backstop = window.setTimeout(
+      arrive,
+      departsAt(flight) + flight.duration + SETTLE_GRACE_MS,
+    );
 
     return () => {
       arrived = true;
@@ -342,10 +356,24 @@ function FlightCard({
 
   return (
     <div ref={element} className="absolute left-0 top-0 will-change-transform">
-      {flight.card ? (
-        <PlayingCard card={flight.card} size={flight.size} mirrored={mirrored} />
-      ) : (
+      {flight.card === null ? (
         <CardBack size={flight.size} />
+      ) : flight.turns ? (
+        /* Off the deck, so it turns over before it goes anywhere — sitting on the
+           deck, at the deck's size, because the parent is parked at its origin
+           transform for the whole of this. The turn is CSS on the children and
+           the trip is WAAPI on the parent, which is what keeps them off each
+           other's `transform`; the frame either clock may be out by is shorter
+           than the sliver of card still turning. */
+        <TurningCard
+          card={flight.card}
+          size={flight.size}
+          mirrored={mirrored}
+          delay={flight.delay}
+          flip={FLIP_MS}
+        />
+      ) : (
+        <PlayingCard card={flight.card} size={flight.size} mirrored={mirrored} />
       )}
     </div>
   );

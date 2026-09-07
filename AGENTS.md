@@ -1586,6 +1586,23 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   throughout. And **reduced motion plans no flights at all**, exactly as the
   phone does, with the board correct without them.
 
+  **The turn is not this screen's any more** (#451). The phone flew a drawn card
+  out of the deck already face up, so the one moment the deck is doing something
+  was the moment nothing about the deck moved. Both layers draw it now, off one
+  decision and one figure: `turns` is on the `FlightPlan` — asked where `card:
+  null` is already asked, and tested there, because it is the same question on
+  both screens and neither flight layer is where it should be answered twice —
+  and `FLIP_MS` is one number for the pair, unlike the trips either side of it.
+  In an IRL room a phone and the screen in the middle draw the same card off the
+  same deck at the same moment, which is #185's argument; the trips are allowed
+  to differ because those are about how far a card has to go.
+
+  What stays each layer's own is only the travel: WAAPI on the parent here on a
+  phone, `table-screen-card` there. `departsAt` is what holds both of them back
+  by the turn, and `TurningCard` in `components/Card.tsx` is the ink — the
+  figures are passed into it rather than imported, because `components` is below
+  `motion` and may not reach up.
+
   **The pile is the one exception to that, and it is not a gate** (#449). Every
   state message arrives as a finished picture, so the card in play changes the
   moment it is played — and this board then spends 840ms flying that same card to

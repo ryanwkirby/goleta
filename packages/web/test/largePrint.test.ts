@@ -10,7 +10,10 @@ import {
   LARGE_CARD_SHAPE,
   RANK_EM,
   cardHeightPx,
+  cardWidthAt,
   cardWidthPx,
+  indexBox,
+  indexInset,
   readableSliver,
   shapeFor,
   type CardSize,
@@ -245,6 +248,64 @@ describe("how much of a card has to show", () => {
         handStep(828, cards, CARD_WIDTH_PX["2xl"], undefined, true),
       );
     }
+  });
+});
+
+/**
+ * Where that ink sits across the card (#457). The floor above says how much of a
+ * card has to show; this says where in what shows the index goes — and the two
+ * meet at exactly that floor, which is what these hold.
+ */
+describe("the index goes in the middle of what is showing", () => {
+  const heights = SIZES.map((size) => CARD_HEIGHT_PX[size] * LARGE_SCALE);
+
+  it.each(SIZES)("centres it across a whole %s card", (size) => {
+    const height = CARD_HEIGHT_PX[size] * LARGE_SCALE;
+    const width = cardWidthAt(height);
+    const inset = indexInset(height, width);
+    // The same room on both sides of it, which is the whole of the ask.
+    expect(inset).toBeCloseTo(width - inset - indexBox(height), 6);
+    // And it is a real move rather than a rounding: a card shows about a third
+    // of itself either side of the ink.
+    expect(inset).toBeGreaterThan(LARGE_CARD_SHAPE.pad * height * 2);
+  });
+
+  /** `readableSliver` is derived from an index drawn at the padding, so a card
+   * cut to that floor has to still be drawn there or the floor stops meaning
+   * anything. It is also what makes the clamp invisible: the inset is flat at the
+   * padding from the floor up to about 0.73 of a card and only moves after
+   * that, so nothing steps. */
+  it.each(heights)("leaves a card cut to its floor exactly where it was (%d)", (height) => {
+    expect(indexInset(height, readableSliver(height, true))).toBe(
+      LARGE_CARD_SHAPE.pad * height,
+    );
+  });
+
+  /** The point of the floor, restated as the thing it protects: from the
+   * narrowest sliver the fans may tighten to, all the way up to a whole card,
+   * every pixel of the index is inside the part of the card you can see. */
+  it.each(heights)("never draws ink under the next card (%d)", (height) => {
+    const width = cardWidthAt(height);
+    for (let showing = readableSliver(height, true); showing <= width; showing++) {
+      expect(indexInset(height, showing) + indexBox(height)).toBeLessThanOrEqual(showing);
+      expect(indexInset(height, showing)).toBeGreaterThanOrEqual(LARGE_CARD_SHAPE.pad * height);
+    }
+  });
+
+  it.each(heights)("never moves left as more of the card shows (%d)", (height) => {
+    let last = 0;
+    for (let showing = 0; showing <= cardWidthAt(height); showing++) {
+      const inset = indexInset(height, showing);
+      expect(inset).toBeGreaterThanOrEqual(last);
+      last = inset;
+    }
+  });
+
+  /** One box for every rank, so a fan of `7`s and `10`s shares a centre line
+   * rather than each card being centred on its own glyphs. */
+  it("is as wide as `10` whatever the rank is", () => {
+    const height = CARD_HEIGHT_PX["2xl"] * LARGE_SCALE;
+    expect(indexBox(height)).toBeCloseTo(LARGE_CARD_SHAPE.text * RANK_EM * height, 6);
   });
 });
 

@@ -219,6 +219,49 @@ export function CardBack({
 }
 
 /**
+ * A card coming off the deck, turning over where it starts (#451). It is what
+ * makes a draw read as a card being dealt out rather than one appearing from
+ * nowhere, and it is **not a leak**: every hand at this table is face up.
+ *
+ * Two children in one box, squashed and unsquashed against each other — a 3D
+ * flip would want `preserve-3d` inside the shared screen's 2D board transform,
+ * and `card-turn-back`/`card-turn-face` in `index.css` say the same thing in two
+ * keyframes. **Whatever is carrying the card owns the travel**, and starts it on
+ * the far side of this, so the two never fight over `transform`: on a phone the
+ * flight layer's Web Animations trip, on the shared screen `table-screen-card`.
+ *
+ * It lives here because both of them draw it, and the figures are passed in for
+ * the same reason — `components` is below `motion`, so it may not reach up for
+ * `FLIP_MS`.
+ */
+export function TurningCard({
+  card,
+  size,
+  mirrored = false,
+  /** When the turn starts, relative to whatever is driving it. */
+  delay,
+  flip,
+}: {
+  card: CardModel;
+  size: CardSize;
+  mirrored?: boolean;
+  delay: number;
+  flip: number;
+}) {
+  const timing = { "--flip": `${flip}ms`, "--delay": `${delay}ms` } as CSSProperties;
+  return (
+    <span className="relative block" style={timing}>
+      <span className="card-turn-back block">
+        <CardBack size={size} />
+      </span>
+      <span className="card-turn-face absolute inset-0 block">
+        <PlayingCard card={card} size={size} mirrored={mirrored} />
+      </span>
+    </span>
+  );
+}
+
+/**
  * A suit, as a mark rather than a word. It used to be the glyph *and* the name
  * inside a 48px circle — 75px of text across, multiplied by whatever the shared
  * screen was scaling the piles by, so about fifty pixels of it lay unbacked

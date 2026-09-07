@@ -24,12 +24,11 @@ import { Piles } from "../components/Piles.tsx";
 import { QrCode, QrGlyph } from "../components/QrCode.tsx";
 import { RoomInvite } from "../components/RoomInvite.tsx";
 import { SettingsCog } from "../components/Settings.tsx";
-import { CardBack, PlayingCard } from "../components/Card.tsx";
+import { CardBack, PlayingCard, TurningCard } from "../components/Card.tsx";
 import { SUIT_GLYPH } from "../lib/cardShape.ts";
 import { Seats } from "../components/Seats.tsx";
 import { TableInstall } from "../components/TableInstall.tsx";
 import { TableRotateNudge } from "../components/TableRotateNudge.tsx";
-import { DECK } from "../lib/anchors.ts";
 import { facingTurn } from "../lib/facing.ts";
 import { namerFor, turnPrompt } from "../lib/format.ts";
 import {
@@ -59,7 +58,7 @@ import { MotionContext, NO_MOTION, type MotionApi } from "../lib/motion.ts";
 import { faceOf, landed, setOff, SETTLED, type PileHold } from "../lib/pileHold.ts";
 import { tablePoint, type TablePlaces } from "../lib/tableFlight.ts";
 import { useWakeLock } from "../lib/wakeLock.ts";
-import { planFlights, TABLE_SCREEN, type FlightPlan } from "../motion/plan.ts";
+import { departsAt, FLIP_MS, planFlights, TABLE_SCREEN, type FlightPlan } from "../motion/plan.ts";
 import { usePrefersReducedMotion } from "../motion/reducedMotion.ts";
 import { joinLink } from "../net/route.ts";
 import type { LoggedEvent, Shout } from "../lib/feed.ts";
@@ -985,10 +984,6 @@ function EdgeNames({
  * hand at whoever just walked up to it. */
 const STALE_MS = 1500;
 
-/** How long a card coming off the deck spends turning over before it travels.
- * In step with `--flip` in `index.css`. */
-const FLIP_MS = 240;
-
 /**
  * Added to every planned duration. The plan's figures are tuned for a phone,
  * where the longest trip is a hand's width; here the same flight crosses a board
@@ -1022,14 +1017,12 @@ const SWEEP_GRACE_MS = 200;
  * both timed off it, and a sweep that ran early would take a card out mid-flight.
  */
 const landsAt = (flight: LiveFlight): number =>
-  flight.delay + (flight.turns ? FLIP_MS : 0) + flight.duration + TABLE_TRIP_MS;
+  departsAt(flight) + flight.duration + TABLE_TRIP_MS;
 
 /** A plan with both ends resolved to points on the board. */
 interface LiveFlight extends Omit<FlightPlan, "from" | "to"> {
   from: Point;
   to: Point;
-  /** Off the deck with a face on it, so it turns over before it goes. */
-  turns: boolean;
 }
 
 /**
@@ -1124,7 +1117,7 @@ function useBoardFlights({
       // is correct without it, which is the same answer the phone gives when a
       // seat is off screen.
       if (!from || !to) continue;
-      live.push({ ...plan, from, to, turns: plan.card !== null && plan.from[0] === DECK });
+      live.push({ ...plan, from, to });
     }
     if (live.length === 0) return;
 
@@ -1197,7 +1190,7 @@ function TableFlights({
               top: flight.from.y,
               "--dx": `${flight.to.x - flight.from.x}px`,
               "--dy": `${flight.to.y - flight.from.y}px`,
-              "--delay": `${flight.delay + (flight.turns ? FLIP_MS : 0)}ms`,
+              "--delay": `${departsAt(flight)}ms`,
               "--duration": `${flight.duration + TABLE_TRIP_MS}ms`,
             } as CSSProperties
           }
@@ -1222,24 +1215,16 @@ function TableFlights({
             {flight.card === null ? (
               <CardBack size="xl" />
             ) : flight.turns ? (
-              /* Off the deck, so it turns over before it goes. Two children in one
-                 box, squashed against each other — the travel is on the parent
-                 and starts once this has finished, so they never fight over
-                 `transform`. */
-              <span className="relative block">
-                <span
-                  style={{ "--delay": `${flight.delay}ms` } as CSSProperties}
-                  className="table-screen-turn-back block"
-                >
-                  <CardBack size="xl" />
-                </span>
-                <span
-                  style={{ "--delay": `${flight.delay}ms` } as CSSProperties}
-                  className="table-screen-turn-face absolute inset-0 block"
-                >
-                  <PlayingCard card={flight.card} size="xl" mirrored={irl} />
-                </span>
-              </span>
+              /* Off the deck, so it turns over before it goes. The travel is
+                 `table-screen-card` on the parent and starts once this has
+                 finished, so the two never fight over `transform`. */
+              <TurningCard
+                card={flight.card}
+                size="xl"
+                mirrored={irl}
+                delay={flight.delay}
+                flip={FLIP_MS}
+              />
             ) : (
               <PlayingCard card={flight.card} size="xl" mirrored={irl} />
             )}

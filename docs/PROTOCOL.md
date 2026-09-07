@@ -109,7 +109,7 @@ in front of it — the alternative is a class hierarchy for one bit.
 | `start` | host | Needs at least 4 seats, at most 8; bots count. Deals, and passes the deal one seat on from last round — or draws for it, if the table has asked for that. |
 | `addBot` / `removeSeat` | host | Between games only. |
 | `moveSeat` | host | Between games only. Moves one seat one place `up` or `down` the table order, which is the turn order — the pair trade chairs. Off either end does nothing rather than refusing. The lobby's drag handle sends a run of these — one per place — rather than a whole order; see below. |
-| `placeSeat` | shared screen, IRL room | Between games only. Puts one seat at `spot`, `[0, 1)` clockwise round the edge of the board (#320). Nobody else moves. A phone is refused: dragging a name round the board is a gesture that only exists on that screen. |
+| `placeSeat` | shared screen, IRL room | Between games only. Puts one seat at `spot`, `[0, 1)` clockwise round the edge of the board from the bottom-right corner (#320, #453). Nobody else moves. A phone is refused: dragging a name round the board is a gesture that only exists on that screen. |
 | `setBotSpeed` | host | Between games only. `human` or `lightning`; carried back to everyone on `RoomView`. |
 | `setHouseRules` | host | Between games only. The three toggles; carried back to everyone on `RoomView`. |
 | `setIrl` | host | **Any time, including mid-game.** "Real life" rather than "remote play"; carried back to everyone on `RoomView`. |
@@ -354,6 +354,15 @@ swaps two neighbours' chairs, a joiner takes a free one, a leaver leaves a gap,
 and `shuffleSeats` permutes the *players* across the chairs that are already
 there — the chairs stay where they are and who sits in them changes, which is
 what the "take your seat" screen is already telling everybody (#199).
+
+**The ring starts at the bottom-right corner**, so the first quarter is the
+bottom edge (#453). It began at the top-left, which is what a screen lying flat
+wants — somebody is sitting at the top edge, reads their own name the right way
+up and has the board turned towards them on their turn — and is wrong for one
+standing upright, cast to a TV or propped on a shelf, where nobody is there at
+all. An unarranged table is spaced evenly in join order, so the seat that opens
+the game was the seat drawn upside down. Half a turn later is the same clockwise
+loop: it moves which seat pays rather than how many do.
 
 **A table nobody has arranged is simply re-spaced as it fills**, evenly round the
 circle in the order people sat down. Without that, a joiner taking the middle of

@@ -1516,6 +1516,33 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   stays open. `moveSeat` stays for the lobby's arrows, and swaps two neighbours'
   chairs.
 
+  **The ring starts at the bottom-right corner, so the first quarter is the
+  bottom edge** (#453). It began at the top-left, which is the right answer for
+  the screen this was designed for: a tablet lying flat, where somebody really is
+  sitting at the top edge, reads their own name the right way up (#141) and has
+  the board turned towards them when they are on the clock (#160). It is the
+  wrong one for a screen standing **upright** — cast to a TV, propped on a shelf —
+  where nobody is sitting at the top edge at all, and an unarranged table is
+  spaced evenly in join order, so the seat that opens the game was the one drawn
+  upside down and the one that turned the whole board over immediately.
+
+  **It is a rotation, so it does not make more of the *names* upright**: one is
+  still on the top edge at four seats and two at eight. What it moves is *which*
+  seat pays, and the first seat — the dealer as often as not, always the one who
+  opens — is the one worth spending it on. The four pieces that turn with
+  `facingTurn` (#160) are the part that gets more than a rotation, because they
+  follow whoever is up rather than sitting on an edge: the deal used to open with
+  the prompt, the deck count, the view toggle and the suit all turned over, and
+  now opens upright. It is deliberately **not gated on `irl`**: `edgeAt` is arithmetic in `lib`, and the flag would have to be
+  threaded through `edgeSeats`, `nameRung`, `nearestSeat`, `spotAt`, `facing` and
+  both flight layers to say something with no effect in an online room, where
+  nobody is sitting at an edge in the first place.
+
+  A spot's number kept its meaning and the edge it names changed, so a table that
+  had dragged its names was arranged half a turn round on the deploy that landed
+  it. No `SNAPSHOT_VERSION` bump: the persisted shape is untouched, and dropping
+  every live room to spare one table a drag is the worse trade.
+
   **A table nobody has arranged is re-spaced as it fills**, evenly round the
   circle in the order people sat down, and only then does a newcomer take the
   middle of the largest gap. That is not tidiness: without it an IRL-only feature

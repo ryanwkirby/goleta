@@ -1199,8 +1199,19 @@ function TableFlights({
              (#325). A card going to the pile has somewhere to be: it arrives
              opaque, at rest, over the face the pile is handed at the same
              instant — so the swap is invisible and the sweep a moment later
-             takes away a card identical to the one underneath it (#449). */
-          className={`${flight.toPile ? "table-screen-land" : "table-screen-card"} pointer-events-none absolute z-30`}
+             takes away a card identical to the one underneath it (#449).
+
+             Either trip is held back by `departsAt`, so a card that turns over
+             at the deck spends that hold behind the trip's entry frame — which
+             is `opacity: 0` unless it says otherwise, and the turn was going on
+             behind it (#455). `table-screen-card-turns` is that entry frame
+             moved onto the deck: opaque, at the deck's own size, which is a card
+             back over a card back. */
+          className={[
+            flight.toPile ? "table-screen-land" : "table-screen-card",
+            flight.turns ? "table-screen-card-turns" : "",
+            "pointer-events-none absolute z-30",
+          ].join(" ")}
         >
           <div
             style={

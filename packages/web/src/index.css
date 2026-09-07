@@ -423,9 +423,13 @@
    backwards. Reduced motion now plans no flights at all, exactly as the phone
    does, and the board is correct with none of them. */
 @keyframes table-screen-card {
+  /* The entry frame, and the one a card that turns over at the deck overrides.
+     `--enter` and `--enter-scale` are 0 and 0.82 for a card that arrives out of
+     nothing, and 1 and 1 for one that has been sitting on the deck turning over
+     (#455) — see `.table-screen-card` below. */
   0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.82);
+    opacity: var(--enter, 0);
+    transform: translate(-50%, -50%) scale(var(--enter-scale, 0.82));
   }
   /* Slightly *bigger* than the card it is leaving, which is what separates it
      from one (#325). It leaves from underneath a 300px pile card at the same
@@ -460,6 +464,30 @@
     var(--delay, 0ms) both;
 }
 
+/* A card that turns over at the deck first, which is every flight `plan.ts`
+   marks `turns` (#455). The delay on the trip is `departsAt` — the wait *plus*
+   `FLIP_MS` — and a `both` fill holds the entry frame for the whole of it, so
+   the turn was running behind `opacity: 0` and the table saw a face appear over
+   the deck already the right way up. That is the thing #451 was filed to fix,
+   drawn on this screen and invisible on it.
+
+   So a turning card **enters at the deck** instead of fading in as it leaves:
+   opaque, at the deck's own size, which is what it is sitting on. Nothing has to
+   reveal it, because what is parked is a card back drawn over a card back — the
+   deck draws a `CardBack` whatever its count, which makes it the one origin
+   where a wait costs nothing to paint. That is the exemption #409 already makes
+   for a deal's cards waiting on the deck, and it is why this needs no equivalent
+   of the phone's `revealAt`.
+
+   The `0.82 → 1.04` lift is untouched and stays the trip's own (#325): it now
+   begins where the card actually leaves rather than under a card still being
+   turned over, which is also how the phone draws it — a parked card is its
+   origin's size and only grows on the way. */
+.table-screen-card-turns {
+  --enter: 1;
+  --enter-scale: 1;
+}
+
 /* A card that has somewhere to land, which on this board is the pile and nothing
    else (#449). Same trip and same easing; what it does not do is fade, because
    the pile is handed the card it is carrying at the instant this finishes and a
@@ -467,9 +495,11 @@
    to fix. It comes to rest at the pile's own size rather than the 0.96 of a card
    still going somewhere. */
 @keyframes table-screen-land {
+  /* Same entry frame, and the same reason: a turned-up card comes off the deck
+     and lands on the pile, so it turns over too (#455). */
   0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.82);
+    opacity: var(--enter, 0);
+    transform: translate(-50%, -50%) scale(var(--enter-scale, 0.82));
   }
   10% {
     opacity: 1;

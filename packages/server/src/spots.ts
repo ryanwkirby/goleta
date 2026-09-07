@@ -1,6 +1,6 @@
 /**
  * Where a seat is sitting, as a fraction `[0, 1)` clockwise round the edge of
- * the shared screen's board (#320).
+ * the shared screen's board, from the bottom-right corner (#320, #453).
  *
  * `edgeSeats(count)` used to decide the arrangement outright — six seats were
  * always two along the top, one right, two along the bottom, one left, at fixed
@@ -63,9 +63,10 @@ export const evenlySpaced = (spots: readonly number[]): boolean => {
  * largest gap, so somebody sitting down takes the free chair rather than piling
  * up wherever the last person landed.
  *
- * The gaps are circular, so an empty stretch across the top-left corner counts
- * like any other. An empty table starts at 0, which is the middle of the top
- * edge's own quarter.
+ * The gaps are circular, so an empty stretch across the corner the ring starts
+ * at counts like any other. An empty table starts at 0, which is the bottom edge
+ * — where `edgeAt` begins, and the one edge a screen standing upright rather than
+ * lying flat is read from (#453).
  */
 export const spotForNewSeat = (taken: readonly number[]): number => {
   const spots = taken.map(wrapSpot).toSorted((a, b) => a - b);

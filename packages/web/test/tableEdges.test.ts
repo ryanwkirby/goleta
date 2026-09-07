@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { TABLE_DESIGN } from "../src/lib/fitScale.ts";
 import {
+  EDGES,
   edgeAt,
   edgeSeats,
   nameRung,
@@ -45,20 +46,21 @@ const span = (along: number, edge: Edge, count: number): [number, number] => {
 const overlaps = ([a, b]: [number, number], [c, d]: [number, number]): boolean => a < d && c < b;
 
 /** How far round the edge of the design a seat sits, measured clockwise from the
- * top-left corner. Unrolling the perimeter into one number is what makes the
- * property a comparison rather than a table of expected values. */
+ * bottom-right corner — where the ring starts (#453). Unrolling the perimeter
+ * into one number is what makes the property a comparison rather than a table of
+ * expected values. */
 const { width: W, height: H } = TABLE_DESIGN;
 const perimeter = (seat: EdgeSeat): number => {
   const along = seat.along / 100;
   switch (seat.edge) {
-    case "top":
-      return along * W;
-    case "right":
-      return W + along * H;
     case "bottom":
-      return W + H + (1 - along) * W;
+      return (1 - along) * W;
     case "left":
-      return 2 * W + H + (1 - along) * H;
+      return W + (1 - along) * H;
+    case "top":
+      return W + H + along * W;
+    case "right":
+      return 2 * W + H + along * H;
   }
 };
 
@@ -76,16 +78,17 @@ describe("naming the seats round a shared table screen", () => {
   it("walks the seats round the table in turn order", () => {
     // Seat order is turn order, so play sweeps round the board rather than hopping
     // across it — which is what makes a drawn card fly towards the person who drew it.
-    expect(edgeSeats(sitting(4)).map((seat) => seat.edge)).toEqual(["top", "right", "bottom", "left"]);
+    // Starting at the bottom, so the first seat is the one drawn upright (#453).
+    expect(edgeSeats(sitting(4)).map((seat) => seat.edge)).toEqual(["bottom", "left", "top", "right"]);
     expect(edgeSeats(sitting(8)).map((seat) => seat.edge)).toEqual([
-      "top",
-      "top",
-      "right",
-      "right",
       "bottom",
       "bottom",
       "left",
       "left",
+      "top",
+      "top",
+      "right",
+      "right",
     ]);
   });
 
@@ -125,19 +128,19 @@ describe("naming the seats round a shared table screen", () => {
 
   it("places a lone name in the middle of the span it has", () => {
     // Three of the edges have one span and a lone name centres in it. The bottom
-    // has two, either side of the prompt, and the walk reaches it from the right —
-    // so a table of four puts its bottom name in the right-hand flank rather than
-    // in the middle of the prompt.
+    // has two, either side of the prompt, and the ring starts at the bottom-right
+    // corner — so a table of four puts its first name in the right-hand flank
+    // rather than in the middle of the prompt.
     const four = edgeSeats(sitting(4));
-    expect(four.map((seat) => seat.edge)).toEqual(["top", "right", "bottom", "left"]);
+    expect(four.map((seat) => seat.edge)).toEqual(["bottom", "left", "top", "right"]);
+    expect(four[0]?.along).toBeGreaterThan(60);
     // The top's span is symmetric, so its lone name lands on the middle of the
     // board. The sides' is not — the bottom band is deeper than the top one,
     // because it shares with the prompt — so the middle of the span is a little
     // above the middle of the edge, which is where the name belongs.
-    expect(four[0]?.along).toBeCloseTo(50, 6);
+    expect(four[2]?.along).toBeCloseTo(50, 6);
     expect(four[1]?.along).toBeGreaterThan(45);
     expect(four[1]?.along).toBeLessThan(50);
-    expect(four[2]?.along).toBeGreaterThan(60);
     expect(four[3]?.along).toBeCloseTo(four[1]?.along ?? 0, 6);
   });
 
@@ -240,7 +243,7 @@ describe("naming the seats round a shared table screen", () => {
 
   it("steps down for a table that has crowded itself onto one side", () => {
     // The half the seat count could never say (#320): six people, four of them
-    // down the right-hand side. Two big labels do not fit there however few are
+    // down the left-hand side. Two big labels do not fit there however few are
     // at the table, so the rung is the crowded one and the extra names spill
     // round the corner rather than piling up.
     const bunched = [0, 0.26, 0.3, 0.34, 0.38, 0.6];
@@ -260,7 +263,7 @@ describe("naming the seats round a shared table screen", () => {
     const stacked = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08];
     const placed = edgeSeats(stacked);
     expect(placed).toHaveLength(8);
-    const order = placed.map((seat) => ["top", "right", "bottom", "left"].indexOf(seat.edge));
+    const order = placed.map((seat) => EDGES.indexOf(seat.edge));
     for (const [index, at] of order.entries()) {
       const before = order[index - 1];
       if (before !== undefined) expect(at).toBeGreaterThanOrEqual(before);
@@ -322,15 +325,16 @@ describe("naming the seats round a shared table screen", () => {
     // A lobby is a room before it is a game, and the board draws the names it has.
     expect(edgeSeats(sitting(0))).toEqual([]);
     expect(edgeSeats(sitting(1))).toEqual([
-      { edge: "top", along: 50, across: nameRung(sitting(1)).across.top },
+      { edge: "bottom", along: 84, across: nameRung(sitting(1)).across.bottom },
     ]);
-    // The ring starts at the top-left corner, so the first quarter is the top edge.
-    expect(edgeAt(0)).toBe("top");
-    expect(edgeAt(0.24)).toBe("top");
-    expect(edgeAt(0.25)).toBe("right");
-    expect(edgeAt(0.5)).toBe("bottom");
-    expect(edgeAt(0.75)).toBe("left");
-    expect(edgeAt(0.999)).toBe("left");
+    // The ring starts at the bottom-right corner, so the first quarter is the
+    // bottom edge and the seat that opens the game is the one read upright (#453).
+    expect(edgeAt(0)).toBe("bottom");
+    expect(edgeAt(0.24)).toBe("bottom");
+    expect(edgeAt(0.25)).toBe("left");
+    expect(edgeAt(0.5)).toBe("top");
+    expect(edgeAt(0.75)).toBe("right");
+    expect(edgeAt(0.999)).toBe("right");
   });
 });
 
@@ -343,7 +347,7 @@ const nearest = (point: { x: number; y: number }, count: number): number =>
  */
 describe("the seat a point on the board is nearest", () => {
   it("answers with the seat sitting there", () => {
-    // Four seats walk clockwise from the top, one to an edge.
+    // Four seats walk clockwise from the bottom, one to an edge.
     const spots = edgeSeats(sitting(4));
     for (const [index, spot] of spots.entries()) {
       expect(nearest(seatPoint(spot, TABLE_DESIGN), 4)).toBe(index);

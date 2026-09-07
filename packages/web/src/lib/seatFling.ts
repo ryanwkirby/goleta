@@ -45,7 +45,7 @@ import {
 import type { ClientMessage } from "@goleta/engine";
 
 import { TABLE_DESIGN, designPoint, type Box, type Point } from "./fitScale.ts";
-import { edgeSeats, seatPoint, spotsOf } from "./tableEdges.ts";
+import { EDGES, edgeSeats, seatPoint, spotsOf } from "./tableEdges.ts";
 
 /**
  * How far a finger has to travel before this is a drag rather than a tap. In
@@ -103,8 +103,20 @@ export const restingAt = (
 };
 
 /**
+ * How far round the ring straight up from the middle of the board is — the
+ * middle of the top edge's own quarter, wherever `EDGES` starts.
+ *
+ * **Read off `EDGES` rather than written down.** It was the literal `0.125` that
+ * a ring starting at the top-left corner makes it, which is a second copy of
+ * where the ring starts kept in a different file from the first — and #453 moved
+ * the first one.
+ */
+const UP = (EDGES.indexOf("top") + 0.5) / EDGES.length;
+
+/**
  * Where a point on the board is, as a spot: how far clockwise round the
- * perimeter, `[0, 1)` from the top-left corner (#320).
+ * perimeter, `[0, 1)` from the bottom-right corner, which is where the ring
+ * starts (#320, #453).
  *
  * The **direction** is what matters rather than the distance, because a drop
  * lands somewhere over the felt rather than exactly on an edge. So the point is
@@ -121,11 +133,10 @@ export const spotAt = (point: Point, design: Box): number => {
   const dx = (point.x - design.width / 2) / (design.width / 2);
   const dy = (point.y - design.height / 2) / (design.height / 2);
   if (dx === 0 && dy === 0) return 0;
-  // `atan2(dx, -dy)` is clockwise from straight up. The ring starts at the
-  // **top-left corner**, though — `edgeAt` gives the top edge the first quarter —
-  // so straight up is an eighth of the way round, and that is the offset.
+  // `atan2(dx, -dy)` is clockwise from straight up, and `UP` is where on the ring
+  // that lands.
   const angle = Math.atan2(dx, -dy);
-  return (angle / (2 * Math.PI) + 0.125 + 1) % 1;
+  return (angle / (2 * Math.PI) + UP + 1) % 1;
 };
 
 /**

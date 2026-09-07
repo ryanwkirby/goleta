@@ -18,11 +18,33 @@ import { TABLE_DESIGN, type Box, type Point } from "./fitScale.ts";
 
 export type Edge = "top" | "right" | "bottom" | "left";
 
-export const EDGES: Edge[] = ["top", "right", "bottom", "left"];
+/**
+ * The ring, in the order `spot` walks it: a quarter each, clockwise, **starting
+ * at the bottom-right corner** (#453).
+ *
+ * It started at the top-left until then, which is what a screen lying flat wants:
+ * somebody really is sitting at the top edge, reads their own name the right way
+ * up (#141) and has the board turned towards them when they are on the clock
+ * (#160). A screen that is *upright* — cast to a TV, propped on a shelf — has
+ * nobody there at all, and an unarranged table is spaced evenly in join order, so
+ * the **first** seat was the one drawn 180° out and the one that turned the whole
+ * board over the moment the game started.
+ *
+ * Starting half a turn later is the same loop entered later: four seats are
+ * `bottom, left, top, right` rather than `top, right, bottom, left`. It does not
+ * make more of the board upright — it is a rotation, and one name is still on the
+ * top edge — it decides *which* seat pays, and the first seat is the one worth
+ * spending it on.
+ *
+ * Ring order, not a list of the four edges: `assignEdges` walks it forwards and
+ * `spotAt` measures from its start, so both would break if it were sorted for
+ * tidiness.
+ */
+export const EDGES: Edge[] = ["bottom", "left", "top", "right"];
 
 /**
  * Which edge a seat sitting at `spot` belongs to — a quarter of the ring each,
- * clockwise from the top-left (#320).
+ * clockwise from the bottom-right (#320, #453).
  *
  * It used to take an index and a count, which is the same thing for a table laid
  * out by formula and nothing like it for one that has arranged itself round a
@@ -31,7 +53,7 @@ export const EDGES: Edge[] = ["top", "right", "bottom", "left"];
  */
 export const edgeAt = (spot: number): Edge => {
   const at = spot - Math.floor(spot);
-  return EDGES[Math.min(3, Math.floor(at * 4))] ?? "top";
+  return EDGES[Math.min(3, Math.floor(at * 4))] ?? "bottom";
 };
 
 export const TURN_FOR: Record<Edge, number> = { bottom: 0, left: 90, top: 180, right: -90 };
@@ -147,7 +169,8 @@ const spansOf = (edge: Edge, rung: NameRung, design: Box): [number, number][] =>
     case "right":
       return [[band.top + PAD, design.height - band.bottom - PAD]];
     case "bottom":
-      // Right-hand flank first: the walk reaches the bottom edge from the right.
+      // Right-hand flank first: the ring starts at the bottom-right corner, so the
+      // walk crosses this edge from the right.
       return [
         [(design.width + prompt) / 2 + PAD, design.width - PAD],
         [PAD, (design.width - prompt) / 2 - PAD],
@@ -167,8 +190,8 @@ const centresIn = ([from, to]: [number, number], n: number, label: number): numb
 
 /**
  * Where the names on one edge sit, **in the order the table plays**. Clockwise
- * from the top-left, which means top and right run with `along` and bottom and
- * left run against it — in raw `along` order seats 3 and 4 sat the wrong way
+ * from the bottom-right, which means top and right run with `along` and bottom
+ * and left run against it — in raw `along` order seats 3 and 4 sat the wrong way
  * round on a table of six, and since #164 that threw a drawn card to the wrong
  * corner too (#186). Generated in play order here rather than reversed by the
  * caller afterwards.
@@ -239,7 +262,7 @@ const assignEdges = (
   for (const spot of spots) {
     const wanted = EDGES.indexOf(edgeAt(spot));
     at = Math.max(at, wanted);
-    while (at < 4 && (used[at] ?? 0) >= roomFor(EDGES[at] ?? "top", rung, design)) at += 1;
+    while (at < 4 && (used[at] ?? 0) >= roomFor(EDGES[at] ?? "bottom", rung, design)) at += 1;
     const edge = EDGES[at];
     if (!edge) return null;
     if (!spill && at !== wanted) return null;

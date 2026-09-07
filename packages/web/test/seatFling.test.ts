@@ -97,21 +97,23 @@ describe("a name being dragged round the shared screen", () => {
    */
   it("reads a drop as the direction it is in from the middle of the board", () => {
     const middle = { x: D.width / 2, y: D.height / 2 };
-    // Straight up is the middle of the top edge, which is an eighth of the way
-    // round a ring that starts at the top-left corner.
-    expect(spotAt({ x: middle.x, y: 0 }, D)).toBeCloseTo(0.125, 6);
-    expect(spotAt({ x: D.width, y: middle.y }, D)).toBeCloseTo(0.375, 6);
-    expect(spotAt({ x: middle.x, y: D.height }, D)).toBeCloseTo(0.625, 6);
-    expect(spotAt({ x: 0, y: middle.y }, D)).toBeCloseTo(0.875, 6);
+    // The ring starts at the bottom-right corner (#453), so straight *down* is
+    // the middle of the first quarter and an eighth of the way round.
+    expect(spotAt({ x: middle.x, y: D.height }, D)).toBeCloseTo(0.125, 6);
+    expect(spotAt({ x: 0, y: middle.y }, D)).toBeCloseTo(0.375, 6);
+    expect(spotAt({ x: middle.x, y: 0 }, D)).toBeCloseTo(0.625, 6);
+    expect(spotAt({ x: D.width, y: middle.y }, D)).toBeCloseTo(0.875, 6);
   });
 
   it("puts the four corners on the four boundaries between edges", () => {
     // Squared to the design box first, or a board wider than it is tall puts its
-    // corners in the wrong quarters.
-    expect(spotAt({ x: 0, y: 0 }, D)).toBeCloseTo(0, 6);
-    expect(spotAt({ x: D.width, y: 0 }, D)).toBeCloseTo(0.25, 6);
-    expect(spotAt({ x: D.width, y: D.height }, D)).toBeCloseTo(0.5, 6);
-    expect(spotAt({ x: 0, y: D.height }, D)).toBeCloseTo(0.75, 6);
+    // corners in the wrong quarters. The corner the ring starts at is the seam,
+    // so it reads as either end of `[0, 1)` — it is one place, not two.
+    const seam = spotAt({ x: D.width, y: D.height }, D);
+    expect(Math.min(seam, 1 - seam)).toBeCloseTo(0, 6);
+    expect(spotAt({ x: 0, y: D.height }, D)).toBeCloseTo(0.25, 6);
+    expect(spotAt({ x: 0, y: 0 }, D)).toBeCloseTo(0.5, 6);
+    expect(spotAt({ x: D.width, y: 0 }, D)).toBeCloseTo(0.75, 6);
   });
 
   it("answers inside the ring wherever the finger went", () => {

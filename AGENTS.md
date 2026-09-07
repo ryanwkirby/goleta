@@ -1630,6 +1630,26 @@ The rows are also what closes the invite dialog: it dismisses on the count going
   figures are passed into it rather than imported, because `components` is below
   `motion` and may not reach up.
 
+  **And each layer has to make room for the turn in its own way, which this
+  screen did not** (#455). `departsAt` holds the trip back by `FLIP_MS`, and here
+  that hold is an `animation-delay` under a `both` fill — so the trip's entry
+  frame, `opacity: 0`, was held over the whole of the turn and the two children
+  squashed and unsquashed behind it. The screen the turn was written for was the
+  one screen never showing it, from the day it landed until #455; the phone was
+  fine because `revealAt` fades a card in across the last beat *before* its
+  delay ends, which is where the turn starts.
+
+  So a card that turns over **enters at the deck** rather than fading in as it
+  leaves: `table-screen-card-turns` overrides that entry frame to opaque and to
+  the deck's own size. It needs no reveal to go with it, because what is parked
+  and turning is a card back drawn over a card back — the deck draws a `CardBack`
+  whatever its count, which makes it the one origin where #409's parking is free,
+  and that is the exemption #409 already makes for a deal's cards waiting on the
+  deck. What the table sees is the top of the deck turning face up, which is what
+  it is. The `0.82 → 1.04` lift stays the trip's own (#325) and now begins where
+  the card actually leaves, which is also how the phone draws it: a parked card
+  is its origin's size and only grows on the way.
+
   **The pile is the one exception to that, and it is not a gate** (#449). Every
   state message arrives as a finished picture, so the card in play changes the
   moment it is played — and this board then spends 840ms flying that same card to

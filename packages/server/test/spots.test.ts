@@ -39,7 +39,7 @@ describe("where a seat sits round the board", () => {
 
   it("counts the gap that wraps past the corner like any other", () => {
     // Three seats bunched at the start: the empty three-quarters is the gap, and
-    // it runs across the top-left corner rather than stopping at it.
+    // it runs across the corner the ring starts at rather than stopping there.
     const bunched = [0, 0.05, 0.1];
     const next = spotForNewSeat(bunched);
     expect(next).toBeGreaterThan(0.5);

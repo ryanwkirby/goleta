@@ -92,6 +92,17 @@ export const RANK_EM = 1.107;
 const MARGIN = 2;
 
 /**
+ * The box large print's index is drawn in: as wide as `10` at this size,
+ * whatever the rank actually is.
+ *
+ * One box for every rank is what keeps a fan reading as a row. Sized to its own
+ * glyphs a `7` would be centred a few pixels off a `10` beside it, and a line of
+ * indices that do not share a centre reads as cards that are not quite level.
+ */
+export const indexBox = (cardHeight: number): number =>
+  LARGE_CARD_SHAPE.text * RANK_EM * cardHeight;
+
+/**
  * How much of a card's left edge has to show for its rank to still be read off
  * it, which is the floor every fan in the app tightens to.
  *
@@ -101,14 +112,39 @@ const MARGIN = 2;
  * because this face *is* these fractions at every rung: large print always draws
  * a card from a height rather than from a `text-…` class.
  *
- * It is why the face keeps its index at the **left** (#323 proposed centring it,
- * and `Card.tsx` says what happened). A sliver shows the left edge of a card, so
- * ink anywhere else is ink a fanned hand hides.
+ * It is the padding, the index and a margin, written as those three things
+ * because that is what it means: a card cut to this shows its index with the
+ * card's own padding in front of it and a couple of pixels behind. `indexInset`
+ * is floored at that padding for the same reason — the two have to agree about
+ * where this ink starts, or the floor stops describing anything.
  */
 export const readableSliver = (cardHeight: number, large: boolean): number =>
   large
-    ? Math.ceil(cardHeight * (LARGE_CARD_SHAPE.pad + LARGE_CARD_SHAPE.text * RANK_EM) + MARGIN)
+    ? Math.ceil(LARGE_CARD_SHAPE.pad * cardHeight + indexBox(cardHeight) + MARGIN)
     : 0;
+
+/**
+ * Where that box sits across the card, given how much of the card's left edge is
+ * actually showing (#457).
+ *
+ * **This and #323's rule are the same rule asked at two widths.** #323 pinned
+ * the index to the left edge and argued it well: cards fan, what a fanned card
+ * leaves showing is a sliver of its left edge, and a centred rank is drawn in the
+ * half the next card is covering — blank white at the strip's floor. That is true
+ * of a card in the middle of a fan and of nothing else. The card in play, the
+ * turned-up card, the last card of every row and a hand that is not overlapping
+ * at all are covered by nothing, and were drawn with a rank in the left half and
+ * a card's worth of white beside it. So the index goes in the middle of **what
+ * shows**, which on a covered card is where #323 put it and on every other card
+ * is the middle of the card.
+ *
+ * **Floored at the padding**, which is what keeps that agreement with
+ * `readableSliver` above. The clamp binds a little over it — at about 0.73 of a
+ * card — so between the floor and there the inset is flat and past there it
+ * grows, and nothing steps.
+ */
+export const indexInset = (cardHeight: number, showing: number): number =>
+  Math.max(LARGE_CARD_SHAPE.pad * cardHeight, (showing - indexBox(cardHeight)) / 2);
 
 export const cardWidthAt = (height: number): number => Math.round(height * CARD_SHAPE.width);
 

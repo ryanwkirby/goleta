@@ -350,7 +350,7 @@ export function Hand({
         if (event.target === event.currentTarget) setSelected(null);
       }}
     >
-      {cards.map((card) => {
+      {cards.map((card, at) => {
         const playable = legal.has(card.id);
         return (
           <PlayingCard
@@ -358,6 +358,11 @@ export function Hand({
             card={card}
             size={size}
             height={height}
+            // The fan's own `--fan`, for the card it is drawn over: large print
+            // puts its index in the middle of whatever is left showing (#457).
+            // The last card is covered by nothing, and neither is any of them
+            // while the hand is loose enough not to overlap.
+            covered={at < cards.length - 1 ? Math.max(0, cardWidth - step) : 0}
             mirrored={irl}
             anchor={refFor(card.id)}
             arriving={isArriving(card.id)}

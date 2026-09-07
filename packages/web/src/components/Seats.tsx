@@ -93,6 +93,7 @@ function Seat({
   game,
   shouting,
   rows,
+  covered,
   outWidth,
 }: {
   player: PlayerView;
@@ -101,6 +102,10 @@ function Seat({
   shouting: ShoutKind | undefined;
   /** How many rows this hand takes at the strip's shared sliver. */
   rows: number;
+  /** How much of each card the next one covers — the strip's own `--fan`, and
+   * where large print's index goes across it (#457). Table-wide, like the sliver
+   * it comes from; the last card of a row is covered by nothing. */
+  covered: number;
   /** The one width every out seat is drawn at (#334). */
   outWidth: number;
 }) {
@@ -174,11 +179,14 @@ function Seat({
           // keep their full box, shifted rather than shrunk: `resolveAnchor` reads
           // these rects to place a flight.
           <div key={row[0].id} className="flex [&>*+*]:ml-[var(--fan)]">
-            {row.map((card) => (
+            {row.map((card, at) => (
               <PlayingCard
                 key={card.id}
                 card={card}
                 size="sm"
+                // Every card but the last of the row, which the strip's fan
+                // leaves showing whole (#457).
+                covered={at < row.length - 1 ? covered : 0}
                 mirrored={room.irl}
                 anchor={anchor(cardAnchor(card.id))}
                 arriving={isArriving(card.id)}
@@ -339,6 +347,11 @@ export function Seats({
     list.scrollTo({ left, behavior: gliding ? "smooth" : "auto" });
   }, [waitingOn, you, nextUp, reduced, settled]);
 
+  /** The overlap `--fan` draws, as a positive number, for the face that has to be
+   * placed inside it (#457). Negative — a sliver looser than a card is wide — is
+   * a fan with nothing covering anything. */
+  const covered = Math.max(0, cardWidthPx("sm", scale) - fan.sliver);
+
   const list = (
     <ul
       ref={strip}
@@ -383,6 +396,7 @@ export function Seats({
           game={game}
           shouting={shouting.get(player.id)}
           rows={fan.rows[seat] ?? 1}
+          covered={covered}
           outWidth={outWidth}
         />
       ))}

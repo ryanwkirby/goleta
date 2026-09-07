@@ -7,6 +7,8 @@ import type { PileSuit } from "../lib/pile.ts";
 import {
   CARD_HEIGHT_PX,
   cardWidthAt,
+  indexBox,
+  indexInset,
   isRed,
   shapeFor,
   SUIT_GLYPH,
@@ -45,6 +47,18 @@ interface CardProps {
   /** Drawn at this height in pixels rather than at `size`. The landscape hand sets
    * it; nothing else should. */
   height?: number;
+  /**
+   * How much of this card's right-hand side the next card covers, in pixels
+   * (#457). It is the fan's own negative margin and nothing else, which is what
+   * makes it exact: whatever the ladder says a card is wide, the overlap *is*
+   * the margin. Zero — the default — is a card showing whole, which is every
+   * card outside a fan and the last one of every fanned row.
+   *
+   * **Read by large print's face alone.** The ordinary face draws a corner index
+   * and a ghost pip, which is a convention rather than a placement, and it does
+   * not move.
+   */
+  covered?: number;
   /** In-person cards need to be readable from both sides of the table. */
   mirrored?: boolean;
   /** Dimmed but still legible, and still opaque: you can see it, you just can't
@@ -64,6 +78,7 @@ export function PlayingCard({
   card,
   size = "md",
   height,
+  covered = 0,
   mirrored = false,
   dimmed = false,
   selected = false,
@@ -96,15 +111,38 @@ export function PlayingCard({
    * pixel.
    */
   const drawnHeight = height ?? (large ? CARD_HEIGHT_PX[size] * scale : undefined);
-  const sized: CSSProperties | undefined = drawnHeight
-    ? {
-        height: drawnHeight,
-        width: cardWidthAt(drawnHeight),
-        fontSize: drawnHeight * shape.text,
-        padding: drawnHeight * shape.pad,
-        borderRadius: drawnHeight * shape.radius,
-      }
-    : undefined;
+  const drawnWidth = drawnHeight === undefined ? undefined : cardWidthAt(drawnHeight);
+  const sized: CSSProperties | undefined =
+    drawnHeight !== undefined && drawnWidth !== undefined
+      ? {
+          height: drawnHeight,
+          width: drawnWidth,
+          fontSize: drawnHeight * shape.text,
+          padding: drawnHeight * shape.pad,
+          borderRadius: drawnHeight * shape.radius,
+        }
+      : undefined;
+
+  /**
+   * Large print's one index, placed across whatever of this card is showing
+   * (#457) — the whole of it unless the next card in a fan is over the top of
+   * it. `lib/cardShape.ts` has the rule and why it is the same rule #323 wrote.
+   *
+   * A margin rather than an offset, so the box stays in the flex column that
+   * centres it down the card, and it is measured off the padding that column
+   * already has: `indexInset` is floored at exactly that, so this is never
+   * negative. Large print always draws from a height, so the two below are
+   * always numbers here.
+   */
+  const index: CSSProperties | undefined =
+    large && drawnHeight !== undefined && drawnWidth !== undefined
+      ? {
+          width: indexBox(drawnHeight),
+          marginLeft:
+            indexInset(drawnHeight, drawnWidth - Math.max(0, covered)) -
+            drawnHeight * shape.pad,
+        }
+      : undefined;
 
   return (
     <Tag
@@ -120,8 +158,8 @@ export function PlayingCard({
         // Belt to the layout's braces: a rank like 10 at a large text size must never
         // spill past the card's edge.
         "relative flex shrink-0 flex-col items-start overflow-hidden bg-white font-semibold leading-none shadow-lg",
-        // Large print's one index sits in the middle of the card's height, at the
-        // left edge like every other face here. See below for why not centred.
+        // Large print's one index sits in the middle of the card's height. Across
+        // it, it sits in the middle of whatever is showing — see below.
         large ? "justify-center" : "",
         "ring-1 ring-black/10 transition-transform duration-150",
         // Dimmed, never translucent (#331). The hand fans with a step well under a
@@ -145,20 +183,28 @@ export function PlayingCard({
            first one, and a single rank nearly twice the size is more legible
            across a table upside down than two small ones are the right way up.
 
-           **At the left edge, not centred**, which is where #323's proposal was
-           wrong and the app's oldest layout rule is right. Cards fan: the seat
-           strip overlaps them to fit a table on a phone (#59) and your own hand
-           closes up before it scrolls (#117), and what a fanned card leaves
-           showing is a sliver of its **left edge**. A centred rank is drawn in
-           the half of the card the next card is covering, so at the strip's floor
-           it was blank white — measured on a four-seat table, which is the widest
-           the strip ever is. Vertically it does sit in the middle: nothing else
-           is competing for the height, and it reads as placed rather than as an
-           index that lost its card.
+           **In the middle of what is showing** (#457), which is the middle of the
+           card unless something is over the top of it. #323 pinned this to the
+           left edge and was right about the case it looked at: cards fan — the
+           seat strip overlaps them to fit a table on a phone (#59), your own hand
+           closes up before it scrolls (#117) — and what a fanned card leaves
+           showing is a sliver of its **left edge**, so a centred rank is drawn in
+           the half the next card is covering, blank white at the strip's floor.
+           What it missed is that most cards here are covered by nothing at all:
+           the card in play, the turned-up card, a hand that is not overlapping,
+           and the last card of every fanned row. Those had a rank in the left half
+           and a card's worth of white beside it.
 
-           `readableSliver` is the floor that follows from this, and it is why
-           large print scrolls sooner than the ordinary face does. */
-        <span className="leading-[1.05]">
+           So the two rules are one rule at two widths, and `indexInset` is it —
+           floored at the padding, which is where `readableSliver` assumes this
+           ink starts and therefore where a card cut to that floor still draws it.
+           Vertically it stays in the middle, because nothing is competing for the
+           height.
+
+           The box is as wide as `10` whatever the rank is, so every card in a fan
+           shares one centre line rather than each being centred on its own
+           glyphs. */
+        <span style={index} className="text-center leading-[1.05]">
           {card.rank}
           <span className="block text-[0.85em]">{glyph}</span>
         </span>

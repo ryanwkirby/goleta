@@ -25,13 +25,14 @@ const gameOf = (waitingOn: string | null, out: string[] = []): GameView =>
     players: out.map((id) => ({ id, eliminated: true })),
   }) as GameView;
 
-/** Four seats is one per edge, in turn order: top, right, bottom, left. */
-const FOUR = roomOf(["Top", false], ["Right", false], ["Bottom", false], ["Left", false]);
+/** Four seats is one per edge, in turn order — and the ring starts at the bottom
+ * (#453), so that is bottom, left, top, right. */
+const FOUR = roomOf(["Bottom", false], ["Left", false], ["Top", false], ["Right", false]);
 
 describe("which way up the shared table screen says things", () => {
   it("faces the seat on the clock", () => {
-    expect(seatToFace(FOUR, gameOf("Top"))).toBe(0);
-    expect(seatToFace(FOUR, gameOf("Bottom"))).toBe(2);
+    expect(seatToFace(FOUR, gameOf("Bottom"))).toBe(0);
+    expect(seatToFace(FOUR, gameOf("Top"))).toBe(2);
   });
 
   it("turns the board for somebody across the table and leaves it for somebody at this end", () => {
@@ -50,25 +51,25 @@ describe("which way up the shared table screen says things", () => {
 
   it("walks past a bot to the next person who is actually up", () => {
     // Nobody needs the board turned towards a robot.
-    const room = roomOf(["Top", true], ["Right", true], ["Bottom", false], ["Left", false]);
-    expect(seatToFace(room, gameOf("Top"))).toBe(2);
+    const room = roomOf(["Bottom", false], ["Left", false], ["Top", true], ["Right", true]);
+    expect(seatToFace(room, gameOf("Top"))).toBe(0);
     expect(facingTurn(room, gameOf("Top"))).toBe(0);
   });
 
   it("wraps round the table rather than stopping at the last seat", () => {
-    const room = roomOf(["Top", false], ["Right", true], ["Bottom", true], ["Left", true]);
-    expect(seatToFace(room, gameOf("Right"))).toBe(0);
+    const room = roomOf(["Bottom", true], ["Left", true], ["Top", false], ["Right", true]);
+    expect(seatToFace(room, gameOf("Right"))).toBe(2);
     expect(facingTurn(room, gameOf("Right"))).toBe(180);
   });
 
   it("walks past somebody who is out, the same as a bot", () => {
     // They are still at the table. They are not about to play.
-    const room = roomOf(["Top", false], ["Right", false], ["Bottom", false], ["Left", false]);
-    expect(seatToFace(room, gameOf("Top", ["Top", "Right"]))).toBe(2);
+    const room = roomOf(["Bottom", false], ["Left", false], ["Top", false], ["Right", false]);
+    expect(seatToFace(room, gameOf("Bottom", ["Bottom", "Left"]))).toBe(2);
   });
 
   it("stays upright at a table of bots, and before anybody is on the clock", () => {
-    const bots = roomOf(["Top", true], ["Right", true], ["Bottom", true], ["Left", true]);
+    const bots = roomOf(["Bottom", true], ["Left", true], ["Top", true], ["Right", true]);
     expect(seatToFace(bots, gameOf("Top"))).toBeNull();
     expect(facingTurn(bots, gameOf("Top"))).toBe(0);
 

@@ -892,13 +892,29 @@ eyes; all of them have already been decided deliberately. Do not "fix" them.
   on, since a single rank twice the size reads across a table better upside down
   than two small ones do the right way up.
 
-  **It keeps its index at the left, and that is where #323's proposal was
-  wrong.** Cards fan: the seat strip overlaps them to fit a table on a phone
-  (#59) and your own hand closes up before it scrolls (#117), and what a fanned
-  card leaves showing is a sliver of its **left edge**. A centred rank is drawn
-  in the half the next card is covering, and at the strip's floor it came out
-  blank white on a four-seat table. Vertically it does sit in the middle, because
-  nothing is competing for the height.
+  **Its index is centred in whatever of the card is showing** (#457), which is
+  the whole of it unless the next card in a fan is over the top of it. #323
+  pinned it to the left edge and was right about the case it looked at: cards fan
+  — the seat strip overlaps them to fit a table on a phone (#59), your own hand
+  closes up before it scrolls (#117) — and what a fanned card leaves showing is a
+  sliver of its **left edge**, so a centred rank is drawn in the half the next
+  card is covering, blank white at the strip's floor on a four-seat table. What
+  it missed is that most cards here are covered by nothing at all: the card in
+  play, the card turned up on the deck, the last card of every fanned row, and a
+  hand loose enough not to overlap. Every one of those was a rank in the left half
+  with a card's worth of white beside it.
+
+  So the two are one rule at two widths, and the old one is what it comes to on a
+  covered card. Three things hold it. The inset is **floored at the card's own
+  padding**, which is where `readableSliver` assumes this ink starts — a card cut
+  to that floor is drawn exactly where it always was, and the clamp binds a little
+  above it, so nothing steps anywhere. The box is as wide as **`10` whatever the
+  rank is**, so a fan shares one centre line instead of each card being centred on
+  its own glyphs. And what a card is told is the **overlap rather than a width**:
+  `covered` is the fan's own negative margin, which is exact whatever the ladder
+  says a card measures, and the three fans that set that margin — `Hand`, the seat
+  strip, the docked accusation picker — are the three that pass it. Vertically it
+  still sits in the middle, because nothing is competing for the height.
 
   **Which floors move is the part to get right, and it is three questions rather
   than one.** A **tap** floor does not scale at all: a thumb is the same width

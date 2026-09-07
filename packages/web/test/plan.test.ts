@@ -4,7 +4,15 @@ import type { Card, GameEvent, GameView } from "@goleta/engine";
 
 import { DECK, seatAnchor } from "../src/lib/anchors.ts";
 import { PEEL_MS, RESHUFFLE_MS } from "../src/lib/beats.ts";
-import { RESHUFFLE_CARDS, planFlights, revealAt, settlesAt } from "../src/motion/plan.ts";
+import {
+  departsAt,
+  FLIGHT_MS,
+  FLIP_MS,
+  RESHUFFLE_CARDS,
+  planFlights,
+  revealAt,
+  settlesAt,
+} from "../src/motion/plan.ts";
 import { DECK as DECK_KEY, PILE } from "../src/lib/anchors.ts";
 
 const card = (id: string, rank: Card["rank"] = "7", suit: Card["suit"] = "H"): Card => ({
@@ -171,7 +179,76 @@ describe("a deal", () => {
     const { flights } = plan([{ type: "gameStarted", seatsShuffled: false, upcard: card("up") }], view({ players }));
 
     expect(flights).toHaveLength(31);
-    expect(settlesAt(flights)).toBeLessThan(1200);
+    // The cards going out. The upcard on the end of them turns over at the deck
+    // first (#451), so it settles a beat after they do rather than with them.
+    expect(settlesAt(flights.slice(0, -1))).toBeLessThan(1200);
+    expect(settlesAt(flights)).toBeLessThan(1200 + FLIP_MS);
+  });
+});
+
+/**
+ * Which cards turn over where they start (#451). Asked here rather than in
+ * either flight layer, so a phone and the screen in the middle of the table
+ * cannot answer it differently — the reason `pileHold.ts` is shared too.
+ */
+describe("a card off the deck", () => {
+  it("turns over before it travels, yours and anybody else's", () => {
+    expect(plan([{ type: "drew", playerId: "me", card: card("m4") }]).flights[0]?.turns).toBe(true);
+    expect(plan([{ type: "drew", playerId: "them", card: card("t4") }]).flights[0]?.turns).toBe(
+      true,
+    );
+  });
+
+  it("turns over when a card is turned up, which is off the same deck", () => {
+    const { flights } = plan([
+      { type: "turnedUp", cards: [card("u1"), card("u2")], reason: "sunnyTouched" },
+    ]);
+    const up = flights.filter((flight) => flight.card !== null);
+
+    expect(up).toHaveLength(2);
+    expect(up.every((flight) => flight.turns)).toBe(true);
+  });
+
+  it("leaves a card that never had a back alone", () => {
+    // Everything that starts in a hand is already face up, so there is nothing
+    // to turn: a play, a punishment card, and the cards a landed call takes back
+    // — that last one flies *to* the deck, which is not the same question.
+    expect(plan([{ type: "played", playerId: "me", card: card("m2") }]).flights[0]?.turns).toBe(
+      false,
+    );
+    expect(
+      plan([
+        { type: "surrendered", playerId: "me", card: card("m1"), reason: "sunnyPunishment" },
+      ]).flights[0]?.turns,
+    ).toBe(false);
+    expect(plan([called({ returned: [card("t1")] })]).flights[0]?.turns).toBe(false);
+  });
+
+  it("leaves a deal face down, and turns the upcard on the end of it", () => {
+    const { flights } = plan([{ type: "gameStarted", seatsShuffled: false, upcard: card("up") }]);
+    const dealt = flights.slice(0, -1);
+
+    // Nobody watches a deal card by card; they go out face down and turn over as
+    // they land. The upcard is the one card of a deal everybody reads.
+    expect(dealt.every((flight) => flight.turns)).toBe(false);
+    expect(dealt.some((flight) => flight.turns)).toBe(false);
+    expect(flights.at(-1)?.turns).toBe(true);
+  });
+
+  it("keeps a recycle face down in both directions", () => {
+    const { flights } = plan([{ type: "reshuffled", drawPileSize: 31 }]);
+    expect(flights.every((flight) => flight.turns)).toBe(false);
+  });
+
+  it("holds its trip back by the turn, and holds nothing else back at all", () => {
+    const { flights } = plan([{ type: "drew", playerId: "me", card: card("m4") }]);
+    const drawn = flights[0];
+
+    expect(departsAt(drawn!)).toBe(drawn!.delay + FLIP_MS);
+    expect(settlesAt(flights)).toBe(drawn!.delay + FLIP_MS + FLIGHT_MS);
+
+    const played = plan([{ type: "played", playerId: "me", card: card("m2") }]).flights[0];
+    expect(departsAt(played!)).toBe(played!.delay);
   });
 });
 

@@ -494,8 +494,16 @@
    flip would want `preserve-3d` inside a board that is already carrying a 2D
    transform, and this says the same thing in two keyframes. The travel is on
    the parent and starts once this has finished, so the two never fight over
-   `transform`. */
-@keyframes table-screen-turn-back {
+   `transform`.
+
+   **Both flight layers draw it** (#451). It was the shared screen's until then
+   and named for it, and a card turning over is not a fact about which screen is
+   watching — the phone's `FlightCard` builds the same two children and hands
+   them the same `--flip`, which is `FLIP_MS` in `motion/plan.ts` for both. What
+   stays each layer's own is the trip either side of it: the phone owns the
+   parent's travel through the Web Animations API, this screen through
+   `table-screen-card`. */
+@keyframes card-turn-back {
   0% {
     transform: scaleX(1);
   }
@@ -505,7 +513,7 @@
   }
 }
 
-@keyframes table-screen-turn-face {
+@keyframes card-turn-face {
   0%,
   50% {
     transform: scaleX(0);
@@ -515,12 +523,12 @@
   }
 }
 
-.table-screen-turn-back {
-  animation: table-screen-turn-back var(--flip, 240ms) ease-in var(--delay, 0ms) both;
+.card-turn-back {
+  animation: card-turn-back var(--flip, 240ms) ease-in var(--delay, 0ms) both;
 }
 
-.table-screen-turn-face {
-  animation: table-screen-turn-face var(--flip, 240ms) ease-out var(--delay, 0ms) both;
+.card-turn-face {
+  animation: card-turn-face var(--flip, 240ms) ease-out var(--delay, 0ms) both;
 }
 
 html,

@@ -14,6 +14,21 @@ import { cardAnchor, DECK, HAND, PILE, seatAnchor, type AnchorKey } from "../lib
 export const FLIGHT_MS = 220;
 const DEAL_MS = 190;
 
+/**
+ * How long a card coming off the deck spends turning over before it goes
+ * anywhere (#451).
+ *
+ * **One figure for both flight layers**, unlike the trips either side of it. In
+ * an IRL room a phone and the screen in the middle of the table draw the same
+ * card off the same deck at the same moment, so two lengths for one gesture is
+ * #185's argument arriving by another route. The trips are allowed to differ —
+ * `FLIGHT_MS` here against `FLIGHT_MS + TABLE_TRIP_MS` there (#325) — because
+ * those are about how far a card has to go, and turning one over is not.
+ *
+ * In step with `--flip` in `index.css`, which draws it.
+ */
+export const FLIP_MS = 240;
+
 /** Gap between one card's flight and the next in the same batch. */
 const BEAT_MS = 110;
 const TURN_UP_BEAT_MS = 95;
@@ -40,6 +55,11 @@ export interface FlightPlan {
   card: Card | null;
   from: AnchorKey[];
   to: AnchorKey[];
+  /** Off the deck with a face on it, so it turns over where it starts before it
+   * travels (#451). Decided here rather than in either flight layer: it is the
+   * same question on a phone and on the shared screen, and it is asked one line
+   * away from `card`, which is the other half of what a flight shows. */
+  turns: boolean;
   /** Rendered at the destination's size — that's where it comes to rest. */
   size: CardSize;
   fromSize: CardSize;
@@ -83,6 +103,13 @@ export const TABLE_SCREEN: TableScale = { hand: "xl", pile: "xl", seat: "xl" };
 
 const isYou = (game: GameView, playerId: PlayerId): boolean => game.you === playerId;
 
+/** A card leaving the deck with a face on it. Asked in one place, so the two
+ * flight layers cannot answer it differently — a deal's cards fly face down and
+ * turn over as they land, and everything else starts where it can already be
+ * seen. */
+const turnsOver = (card: Card | null, from: readonly AnchorKey[]): boolean =>
+  card !== null && from[0] === DECK;
+
 /** Where a player's cards live on screen. */
 const handOf = (game: GameView, playerId: PlayerId): AnchorKey =>
   isYou(game, playerId) ? HAND : seatAnchor(playerId);
@@ -113,8 +140,15 @@ export const planFlights = (
   // Events in a batch happened in order and should read that way.
   let cursor = 0;
 
-  const add = (plan: Omit<FlightPlan, "id" | "delay"> & { delay?: number }): void => {
-    flights.push({ id: nextId(), delay: plan.delay ?? cursor, ...plan });
+  const add = (
+    plan: Omit<FlightPlan, "id" | "delay" | "turns"> & { delay?: number },
+  ): void => {
+    flights.push({
+      id: nextId(),
+      delay: plan.delay ?? cursor,
+      turns: turnsOver(plan.card, plan.from),
+      ...plan,
+    });
   };
 
   for (const event of events) {
@@ -304,6 +338,7 @@ const dealFlights = (
       out.push({
         id: nextId(),
         card: null,
+        turns: false,
         from: [DECK],
         to: cardOrHand(game, player.id, card?.id ?? null),
         size: sizeOfHand(game, player.id, scale),
@@ -317,9 +352,12 @@ const dealFlights = (
     }
   }
 
+  // The one card of a deal anybody reads, and the only one that turns over at the
+  // deck: the rest go out face down and turn over as they land.
   out.push({
     id: nextId(),
     card: upcard,
+    turns: true,
     from: [DECK],
     to: [PILE],
     size: scale.pile,
@@ -391,6 +429,13 @@ export const revealAt = (delay: number): { delay: number; duration: number } => 
   return { delay: delay - fade, duration: fade };
 };
 
+/** When a flight actually starts moving. A card off the deck spends `FLIP_MS`
+ * turning over first, at the place it starts, and both layers have to hold the
+ * trip back by the same amount — the phone's travel animation, and the shared
+ * screen's `--delay` and the sweep it is timed off. */
+export const departsAt = (flight: Pick<FlightPlan, "delay" | "turns">): number =>
+  flight.delay + (flight.turns ? FLIP_MS : 0);
+
 /** When the last card in a batch comes to rest. */
 export const settlesAt = (flights: readonly FlightPlan[]): number =>
-  Math.max(0, ...flights.map((flight) => flight.delay + flight.duration));
+  Math.max(0, ...flights.map((flight) => departsAt(flight) + flight.duration));

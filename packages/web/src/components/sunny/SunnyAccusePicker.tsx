@@ -274,11 +274,20 @@ export function SunnyAccusePicker({
           compact ? "mt-1.5 overflow-x-auto [&>*+*]:ml-[var(--fan)]" : "mt-2 flex-wrap gap-2",
         ].join(" ")}
       >
-        {reach.hand.map((card) => (
+        {reach.hand.map((card, at) => (
           <PlayingCard
             key={card.id}
             card={card}
             size={compact ? "sm" : "md"}
+            // Where large print's index goes across the card (#457). Only the
+            // docked row overlaps at all; wrapped, every card shows whole. The
+            // overlap is still one number for the whole row, so it says nothing
+            // about which card was legal (#96).
+            covered={
+              compact && at < reach.hand.length - 1
+                ? Math.max(0, cardWidthPx("sm", scale) - step)
+                : 0
+            }
             mirrored={irl}
             onClick={() => onPick(card.id)}
             title={`Accuse them of skipping the ${card.rank}${SUIT_GLYPH[card.suit]}`}

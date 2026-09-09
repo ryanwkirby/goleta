@@ -36,6 +36,11 @@
   /* The phone on the rotate panel, showing which way it wants to go. */
   --animate-rotate-hint: rotate-hint 2.6s ease-in-out infinite;
 
+  /* And its opposite, on the shared screen's nudge (#447). Same figures,
+     because the two are one gesture read in either direction; a separate name
+     because they ask for opposite ones. */
+  --animate-stand-hint: stand-hint 2.6s ease-in-out infinite;
+
 }
 
 /* A Bee deck's woven diamond lattice, near enough: two repeating gradients
@@ -244,6 +249,34 @@
   }
 }
 
+/* The same gesture undone, for the screen in the middle of the table (#447).
+   `TableRotateNudge` asks a phone standing in for a spare tablet to be stood
+   **upright**, and drew `rotate-hint` to ask it — a phone starting upright,
+   turning a quarter, and resting on its side for most of the cycle, which is the
+   picture the other panel uses to mean the opposite thing. Under
+   `prefers-reduced-motion` it held on its side permanently, so the only frame
+   that player ever saw was the wrong one.
+
+   So the two are deliberately **not** one keyframe. #446 flipped `rotate-hint`'s
+   direction and this mirrored along with it, exactly as wrong as before, which is
+   what a shared name buys when the thing being shared is an instruction. The
+   figures are the same because the movement is the same movement; only the ends
+   are swapped, so it starts chin-to-the-right — where #446 says a phone lying
+   sideways is — and rests where it is being asked to go. */
+@keyframes stand-hint {
+  0%,
+  25% {
+    transform: rotate(-90deg);
+  }
+  45%,
+  85% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-90deg);
+  }
+}
+
 /* The pile peeling back off a Sunny call. `forwards` on both: the evidence has
    to stay up and stay legible for the rest of the beat, not spring back the
    moment it has finished arriving.
@@ -394,6 +427,15 @@
     from,
     to {
       transform: rotate(-90deg);
+    }
+  }
+
+  /* And the nudge's own still frame is its own way up (#447), for the same
+     reason one frame away: the rest is the whole of the instruction here. */
+  @keyframes stand-hint {
+    from,
+    to {
+      transform: rotate(0deg);
     }
   }
 

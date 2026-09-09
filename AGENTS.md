@@ -1368,8 +1368,24 @@ Things that will read as oversights in that view and are not:
   wrist already holding the phone makes with the least effort — and both ends
   moved together, because it rests turned for most of the cycle and under
   `prefers-reduced-motion` that rest is the only frame anybody sees.
-  `TableRotateNudge` draws the same keyframe while asking for the opposite
-  gesture, which the flip mirrors rather than fixes; that is #447 and is not this.
+  **`TableRotateNudge` asks for the opposite gesture and now draws its own
+  keyframe** (#447). It used `rotate-hint` under a heading reading *stand this
+  screen upright*, so the picture showed a phone turning *into* landscape and
+  resting there — and under `prefers-reduced-motion` resting there was the only
+  frame that player ever saw. #446 flipping the shared keyframe mirrored the
+  nudge along with it rather than fixing it, which is what a shared name costs
+  when what is being shared is an instruction. `stand-hint` is the same movement
+  with its ends swapped: sideways, then upright, resting upright, with the
+  reduced-motion still resting upright too. It starts chin-to-the-right because
+  that is where the paragraph above says a phone lying sideways is.
+
+  **The ends are what a test holds, not the figures.** Nothing in a build fails
+  when the two are pointed at one name — the class exists, the phone rotates, and
+  the picture is simply wrong — so `rotateHint.test.ts` reads the stylesheet and
+  both components as text, the way `largePrint.test.ts` and `pacing.test.ts` do.
+  What it checks is that each animation rests where its own panel is asking the
+  phone to end up, in motion and in the still frame. The beats in between are
+  free to be tuned.
 
   **Nothing anywhere reaches for that lock, including where it exists.** The
   panel used to offer it behind a "keep it landscape" button, and it froze the
